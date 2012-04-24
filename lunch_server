@@ -11,6 +11,7 @@ def incoming_call(msg,addr):
         subprocess.call(["eject", "-T", "/dev/cdrom"])
         subprocess.call(["play", "-q", sys.path[0]+"/sounds/sonar.wav"])	
         subprocess.call(["eject", "-T", "/dev/cdrom"])
+        subprocess.call(["notify-send", "Gleich gibts LUUUUUUUUUNCH!!!!"])
     except:
         pass
 
