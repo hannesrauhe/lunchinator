@@ -1,8 +1,10 @@
 import socket 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-ip = raw_input("IP-Adresse: ") 
-nachricht = raw_input("Nachricht: ")
+f = open("lunch_members",'r')
 
-s.sendto(nachricht, (ip, 50000)) 
+for ip in f.readlines():
+	print "calling",ip.strip()
+	s.sendto("lunch", (ip.strip(), 50000)) 
+
 s.close()
