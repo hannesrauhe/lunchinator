@@ -1,10 +1,16 @@
 import socket 
+from time import gmtime, strftime
+
+def incoming_call(msg,addr):
+    t = strftime("%a, %d %b %Y %H:%M:%S", gmtime())
+    print "%s: [%s] %s" % (t,addr, msg)	
+
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 try: 
     s.bind(("", 50000)) 
     while True: 
         daten, addr = s.recvfrom(1024) 
-        print "[%s] %s" % (addr[0], daten) 
+        incoming_call(daten,addr[0])
 finally: 
     s.close()
