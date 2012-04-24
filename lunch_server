@@ -1,9 +1,12 @@
-import socket 
+import socket
+import subprocess
 from time import gmtime, strftime
 
 def incoming_call(msg,addr):
     t = strftime("%a, %d %b %Y %H:%M:%S", gmtime())
-    print "%s: [%s] %s" % (t,addr, msg)	
+    print "%s: [%s] %s" % (t,addr, msg)
+    subprocess.call(["eject", "-T", "/dev/cdrom"])
+	
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
