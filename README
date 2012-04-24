@@ -1,0 +1,23 @@
+ONLY TESTED ON UBUNTU ATM
+
+INSTALL
+=======
+sudo apt-get install sox
+
+USAGE
+=====
+If you want to be notified for lunch, 
+1. add your machine to the lunch_members text file and push the changes to the git repository.
+2. execute python lunch_server
+
+If you want to notify the lunch_members, that it's time for lunch:
+execute python lunch_client
+
+Please pull the newest version from the git repository from time to time to update your local lunch_members file and security fixes
+
+HOW IT WORKS
+============
+lunch_server listens on incoming UDP connections on Port 50000
+ATM it will not parse incoming messages - it will simply open/close your DVD and play a sound
+
+
