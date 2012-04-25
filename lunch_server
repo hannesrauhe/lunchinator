@@ -3,6 +3,7 @@ import socket
 import subprocess
 from time import gmtime, strftime
 import sys
+import os
 
 def incoming_call(msg,addr):
     t = strftime("%a, %d %b %Y %H:%M:%S", gmtime())
@@ -20,10 +21,14 @@ s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 try: 
     s.bind(("", 50000)) 
     while True:
-        if msg=="update":
-            pass
+        daten, addr = s.recvfrom(1024) 
+        if daten=="update":
+            t = strftime("%a, %d %b %Y %H:%M:%S", gmtime())
+            print "%s: [%s] update and restart" % (t,addr)
+            os.chdir(sys.path[0])
+            subprocess.call(["git","pull"])
+            os.execl("python","lunch_server") 
  	else:
-            daten, addr = s.recvfrom(1024) 
             incoming_call(daten,addr[0])
 finally: 
     s.close()
