@@ -8,25 +8,26 @@ import os
 def incoming_call(msg,addr):
     t = strftime("%a, %d %b %Y %H:%M:%S", gmtime())
     print "%s: [%s] %s" % (t,addr, msg)
-    try:
-        subprocess.call(["eject", "-T", "/dev/cdrom"])
-    except:
-        pass
-
-    try:
-        subprocess.call(["play", "-q", sys.path[0]+"/sounds/sonar.wav"])	
-    except:
-        pass
-
-    try:
-        subprocess.call(["eject", "-T", "/dev/cdrom"])
-    except:
-        pass
-
-    try:
-        subprocess.call(["notify-send", msg])
-    except:
-        pass
+    if localtime()[3] >= 11 and localtime()[4] >= 45 and localtime()[3] <= 12 and localtime()[4] <= 45:
+        try:
+            subprocess.call(["eject", "-T", "/dev/cdrom"])
+        except:
+            pass
+    
+        try:
+            subprocess.call(["play", "-q", sys.path[0]+"/sounds/sonar.wav"])	
+        except:
+            pass
+    
+        try:
+            subprocess.call(["eject", "-T", "/dev/cdrom"])
+        except:
+            pass
+    
+        try:
+            subprocess.call(["notify-send", msg])
+        except:
+            pass
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -41,8 +42,7 @@ try:
             subprocess.call(["git","pull"])
             s.close()
             os.execlp("python","python","lunch_server") 
- 	else:
-            if localtime()[3] >= 11 and localtime()[4] >= 45 and localtime()[3] <= 12 and localtime()[4] <= 45:
-                incoming_call(daten,addr[0])
+     	else:
+            incoming_call(daten,addr[0])
 finally: 
     s.close()
