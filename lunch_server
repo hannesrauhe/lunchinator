@@ -27,7 +27,8 @@ try:
             print "%s: [%s] update and restart" % (t,addr)
             os.chdir(sys.path[0])
             subprocess.call(["git","pull"])
-            os.execl("python","lunch_server") 
+            s.close()
+            os.execlp("python","python","lunch_server") 
  	else:
             if localtime()[3] >= 11 and localtime()[4] >= 45 and localtime()[3] <= 12 and localtime()[4] <= 45:
                 incoming_call(daten,addr[0])
