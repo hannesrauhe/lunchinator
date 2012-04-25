@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import socket
 import subprocess
-from time import gmtime, strftime
+from time import gmtime, strftime, localtime
 import sys
 import os
 
@@ -29,6 +29,7 @@ try:
             subprocess.call(["git","pull"])
             os.execl("python","lunch_server") 
  	else:
+        if localtime()[3] >= 11 and localtime()[4] >= 45 and localtime()[3] <= 12 and localtime()[4] <= 45:
             incoming_call(daten,addr[0])
 finally: 
     s.close()
