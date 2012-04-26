@@ -5,6 +5,7 @@ from time import gmtime, strftime, localtime
 import sys
 import os
 
+#magic function
 def incoming_call(msg,addr):
     t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
     print "%s: [%s] %s" % (t,addr, msg)
