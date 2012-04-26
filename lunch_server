@@ -9,7 +9,7 @@ import os
 def incoming_call(msg,addr):
     t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
     print "%s: [%s] %s" % (t,addr, msg)
-    if localtime()[3] >= 11 and localtime()[4] >= 45 and localtime()[3] <= 12 and localtime()[4] <= 45:
+    if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765:
         try:
             subprocess.call(["eject", "-T", "/dev/cdrom"])
         except:
