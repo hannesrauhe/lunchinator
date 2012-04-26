@@ -6,6 +6,7 @@ f = open("lunch_members",'r')
 
 for ip in f.readlines():
 	print "calling",ip.strip()
+	# this command sends some data over the network on port 50000
 	s.sendto("lunch", (ip.strip(), 50000)) 
 
 s.close()
