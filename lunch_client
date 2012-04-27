@@ -1,12 +1,15 @@
 #!/usr/bin/python
-import socket 
+import socket,sys
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-f = open("lunch_members",'r')
+f = open(sys.path[0]+"/lunch_members",'r')
 
 for ip in f.readlines():
-	print "calling",ip.strip()
-	# this command sends some data over the network on port 50000
-	s.sendto("lunch", (ip.strip(), 50000)) 
+    print "calling",ip.strip()
+    # this command sends some data over the network on port 50000
+    try:
+        s.sendto("lunch", (ip.strip(), 50000)) 
+    except:
+        print " hostname unknown"
 
 s.close()
