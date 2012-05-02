@@ -9,6 +9,12 @@ import os
 def incoming_call(msg,addr):
     t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
     print "%s: [%s] %s" % (t,addr, msg)
+
+    try:
+        subprocess.call(["notify-send", msg])
+    except:
+        pass
+
     if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765:
         try:
             subprocess.call(["eject", "-T", "/dev/cdrom"])
@@ -22,11 +28,6 @@ def incoming_call(msg,addr):
     
         try:
             subprocess.call(["eject", "-T", "/dev/cdrom"])
-        except:
-            pass
-    
-        try:
-            subprocess.call(["notify-send", msg])
         except:
             pass
 

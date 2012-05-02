@@ -12,7 +12,7 @@ for ip in f.readlines():
     print ip.strip(),
     # this command sends some data over the network on port 50000
     try:
-        s.sendto("lunch", (ip.strip(), 50000)) 
+        s.sendto(msg, (ip.strip(), 50000)) 
     except:
         print "(Exception: hostname unknown)",
 
