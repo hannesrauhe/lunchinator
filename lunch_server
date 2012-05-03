@@ -4,6 +4,7 @@ import subprocess
 from time import gmtime, strftime, localtime
 import sys
 import os
+import ctypes
 
 #magic function
 def incoming_call(msg,addr):
@@ -22,12 +23,22 @@ def incoming_call(msg,addr):
             pass
     
         try:
-            subprocess.call(["play", "-q", sys.path[0]+"/sounds/sonar.wav"])	
+            subprocess.call(["play", "-q", sys.path[0]+"/sounds/sonar.wav"])    
         except:
             pass
     
         try:
             subprocess.call(["eject", "-T", "/dev/cdrom"])
+        except:
+            pass
+        
+def incoming_call_win(msg,addr):
+    t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
+    print "%s: [%s] %s" % (t,addr, msg)
+
+    if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765:
+        try:
+            ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
         except:
             pass
 
@@ -45,6 +56,9 @@ try:
             s.close()
             os.execlp("python","python","lunch_server") 
      	else:
-            incoming_call(daten,addr[0])
+            if sys.platform.startswith('linux'):
+                incoming_call(daten,addr[0])
+            else:
+                incoming_call_win(daten,addr[0])
 finally: 
     s.close()
