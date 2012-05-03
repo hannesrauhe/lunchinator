@@ -12,7 +12,7 @@ def incoming_call(msg,addr):
     print "%s: [%s] %s" % (t,addr, msg)
 
     try:
-        subprocess.call(["notify-send", msg])
+        subprocess.call(["notify-send", msg + " [" + addr + "]"])
     except:
         pass
 
