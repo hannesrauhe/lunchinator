@@ -20,3 +20,4 @@ if __name__ == "__main__":
     msg = "lunch"
     if len(sys.argv)>1:
         msg = sys.argv[1]
+    call(msg)
