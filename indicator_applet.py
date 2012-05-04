@@ -28,39 +28,29 @@ import gobject
 import gtk
 import appindicator
 #import lunch_server
+import lunch_client
 import threading
 
 
 def menuitem_response(w, buf):
-    print buf
+    lunch_client.call("lunch")
 
 if __name__ == "__main__": 
     #t1 = threading.Thread(target=lunch_server.start_server)
     #t1.start()
     #t1.join()
-    ind = appindicator.Indicator ("example-simple-client",
-                                "indicator-messages",
+    ind = appindicator.Indicator ("lunch notifier",
+                                "news-feed",
                                 appindicator.CATEGORY_APPLICATION_STATUS)
     ind.set_status (appindicator.STATUS_ACTIVE)
     ind.set_attention_icon ("indicator-messages-new")
     
     # create a menu
-    menu = gtk.Menu()
-    
-    # create some 
-    for i in range(3):
-      buf = "Test-undermenu - %d" % i
-    
-      menu_items = gtk.MenuItem(buf)
-    
-      menu.append(menu_items)
-    
-      # this is where you would connect your menu item up with a function:
-      
-      # menu_items.connect("activate", menuitem_response, buf)
-    
-      # show the items
-      menu_items.show()
+    menu = gtk.Menu()    
+    menu_items = gtk.MenuItem("Call for lunch")
+    menu.append(menu_items)      
+    menu_items.connect("activate", menuitem_response, "")
+    menu_items.show()
     
     ind.set_menu(menu)
     
