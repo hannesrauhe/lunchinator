@@ -50,7 +50,11 @@ if __name__ == "__main__":
     menu_items = gtk.MenuItem("Call for lunch")
     menu.append(menu_items)      
     menu_items.connect("activate", menuitem_response, "")
-    menu_items.show()
+    menu_items.show()  
+    exit_item = gtk.MenuItem("Exit")
+    menu.append(exit_item)      
+    exit_item.connect("activate", exit)
+    exit_item.show()
     
     ind.set_menu(menu)
     
