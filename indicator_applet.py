@@ -34,9 +34,10 @@ import threading
 class ServerThread(threading.Thread): 
     l = lunch_server.lunch_server()
     def __init__(self): 
+        self.l.auto_update = False
         threading.Thread.__init__(self) 
  
-    def run(self): 
+    def run(self):
         self.l.start_server()
         
     def stop_server(self):
@@ -45,21 +46,23 @@ class ServerThread(threading.Thread):
 class lunch_control():
     t = ServerThread()
         
-    def server(self,w):
+    def start_server(self,w):
         if not self.t.isAlive():
             self.t = ServerThread()
             self.t.start()
-            #print "server started"
         else:
-            #print "stopping server"
-            self.t.stop_server()
-            self.t.join()
-            #print "server stopped"
-            self.t = ServerThread()
-    def quit(self,widget):
+            print "server already running"
+            
+    def stop_server(self,w):        
         if self.t.isAlive():
             self.t.stop_server()
-            self.t.join()        
+            self.t.join()  
+            print "server stopped" 
+        else:
+            print "server not running"  
+                  
+    def quit(self,w): 
+        self.stop_server(w)
         sys.exit(0)
         
 def menuitem_response(w, buf):
@@ -67,7 +70,10 @@ def menuitem_response(w, buf):
     
     
 if __name__ == "__main__": 
-    thread = lunch_control()
+    #you need this to use threads and GTK
+    gobject.threads_init()
+    
+    c = lunch_control()
     
     ind = appindicator.Indicator ("lunch notifier",
                                 "news-feed",
@@ -83,14 +89,18 @@ if __name__ == "__main__":
     menu_items.show()  
     server_item = gtk.MenuItem("Start Server")
     menu.append(server_item)      
-    server_item.connect("activate", thread.server)
+    server_item.connect("activate", c.start_server)
+    server_item.show()
+    server_item = gtk.MenuItem("Stop Server")
+    menu.append(server_item)      
+    server_item.connect("activate", c.stop_server)
     server_item.show()
     exit_item = gtk.MenuItem("Exit")
     menu.append(exit_item)      
-    exit_item.connect("activate", thread.quit)
+    exit_item.connect("activate", c.quit)
     exit_item.show()
     
-    #thread.server("")
+    c.start_server(menu)
     
     ind.set_menu(menu)
     

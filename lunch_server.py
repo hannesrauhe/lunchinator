@@ -8,6 +8,8 @@ import ctypes
 
 class lunch_server(object):
     running = False
+    auto_update = True
+    
     def incoming_call(self,msg,addr):
         t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
         print "%s: [%s] %s" % (t,addr, msg)
@@ -54,9 +56,9 @@ class lunch_server(object):
                 pass
     
     def start_server(self):
+        print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service"
         self.running = True
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service"
         try: 
             s.bind(("", 50000)) 
             s.settimeout(5.0)
@@ -65,11 +67,15 @@ class lunch_server(object):
                     daten, addr = s.recvfrom(1024) 
                     if daten.startswith("update"):
                         t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
-                        print "%s: [%s] update and restart" % (t,addr)
-                        os.chdir(sys.path[0])
-                        subprocess.call(["git","pull"])
-                        s.close()
-                        os.execlp("python","python",os.path.basename(sys.argv[0]))
+                        if self.auto_update:
+                            print "%s: [%s] update and restart" % (t,addr)
+                            os.chdir(sys.path[0])
+                            subprocess.call(["git","pull"])
+                            s.close()
+                            os.execlp("python","python",os.path.basename(sys.argv[0]))
+                        else:
+                            print "%s: %s issued an update but updates are disabled" % (t,addr)
+                            
                     else:
                         if sys.platform.startswith('linux'):
                             self.incoming_call(daten,addr[0])
@@ -78,9 +84,8 @@ class lunch_server(object):
                 except socket.timeout:
                     pass
         finally: 
-            s.close()
-                    
-        print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
+            s.close()                    
+            print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
     
 if __name__ == "__main__":
     l = lunch_server()
