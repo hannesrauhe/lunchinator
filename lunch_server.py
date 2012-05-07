@@ -15,22 +15,26 @@ class lunch_server(object):
         try:
             subprocess.call(["notify-send", msg + " [" + addr + "]"])
         except:
+            print "notify error"
             pass
     
         if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765:
             try:
                 subprocess.call(["eject", "-T", "/dev/cdrom"])
             except:
+                print "eject error (open)"
                 pass
         
             try:
                 subprocess.call(["play", "-q", sys.path[0]+"/sounds/sonar.wav"])    
             except:
+                print "sound error"
                 pass
         
             try:
                 subprocess.call(["eject", "-T", "/dev/cdrom"])
             except:
+                print "eject error (close)"
                 pass
             
     def incoming_call_win(self,msg,addr):
@@ -41,10 +45,12 @@ class lunch_server(object):
             try:
                 ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
             except:
+                print "eject error (open)"
                 pass
             try:
-                ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door close", None, 0, None)
+                ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
             except:
+                print "eject error (close)"
                 pass
     
     def start_server(self):
@@ -63,7 +69,7 @@ class lunch_server(object):
                         os.chdir(sys.path[0])
                         subprocess.call(["git","pull"])
                         s.close()
-                        os.execlp("python","python","lunch_server.py")
+                        os.execlp("python","python",os.path.basename(sys.argv[0]))
                     else:
                         if sys.platform.startswith('linux'):
                             self.incoming_call(daten,addr[0])
