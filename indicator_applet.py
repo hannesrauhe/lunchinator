@@ -23,22 +23,52 @@
 # License version 3 and version 2.1 along with this program.  If not, see 
 # <http://www.gnu.org/licenses/>
 #
-
+import sys
 import gobject
 import gtk
 import appindicator
-#import lunch_server
+import lunch_server
 import lunch_client
 import threading
 
+class ServerThread(threading.Thread): 
+    l = lunch_server.lunch_server()
+    def __init__(self): 
+        threading.Thread.__init__(self) 
+ 
+    def run(self): 
+        self.l.start_server()
+        
+    def stop_server(self):
+        self.l.running = False
 
+class lunch_control():
+    t = ServerThread()
+        
+    def server(self,w):
+        if not self.t.isAlive():
+            self.t = ServerThread()
+            self.t.start()
+            #print "server started"
+        else:
+            #print "stopping server"
+            self.t.stop_server()
+            self.t.join()
+            #print "server stopped"
+            self.t = ServerThread()
+    def quit(self,widget):
+        if self.t.isAlive():
+            self.t.stop_server()
+            self.t.join()        
+        sys.exit(0)
+        
 def menuitem_response(w, buf):
     lunch_client.call("lunch")
-
+    
+    
 if __name__ == "__main__": 
-    #t1 = threading.Thread(target=lunch_server.start_server)
-    #t1.start()
-    #t1.join()
+    thread = lunch_control()
+    
     ind = appindicator.Indicator ("lunch notifier",
                                 "news-feed",
                                 appindicator.CATEGORY_APPLICATION_STATUS)
@@ -51,10 +81,16 @@ if __name__ == "__main__":
     menu.append(menu_items)      
     menu_items.connect("activate", menuitem_response, "")
     menu_items.show()  
+    server_item = gtk.MenuItem("Start Server")
+    menu.append(server_item)      
+    server_item.connect("activate", thread.server)
+    server_item.show()
     exit_item = gtk.MenuItem("Exit")
     menu.append(exit_item)      
-    exit_item.connect("activate", exit)
+    exit_item.connect("activate", thread.quit)
     exit_item.show()
+    
+    thread.server("")
     
     ind.set_menu(menu)
     
