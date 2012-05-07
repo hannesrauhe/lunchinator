@@ -50,7 +50,7 @@ class lunch_server(object):
     def start_server(self):
         self.running = True
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        print "Starting the lunch notifier service"
+        print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service"
         try: 
             s.bind(("", 50000)) 
             s.settimeout(5.0)
@@ -73,6 +73,8 @@ class lunch_server(object):
                     pass
         finally: 
             s.close()
+                    
+        print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
     
 if __name__ == "__main__":
     l = lunch_server()

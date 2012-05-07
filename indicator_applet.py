@@ -90,7 +90,7 @@ if __name__ == "__main__":
     exit_item.connect("activate", thread.quit)
     exit_item.show()
     
-    thread.server("")
+    #thread.server("")
     
     ind.set_menu(menu)
     
