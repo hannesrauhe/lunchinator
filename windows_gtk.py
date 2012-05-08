@@ -16,7 +16,7 @@ class Main(gtk.Window):
         statusicon = gtk.StatusIcon()
         statusicon = gtk.status_icon_new_from_pixbuf(pixbuf)
         statusicon.connect("activate",self.tray_activate)
-        self.show_all()
+        #self.show_all()
 
     def on_delete_event(self, widget, event):
         self.hide()
