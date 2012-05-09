@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import sys
 import gobject
 import gtk
