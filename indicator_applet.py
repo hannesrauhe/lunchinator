@@ -40,10 +40,51 @@ class lunch_control():
                   
     def quit(self,w): 
         self.stop_server(w)
-        sys.exit(0)
-        
-def menuitem_response(w, buf):
-    lunch_client.call("lunch")
+        sys.exit(0)        
+    
+def send_msg(w,msg):
+    lunch_client.call(msg)
+    
+def msg_window(w):
+    # create a new window
+    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+
+    # When the window is given the "delete_event" signal (this is given
+    # by the window manager, usually by the "close" option, or on the
+    # titlebar), we ask it to call the delete_event () function
+    # as defined above. The data passed to the callback
+    # function is NULL and is ignored in the callback function.
+    #window.connect("delete_event", delete_event)
+
+    # Here we connect the "destroy" event to a signal handler.  
+    # This event occurs when we call gtk_widget_destroy() on the window,
+    # or if we return FALSE in the "delete_event" callback.
+    #window.connect("destroy", destroy)
+
+    # Sets the border width of the window.
+    window.set_border_width(10)
+
+    # Creates a new button with the label "Hello World".
+    button = gtk.Button("Hello World")
+
+    # When the button receives the "clicked" signal, it will call the
+    # function hello() passing it None as its argument.  The hello()
+    # function is defined above.
+    button.connect("clicked", send_msg, "hello world")
+
+    # This will cause the window to be destroyed by calling
+    # gtk_widget_destroy(window) when "clicked".  Again, the destroy
+    # signal could come from here, or the window manager.
+    button.connect_object("clicked", gtk.Widget.destroy, window)
+
+    # This packs the button into the window (a GTK container).
+    window.add(button)
+
+    # The final step is to display this newly created widget.
+    button.show()
+
+    # and the window
+    window.show()
     
     
 if __name__ == "__main__": 
@@ -62,8 +103,12 @@ if __name__ == "__main__":
     menu = gtk.Menu()    
     menu_items = gtk.MenuItem("Call for lunch")
     menu.append(menu_items)      
-    menu_items.connect("activate", menuitem_response, "")
-    menu_items.show()  
+    menu_items.connect("activate", send_msg, "lunch")
+    menu_items.show()      
+    msg_items = gtk.MenuItem("Send message")
+    menu.append(msg_items)      
+    msg_items.connect("activate", msg_window)
+    msg_items.show()  
     #server_item = gtk.MenuItem("Start Server")
     #menu.append(server_item)      
     #server_item.connect("activate", c.start_server)
