@@ -10,7 +10,8 @@ import threading
 class ServerThread(threading.Thread): 
     l = lunch_server.lunch_server()
     def __init__(self): 
-        self.l.auto_update = False
+        #auto-update may be working...
+        #self.l.auto_update = False
         threading.Thread.__init__(self) 
  
     def run(self):
