@@ -16,6 +16,7 @@ else
  	git add lunch_members
 	git commit -m "added $(hostname) automatically"
 	git push
+	python lunch_updater
 fi
 
 unbuffer $DIR/indicator_applet.py >> $HOME/.lunch_calls
