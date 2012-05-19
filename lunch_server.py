@@ -9,11 +9,24 @@ import ctypes
 class lunch_server(object):
     running = False
     auto_update = True
+    new_msg = False
+    last_messages = [("start","start","start")]
     
     def incoming_call(self,msg,addr):
         t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
         print "%s: [%s] %s" % (t,addr, msg)
-    
+        
+        self.last_messages.append((t,addr,msg))
+        if len(self.last_messages)>5:
+            self.last_messages.pop(0)
+        self.new_msg = True
+            
+        if sys.platform.startswith('linux'):
+            self.incoming_call_linux(msg,addr)
+        else:
+            self.incoming_call_win(msg,addr)
+            
+    def incoming_call_linux(self,msg,addr):    
         try:
             subprocess.call(["notify-send", msg + " [" + addr + "]"])
         except:
@@ -38,11 +51,8 @@ class lunch_server(object):
             except:
                 print "eject error (close)"
                 pass
-            
-    def incoming_call_win(self,msg,addr):
-        t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
-        print "%s: [%s] %s" % (t,addr, msg)
-    
+        
+    def incoming_call_win(self,msg,addr):    
         if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765:
             try:
                 ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
@@ -76,11 +86,8 @@ class lunch_server(object):
                         else:
                             print "%s: %s issued an update but updates are disabled" % (t,addr)
                             
-                    else:
-                        if sys.platform.startswith('linux'):
-                            self.incoming_call(daten,addr[0])
-                        else:
-                            self.incoming_call_win(daten,addr[0])
+                    else:                            
+                        self.incoming_call(daten,addr[0])
                 except socket.timeout:
                     pass
         finally: 

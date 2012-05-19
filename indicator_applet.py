@@ -36,68 +36,94 @@ class lunch_control():
             self.t.join()  
             print "server stopped" 
         else:
-            print "server not running"  
+            print "server not running"
+            
+    def get_last_msgs(self,w):  
+        return self.t.l.last_messages
+    
+    def check_new_msgs(self):
+        return self.t.l.new_msg
+    
+    def reset_new_msgs(self):
+        self.t.l.new_msg=False
                   
     def quit(self,w): 
         self.stop_server(w)
         sys.exit(0)        
     
-def send_msg(w,msg):
-    lunch_client.call(msg)
+def send_msg(w,msg=None):
+    if msg:
+        lunch_client.call(msg)
+    else:
+        lunch_client.call(w.get_text())
     
 def msg_window(w):
-    # create a new window
+    global window
     window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 
-    # When the window is given the "delete_event" signal (this is given
-    # by the window manager, usually by the "close" option, or on the
-    # titlebar), we ask it to call the delete_event () function
-    # as defined above. The data passed to the callback
-    # function is NULL and is ignored in the callback function.
-    #window.connect("delete_event", delete_event)
-
-    # Here we connect the "destroy" event to a signal handler.  
-    # This event occurs when we call gtk_widget_destroy() on the window,
-    # or if we return FALSE in the "delete_event" callback.
-    #window.connect("destroy", destroy)
-
-    # Sets the border width of the window.
     window.set_border_width(10)
+    window.set_position(gtk.WIN_POS_CENTER)
 
-    # Creates a new button with the label "Hello World".
-    button = gtk.Button("Hello World")
-
-    # When the button receives the "clicked" signal, it will call the
-    # function hello() passing it None as its argument.  The hello()
-    # function is defined above.
-    button.connect("clicked", send_msg, "hello world")
-
-    # This will cause the window to be destroyed by calling
-    # gtk_widget_destroy(window) when "clicked".  Again, the destroy
-    # signal could come from here, or the window manager.
-    button.connect_object("clicked", gtk.Widget.destroy, window)
-
-    # This packs the button into the window (a GTK container).
-    window.add(button)
-
-    # The final step is to display this newly created widget.
+    table = gtk.Table(rows=6, columns=3, homogeneous=False)
+    window.add(table)
+    entry = gtk.Entry()
+    table.attach(entry,0,2,5,6)
+    entry.show()
+    button = gtk.Button("Send Msg")
+    table.attach(button,2,3,5,6)    
     button.show()
+    m = c.get_last_msgs(None)
+    c.reset_new_msgs()
+    st = gtk.ListStore(str, str, str)
+    for i in m:
+        st.append(i)
+    treeView = gtk.TreeView(st)
+    
+    rendererText = gtk.CellRendererText()
+    column = gtk.TreeViewColumn("Time", rendererText, text=0)
+    column.set_sort_column_id(0)    
+    treeView.append_column(column)
+    
+    rendererText = gtk.CellRendererText()
+    column = gtk.TreeViewColumn("Sender", rendererText, text=1)
+    column.set_sort_column_id(1)
+    treeView.append_column(column)
 
-    # and the window
+    rendererText = gtk.CellRendererText()
+    column = gtk.TreeViewColumn("Message", rendererText, text=2)
+    column.set_sort_column_id(2)
+    treeView.append_column(column)
+    treeView.show()
+    table.attach(treeView,0,1,0,1)
+    
+    table.show()
     window.show()
     
+    entry.connect("activate", send_msg)
+    entry.connect_object("activate", gtk.Widget.destroy, window)
+    button.connect_object("clicked", gtk.Widget.activate, entry)
+    
+def highlight_icon():
+    if c.check_new_msgs():
+        ind.set_status(appindicator.STATUS_ATTENTION)
+    else:
+        ind.set_status(appindicator.STATUS_ACTIVE)
+    return True
+        
     
 if __name__ == "__main__": 
     #you need this to use threads and GTK
     gobject.threads_init()
     
+    global c
     c = lunch_control()
     
+    global ind
     ind = appindicator.Indicator ("lunch notifier",
                                 "news-feed",
-                                appindicator.CATEGORY_APPLICATION_STATUS)
+                                appindicator.CATEGORY_COMMUNICATIONS)
     ind.set_status (appindicator.STATUS_ACTIVE)
-    ind.set_attention_icon ("indicator-messages-new")
+    ind.set_attention_icon ("gksu-root-terminal")
     
     # create a menu
     menu = gtk.Menu()    
@@ -109,21 +135,18 @@ if __name__ == "__main__":
     menu.append(msg_items)      
     msg_items.connect("activate", msg_window)
     msg_items.show()  
-    #server_item = gtk.MenuItem("Start Server")
-    #menu.append(server_item)      
-    #server_item.connect("activate", c.start_server)
-    #server_item.show()
-    #server_item2 = gtk.MenuItem("Stop Server")
-    #menu.append(server_item2)      
-    #server_item2.connect("activate", c.stop_server)
-    #server_item2.show()
     exit_item = gtk.MenuItem("Exit")
     menu.append(exit_item)      
     exit_item.connect("activate", c.quit)
-    exit_item.show()
+    exit_item.show() 
+    #test_item = gtk.MenuItem("Test")
+    #menu.append(test_item)      
+    #test_item.connect("activate", highlight_icon)
+    #test_item.show()
     
     c.start_server(menu)
     
     ind.set_menu(menu)
     
+    gobject.timeout_add(2000, highlight_icon)
     gtk.main()
