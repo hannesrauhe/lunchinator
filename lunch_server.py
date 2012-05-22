@@ -73,8 +73,8 @@ class lunch_server(object):
     
     def start_server(self):
         print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service"
-        lunch_client.call("HELO "+getpass.getuser())
-        self.running = True
+        self.running = True        
+        announce_name=True
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try: 
             s.bind(("", 50000)) 
@@ -100,7 +100,11 @@ class lunch_server(object):
                     else:                            
                         self.incoming_call(daten,addr[0])
                 except socket.timeout:
-                    pass
+                    if announce_name:                        
+                        lunch_client.call("HELO "+getpass.getuser())
+                        announce_name=False
+                    else:
+                        pass
         finally: 
             s.close()                    
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
