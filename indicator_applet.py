@@ -131,7 +131,7 @@ if __name__ == "__main__":
     menu.append(menu_items)      
     menu_items.connect("activate", send_msg, "lunch")
     menu_items.show()      
-    msg_items = gtk.MenuItem("Send message")
+    msg_items = gtk.MenuItem("Show/Send messages")
     menu.append(msg_items)      
     msg_items.connect("activate", msg_window)
     msg_items.show()  
