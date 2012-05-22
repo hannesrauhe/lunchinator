@@ -94,7 +94,7 @@ class lunch_server(object):
                             print "%s: %s issued an update but updates are disabled" % (t,addr)
                             
                     elif daten.startswith("HELO"):
-                        self.members[addr]=daten.split(" ",1)[1].strip()
+                        self.members[addr[0]]=daten.split(" ",1)[1].strip()
                         print self.members
                             
                     else:                            
