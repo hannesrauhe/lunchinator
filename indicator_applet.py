@@ -41,6 +41,9 @@ class lunch_control():
     def get_last_msgs(self,w):  
         return self.t.l.last_messages
     
+    def get_members(self):  
+        return self.t.l.members
+    
     def check_new_msgs(self):
         return self.t.l.new_msg
     
@@ -95,6 +98,26 @@ def msg_window(w):
     treeView.append_column(column)
     treeView.show()
     table.attach(treeView,0,1,0,1)
+    
+    
+    
+    m = c.get_members()
+    st = gtk.ListStore(str, str)
+    for i in m.items():
+        st.append(i)
+    treeView = gtk.TreeView(st)
+    
+    rendererText = gtk.CellRendererText()
+    column = gtk.TreeViewColumn("Member", rendererText, text=0)
+    column.set_sort_column_id(0)    
+    treeView.append_column(column)
+    
+    rendererText = gtk.CellRendererText()
+    column = gtk.TreeViewColumn("IP", rendererText, text=1)
+    column.set_sort_column_id(1)
+    treeView.append_column(column)
+    treeView.show()
+    table.attach(treeView,2,3,0,5)
     
     table.show()
     window.show()
