@@ -11,6 +11,7 @@ import getpass
 class lunch_server(object):
     running = False
     auto_update = True
+    update_request = False
     new_msg = False
     last_messages = [("start","start","start")]
     members = {"127.0.0.1":"myself"}
@@ -92,6 +93,7 @@ class lunch_server(object):
                             os.execlp("python","python",os.path.basename(sys.argv[0]))
                         else:
                             print "%s: %s issued an update but updates are disabled" % (t,addr)
+                            self.update_request = True
                             
                     elif daten.startswith("HELO"):
                         self.members[addr[0]]=daten.split(" ",1)[1].strip()
