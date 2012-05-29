@@ -2,8 +2,6 @@
 
 . /etc/*release
 
-#execute right script depending on distribution here
-#echo $DISTRIB_DESCRIPTION
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR
 
@@ -19,6 +17,13 @@ else
 	python lunch_updater.py
 fi
 
-unbuffer $DIR/indicator_applet.py >> $HOME/.lunch_calls
+#execute right script depending on distribution here
+echo ${DISTRIB_DESCRIPTION:0:6}
 
+if [ "${DISTRIB_DESCRIPTION:0:6}" = "Ubuntu" ]; then
+    unbuffer $DIR/indicator_applet.py >> $HOME/.lunch_calls
+else
+    unbuffer $DIR/gui_tray.py >> $HOME/.lunch_calls
+fi
+#
 
