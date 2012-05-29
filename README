@@ -1,8 +1,13 @@
 ONLY TESTED ON UBUNTU ATM
 
-INSTALL
+INSTALL DEPENDENCIES
 =======
-sudo apt-get install sox libnotify-bin
+sudo apt-get install sox libnotify-bin expect-dev
+
+USAGE UBUNTU
+============
+
+execute (Alt-F2 recommended) start_notifier.sh
 
 USAGE
 =====
