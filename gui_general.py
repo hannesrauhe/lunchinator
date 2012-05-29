@@ -131,12 +131,12 @@ def msg_window(w, c):
     treeView = gtk.TreeView(st)
     
     rendererText = gtk.CellRendererText()
-    column = gtk.TreeViewColumn("Member", rendererText, text=0)
+    column = gtk.TreeViewColumn("IP", rendererText, text=0)
     column.set_sort_column_id(0)    
     treeView.append_column(column)
     
     rendererText = gtk.CellRendererText()
-    column = gtk.TreeViewColumn("IP", rendererText, text=1)
+    column = gtk.TreeViewColumn("Member", rendererText, text=1)
     column.set_sort_column_id(1)
     treeView.append_column(column)
     treeView.show()
