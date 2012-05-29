@@ -1,3 +1,4 @@
+#!/usr/bin/python
 from gui_general import *
     
 def highlight_icon(c):

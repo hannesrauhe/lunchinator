@@ -23,6 +23,7 @@ echo ${DISTRIB_DESCRIPTION:0:6}
 if [ "${DISTRIB_DESCRIPTION:0:6}" = "Ubuntu" ]; then
     unbuffer $DIR/indicator_applet.py >> $HOME/.lunch_calls
 else
+    echo "starting gtk-tray instead of indicator"
     unbuffer $DIR/gui_tray.py >> $HOME/.lunch_calls
 fi
 #
