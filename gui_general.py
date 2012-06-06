@@ -4,6 +4,7 @@ import gtk
 import lunch_server
 import lunch_client
 import threading
+import getpass
 
 class ServerThread(threading.Thread): 
     l = lunch_server.lunch_server()
@@ -78,6 +79,7 @@ class lunchinator():
         exit_item.show()
     
 def send_msg(w,msg=None):
+    lunch_client.call("HELO "+getpass.getuser())
     if msg:
         lunch_client.call(msg)
     else:
