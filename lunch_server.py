@@ -7,14 +7,23 @@ import os
 import ctypes
 import lunch_client
 import getpass
+import json
 
 class lunch_server(object):
+    user_name = ""
     running = False
     auto_update = True
     update_request = False
     new_msg = False
+    my_master = -1
     last_messages = [("start","start","start")]
     members = {"127.0.0.1":"myself"}
+    
+    def get_user_name(self):
+        if self.user_name:
+            return user_name
+        else:
+            return getpass.getuser()
     
     def incoming_call(self,msg,addr):
         t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
@@ -75,7 +84,10 @@ class lunch_server(object):
     def start_server(self):
         print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service"
         self.running = True        
-        announce_name=True
+        got_members=False #i do not have any master yet... 
+        self.my_master=-1 #the peer i use as master
+        peer_nr=-1 #the number of the peer i contacted to be my master
+        announce_name=0 #how often did I announce my name
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try: 
             s.bind(("", 50000)) 
@@ -96,17 +108,43 @@ class lunch_server(object):
                             self.update_request = True
                             
                     elif daten.startswith("HELO"):
-                        self.members[addr[0]]=daten.split(" ",1)[1].strip()
-                        print self.members
+                        try:
+                            if daten.startswith("HELO_DICT"):
+                                #the master send me the list of members - yeah
+                                ext_members = daten.split(" ",1)[1].strip()
+                                self.members.update(json.loads(ext_members))
+                                if len(self.members)>2:
+                                    got_members=True
+                                    self.my_master = addr[0]
+                                    print "got members from",self.my_master,":",json.dumps(self.members)
+                                else:
+                                    print "got members from",addr[0],"but not enough -- continue trying"
+                                
+                            elif daten.startswith("HELO_MASTER"):
+                                #someone thinks i'm the master - I'll send him the members I know
+                                self.members[addr[0]]=daten.split(" ",1)[1].strip()
+                                lunch_client.call("HELO_DICT "+json.dumps(self.members),addr[0])
+                            else:
+                                #someone tells me his name    
+                                self.members[addr[0]]=daten.split(" ",1)[1].strip()
+                        except:
+                            print "Unexpected error while handling HELO call: ", sys.exc_info()[0]
+                            print "The data send was:",daten
                             
                     else:                            
                         self.incoming_call(daten,addr[0])
                 except socket.timeout:
-                    if announce_name:                        
-                        lunch_client.call("HELO "+getpass.getuser())
-                        announce_name=False
+                    if not got_members:        
+                        #I'm still waiting for someone to send me his list of members   
+                        peer_nr+=1                     
+                        peer_nr = lunch_client.call_peer_nr("HELO_MASTER "+getpass.getuser(),peer_nr)
+                    elif announce_name==10:
+                        #it's time to announce my name again
+                        lunch_client.call("HELO "+self.get_user_name())
+                        announce_name=0
                     else:
-                        pass
+                        #just wait for the next time when i have to announce my name
+                        announce_name+=1
         finally: 
             s.close()                    
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"

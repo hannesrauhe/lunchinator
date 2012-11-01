@@ -1,6 +1,28 @@
 #!/usr/bin/python
 import socket,sys,os
 
+def call_peer_nr(msg,peer_nr):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    f = open(sys.path[0]+"/lunch_members",'r')    
+    i=0
+    found=False
+    for ip in f.readlines():
+        if i==peer_nr:
+            print "sending",msg,"to",ip.strip(),
+            try:
+                s.sendto(msg, (ip.strip(), 50000)) 
+                found=True
+                break
+            except:
+                print "(Exception: hostname unknown)",
+        i+=1
+    s.close()
+    print ""
+    
+    if not found:
+        i=-1
+    return i
+    
 def call(msg,client=''):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     f = open(sys.path[0]+"/lunch_members",'r')
