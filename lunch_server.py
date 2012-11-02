@@ -125,7 +125,7 @@ class lunch_server(object):
                                     print "I'm the master for",addr[0]
                                     members_from_file=lunch_client.build_members_from_file()
                                     members_from_file.update(self.members)
-                                    self.members = members_from_file()
+                                    self.members = members_from_file
                                     self.members[addr[0]]=daten.split(" ",1)[1].strip()
                                     lunch_client.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                                 else:
