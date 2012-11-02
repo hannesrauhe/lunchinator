@@ -29,7 +29,7 @@ def call(msg,client=''):
     f = open(sys.path[0]+"/lunch_members",'r')
     #print "sending",msg,"to",
     if client:
-        print client
+        #print client
         try:
             s.sendto(msg, (client.strip(), 50000)) 
         except:

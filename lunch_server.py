@@ -123,6 +123,7 @@ class lunch_server(object):
                                 
                             elif daten.startswith("HELO_MASTER"):
                                 #someone thinks i'm the master - I'll send him the members I know
+                                print "I'm the master for",addr[0]
                                 self.members[addr[0]]=daten.split(" ",1)[1].strip()
                                 lunch_client.call("HELO_DICT "+json.dumps(self.members),addr[0])
                             else:
