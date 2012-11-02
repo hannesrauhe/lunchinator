@@ -51,6 +51,9 @@ class lunch_control():
         
     def disable_auto_update(self):
         self.t.l.auto_update=False
+
+    def set_user_name(self,name):
+        self.t.l.user_name=name
                   
     def quit(self,w): 
         self.stop_server(w)
