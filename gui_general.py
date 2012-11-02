@@ -5,6 +5,7 @@ import lunch_server
 import lunch_client
 import threading
 import getpass
+import time
 
 class ServerThread(threading.Thread): 
     l = lunch_server.lunch_server()
@@ -42,6 +43,9 @@ class lunch_control():
     
     def get_members(self):  
         return self.t.l.members
+
+    def get_member_timeout(self):  
+        return self.t.l.member_timeout
     
     def check_new_msgs(self):
         return self.t.l.new_msg
@@ -82,7 +86,6 @@ class lunchinator():
         exit_item.show()
     
 def send_msg(w,msg=None):
-    lunch_client.call("HELO "+getpass.getuser())
     if msg:
         lunch_client.call(msg)
     else:
@@ -129,10 +132,16 @@ def msg_window(w, c):
     
     
     
-    m = c.get_members()
-    st = gtk.ListStore(str, str)
-    for i in m.items():
-        st.append(i)
+    me = c.get_members()
+    ti = c.get_member_timeout()
+    st = gtk.ListStore(str, str, str)
+    for ip in me.keys():
+        member_entry=("","","")
+        if(ti.has_key(ip)):
+            member_entry = (ip,me[ip],int(time.time()-ti[ip]))
+        else:
+            member_entry = (ip,me[ip],"never")            
+        st.append(member_entry)
     treeView = gtk.TreeView(st)
     
     rendererText = gtk.CellRendererText()
@@ -141,8 +150,13 @@ def msg_window(w, c):
     treeView.append_column(column)
     
     rendererText = gtk.CellRendererText()
-    column = gtk.TreeViewColumn("Member", rendererText, text=1)
+    column = gtk.TreeViewColumn("Name", rendererText, text=1)
     column.set_sort_column_id(1)
+    treeView.append_column(column)
+
+    rendererText = gtk.CellRendererText()
+    column = gtk.TreeViewColumn("LastSeen", rendererText, text=2)
+    column.set_sort_column_id(2)
     treeView.append_column(column)
     treeView.show()
     table.attach(treeView,2,3,0,5)

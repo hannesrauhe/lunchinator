@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import socket
 import subprocess
-from time import gmtime, strftime, localtime
+from time import gmtime, strftime, localtime, time
 import sys
 import os
 import ctypes
@@ -18,6 +18,7 @@ class lunch_server(object):
     my_master = -1
     last_messages = [("start","start","start")]
     members = {"127.0.0.1":"myself"}
+    member_timeout = {"127.0.0.1":time()}
     
     def get_user_name(self):
         if self.user_name:
@@ -84,7 +85,7 @@ class lunch_server(object):
     def start_server(self):
         print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service"
         self.running = True        
-        got_members=False #i do not have any master yet... 
+        self.members = lunch_client.build_members_from_file()
         self.my_master=-1 #the peer i use as master
         peer_nr=-1 #the number of the peer i contacted to be my master
         announce_name=0 #how often did I announce my name
@@ -108,42 +109,43 @@ class lunch_server(object):
                             self.update_request = True
                             
                     elif daten.startswith("HELO"):
-                        try:
-                            if daten.startswith("HELO_DICT"):
-                                #the master send me the list of members - yeah
-                                ext_members = daten.split(" ",1)[1].strip()
-                                self.members.update(json.loads(ext_members))
-                                self.members["127.0.0.1"] = "myself"
-                                if len(self.members)>2:
-                                    got_members=True
+                        if not addr[0].startswith("127."):
+                            try:
+                                self.member_timeout[addr[0]]=time()
+                                if daten.startswith("HELO_DICT"):
+                                    #the master send me the list of members - yeah
+                                    ext_members = json.loads(daten.split(" ",1)[1].strip())
+                                    self.members.update(ext_members)
+                                    self.members["127.0.0.1"] = "myself"
                                     self.my_master = addr[0]
-                                    print "got members from",self.my_master,":",json.dumps(self.members)
-                                else:
-                                    print "got members from",addr[0],"but not enough -- continue trying"
-                                
-                            elif daten.startswith("HELO_MASTER"):
-                                #someone thinks i'm the master - I'll send him the members I know
-                                print "I'm the master for",addr[0]
-                                self.members[addr[0]]=daten.split(" ",1)[1].strip()
-                                lunch_client.call("HELO_DICT "+json.dumps(self.members),addr[0])
-                            else:
-                                #someone tells me his name    
-                                if addr[0]!="127.0.0.1":
+                                    print "got new members from",self.my_master,":",json.dumps([item for item in ext_members.keys() if not self.members.has_key(item)])
+                                    
+                                elif daten.startswith("HELO_MASTER"):
+                                    #someone thinks i'm the master - I'll send him the members I know
+                                    print "I'm the master for",addr[0]
+                                    members_from_file=lunch_client.build_members_from_file()
+                                    members_from_file.update(self.members)
+                                    self.members = members_from_file()
                                     self.members[addr[0]]=daten.split(" ",1)[1].strip()
-                        except:
-                            print "Unexpected error while handling HELO call: ", sys.exc_info()[0]
-                            print "The data send was:",daten
+                                    lunch_client.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
+                                else:
+                                    #someone tells me his name
+                                    self.members[addr[0]]=daten.split(" ",1)[1].strip()
+                            except:
+                                print "Unexpected error while handling HELO call: ", sys.exc_info()[0]
+                                print "The data send was:",daten
                             
                     else:                            
                         self.incoming_call(daten,addr[0])
                 except socket.timeout:
-                    if not got_members:        
+                    if self.my_master==-1:        
                         #I'm still waiting for someone to send me his list of members   
                         peer_nr+=1                     
-                        peer_nr = lunch_client.call_peer_nr("HELO_MASTER "+getpass.getuser(),peer_nr)
-                    elif announce_name==10:
+                        peer_nr = lunch_client.call("HELO_MASTER "+self.get_user_name(),peer_nr=peer_nr)
+                    
+                    if announce_name==10:
                         #it's time to announce my name again
-                        lunch_client.call("HELO "+self.get_user_name())
+                        lunch_client.call("HELO "+self.get_user_name(),hosts=self.members)
                         announce_name=0
                     else:
                         #just wait for the next time when i have to announce my name

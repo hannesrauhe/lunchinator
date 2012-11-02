@@ -1,59 +1,64 @@
 #!/usr/bin/python
 import socket,sys,os
 
-def call_peer_nr(msg,peer_nr):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+def build_members_from_file():
+    members = {}
     f = open(sys.path[0]+"/lunch_members",'r')    
-    i=0
-    found=False
-    for ip in f.readlines():
-        if i==peer_nr:
-            #print "sending",msg,"to",ip.strip(),
-            try:
-                s.sendto(msg, (ip.strip(), 50000)) 
-                found=True
-                break
-            except:              
-                pass
-                #print "(Exception: hostname unknown)",
-        i+=1
-    s.close()
-    #print ""
-    
-    if not found:
-        i=-1
-    return i
-    
-def call(msg,client=''):
+    for hostn in f.readlines():
+        try:
+            members[socket.gethostbyname(hostn.strip())]=hostn.strip()
+        except:
+            pass
+    if len(members)<=1:
+        print "Warning: Less than two host of the members file are online"
+    return members
+        
+def call(msg,client='',hosts={},peer_nr=-1):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    f = open(sys.path[0]+"/lunch_members",'r')
+    found_peer=False;
+    i=0
     #print "sending",msg,"to",
     if client:
         #print client
         try:
             s.sendto(msg, (client.strip(), 50000)) 
+            i+=1
         except:
-            pass
-            #print "(Exception: hostname unknown)",
+            print "Exception while sending msg %s to %s:"%(ip,name), sys.exc_info()[0]
     else:
-        for ip in f.readlines():
-            #print ip.strip(),
-            try:
-                s.sendto(msg, (ip.strip(), 50000)) 
-            except:
-                pass
-                #print "(Exception: hostname unknown)",
+        members = build_members_from_file()
+        members.update(hosts)
+        for ip,name in members.items():
+            if ip.startswith("127."):
+                continue
+            if i==peer_nr or peer_nr==-1:
+                #print ip.strip(),
+                try:
+                    s.sendto(msg, (ip.strip(), 50000))
+                    i+=1
+                    if peer_nr!=-1:
+                        found_peer=True
+                        break 
+                except:
+                    #print "Exception while sending msg %s to %s:"%(ip,name), sys.exc_info()[0]
+                    continue
     
     s.close() 
     #print ""
+    if peer_nr!=-1 and not found_peer:
+        i=-1
+    return i
 
 if __name__ == "__main__":
     msg = "lunch"
-    client =''
+    cli =''
     if len(sys.argv)>1:
         msg = sys.argv[1]
     if len(sys.argv)>2:
-        print client,":",
-        client = sys.argv[2]
+        cli = sys.argv[2]
+        print cli,":",
     print msg
-    call(msg,client)
+    
+    recv_nr=call(msg,client=cli)
+    print "sent to",recv_nr,"clients"
+    
