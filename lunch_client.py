@@ -29,24 +29,26 @@ def call(msg,client='',hosts={},peer_nr=-1):
         members = build_members_from_file()
         members.update(hosts)
         for ip,name in members.items():
+            print i,
             if ip.startswith("127."):
                 continue
             if i==peer_nr or peer_nr==-1:
-                #print ip.strip(),
+                print ip.strip()
                 try:
                     s.sendto(msg, (ip.strip(), 50000))
-                    i+=1
                     if peer_nr!=-1:
                         found_peer=True
+                        i+=1
                         break 
                 except:
                     #print "Exception while sending msg %s to %s:"%(ip,name), sys.exc_info()[0]
                     continue
+            i+=1
     
     s.close() 
     #print ""
     if peer_nr!=-1 and not found_peer:
-        i=-1
+        i=0
     return i
 
 if __name__ == "__main__":

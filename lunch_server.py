@@ -87,7 +87,7 @@ class lunch_server(object):
         self.running = True        
         self.members = lunch_client.build_members_from_file()
         self.my_master=-1 #the peer i use as master
-        peer_nr=-1 #the number of the peer i contacted to be my master
+        peer_nr=0 #the number of the peer i contacted to be my master
         announce_name=0 #how often did I announce my name
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try: 
@@ -139,10 +139,8 @@ class lunch_server(object):
                         self.incoming_call(daten,addr[0])
                 except socket.timeout:
                     if self.my_master==-1:        
-                        #I'm still waiting for someone to send me his list of members   
-                        peer_nr+=1                     
+                        #I'm still waiting for someone to send me his list of members
                         peer_nr = lunch_client.call("HELO_MASTER "+self.get_user_name(),peer_nr=peer_nr)
-                    
                     if announce_name==10:
                         #it's time to announce my name again
                         lunch_client.call("HELO "+self.get_user_name(),hosts=self.members)
