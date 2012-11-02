@@ -113,6 +113,7 @@ class lunch_server(object):
                                 #the master send me the list of members - yeah
                                 ext_members = daten.split(" ",1)[1].strip()
                                 self.members.update(json.loads(ext_members))
+                                self.members["127.0.0.1"] = "myself"
                                 if len(self.members)>2:
                                     got_members=True
                                     self.my_master = addr[0]
@@ -126,7 +127,8 @@ class lunch_server(object):
                                 lunch_client.call("HELO_DICT "+json.dumps(self.members),addr[0])
                             else:
                                 #someone tells me his name    
-                                self.members[addr[0]]=daten.split(" ",1)[1].strip()
+                                if addr[0]!="127.0.0.1":
+                                    self.members[addr[0]]=daten.split(" ",1)[1].strip()
                         except:
                             print "Unexpected error while handling HELO call: ", sys.exc_info()[0]
                             print "The data send was:",daten
