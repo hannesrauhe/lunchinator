@@ -14,7 +14,7 @@ else
  	git add lunch_members
 	git commit -m "added $(hostname) automatically"
 	git push
-	python lunch_updater.py
+#	python lunch_updater.py #not necessary anymore
 fi
 
 #execute right script depending on distribution here
