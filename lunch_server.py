@@ -22,7 +22,7 @@ class lunch_server(object):
     
     def get_user_name(self):
         if self.user_name:
-            return user_name
+            return self.user_name
         else:
             return getpass.getuser()
     
@@ -89,6 +89,10 @@ class lunch_server(object):
         self.my_master=-1 #the peer i use as master
         peer_nr=0 #the number of the peer i contacted to be my master
         announce_name=0 #how often did I announce my name
+        if os.path.exists(sys.path[0]+"/username.cfg"):
+            with open(sys.path[0]+"/username.cfg") as f:
+                self.user_name = f.readline()		
+                print "using name",self.user_name
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try: 
             s.bind(("", 50000)) 
@@ -116,7 +120,8 @@ class lunch_server(object):
                                     #the master send me the list of members - yeah
                                     ext_members = json.loads(daten.split(" ",1)[1].strip())
                                     self.members.update(ext_members)
-                                    self.members["127.0.0.1"] = "myself"
+                                    self.members = dict((k, v) for k, v in self.members.items() if not k.startswith("127"))
+                                    #self.members["127.0.0.1"] = "myself"
                                     self.my_master = addr[0]
                                     print "got new members from",self.my_master,":",json.dumps([item for item in ext_members.keys() if not self.members.has_key(item)])
                                     
