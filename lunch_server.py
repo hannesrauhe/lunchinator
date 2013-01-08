@@ -10,6 +10,7 @@ import getpass
 import json
 
 class lunch_server(object):
+    audio_file ="alarm.wav"
     user_name = ""
     running = False
     auto_update = True
@@ -58,7 +59,7 @@ class lunch_server(object):
                 pass
         
             try:
-                subprocess.call(["play", "-q", sys.path[0]+"/sounds/sonar.wav"])    
+                subprocess.call(["play", "-q", sys.path[0]+"/sounds/"+self.audio_file])    
             except:
                 print "sound error"
                 pass
@@ -100,6 +101,7 @@ class lunch_server(object):
             while self.running:
                 try:
                     daten, addr = s.recvfrom(1024) 
+#three types of messages: 1. call for application update'''
                     if daten.startswith("update"):
                         t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
                         if self.auto_update:
@@ -111,7 +113,7 @@ class lunch_server(object):
                         else:
                             print "%s: %s issued an update but updates are disabled" % (t,addr)
                             self.update_request = True
-                            
+#2. simple infrastructure protocoll messages starting with HELO'''                            
                     elif daten.startswith("HELO"):
                         if not addr[0].startswith("127."):
                             try:
@@ -139,7 +141,7 @@ class lunch_server(object):
                             except:
                                 print "Unexpected error while handling HELO call: ", sys.exc_info()[0]
                                 print "The data send was:",daten
-                            
+#3. everything else is a message that should be displayed to the user'''                            
                     else:                            
                         self.incoming_call(daten,addr[0])
                 except socket.timeout:

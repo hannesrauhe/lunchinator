@@ -29,9 +29,6 @@ def call(msg,client='',hosts={},peer_nr=-1):
         members = build_members_from_file()
         members.update(hosts)
         for ip,name in members.items():
-            #print i,
-            if ip.startswith("127."):
-                continue
             if i==peer_nr or peer_nr==-1:
                 #print ip.strip()
                 try:
