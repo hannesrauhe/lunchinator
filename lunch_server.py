@@ -10,7 +10,7 @@ import getpass
 import json
 
 class lunch_server(object):
-    audio_file ="alarm.wav"
+    audio_file ="sonar.wav"
     user_name = ""
     running = False
     auto_update = True
@@ -25,7 +25,11 @@ class lunch_server(object):
         if self.user_name:
             return self.user_name
         else:
-            return getpass.getuser()
+            if os.path.exists(sys.path[0]+"/username.cfg"):
+                with open(sys.path[0]+"/username.cfg") as f:
+                    return f.readline()
+            else:
+                return getpass.getuser()
     
     def incoming_call(self,msg,addr):
         t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
@@ -90,10 +94,6 @@ class lunch_server(object):
         self.my_master=-1 #the peer i use as master
         peer_nr=0 #the number of the peer i contacted to be my master
         announce_name=0 #how often did I announce my name
-        if os.path.exists(sys.path[0]+"/username.cfg"):
-            with open(sys.path[0]+"/username.cfg") as f:
-                self.user_name = f.readline()		
-                print "using name",self.user_name
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try: 
             s.bind(("", 50000)) 
