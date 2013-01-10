@@ -21,15 +21,23 @@ class lunch_server(object):
     members = {"127.0.0.1":"myself"}
     member_timeout = {"127.0.0.1":time()}
     
-    def get_user_name(self):
-        if self.user_name:
-            return self.user_name
+    '''will be called every ten seconds'''
+    def read_config(self):    
+        if os.path.exists(sys.path[0]+"/username.cfg"):
+            with open(sys.path[0]+"/username.cfg") as f:
+                self.user_name = f.readline().strip()
         else:
-            if os.path.exists(sys.path[0]+"/username.cfg"):
-                with open(sys.path[0]+"/username.cfg") as f:
-                    return f.readline()
-            else:
-                return getpass.getuser()
+             self.user_name = getpass.getuser()
+        if os.path.exists(sys.path[0]+"/sound.cfg"):
+            with open(sys.path[0]+"/sound.cfg") as f:
+                audio_file = f.readline().strip()
+                if os.path.exists(sys.path[0]+"/sounds/"+audio_file):
+                    self.audio_file = audio_file
+                else:
+                    print "configured audio file "+audio_file+" does not exist in sounds folder, using old one: "+self.audio_file
+        
+    def get_user_name(self):
+        return self.user_name
     
     def incoming_call(self,msg,addr):
         t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
@@ -92,8 +100,11 @@ class lunch_server(object):
         self.running = True        
         self.members = lunch_client.build_members_from_file()
         self.my_master=-1 #the peer i use as master
+        self.user_name=getpass.getuser()
         peer_nr=0 #the number of the peer i contacted to be my master
         announce_name=0 #how often did I announce my name
+        
+        self.read_config()
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try: 
             s.bind(("", 50000)) 
@@ -145,6 +156,7 @@ class lunch_server(object):
                     else:                            
                         self.incoming_call(daten,addr[0])
                 except socket.timeout:
+                    self.read_config()
                     if self.my_master==-1:        
                         #I'm still waiting for someone to send me his list of members
                         peer_nr = lunch_client.call("HELO_MASTER "+self.get_user_name(),peer_nr=peer_nr)
