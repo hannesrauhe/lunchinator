@@ -10,6 +10,11 @@ USAGE UBUNTU
 execute (Alt-F2 recommended) start_notifier.sh
 output will be logged to .lunch_calls
 
+CONFIG
+======
+Put your username in username.cfg.
+If you want another sound-file put a wav-file to the sounds-dir and write the filename to sound.cfg
+
 Details
 =====
 The bash script pulls the newest version from git and executes the indicator applet on ubuntu and the general tray icon on every other system (pygtk needed)
