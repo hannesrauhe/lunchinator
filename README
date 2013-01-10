@@ -8,21 +8,26 @@ USAGE UBUNTU
 ============
 
 execute (Alt-F2 recommended) start_notifier.sh
+output will be logged to .lunch_calls
 
-USAGE
+Details
 =====
-If you want to be notified for lunch, 
-1. add your machine to the lunch_members text file and push the changes to the git repository.
-2. execute python lunch_server
+The bash script pulls the newest version from git and executes the indicator applet on ubuntu and the general tray icon on every other system (pygtk needed)
 
-If you want to notify the lunch_members, that it's time for lunch:
-execute python lunch_client
+CLI
+===
 
-Please pull the newest version from the git repository from time to time to update your local lunch_members file and security fixes
+You can also start lunch_server.py in a console and watch the output there, to call for lunch you can execute lunch_client.py <message>
+
 
 HOW IT WORKS
 ============
 lunch_server listens on incoming UDP connections on Port 50000
 ATM it will not parse incoming messages - it will simply open/close your DVD and play a sound
+(Exception: Messages starting with HELO are there to communicate user names etc.)
 
+lunch_client sends a message to all clients that are in the lunch_members file (which is in the git repository)
+additional all clients that announce theirself will get a message as well (doesn't work from cli, only from gui)
+
+the other *.py-files are there for the gui/tray-icon/indicator-applet
 
