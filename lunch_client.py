@@ -10,12 +10,11 @@ def build_members_from_file():
         except:
             pass
     if len(members)<=1:
-        print "Warning: Less than two host of the members file are online"
+        print "Warning: Less than two host of the members file are online - names could not be resolved"
     return members
         
-def call(msg,client='',hosts={},peer_nr=-1):
+def call(msg,client='',hosts={}):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    found_peer=False;
     i=0
     #print "sending",msg,"to",
     if client:
@@ -24,29 +23,27 @@ def call(msg,client='',hosts={},peer_nr=-1):
             s.sendto(msg, (client.strip(), 50000)) 
             i+=1
         except:
-            print "Exception while sending msg %s to %s:"%(ip,name), sys.exc_info()[0]
-    else:
+            print "Exception while sending msg %s to %s:"%(msg,client), sys.exc_info()[0]
+    elif 0==len(hosts):
         members = build_members_from_file()
-        members.update(hosts)
         for ip,name in members.items():
-            if i==peer_nr or peer_nr==-1:
-                #print ip.strip()
-                try:
-                    s.sendto(msg, (ip.strip(), 50000))
-                    if peer_nr!=-1:
-                        found_peer=True
-                        i+=1
-                        break 
-                except:
-                    #print "Exception while sending msg %s to %s:"%(ip,name), sys.exc_info()[0]
-                    continue
-            i+=1
+            try:
+                s.sendto(msg, (ip.strip(), 50000))
+                i+=1
+            except:
+                #print "Exception while sending msg %s to %s:"%(ip,name), sys.exc_info()[0]
+                continue
+    else:
+        for ip,name in hosts.items():
+            #print ip.strip()
+            try:
+                s.sendto(msg, (ip.strip(), 50000))
+                i+=1
+            except:
+                #print "Exception while sending msg %s to %s:"%(ip,name), sys.exc_info()[0]
+                continue
     
     s.close() 
-    #print ""
-    if peer_nr!=-1 and not found_peer:
-        i=0
-    return i
 
 if __name__ == "__main__":
     msg = "lunch"

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import socket
 import subprocess
-from time import gmtime, strftime, localtime, time
+from time import strftime, localtime, time
 import sys
 import os
 import ctypes
@@ -12,14 +12,18 @@ import json
 class lunch_server(object):
     audio_file ="sonar.wav"
     user_name = ""
+    debug = True
     running = False
-    auto_update = True
+    auto_update = True    
+    members_file = sys.path[0]+"/lunch_members.cfg"
+    
     update_request = False
     new_msg = False
-    my_master = -1
+    my_master = -1    
+    peer_nr=0 #the number of the peer i contacted to be my master
     last_messages = [("start","start","start")]
-    members = {"127.0.0.1":"myself"}
-    member_timeout = {"127.0.0.1":time()}
+    members = {}
+    member_timeout = {}
     
     '''will be called every ten seconds'''
     def read_config(self):    
@@ -27,7 +31,7 @@ class lunch_server(object):
             with open(sys.path[0]+"/username.cfg") as f:
                 self.user_name = f.readline().strip()
         else:
-             self.user_name = getpass.getuser()
+                self.user_name = getpass.getuser()
         if os.path.exists(sys.path[0]+"/sound.cfg"):
             with open(sys.path[0]+"/sound.cfg") as f:
                 audio_file = f.readline().strip()
@@ -94,14 +98,54 @@ class lunch_server(object):
             except:
                 print "eject error (close)"
                 pass
+            
+    def init_members_from_file(self):
+        members = {}
+        f = open(sys.path[0]+"/lunch_members.cfg",'r')    
+        for hostn in f.readlines():
+            try:
+                members[socket.gethostbyname(hostn.strip())]=hostn.strip()
+            except:
+                print "cannot find host specified by",self.members_file,"with name",hostn
+        return members
     
+    def write_members_to_file(self):
+        try:
+            f = open(self.members_file,'w')
+            f.truncate()
+            for m in self.members.keys():
+                f.write(m+"\n")
+            f.close();
+        except:
+            print "Could not write",self.members_file
+
+    
+    def remove_inactive_members(self):
+        try:
+            for ip in self.members.keys():
+                if ip in self.member_timeout:
+                    if time()-self.member_timeout[ip]>100:
+                        del self.members[ip]
+                else:
+                    del self.members[ip]
+        except:
+            print "Something went wrong while trying to clean up the members-table"
+            
+    def call_new_master(self):
+        try:
+            if len(self.members.keys())>self.peer_nr:
+                lunch_client.call("HELO_MASTER "+self.get_user_name(),client=self.members.keys()[self.peer_nr])
+            self.peer_nr=(self.peer_nr+1) % len(self.members)
+        except:
+            print "Something went wrong while trying to send a call to the new master"
+            
+        
     def start_server(self):
         print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service"
         self.running = True        
-        self.members = lunch_client.build_members_from_file()
+        self.members = self.init_members_from_file()
         self.my_master=-1 #the peer i use as master
         self.user_name=getpass.getuser()
-        peer_nr=0 #the number of the peer i contacted to be my master
         announce_name=0 #how often did I announce my name
         
         self.read_config()
@@ -136,19 +180,23 @@ class lunch_server(object):
                                     self.members = dict((k, v) for k, v in self.members.items() if not k.startswith("127"))
                                     #self.members["127.0.0.1"] = "myself"
                                     self.my_master = addr[0]
-                                    print "got new members from",self.my_master,":",json.dumps([item for item in ext_members.keys() if not self.members.has_key(item)])
+#                                    print "got new members from",self.my_master,":",json.dumps([item for item in ext_members.keys() if not self.members.has_key(item)])
                                     
                                 elif daten.startswith("HELO_MASTER"):
                                     #someone thinks i'm the master - I'll send him the members I know
-                                    print "I'm the master for",addr[0]
-                                    members_from_file=lunch_client.build_members_from_file()
-                                    members_from_file.update(self.members)
-                                    self.members = members_from_file
+#                                    print "I'm the master for",addr[0]
+#                                   members_from_file=self.init_members_from_file()
+#                                    members_from_file.update(self.members)
+#                                    self.members = members_from_file
                                     self.members[addr[0]]=daten.split(" ",1)[1].strip()
                                     lunch_client.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                                 else:
                                     #someone tells me his name
-                                    self.members[addr[0]]=daten.split(" ",1)[1].strip()
+                                    if addr[0] in self.members:
+                                        self.members[addr[0]]=daten.split(" ",1)[1].strip()
+                                    else:
+                                        self.members[addr[0]]=daten.split(" ",1)[1].strip()                                        
+                                        self.write_members_to_file()
                             except:
                                 print "Unexpected error while handling HELO call: ", sys.exc_info()[0]
                                 print "The data send was:",daten
@@ -157,16 +205,22 @@ class lunch_server(object):
                         self.incoming_call(daten,addr[0])
                 except socket.timeout:
                     self.read_config()
-                    if self.my_master==-1:        
-                        #I'm still waiting for someone to send me his list of members
-                        peer_nr = lunch_client.call("HELO_MASTER "+self.get_user_name(),peer_nr=peer_nr)
+                    if self.my_master==-1:
+                        self.call_new_master()
                     if announce_name==10:
-                        #it's time to announce my name again
+                        #it's time to announce my name again and switch the master
                         lunch_client.call("HELO "+self.get_user_name(),hosts=self.members)
                         announce_name=0
+                        self.remove_inactive_members()
+                        self.call_new_master()
                     else:
                         #just wait for the next time when i have to announce my name
                         announce_name+=1
+                    if self.debug:
+                        if self.my_master==-1:
+                            print "no master found yet"
+                        print self.members
+                        print self.member_timeout
         finally: 
             s.close()                    
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
