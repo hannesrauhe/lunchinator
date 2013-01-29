@@ -1,6 +1,7 @@
 import sys
 import gobject
 import gtk
+import gtk.glade as glade
 import lunch_server
 import lunch_client
 import threading
@@ -91,6 +92,25 @@ def send_msg(w,msg=None):
     else:
         lunch_client.call(w.get_text())
     
+def dispatch_window(w,c):
+    if len(c.get_members())==0:
+        #add_host_window(w,c)
+        msg_window(w,c)
+    else:
+        msg_window(w,c)
+        
+def add_host_window(w, c):
+    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+
+    window.set_border_width(10)
+    window.set_position(gtk.WIN_POS_CENTER)
+    window.set_title("Lunchinator")
+    
+    label = gtk.Label("At the moment the list of peers is empty, it may help to specify the name of one peer:")
+    host_name_field = gtk.InputDialog()
+
+    
+        
 def msg_window(w, c):
     window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 
