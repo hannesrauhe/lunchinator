@@ -3,7 +3,7 @@ import socket,sys,os
 
 def build_members_from_file():
     members = {}
-    f = open(sys.path[0]+"/lunch_members",'r')    
+    f = open(sys.path[0]+"/lunch_members.cfg",'r')    
     for hostn in f.readlines():
         try:
             members[socket.gethostbyname(hostn.strip())]=hostn.strip()
