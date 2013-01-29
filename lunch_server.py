@@ -101,12 +101,13 @@ class lunch_server(object):
             
     def init_members_from_file(self):
         members = {}
-        f = open(sys.path[0]+"/lunch_members.cfg",'r')    
-        for hostn in f.readlines():
-            try:
-                members[socket.gethostbyname(hostn.strip())]=hostn.strip()
-            except:
-                print "cannot find host specified by",self.members_file,"with name",hostn
+        if os.path.exists(self.members_file):
+            f = open(self.members_file,'r')    
+            for hostn in f.readlines():
+                try:
+                    members[socket.gethostbyname(hostn.strip())]=hostn.strip()
+                except:
+                    print "cannot find host specified by",self.members_file,"with name",hostn
         return members
     
     def write_members_to_file(self):
