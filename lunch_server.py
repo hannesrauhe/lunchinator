@@ -15,7 +15,7 @@ class lunch_server(object):
     debug = False
     auto_update = True    
     members_file = sys.path[0]+"/lunch_members.cfg"
-    peer_timeout = 500
+    peer_timeout = 604800 #one week so that we don't forget someone too soon
     
     running = False
     update_request = False
@@ -27,7 +27,10 @@ class lunch_server(object):
     member_timeout = {}
     
     '''will be called every ten seconds'''
-    def read_config(self):    
+    def read_config(self): 
+        if len(self.members)==0:
+            self.members=self.init_members_from_file()
+            
         if os.path.exists(sys.path[0]+"/debug.cfg"):
             self.debug = True
         else:
@@ -163,8 +166,7 @@ class lunch_server(object):
         
     def start_server(self):
         print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service"
-        self.running = True        
-        self.members = self.init_members_from_file()
+        self.running = True
         self.my_master=-1 #the peer i use as master
         self.user_name=getpass.getuser()
         announce_name=0 #how often did I announce my name
@@ -228,15 +230,16 @@ class lunch_server(object):
                     self.read_config()
                     if self.my_master==-1:
                         self.call_new_master()
-                    if announce_name==10:
-                        #it's time to announce my name again and switch the master
-                        lunch_client.call("HELO "+self.get_user_name(),hosts=self.members)
-                        announce_name=0
-                        self.remove_inactive_members()
-                        self.call_new_master()
                     else:
-                        #just wait for the next time when i have to announce my name
-                        announce_name+=1
+                        if announce_name==10:
+                            #it's time to announce my name again and switch the master
+                            lunch_client.call("HELO "+self.get_user_name(),hosts=self.members)
+                            announce_name=0
+                            self.remove_inactive_members()
+                            self.call_new_master()
+                        else:
+                            #just wait for the next time when i have to announce my name
+                            announce_name+=1
                     if self.debug:
                         if self.my_master==-1:
                             print "no master found yet"
