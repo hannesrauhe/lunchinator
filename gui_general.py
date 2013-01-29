@@ -7,6 +7,7 @@ import lunch_client
 import threading
 import getpass
 import time
+import socket
 
 class ServerThread(threading.Thread): 
     l = lunch_server.lunch_server()
@@ -91,99 +92,142 @@ def send_msg(w,msg=None):
         lunch_client.call(msg)
     else:
         lunch_client.call(w.get_text())
-    
-def dispatch_window(w,c):
-    if len(c.get_members())==0:
-        #add_host_window(w,c)
-        msg_window(w,c)
-    else:
-        msg_window(w,c)
         
-def add_host_window(w, c):
+def add_host(w,*data):
+    hostn = w.get_text()
+    c = data[0]
+    try:
+        c.t.l.members[socket.gethostbyname(hostn.strip())]=hostn.strip()
+    except:
+        d = gtk.MessageDialog(parent=None, flags=0, type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK, message_format=None)
+        d.set_markup("Cannot add host: Hostname unknown")
+        d.run()
+
+class UpdatingTable(object):    
+    def __init__(self,box,c):
+        self.c = c        
+        self.treeView = gtk.TreeView(self.create_model())
+        self.fill_treeview()
+        self.treeView.show()        
+        box.pack_start(self.treeView, True, False, 3)
+        gobject.timeout_add(100, self.timeout)        
+        
+    def timeout(self):
+        self.treeView.set_model(self.create_model())
+        return True
+    
+    def fill_treeview(self):
+        return None
+    
+    def create_model(self):
+        return None
+    
+class MembersTable(UpdatingTable):    
+    def __init__(self,box,c):
+        UpdatingTable.__init__(self,box,c)        
+        
+    def fill_treeview(self):        
+        rendererText = gtk.CellRendererText()
+        column = gtk.TreeViewColumn("IP", rendererText, text=0)
+        column.set_sort_column_id(0)    
+        self.treeView.append_column(column)
+        
+        rendererText = gtk.CellRendererText()
+        column = gtk.TreeViewColumn("Name", rendererText, text=1)
+        column.set_sort_column_id(1)
+        self.treeView.append_column(column)
+    
+        rendererText = gtk.CellRendererText()
+        column = gtk.TreeViewColumn("LastSeen", rendererText, text=2)
+        column.set_sort_column_id(2)
+        self.treeView.append_column(column)
+    
+    def create_model(self):
+        me = self.c.get_members()
+        ti = self.c.get_member_timeout()
+        st = gtk.ListStore(str, str, int)
+        for ip in me.keys():
+            member_entry=("","","")
+            if(ti.has_key(ip)):
+                member_entry = (ip,me[ip],int(time.time()-ti[ip]))
+            else:
+                member_entry = (ip,me[ip],-1)            
+            st.append(member_entry)
+        return st
+    
+class MessageTable(UpdatingTable):
+    def __init__(self,box,c):
+        UpdatingTable.__init__(self,box,c)     
+        
+    def fill_treeview(self):
+        rendererText = gtk.CellRendererText()
+        column = gtk.TreeViewColumn("Time", rendererText, text=0)
+        column.set_sort_column_id(0)    
+        self.treeView.append_column(column)
+        
+        rendererText = gtk.CellRendererText()
+        column = gtk.TreeViewColumn("Sender", rendererText, text=1)
+        column.set_sort_column_id(1)
+        self.treeView.append_column(column)
+    
+        rendererText = gtk.CellRendererText()
+        column = gtk.TreeViewColumn("Message", rendererText, text=2)
+        column.set_sort_column_id(2)
+        self.treeView.append_column(column)
+    
+    def create_model(self):
+        m = self.c.get_last_msgs(None)
+        st = gtk.ListStore(str, str, str)
+        for i in m:
+            i=(time.strftime("%a, %d %b %Y %H:%M:%S", i[0]),i[1],i[2])
+            st.append(i)
+        return st
+        
+        
+    
+def msg_window(w, c):    
+    c.reset_new_msgs() 
+    
     window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 
     window.set_border_width(10)
     window.set_position(gtk.WIN_POS_CENTER)
     window.set_title("Lunchinator")
     
-    label = gtk.Label("At the moment the list of peers is empty, it may help to specify the name of one peer:")
-    host_name_field = gtk.InputDialog()
-
+    box1 = gtk.VBox(False, 0)
+    box2 = gtk.HBox(False, 0)    
+    msgt = MessageTable(box2,c)    
+    memt = MembersTable(box2,c)
+    box1.pack_start(box2, False, False, 0)
+    box2.show()
     
-        
-def msg_window(w, c):
-    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-
-    window.set_border_width(10)
-    window.set_position(gtk.WIN_POS_CENTER)
-    window.set_title("Lunchinator")
-
-    table = gtk.Table(rows=6, columns=3, homogeneous=False)
-    window.add(table)
-    entry = gtk.Entry()
-    table.attach(entry,0,2,5,6)
+    box2 = gtk.HBox(False, 0)
+    entry = gtk.Entry()    
+    box2.pack_start(entry, True, True, 0)
     entry.show()
     button = gtk.Button("Send Msg")
-    table.attach(button,2,3,5,6)    
+    box2.pack_start(button, True, False, 0)
     button.show()
-    m = c.get_last_msgs(None)
-    c.reset_new_msgs()
-    st = gtk.ListStore(str, str, str)
-    for i in m:
-        st.append(i)
-    treeView = gtk.TreeView(st)
     
-    rendererText = gtk.CellRendererText()
-    column = gtk.TreeViewColumn("Time", rendererText, text=0)
-    column.set_sort_column_id(0)    
-    treeView.append_column(column)
+#    box1.pack_start(box2, False, False, 0)
+#    box2.show()
+#        
+#    box2 = gtk.HBox(False, 0)
+    entry2 = gtk.Entry()    
+    box2.pack_start(entry2, True, True, 0)
+    entry2.show()
+    button2 = gtk.Button("Add Host")
+    box2.pack_start(button2, True, False, 0)
+    button2.show()
     
-    rendererText = gtk.CellRendererText()
-    column = gtk.TreeViewColumn("Sender", rendererText, text=1)
-    column.set_sort_column_id(1)
-    treeView.append_column(column)
-
-    rendererText = gtk.CellRendererText()
-    column = gtk.TreeViewColumn("Message", rendererText, text=2)
-    column.set_sort_column_id(2)
-    treeView.append_column(column)
-    treeView.show()
-    table.attach(treeView,0,1,0,1)
+    box1.pack_start(box2, False, False, 0)
+    box2.show()
     
-    
-    
-    me = c.get_members()
-    ti = c.get_member_timeout()
-    st = gtk.ListStore(str, str, str)
-    for ip in me.keys():
-        member_entry=("","","")
-        if(ti.has_key(ip)):
-            member_entry = (ip,me[ip],int(time.time()-ti[ip]))
-        else:
-            member_entry = (ip,me[ip],"never")            
-        st.append(member_entry)
-    treeView = gtk.TreeView(st)
-    
-    rendererText = gtk.CellRendererText()
-    column = gtk.TreeViewColumn("IP", rendererText, text=0)
-    column.set_sort_column_id(0)    
-    treeView.append_column(column)
-    
-    rendererText = gtk.CellRendererText()
-    column = gtk.TreeViewColumn("Name", rendererText, text=1)
-    column.set_sort_column_id(1)
-    treeView.append_column(column)
-
-    rendererText = gtk.CellRendererText()
-    column = gtk.TreeViewColumn("LastSeen", rendererText, text=2)
-    column.set_sort_column_id(2)
-    treeView.append_column(column)
-    treeView.show()
-    table.attach(treeView,2,3,0,5)
-    
-    table.show()
+    window.add(box1)   
+    box1.show()
     window.show()
-    
     entry.connect("activate", send_msg)
     entry.connect_object("activate", gtk.Widget.destroy, window)
     button.connect_object("clicked", gtk.Widget.activate, entry)
+    entry2.connect("activate", add_host, c)
+    button2.connect_object("clicked", gtk.Widget.activate, entry2)
