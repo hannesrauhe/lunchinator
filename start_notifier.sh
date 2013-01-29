@@ -7,15 +7,15 @@ cd $DIR
 
 git pull
 
-if grep -q $(hostname) lunch_members
-	then echo "already a lunch member"
-else
-	echo $(hostname) >> lunch_members
- 	git add lunch_members
-	git commit -m "added $(hostname) automatically"
-	git push
+#if grep -q $(hostname) lunch_members
+#	then echo "already a lunch member"
+#else
+#	echo $(hostname) >> lunch_members
+# 	git add lunch_members
+#	git commit -m "added $(hostname) automatically"
+#	git push
 #	python lunch_updater.py #not necessary anymore
-fi
+#fi
 
 #execute right script depending on distribution here
 echo ${DISTRIB_DESCRIPTION:0:6}

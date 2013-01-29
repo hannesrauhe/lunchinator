@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import socket
 import subprocess
-from time import strftime, localtime, time
+from time import strftime, localtime, time, mktime
 import sys
 import os
 import ctypes
@@ -12,21 +12,25 @@ import json
 class lunch_server(object):
     audio_file ="sonar.wav"
     user_name = ""
-    debug = True
-    running = False
+    debug = False
     auto_update = True    
     members_file = sys.path[0]+"/lunch_members.cfg"
     
+    running = False
     update_request = False
     new_msg = False
     my_master = -1    
     peer_nr=0 #the number of the peer i contacted to be my master
-    last_messages = [("start","start","start")]
+    last_messages = []
     members = {}
     member_timeout = {}
     
     '''will be called every ten seconds'''
     def read_config(self):    
+        if os.path.exists(sys.path[0]+"/debug.cfg"):
+            self.debug = True
+        else:
+            self.debug = False
         if os.path.exists(sys.path[0]+"/username.cfg"):
             with open(sys.path[0]+"/username.cfg") as f:
                 self.user_name = f.readline().strip()
@@ -44,15 +48,29 @@ class lunch_server(object):
         return self.user_name
     
     def incoming_call(self,msg,addr):
+        mtime = localtime()
+        
         t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
         m = addr
         if addr in self.members:
             m = self.members[addr]
-        print "%s: [%s] %s" % (t,m, msg)
+            
+        if len(self.last_messages)>0:
+            last = self.last_messages[0]            
+            if msg==last[2] and mktime(mtime)-mktime(last[0])<5:
+                if self.debug:
+                    print "a second message with the same text arrived within 5 seconds: "
+                    print "%s: [%s] %s" % (t,m,msg)
+                return
+            if addr==last[1] and mktime(mtime)-mktime(last[0])<5:
+                if self.debug:
+                    print "somebody sent two msgs in a row - was muted: "
+                    print "%s: [%s] %s" % (t,m,msg)
+                return
+            
+        print "%s: [%s] %s" % (t,m,msg)
         
-        self.last_messages.append((t,m,msg))
-        if len(self.last_messages)>5:
-            self.last_messages.pop(0)
+        self.last_messages.insert(0,(mtime,addr,msg))
         self.new_msg = True
             
         if sys.platform.startswith('linux'):
