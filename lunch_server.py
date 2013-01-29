@@ -15,6 +15,7 @@ class lunch_server(object):
     debug = False
     auto_update = True    
     members_file = sys.path[0]+"/lunch_members.cfg"
+    peer_timeout = 500
     
     running = False
     update_request = False
@@ -130,11 +131,12 @@ class lunch_server(object):
     
     def write_members_to_file(self):
         try:
-            f = open(self.members_file,'w')
-            f.truncate()
-            for m in self.members.keys():
-                f.write(m+"\n")
-            f.close();
+            if len(self.members)>2:
+                f = open(self.members_file,'w')
+                f.truncate()
+                for m in self.members.keys():
+                    f.write(m+"\n")
+                f.close();
         except:
             print "Could not write",self.members_file
 
@@ -143,7 +145,7 @@ class lunch_server(object):
         try:
             for ip in self.members.keys():
                 if ip in self.member_timeout:
-                    if time()-self.member_timeout[ip]>100:
+                    if time()-self.member_timeout[ip]>self.peer_timeout:
                         del self.members[ip]
                 else:
                     del self.members[ip]
