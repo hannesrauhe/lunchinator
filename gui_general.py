@@ -235,4 +235,4 @@ def msg_window(w, c):
     entry.connect_object("activate", gtk.Widget.destroy, window)
     button.connect_object("clicked", gtk.Widget.activate, entry)
     entry2.connect("activate", add_host, c)
-    button2.connect_object("clicked", gtk.Widget.activate, entry2)
+    button2.connect_object("clicked", gtk.Widget.activate, entry2) 
