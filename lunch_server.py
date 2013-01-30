@@ -185,6 +185,7 @@ class lunch_server(object):
                         if self.auto_update:
                             print "%s: [%s] update and restart" % (t,addr)
                             os.chdir(sys.path[0])
+                            subprocess.call(["git","stash"])
                             subprocess.call(["git","pull"])
                             s.close()
                             os.execlp("python","python",os.path.basename(sys.argv[0]))
