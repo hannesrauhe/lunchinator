@@ -76,7 +76,7 @@ class lunchinator():
         self.menu = gtk.Menu()    
         menu_items = gtk.MenuItem("Call for lunch")
         self.menu.append(menu_items)      
-        menu_items.connect("activate", send_msg, "lunch")
+        menu_items.connect("activate", send_msg, self.c, "lunch")
         menu_items.show()      
         msg_items = gtk.MenuItem("Show/Send messages")
         self.menu.append(msg_items)      
@@ -87,9 +87,10 @@ class lunchinator():
         exit_item.connect("activate", self.c.quit)
         exit_item.show()
     
-def send_msg(w,msg=None):
-    if msg:
-        lunch_client.call(msg)
+def send_msg(w,*data):
+    c = data[0]
+    if len(data)>1:
+        lunch_client.call(data[1],hosts=c.get_members())
     else:
         lunch_client.call(w.get_text())
         
@@ -226,7 +227,7 @@ def msg_window(w, c):
     window.add(box1)   
     box1.show()
     window.show()
-    entry.connect("activate", send_msg)
+    entry.connect("activate", send_msg, c)
     entry.connect_object("activate", gtk.Widget.destroy, window)
     button.connect_object("clicked", gtk.Widget.activate, entry)
     entry2.connect("activate", add_host, c)

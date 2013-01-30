@@ -3,14 +3,17 @@ import socket,sys,os
 
 def build_members_from_file():
     members = {}
-    f = open(sys.path[0]+"/lunch_members.cfg",'r')    
-    for hostn in f.readlines():
-        try:
-            members[socket.gethostbyname(hostn.strip())]=hostn.strip()
-        except:
-            pass
-    if len(members)<=1:
-        print "Warning: Less than two host of the members file are online - names could not be resolved"
+    try:
+        f = open(sys.path[0]+"/lunch_members.cfg",'r')    
+        for hostn in f.readlines():
+            try:
+                members[socket.gethostbyname(hostn.strip())]=hostn.strip()
+            except:
+                pass
+        if len(members)<=1:
+            print "Warning: Less than two host of the members file are online - names could not be resolved"
+    except:
+        print "lunch_members.cfg does not exist - are you connected to anyone?"
     return members
         
 def call(msg,client='',hosts={}):
@@ -46,6 +49,7 @@ def call(msg,client='',hosts={}):
         s.sendto(msg, ("127.0.0.1", 50000))
     
     s.close() 
+    return i
 
 if __name__ == "__main__":
     msg = "lunch"

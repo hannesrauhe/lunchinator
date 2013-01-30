@@ -76,11 +76,12 @@ class lunch_server(object):
         
         self.last_messages.insert(0,(mtime,addr,msg))
         self.new_msg = True
-            
-        if sys.platform.startswith('linux'):
-            self.incoming_call_linux(msg,m)
-        else:
-            self.incoming_call_win(msg,m)
+        
+        if not msg.startswith("ignore"):
+            if sys.platform.startswith('linux'):
+                self.incoming_call_linux(msg,m)
+            else:
+                self.incoming_call_win(msg,m)
             
     def incoming_call_linux(self,msg,addr):    
         try:
@@ -203,7 +204,9 @@ class lunch_server(object):
                                     self.members.update(ext_members)
                                     self.members = dict((k, v) for k, v in self.members.items() if not k.startswith("127"))
                                     #self.members["127.0.0.1"] = "myself"
-                                    self.my_master = addr[0]
+                                    self.my_master = addr[0]                                    
+                                    if not os.path.exists(self.members_file):
+                                        self.write_members_to_file()
 #                                    print "got new members from",self.my_master,":",json.dumps([item for item in ext_members.keys() if not self.members.has_key(item)])
                                     
                                 elif daten.startswith("HELO_MASTER"):
