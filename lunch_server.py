@@ -16,6 +16,7 @@ class lunch_server(object):
     auto_update = True    
     members_file = sys.path[0]+"/lunch_members.cfg"
     peer_timeout = 604800 #one week so that we don't forget someone too soon
+    mute_timeout = 30
     
     running = False
     update_request = False
@@ -61,12 +62,12 @@ class lunch_server(object):
             
         if len(self.last_messages)>0:
             last = self.last_messages[0]            
-            if msg==last[2] and mktime(mtime)-mktime(last[0])<5:
+            if msg==last[2] and mktime(mtime)-mktime(last[0])<self.mute_timeout:
                 if self.debug:
-                    print "a second message with the same text arrived within 5 seconds: "
+                    print "a second message with the same text arrived within",self.mute_timeout, "seconds: "
                     print "%s: [%s] %s" % (t,m,msg)
                 return
-            if addr==last[1] and mktime(mtime)-mktime(last[0])<5:
+            if addr==last[1] and mktime(mtime)-mktime(last[0])<self.mute_timeout:
                 if self.debug:
                     print "somebody sent two msgs in a row - was muted: "
                     print "%s: [%s] %s" % (t,m,msg)
