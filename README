@@ -1,14 +1,32 @@
-ONLY TESTED ON UBUNTU ATM
-
 INSTALL DEPENDENCIES
 =======
-sudo apt-get install sox libnotify-bin expect-dev
+ sudo apt-get install sox libnotify-bin expect-dev
 
-USAGE UBUNTU
-============
+Open Up port 50000/UDP on your machine
+
+
+USAGE WITH GUI
+=============
 
 execute (Alt-F2 recommended) start_notifier.sh
 output will be logged to .lunch_calls
+
+first time usage:
+click on the icon (RSS-standard icon next to the clock) and on "Show/Send Messages"
+write a hostname/IP of one of the lunch peers (e.g. luder) to the right bottom text field, click on "add host" and wait a few seconds
+
+CLI
+===
+If you don't have a GUI or no pyGTK, you can also use the CLI.
+Before you start, check if you have a lunch_members.cfg file with at least one peer. If you don't have one:
+
+ echo "luder" >> lunch_members.cfg
+
+start the server:
+ lunch_server.py 
+
+to send a call:
+ lunch_client.py <message>
 
 CONFIG
 ======
@@ -16,23 +34,17 @@ Put your username in username.cfg.
 If you want another sound-file put a wav-file to the sounds-dir and write the filename to sound.cfg
 
 Details
-=====
+======
 The bash script pulls the newest version from git and executes the indicator applet on ubuntu and the general tray icon on every other system (pygtk needed)
-
-CLI
-===
-
-You can also start lunch_server.py in a console and watch the output there, to call for lunch you can execute lunch_client.py <message>
-
 
 HOW IT WORKS
 ============
 lunch_server listens on incoming UDP connections on Port 50000
-ATM it will not parse incoming messages - it will simply open/close your DVD and play a sound
+ATM it will not parse incoming messages - it will simply show a notice (and open/close your DVD and play a sound at lunch time)
 (Exception: Messages starting with HELO are there to communicate user names etc.)
+From time to time, the lunch_server will write all members to lunch_members.cfg
 
-lunch_client sends a message to all clients that are in the lunch_members file (which is in the git repository)
+lunch_client sends a message to all clients that are in the lunch_members.cfg file (which is in the git repository)
 additional all clients that announce theirself will get a message as well (doesn't work from cli, only from gui)
 
 the other *.py-files are there for the gui/tray-icon/indicator-applet
-
