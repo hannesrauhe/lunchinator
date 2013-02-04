@@ -3,9 +3,9 @@ import appindicator
 from gui_general import *
     
 def highlight_icon(c):
-    if len(c.get_members())==0:
-        ind.set_status(appindicator.STATUS_PASSIVE)
-    elif c.check_new_msgs():
+#    if len(c.get_members())==0:
+#        ind.set_status(appindicator.STATUS_PASSIVE)
+    if c.check_new_msgs():
         ind.set_status(appindicator.STATUS_ATTENTION)
     else:
         ind.set_status(appindicator.STATUS_ACTIVE)
