@@ -3,6 +3,7 @@
 import time
 import usb
 import lunch_client
+import subprocess
 
 def findButton():
 	for bus in usb.busses():
@@ -35,6 +36,7 @@ while 1:
 		result = handle.interruptRead(endpoint.address, endpoint.maxPacketSize)
 		if 22==result[0]:
 			if not unbuffer:
+				subprocess.call(["./sirene.sh"])
 				print "pressed"
 				lunch_client.call("lunch panic")
 			unbuffer = True
