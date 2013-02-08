@@ -154,6 +154,7 @@ class MembersTable(UpdatingTable):
             else:
                 member_entry = (ip,me[ip],-1)            
             st.append(member_entry)
+        st.set_sort_column_id(2,gtk.SORT_DESCENDING)
         return st
     
 class MessageTable(UpdatingTable):
@@ -180,7 +181,10 @@ class MessageTable(UpdatingTable):
         m = self.c.get_last_msgs(None)
         st = gtk.ListStore(str, str, str)
         for i in m:
-            i=(time.strftime("%a, %d %b %Y %H:%M:%S", i[0]),i[1],i[2])
+            if i[1] in self.c.get_members():
+                i=(time.strftime("%a, %d %b %Y %H:%M:%S", i[0]),self.c.get_members()[i[1]],i[2])
+            else:
+                i=(time.strftime("%a, %d %b %Y %H:%M:%S", i[0]),i[1],i[2])
             st.append(i)
         return st
         
@@ -231,4 +235,4 @@ def msg_window(w, c):
     entry.connect_object("activate", gtk.Widget.destroy, window)
     button.connect_object("clicked", gtk.Widget.activate, entry)
     entry2.connect("activate", add_host, c)
-    button2.connect_object("clicked", gtk.Widget.activate, entry2)
+    button2.connect_object("clicked", gtk.Widget.activate, entry2) 
