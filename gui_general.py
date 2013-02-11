@@ -109,8 +109,14 @@ class UpdatingTable(object):
         self.c = c        
         self.treeView = gtk.TreeView(self.create_model())
         self.fill_treeview()
-        self.treeView.show()        
-        box.pack_start(self.treeView, True, False, 3)
+        self.scrollTree = gtk.ScrolledWindow()
+        self.scrollTree.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.scrollTree.set_border_width(10)
+        self.scrollTree.add_with_viewport(self.treeView)  
+        self.scrollTree.set_size_request(300, 250)   
+        self.treeView.show()
+        self.scrollTree.show()   
+        box.pack_start(self.scrollTree, True, False, 3)
         gobject.timeout_add(100, self.timeout)        
         
     def timeout(self):
@@ -197,6 +203,7 @@ def msg_window(w, c):
 
     window.set_border_width(10)
     window.set_position(gtk.WIN_POS_CENTER)
+#    window.set_size_request(00, 300)
     window.set_title("Lunchinator")
     
     box1 = gtk.VBox(False, 0)
