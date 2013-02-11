@@ -113,7 +113,7 @@ class UpdatingTable(object):
         self.scrollTree.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.scrollTree.set_border_width(10)
         self.scrollTree.add_with_viewport(self.treeView)  
-        self.scrollTree.set_size_request(300, 250)   
+        self.scrollTree.set_size_request(400, 250)   
         self.treeView.show()
         self.scrollTree.show()   
         box.pack_start(self.scrollTree, True, False, 3)
@@ -188,9 +188,9 @@ class MessageTable(UpdatingTable):
         st = gtk.ListStore(str, str, str)
         for i in m:
             if i[1] in self.c.get_members():
-                i=(time.strftime("%a, %d %b %Y %H:%M:%S", i[0]),self.c.get_members()[i[1]],i[2])
+                i=(time.strftime("%a, %d.%m.%Y %H:%M:%S", i[0]),self.c.get_members()[i[1]],i[2])
             else:
-                i=(time.strftime("%a, %d %b %Y %H:%M:%S", i[0]),i[1],i[2])
+                i=(time.strftime("%a, %d.%m.%Y %H:%M:%S", i[0]),i[1],i[2])
             st.append(i)
         return st
         
@@ -203,7 +203,6 @@ def msg_window(w, c):
 
     window.set_border_width(10)
     window.set_position(gtk.WIN_POS_CENTER)
-#    window.set_size_request(00, 300)
     window.set_title("Lunchinator")
     
     box1 = gtk.VBox(False, 0)
