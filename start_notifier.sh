@@ -23,10 +23,10 @@ git pull
 echo ${DISTRIB_DESCRIPTION:0:6}
 
 if [ "${DISTRIB_DESCRIPTION:0:6}" = "Ubuntu" ]; then
-    unbuffer $LUNCHINATOR_DIR/indicator_applet.py --distrib-release=${DISTRIB_RELEASE} >> $LUNCHINATOR_CONFIG_DIR/.lunch_calls
+    unbuffer $LUNCHINATOR_DIR/indicator_applet.py --distrib-release=${DISTRIB_RELEASE} >> $LUNCHINATOR_CONFIG_DIR/lunch_calls.log
 else
     echo "starting gtk-tray instead of indicator"
-    unbuffer $LUNCHINATOR_DIR/gui_tray.py >> $LUNCHINATOR_CONFIG_DIR/.lunch_calls
+    unbuffer $LUNCHINATOR_DIR/gui_tray.py >> $LUNCHINATOR_CONFIG_DIR/lunch_calls.log
 fi
 #
 
