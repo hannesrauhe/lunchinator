@@ -1,13 +1,12 @@
 import sys
 import gobject
 import gtk
-import gtk.glade as glade
 import lunch_server
 import lunch_client
-import threading
 import getpass
 import time
 import socket
+import threading
 
 class ServerThread(threading.Thread): 
     l = lunch_server.lunch_server()

@@ -1,4 +1,6 @@
 #!/usr/bin/python
+from lunch_datathread import *
+
 import socket
 import subprocess
 from time import strftime, localtime, time, mktime
@@ -8,7 +10,7 @@ import ctypes
 import lunch_client
 import getpass
 import json
-
+        
 class lunch_server(object):
     audio_file ="sonar.wav"
     user_name = ""
