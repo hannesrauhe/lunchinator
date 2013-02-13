@@ -17,7 +17,7 @@ class lunch_server(object):
     members_file = sys.path[0]+"/lunch_members.cfg"
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30
-    config_dirs = {sys.path[0],os.getenv("HOME")+"/.lunchinator"}
+    config_dirs = [sys.path[0],os.getenv("HOME")+"/.lunchinator"]
     icon_file = sys.path[0]+"/images/mini_breakfast.png"
     
     running = False
