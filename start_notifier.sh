@@ -2,8 +2,10 @@
 
 . /etc/*release
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd $DIR
+LUNCHINATOR_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+LUNCHINATOR_CONFIG_DIR=$HOME/.lunchinator
+cd $LUNCHINATOR_DIR
+mkdir $LUNCHINATOR_CONFIG_DIR
 
 git pull
 
@@ -21,10 +23,10 @@ git pull
 echo ${DISTRIB_DESCRIPTION:0:6}
 
 if [ "${DISTRIB_DESCRIPTION:0:6}" = "Ubuntu" ]; then
-    unbuffer $DIR/indicator_applet.py >> $HOME/.lunch_calls
+    unbuffer $LUNCHINATOR_DIR/indicator_applet.py >> $LUNCHINATOR_CONFIG_DIR/.lunch_calls
 else
     echo "starting gtk-tray instead of indicator"
-    unbuffer $DIR/gui_tray.py >> $HOME/.lunch_calls
+    unbuffer $LUNCHINATOR_DIR/gui_tray.py >> $LUNCHINATOR_CONFIG_DIR/.lunch_calls
 fi
 #
 

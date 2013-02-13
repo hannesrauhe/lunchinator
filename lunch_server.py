@@ -17,6 +17,8 @@ class lunch_server(object):
     members_file = sys.path[0]+"/lunch_members.cfg"
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30
+    config_dirs = {sys.path[0],os.getenv("HOME")+"/.lunchinator"}
+    icon_file = sys.path[0]+"/images/mini_breakfast.png"
     
     running = False
     update_request = False
@@ -32,22 +34,23 @@ class lunch_server(object):
         if len(self.members)==0:
             self.members=self.init_members_from_file()
             
-        if os.path.exists(sys.path[0]+"/debug.cfg"):
-            self.debug = True
-        else:
-            self.debug = False
-        if os.path.exists(sys.path[0]+"/username.cfg"):
-            with open(sys.path[0]+"/username.cfg") as f:
-                self.user_name = f.readline().strip()
-        else:
-                self.user_name = getpass.getuser()
-        if os.path.exists(sys.path[0]+"/sound.cfg"):
-            with open(sys.path[0]+"/sound.cfg") as f:
-                audio_file = f.readline().strip()
-                if os.path.exists(sys.path[0]+"/sounds/"+audio_file):
-                    self.audio_file = audio_file
-                else:
-                    print "configured audio file "+audio_file+" does not exist in sounds folder, using old one: "+self.audio_file
+        for config_path in self.config_dirs:                
+            if os.path.exists(config_path+"/debug.cfg"):
+                self.debug = True
+            else:
+                self.debug = False
+            if os.path.exists(config_path+"/username.cfg"):
+                with open(config_path+"/username.cfg") as f:
+                    self.user_name = f.readline().strip()
+            else:
+                    self.user_name = getpass.getuser()
+            if os.path.exists(config_path+"/sound.cfg"):
+                with open(config_path+"/sound.cfg") as f:
+                    audio_file = f.readline().strip()
+                    if os.path.exists(config_path+"/sounds/"+audio_file):
+                        self.audio_file = audio_file
+                    else:
+                        print "configured audio file "+audio_file+" does not exist in sounds folder, using old one: "+self.audio_file
         
     def get_user_name(self):
         return self.user_name
@@ -86,7 +89,8 @@ class lunch_server(object):
             
     def incoming_call_linux(self,msg,addr):    
         try:
-            subprocess.call(["notify-send", msg + " [" + addr + "]"])
+            icon = self.icon_file
+            subprocess.call(["notify-send","--icon="+icon, msg + " [" + addr + "]"])
         except:
             print "notify error"
             pass
