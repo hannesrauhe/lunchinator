@@ -22,6 +22,8 @@ if __name__ == "__main__":
     statusicon = gtk.StatusIcon()
     statusicon = gtk.status_icon_new_from_pixbuf(pixbuf)
     statusicon.connect("popup-menu", show_menu, lanschi.menu)
+#    no double-click event
+#    statusicon.connect("activate", msg_window, lanschi.c)
     
     gobject.timeout_add(2000, highlight_icon, lanschi.c)
     gtk.main()
