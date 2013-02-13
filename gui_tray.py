@@ -17,7 +17,7 @@ if __name__ == "__main__":
     lanschi = lunchinator()
     lanschi.c.disable_auto_update()
 
-    pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(sys.path[0]+"/images/glyphicons_053_alarm.png",25,25)
+    pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(sys.path[0]+"/images/glyphicons_053_alarm_black.png",25,25)
     global statusicon
     statusicon = gtk.StatusIcon()
     statusicon = gtk.status_icon_new_from_pixbuf(pixbuf)
