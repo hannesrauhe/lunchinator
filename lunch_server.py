@@ -30,27 +30,29 @@ class lunch_server(object):
     member_timeout = {}
     
     '''will be called every ten seconds'''
-    def read_config(self): 
-        if len(self.members)==0:
-            self.members=self.init_members_from_file()
-            
+    def read_config(self):             
+        self.debug = False
         for config_path in self.config_dirs:                
             if os.path.exists(config_path+"/debug.cfg"):
                 self.debug = True
-            else:
-                self.debug = False
+                
             if os.path.exists(config_path+"/username.cfg"):
                 with open(config_path+"/username.cfg") as f:
                     self.user_name = f.readline().strip()
-            else:
-                    self.user_name = getpass.getuser()
+                    
             if os.path.exists(config_path+"/sound.cfg"):
                 with open(config_path+"/sound.cfg") as f:
                     audio_file = f.readline().strip()
                     if os.path.exists(config_path+"/sounds/"+audio_file):
                         self.audio_file = audio_file
                     else:
-                        print "configured audio file "+audio_file+" does not exist in sounds folder, using old one: "+self.audio_file
+                        print "configured audio file "+audio_file+" does not exist in sounds folder, using old one: "+self.audio_file                        
+                        
+        if len(self.members)==0:
+            self.members=self.init_members_from_file()
+        
+        if self.user_name=="":
+            self.user_name = getpass.getuser()
         
     def get_user_name(self):
         return self.user_name
