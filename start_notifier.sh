@@ -6,6 +6,7 @@ LUNCHINATOR_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 LUNCHINATOR_CONFIG_DIR=$HOME/.lunchinator
 cd $LUNCHINATOR_DIR
 mkdir -p $LUNCHINATOR_CONFIG_DIR
+mv *.cfg $LUNCHINATOR_CONFIG_DIR
 
 git pull
 

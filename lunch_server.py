@@ -1,27 +1,12 @@
 #!/usr/bin/python
 from lunch_datathread import *
+from lunch_client import *
+from lunch_default_config import *
 
-import socket
-import subprocess
 from time import strftime, localtime, time, mktime
-import sys
-import os
-import ctypes
-import lunch_client
-import getpass
-import json
+import socket,subprocess,sys,os,ctypes,getpass,json
         
-class lunch_server(object):
-    audio_file ="sonar.wav"
-    user_name = ""
-    debug = False
-    auto_update = True    
-    members_file = sys.path[0]+"/lunch_members.cfg"
-    peer_timeout = 604800 #one week so that we don't forget someone too soon
-    mute_timeout = 30
-    config_dirs = [sys.path[0],os.getenv("HOME")+"/.lunchinator"]
-    icon_file = sys.path[0]+"/images/mini_breakfast.png"
-    
+class lunch_server(lunch_default_config):    
     running = False
     update_request = False
     new_msg = False
@@ -30,6 +15,7 @@ class lunch_server(object):
     last_messages = []
     members = {}
     member_timeout = {}
+    lclient = lunch_client()
     
     '''will be called every ten seconds'''
     def read_config(self):             
@@ -168,7 +154,7 @@ class lunch_server(object):
     def call_new_master(self):
         try:
             if len(self.members.keys())>self.peer_nr:
-                lunch_client.call("HELO_MASTER "+self.get_user_name(),client=self.members.keys()[self.peer_nr])
+                self.lclient.call("HELO_MASTER "+self.get_user_name(),client=self.members.keys()[self.peer_nr])
             self.peer_nr=(self.peer_nr+1) % len(self.members)
         except:
             print "Something went wrong while trying to send a call to the new master"
@@ -225,7 +211,7 @@ class lunch_server(object):
 #                                    members_from_file.update(self.members)
 #                                    self.members = members_from_file
                                     self.members[addr[0]]=daten.split(" ",1)[1].strip()
-                                    lunch_client.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
+                                    self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                                 else:
                                     #someone tells me his name
                                     if addr[0] in self.members:
@@ -246,7 +232,7 @@ class lunch_server(object):
                     else:
                         if announce_name==10:
                             #it's time to announce my name again and switch the master
-                            lunch_client.call("HELO "+self.get_user_name(),hosts=self.members)
+                            self.lclient.call("HELO "+self.get_user_name(),hosts=self.members)
                             announce_name=0
                             self.remove_inactive_members()
                             self.call_new_master()

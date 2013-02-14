@@ -3,6 +3,7 @@ INSTALL DEPENDENCIES
  sudo apt-get install sox libnotify-bin expect-dev
 
 Open Up port 50000/UDP on your machine
+Additionally open Up port 50001/TCP on your machine
 
 
 USAGE WITH GUI
@@ -20,7 +21,9 @@ CLI
 If you don't have a GUI or no pyGTK, you can also use the CLI.
 Before you start, check if you have a lunch_members.cfg file with at least one peer. If you don't have one:
 
- echo "luder" >> lunch_members.cfg
+ mkdir -P $HOME/.lunchinator
+ echo "luder" >> $HOME/.lunchinator/lunch_members.cfg
+
 
 start the server:
  lunch_server.py 
@@ -30,6 +33,8 @@ to send a call:
 
 CONFIG
 ======
+Configuration is done by adding/modifying files to the .lunchinator dir in your home.
+
 Put your username in username.cfg.
 If you want another sound-file put a wav-file to the sounds-dir and write the filename to sound.cfg
 
