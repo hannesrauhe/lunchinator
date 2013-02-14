@@ -1,11 +1,41 @@
 import threading
 import socket
 
-class DataThread(threading.Thread):
+class DataSenderThread(threading.Thread):
+    receiver = ""
+    file_path = ''
+    
+    def __init__(self, receiver, file_path): 
+        threading.Thread.__init__(self) 
+        self.receiver = receiver
+        self.file_path = file_path
+        
+    def _sendFile(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((self.receiver, 50001))
+        
+        sendfile = open(self.file_path, 'rb')
+        data = sendfile.read()
+        s.sendall(data)
+        data = s.recv(1)
+        s.close()
+ 
+    def run(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try: 
+            self._sendFile()
+        except:
+            print "I caught something"
+                
+        
+    def stop_server(self):
+        pass
+    
+class DataReceiverThread(threading.Thread):
     sender = ""
     size = ""
     file_path = ''
-    con = 0
+    con = None
     
     def __init__(self, sender, size, file_path): 
         threading.Thread.__init__(self) 

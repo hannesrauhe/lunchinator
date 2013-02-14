@@ -212,6 +212,21 @@ class lunch_server(lunch_default_config):
 #                                    self.members = members_from_file
                                     self.members[addr[0]]=daten.split(" ",1)[1].strip()
                                     self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
+                                    
+                                elif daten.startswith("HELO_PIC"):
+                                    file_size=int(daten.split(" ",1)[1].strip())
+                                    if self.debug:
+                                        print "Receiving file of size",file_size
+                                    dr = DataReceiverThread(addr[0],file_size,self.main_config_dir+"/test.jpg")
+                                    dr.start()
+                                    
+                                elif daten.startswith("HELO_REQUEST_PIC"):
+                                    fileToSend = self.main_config_dir+"/userpic.jpg"
+                                    fileSize = os.path.getsize(fileToSend)
+                                    self.lclient.call("HELO_PICT "+str(fileSize), addr[0])
+                                    ds = DataSenderThread(addr[0],fileToSend)
+                                    ds.start()
+                                    
                                 else:
                                     #someone tells me his name
                                     if addr[0] in self.members:
