@@ -1,4 +1,4 @@
-import threading,socket,sys
+import threading,socket,sys,time
 
 class DataSenderThread(threading.Thread):
     receiver = ""
@@ -28,6 +28,7 @@ class DataSenderThread(threading.Thread):
         
  
     def run(self):
+        time.sleep(5)
         self.con = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self._sendFile()       
