@@ -3,6 +3,7 @@ import threading,socket,sys
 class DataSenderThread(threading.Thread):
     receiver = ""
     file_path = ''
+    con = None
     
     def __init__(self, receiver, file_path): 
         threading.Thread.__init__(self) 
@@ -10,23 +11,31 @@ class DataSenderThread(threading.Thread):
         self.file_path = file_path
         
     def _sendFile(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            s.connect((self.receiver, 50001))
-            
-            sendfile = open(self.file_path, 'rb')
-            data = sendfile.read()
-            s.sendall(data)
-            data = s.recv(1)
+            self.con.connect((self.receiver, 50001))            
         except socket.error as e:
-            print "Socket error when trying to send file",self.file_path,e.strerror
-        except:
-            print "I caught something unexpected when trying to send file",self.file_path, sys.exc_info()[0]
+            print "Could not initiate connection",e.strerror
+            raise
         
-        s.close()
+            sendfile = open(self.file_path, 'rb')
+            
+        data = sendfile.read()
+        try:
+            self.con.sendall(data)                      
+        except socket.error as e:
+            print "Could not initiate connection",e.strerror
+            raise
+        
  
     def run(self):
-        self._sendFile()                
+        self.con = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            self._sendFile()       
+        except:
+            print "An error occured while trying to send file",self.file_path, sys.exc_info()[0]   
+             
+        if self.con:
+            self.con.close()     
         
     def stop_server(self):
         pass
@@ -50,8 +59,6 @@ class DataReceiverThread(threading.Thread):
             rec = self.con.recv(min(1024, length))
             writefile.write(rec)
             length -= len(rec)
-    
-        self.con.send(b'A') # single character A to prevent issues with buffering
  
     def run(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
