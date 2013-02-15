@@ -18,15 +18,15 @@ class DataSenderThread(threading.Thread):
             data = sendfile.read()
             s.sendall(data)
             data = s.recv(1)
-            s.close()
         except socket.error as e:
             print "Socket error when trying to send file",self.file_path,e.strerror
         except:
             print "I caught something unexpected when trying to send file",self.file_path, sys.exc_info()[0]
+        
+        s.close()
  
     def run(self):
-        self._sendFile()
-                
+        self._sendFile()                
         
     def stop_server(self):
         pass
@@ -62,11 +62,14 @@ class DataReceiverThread(threading.Thread):
             self.con, addr = s.accept()
             if addr==self.sender:
                 self._receiveFile()
-            self.con.close()
         except socket.error as e:
             print "Socket error when trying to receive file",self.file_path,e.strerror
         except:
             print "I caught something unexpected when trying to receive file",self.file_path, sys.exc_info()[0]
+        
+        if self.con:    
+            self.con.close()
+        s.close()
                 
         
     def stop_server(self):
