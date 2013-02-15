@@ -206,14 +206,11 @@ class lunch_server(lunch_default_config):
                                     
                                 elif daten.startswith("HELO_MASTER"):
                                     #someone thinks i'm the master - I'll send him the members I know
-#                                    print "I'm the master for",addr[0]
-#                                   members_from_file=self.init_members_from_file()
-#                                    members_from_file.update(self.members)
-#                                    self.members = members_from_file
                                     self.members[addr[0]]=daten.split(" ",1)[1].strip()
                                     self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                                     
                                 elif daten.startswith("HELO_PIC"):
+                                    #someone want's to send me his pic via TCP
                                     file_size=int(daten.split(" ",1)[1].strip())
                                     if self.debug:
                                         print "Receiving file of size",file_size
@@ -221,6 +218,7 @@ class lunch_server(lunch_default_config):
                                     dr.start()
                                     
                                 elif daten.startswith("HELO_REQUEST_PIC"):
+                                    #someone wants my pic 
                                     fileToSend = self.main_config_dir+"/userpic.jpg"
                                     if os.path.exists(fileToSend):
                                         fileSize = os.path.getsize(fileToSend)

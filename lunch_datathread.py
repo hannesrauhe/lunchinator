@@ -69,11 +69,15 @@ class DataReceiverThread(threading.Thread):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try: 
             s.bind(("", 50001)) 
-            s.settimeout(5.0)
+            s.settimeout(30.0)
             s.listen(1)
             self.con, addr = s.accept()
-            if addr==self.sender:
+            self.con.settimeout(5.0)
+            if addr[0]==self.sender:
                 self._receiveFile()
+            else:
+                print "Sender is not allowed to send file:",addr[0],", expected:",self.sender
+                raise
         except:
             print "I caught something unexpected when trying to receive file",self.file_path, sys.exc_info()[0]
         
