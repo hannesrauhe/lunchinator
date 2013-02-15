@@ -15,6 +15,7 @@ class lunch_server(lunch_default_config):
     last_messages = []
     members = {}
     member_timeout = {}
+    member_info = {}
     lclient = lunch_client()
     
     '''will be called every ten seconds'''
@@ -27,6 +28,10 @@ class lunch_server(lunch_default_config):
             if os.path.exists(config_path+"/username.cfg"):
                 with open(config_path+"/username.cfg") as f:
                     self.user_name = f.readline().strip()
+                    
+            if os.path.exists(config_path+"/avatar.cfg"):
+                with open(config_path+"/avatar.cfg") as f:
+                    self.avatar_file = f.readline().strip()
                     
             if os.path.exists(config_path+"/sound.cfg"):
                 with open(config_path+"/sound.cfg") as f:
@@ -80,6 +85,8 @@ class lunch_server(lunch_default_config):
     def incoming_call_linux(self,msg,addr):    
         try:
             icon = self.icon_file
+            if self.member_info.has_key(addr) and self.member_info[addr].has_key("avatar"):
+                icon = self.member_info[addr]["avatar"]
             subprocess.call(["notify-send","--icon="+icon, msg + " [" + addr + "]"])
         except:
             print "notify error"
@@ -154,7 +161,8 @@ class lunch_server(lunch_default_config):
     def call_new_master(self):
         try:
             if len(self.members.keys())>self.peer_nr:
-                self.lclient.call("HELO_MASTER "+self.get_user_name(),client=self.members.keys()[self.peer_nr])
+                self.lclient.call("HELO_MASTER "+json.dumps({"avatar": self.avatar_file}),
+                                                             client=self.members.keys()[self.peer_nr])
             self.peer_nr=(self.peer_nr+1) % len(self.members)
         except:
             print "Something went wrong while trying to send a call to the new master"
@@ -206,7 +214,7 @@ class lunch_server(lunch_default_config):
                                     
                                 elif daten.startswith("HELO_MASTER"):
                                     #someone thinks i'm the master - I'll send him the members I know
-                                    self.members[addr[0]]=daten.split(" ",1)[1].strip()
+                                    self.member_info[addr[0]] = json.loads(daten.split(" ",1)[1].strip())
                                     self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                                     
                                 elif daten.startswith("HELO_PIC"):
