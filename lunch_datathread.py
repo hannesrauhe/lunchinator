@@ -14,16 +14,16 @@ class DataSenderThread(threading.Thread):
         try:
             self.con.connect((self.receiver, 50001))            
         except socket.error as e:
-            print "Could not initiate connection",e.strerror
+            print "Could not initiate connection to",self.receiver,e.strerror
             raise
         
-            sendfile = open(self.file_path, 'rb')
-            
+        sendfile = open(self.file_path, 'rb')           
         data = sendfile.read()
+        
         try:
             self.con.sendall(data)                      
         except socket.error as e:
-            print "Could not initiate connection",e.strerror
+            print "Could not send data",e.strerror
             raise
         
  
@@ -55,10 +55,14 @@ class DataReceiverThread(threading.Thread):
     def _receiveFile(self):
         writefile = open(self.file_path, 'wb')
         length = self.size
-        while length:
-            rec = self.con.recv(min(1024, length))
-            writefile.write(rec)
-            length -= len(rec)
+        try:
+            while length:
+                rec = self.con.recv(min(1024, length))
+                writefile.write(rec)
+                length -= len(rec)
+        except socket.error as e:
+            print "Error while receiving the data, Bytes to receive left:",length,"Error:",e.strerror
+            raise
  
     def run(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -69,8 +73,6 @@ class DataReceiverThread(threading.Thread):
             self.con, addr = s.accept()
             if addr==self.sender:
                 self._receiveFile()
-        except socket.error as e:
-            print "Socket error when trying to receive file",self.file_path,e.strerror
         except:
             print "I caught something unexpected when trying to receive file",self.file_path, sys.exc_info()[0]
         
