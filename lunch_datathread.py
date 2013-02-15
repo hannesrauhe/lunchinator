@@ -1,5 +1,4 @@
-import threading
-import socket
+import threading,socket,sys
 
 class DataSenderThread(threading.Thread):
     receiver = ""
@@ -12,16 +11,21 @@ class DataSenderThread(threading.Thread):
         
     def _sendFile(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((self.receiver, 50001))
-        
-        sendfile = open(self.file_path, 'rb')
-        data = sendfile.read()
-        s.sendall(data)
-        data = s.recv(1)
-        s.close()
+        try:
+            s.connect((self.receiver, 50001))
+            
+            sendfile = open(self.file_path, 'rb')
+            data = sendfile.read()
+            s.sendall(data)
+            data = s.recv(1)
+            s.close()
+        except socket.error as e:
+            print "Socket error:",e.strerror
+        except:
+            print "I caught something unexpected", sys.exc_info()[0]
  
     def run(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try: 
             self._sendFile()
         except:
@@ -54,7 +58,7 @@ class DataReceiverThread(threading.Thread):
         self.con.send(b'A') # single character A to prevent issues with buffering
  
     def run(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try: 
             s.bind(("", 50001)) 
             s.settimeout(5.0)
@@ -63,8 +67,10 @@ class DataReceiverThread(threading.Thread):
             if addr==self.sender:
                 self._receiveFile()
             self.con.close()
+        except socket.error as e:
+            print "Socket error:",e.strerror
         except:
-            print "I caught something"
+            print "I caught something unexpected", sys.exc_info()[0]
                 
         
     def stop_server(self):
