@@ -20,16 +20,12 @@ class DataSenderThread(threading.Thread):
             data = s.recv(1)
             s.close()
         except socket.error as e:
-            print "Socket error:",e.strerror
+            print "Socket error when trying to send file",self.file_path,e.strerror
         except:
-            print "I caught something unexpected", sys.exc_info()[0]
+            print "I caught something unexpected when trying to send file",self.file_path, sys.exc_info()[0]
  
     def run(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try: 
-            self._sendFile()
-        except:
-            print "I caught something"
+        self._sendFile()
                 
         
     def stop_server(self):
@@ -68,9 +64,9 @@ class DataReceiverThread(threading.Thread):
                 self._receiveFile()
             self.con.close()
         except socket.error as e:
-            print "Socket error:",e.strerror
+            print "Socket error when trying to receive file",self.file_path,e.strerror
         except:
-            print "I caught something unexpected", sys.exc_info()[0]
+            print "I caught something unexpected when trying to receive file",self.file_path, sys.exc_info()[0]
                 
         
     def stop_server(self):
