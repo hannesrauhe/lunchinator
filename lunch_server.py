@@ -222,11 +222,13 @@ class lunch_server(lunch_default_config):
                                     
                                 elif daten.startswith("HELO_REQUEST_PIC"):
                                     fileToSend = self.main_config_dir+"/userpic.jpg"
-                                    fileSize = os.path.getsize(fileToSend)
-                                    self.lclient.call("HELO_PICT "+str(fileSize), addr[0])
-                                    ds = DataSenderThread(addr[0],fileToSend)
-                                    ds.start()
-                                    
+                                    if os.path.exists(fileToSend):
+                                        fileSize = os.path.getsize(fileToSend)
+                                        self.lclient.call("HELO_PICT "+str(fileSize), addr[0])
+                                        ds = DataSenderThread(addr[0],fileToSend)
+                                        ds.start()
+                                    else:
+                                        print "File",fileToSend,"not found"
                                 else:
                                     #someone tells me his name
                                     if addr[0] in self.members:
