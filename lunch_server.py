@@ -105,7 +105,7 @@ class lunch_server(lunch_default_config):
                 fileToSend = self.avatar_dir+"/"+self.avatar_file
                 if os.path.exists(fileToSend):
                     fileSize = os.path.getsize(fileToSend)
-                    self.lclient.call("HELO_PICT "+str(fileSize), addr[0])
+                    self.lclient.call("HELO_AVATAR "+str(fileSize), addr[0])
                     ds = DataSenderThread(addr[0],fileToSend)
                     ds.start()
                 else:
