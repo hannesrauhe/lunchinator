@@ -34,4 +34,4 @@ if __name__ == "__main__":
     else:
         file_path = lpic.main_config_dir+"/userpic.jpg"
         
-    print lpic.use_as_avatar(file_path)
+    lpic.use_as_avatar(file_path)

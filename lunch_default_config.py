@@ -19,3 +19,4 @@ class lunch_default_config(object):
     def __init__(self):
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
+            

@@ -50,6 +50,95 @@ class lunch_server(lunch_default_config):
     def get_user_name(self):
         return self.user_name
     
+    def incoming_event(self,data,addr):   
+        if addr[0].startswith("127."):
+            return     
+        
+        (cmd, value) = data.split(" ",1)
+                
+        try:
+            if cmd.startswith("HELO_UPDATE"):
+                t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
+                if self.auto_update:
+                    print "%s: [%s] update" % (t,addr)
+                    os.chdir(sys.path[0])
+                    subprocess.call(["git","stash"])
+                    subprocess.call(["git","pull"])
+                else:
+                    print "%s: %s issued an update but updates are disabled" % (t,addr)
+                self.update_request = True
+                
+            elif cmd.startswith("HELO_REQUEST_DICT"):
+                self.member_info[addr[0]] = json.loads(value)
+                self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
+                #Request avatar if not there yet
+                if self.member_info[addr[0]].has_key("avatar"):
+                    if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
+                        self.lclient.call("HELO_REQUEST_AVATAR ",client=addr[0])
+                        
+                
+            elif cmd.startswith("HELO_DICT"):
+                #the master send me the list of members - yeah
+                ext_members = json.loads(data.split(" ",1)[1].strip())
+                self.members.update(ext_members)
+                self.members = dict((k, v) for k, v in self.members.items() if not k.startswith("127"))
+                if self.my_master==-1:                    
+                    self.lclient.call("HELO "+self.get_user_name(),hosts=self.members)
+                    
+                self.my_master = addr[0]                                    
+                if not os.path.exists(self.members_file):
+                    self.write_members_to_file()
+               
+            elif cmd.startswith("HELO_AVATAR"):
+                #someone want's to send me his pic via TCP
+                file_size=int(value.strip())
+                if self.debug:
+                    print "Receiving file of size",file_size
+                if self.member_info[addr[0]].has_key("avatar"):
+                    dr = DataReceiverThread(addr[0],file_size,self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"])
+                    dr.start()
+                else:
+                    print addr[0],"tried to send his avatar, but I don't know where to safe it"
+                
+            elif cmd.startswith("HELO_REQUEST_AVATAR"):
+                #someone wants my pic 
+                fileToSend = self.avatar_dir+"/"+self.avatar_file
+                if os.path.exists(fileToSend):
+                    fileSize = os.path.getsize(fileToSend)
+                    self.lclient.call("HELO_PICT "+str(fileSize), addr[0])
+                    ds = DataSenderThread(addr[0],fileToSend)
+                    ds.start()
+                else:
+                    print "File",fileToSend,"not found"                    
+                                    
+            elif cmd.startswith("HELO_MASTER"):
+                #deprecated
+                if addr[0] in self.members:
+                    self.members[addr[0]]=value
+                else:
+                    self.members[addr[0]]={'name':value}                                        
+                    self.write_members_to_file()
+                self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
+                
+            elif "HELO"==cmd:
+                #someone tells me his name
+                if addr[0] in self.members:
+                    self.members[addr[0]]=value
+                else:
+                    self.members[addr[0]]={'name':value}                                        
+                    self.write_members_to_file()
+                
+                if addr[0] in self.member_info:                    
+                    self.member_info[addr[0]]['name']=value
+                else:
+                    self.member_info[addr[0]]={'name':value}
+                    
+            else:
+                print "unknown command",cmd,"with value",value
+        except:
+            print "Unexpected error while handling HELO call: ", sys.exc_info()[0]
+            print "The data send was:",data
+    
     def incoming_call(self,msg,addr):
         mtime = localtime()
         
@@ -158,10 +247,12 @@ class lunch_server(lunch_default_config):
         except:
             print "Something went wrong while trying to clean up the members-table"
             
-    def call_new_master(self):
+    '''ask for the dictionary and send over own information'''
+    def call_for_dict(self):
         try:
             if len(self.members.keys())>self.peer_nr:
-                self.lclient.call("HELO_MASTER "+json.dumps({"avatar": self.avatar_file}),
+                self.lclient.call("HELO_REQUEST_DICT "+json.dumps({"avatar": self.avatar_file,
+                                                             "name": self.user_name}),
                                                              client=self.members.keys()[self.peer_nr])
             self.peer_nr=(self.peer_nr+1) % len(self.members)
         except:
@@ -183,82 +274,27 @@ class lunch_server(lunch_default_config):
             while self.running:
                 try:
                     daten, addr = s.recvfrom(1024) 
-#three types of messages: 1. call for application update'''
-                    if daten.startswith("update"):
-                        t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
-                        if self.auto_update:
-                            print "%s: [%s] update and restart" % (t,addr)
-                            os.chdir(sys.path[0])
-                            subprocess.call(["git","stash"])
-                            subprocess.call(["git","pull"])
-                            s.close()
-                            os.execlp("python","python",os.path.basename(sys.argv[0]))
-                        else:
-                            print "%s: %s issued an update but updates are disabled" % (t,addr)
-                            self.update_request = True
-#2. simple infrastructure protocoll messages starting with HELO'''                            
-                    elif daten.startswith("HELO"):
-                        if not addr[0].startswith("127."):
-                            try:
-                                self.member_timeout[addr[0]]=time()
-                                if daten.startswith("HELO_DICT"):
-                                    #the master send me the list of members - yeah
-                                    ext_members = json.loads(daten.split(" ",1)[1].strip())
-                                    self.members.update(ext_members)
-                                    self.members = dict((k, v) for k, v in self.members.items() if not k.startswith("127"))
-                                    #self.members["127.0.0.1"] = "myself"
-                                    self.my_master = addr[0]                                    
-                                    if not os.path.exists(self.members_file):
-                                        self.write_members_to_file()
-#                                    print "got new members from",self.my_master,":",json.dumps([item for item in ext_members.keys() if not self.members.has_key(item)])
-                                    
-                                elif daten.startswith("HELO_MASTER"):
-                                    #someone thinks i'm the master - I'll send him the members I know
-                                    self.member_info[addr[0]] = json.loads(daten.split(" ",1)[1].strip())
-                                    self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
-                                    
-                                elif daten.startswith("HELO_PIC"):
-                                    #someone want's to send me his pic via TCP
-                                    file_size=int(daten.split(" ",1)[1].strip())
-                                    if self.debug:
-                                        print "Receiving file of size",file_size
-                                    dr = DataReceiverThread(addr[0],file_size,self.main_config_dir+"/test.jpg")
-                                    dr.start()
-                                    
-                                elif daten.startswith("HELO_REQUEST_PIC"):
-                                    #someone wants my pic 
-                                    fileToSend = self.main_config_dir+"/userpic.jpg"
-                                    if os.path.exists(fileToSend):
-                                        fileSize = os.path.getsize(fileToSend)
-                                        self.lclient.call("HELO_PICT "+str(fileSize), addr[0])
-                                        ds = DataSenderThread(addr[0],fileToSend)
-                                        ds.start()
-                                    else:
-                                        print "File",fileToSend,"not found"
-                                else:
-                                    #someone tells me his name
-                                    if addr[0] in self.members:
-                                        self.members[addr[0]]=daten.split(" ",1)[1].strip()
-                                    else:
-                                        self.members[addr[0]]=daten.split(" ",1)[1].strip()                                        
-                                        self.write_members_to_file()
-                            except:
-                                print "Unexpected error while handling HELO call: ", sys.exc_info()[0]
-                                print "The data send was:",daten
-#3. everything else is a message that should be displayed to the user'''                            
-                    else:                            
+                    
+                    if not addr[0].startswith("127."):
+                        self.member_timeout[addr[0]]=time()
+                        
+                    if daten.startswith("HELO"):
+                        #simple infrastructure protocol messages starting with HELO''' 
+                        self.incoming_event(daten, addr)                            
+                    else:  
+                        #simple message                          
                         self.incoming_call(daten,addr[0])
                 except socket.timeout:
                     self.read_config()
                     if self.my_master==-1:
-                        self.call_new_master()
+                        self.call_for_dict()
                     else:
                         if announce_name==10:
                             #it's time to announce my name again and switch the master
                             self.lclient.call("HELO "+self.get_user_name(),hosts=self.members)
                             announce_name=0
                             self.remove_inactive_members()
-                            self.call_new_master()
+                            self.call_for_dict()
                         else:
                             #just wait for the next time when i have to announce my name
                             announce_name+=1
