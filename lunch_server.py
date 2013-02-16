@@ -175,7 +175,7 @@ class lunch_server(lunch_default_config):
         try:
             icon = self.icon_file
             if self.member_info.has_key(addr) and self.member_info[addr].has_key("avatar"):
-                icon = self.member_info[addr]["avatar"]
+                icon = self.audio_file+"/"+self.member_info[addr]["avatar"]
             subprocess.call(["notify-send","--icon="+icon, msg + " [" + addr + "]"])
         except:
             print "notify error"
@@ -301,8 +301,7 @@ class lunch_server(lunch_default_config):
                     if self.debug:
                         if self.my_master==-1:
                             print "no master found yet"
-                        print self.members
-                        print self.member_timeout
+                        print self.members.keys()
         finally: 
             s.close()                    
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
