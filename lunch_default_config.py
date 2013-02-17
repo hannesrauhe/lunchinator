@@ -10,6 +10,7 @@ class lunch_default_config(object):
     main_config_dir = os.getenv("HOME")+"/.lunchinator"
     members_file = main_config_dir+"/lunch_members.cfg"
     avatar_dir = main_config_dir+"/avatars/"
+    html_dir = main_config_dir
     
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30

@@ -3,62 +3,48 @@ import gobject
 import gtk
 import lunch_server
 import lunch_client
-import getpass
 import time
 import socket
 import threading
 
-class ServerThread(threading.Thread): 
-    l = lunch_server.lunch_server()
+class lserver_thread(threading.Thread): 
+    ls = lunch_server.lunch_server()
     def __init__(self): 
         #auto-update may be working...
-        #self.l.auto_update = False
+        #self.ls.auto_update = False
         threading.Thread.__init__(self) 
  
     def run(self):
-        self.l.start_server()
-        
-    def stop_server(self):
-        self.l.running = False
-
-class lunch_control():
-    t = ServerThread()
-        
-    def start_server(self,w):
-        if not self.t.isAlive():
-            self.t = ServerThread()
-            self.t.start()
-        else:
-            print "server already running"
+        self.ls.start_server()
             
     def stop_server(self,w):        
-        if self.t.isAlive():
-            self.t.stop_server()
-            self.t.join()  
+        if self.isAlive():
+            self.ls.running = False
+            self.join()  
             print "server stopped" 
         else:
             print "server not running"
             
     def get_last_msgs(self,w):  
-        return self.t.l.last_messages
+        return self.ls.last_messages
     
     def get_members(self):  
-        return self.t.l.members
+        return self.ls.members
 
     def get_member_timeout(self):  
-        return self.t.l.member_timeout
+        return self.ls.member_timeout
     
     def check_new_msgs(self):
-        return self.t.l.new_msg
+        return self.ls.new_msg
     
     def reset_new_msgs(self):
-        self.t.l.new_msg=False
+        self.ls.new_msg=False
         
     def disable_auto_update(self):
-        self.t.l.auto_update=False
+        self.ls.auto_update=False
 
     def set_user_name(self,name):
-        self.t.l.user_name=name
+        self.ls.user_name=name
                   
     def quit(self,w): 
         self.stop_server(w)
@@ -69,35 +55,50 @@ class lunchinator():
     c = None
     
     def __init__(self):
-        self.c = lunch_control()
-        self.c.start_server(None)
-        # create a menu
+        self.c = lserver_thread()
+        self.c.start()
+        
+        #create the settings submenu
+        settings_menu = gtk.Menu()
+        avatar_item = gtk.MenuItem("Avatar")
+        avatar_item.show()
+        settings_menu.append(avatar_item)
+        
+        #main menu
         self.menu = gtk.Menu()    
         menu_items = gtk.MenuItem("Call for lunch")
-        self.menu.append(menu_items)      
-        menu_items.connect("activate", send_msg, self.c, "lunch")
-        menu_items.show()      
         msg_items = gtk.MenuItem("Show/Send messages")
-        self.menu.append(msg_items)      
-        msg_items.connect("activate", msg_window, self.c)
-        msg_items.show()  
+        settings_item = gtk.MenuItem("Settings")
         exit_item = gtk.MenuItem("Exit")
-        self.menu.append(exit_item)      
+                
+        menu_items.connect("activate", send_msg, self.c, "lunch")
+        msg_items.connect("activate", msg_window, self.c)
+        settings_item.set_submenu(settings_menu)
         exit_item.connect("activate", self.c.quit)
+        
+        menu_items.show()         
+        msg_items.show()
+        settings_item.show() 
         exit_item.show()
+        
+        self.menu.append(menu_items)
+        self.menu.append(msg_items)  
+        self.menu.append(settings_item)
+        self.menu.append(exit_item)            
     
 def send_msg(w,*data):
+    lc = lunch_client.lunch_client()
     c = data[0]
     if len(data)>1:
-        lunch_client.call(data[1],hosts=c.get_members())
+        lc.call(data[1],hosts=c.get_members())
     else:
-        lunch_client.call(w.get_text())
+        lc.call(w.get_text())
         
 def add_host(w,*data):
     hostn = w.get_text()
     c = data[0]
     try:
-        c.t.l.members[socket.gethostbyname(hostn.strip())]=hostn.strip()
+        c.t.ls.members[socket.gethostbyname(hostn.strip())]=hostn.strip()
     except:
         d = gtk.MessageDialog(parent=None, flags=0, type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK, message_format=None)
         d.set_markup("Cannot add host: Hostname unknown")

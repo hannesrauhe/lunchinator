@@ -75,6 +75,7 @@ class lunch_server(lunch_default_config):
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
                         self.lclient.call("HELO_REQUEST_AVATAR ",client=addr[0])
+                self.write_info_html()
                         
                 
             elif cmd.startswith("HELO_DICT"):
@@ -167,16 +168,16 @@ class lunch_server(lunch_default_config):
         
         if not msg.startswith("ignore"):
             if sys.platform.startswith('linux'):
-                self.incoming_call_linux(msg,m)
+                self.incoming_call_linux(msg,addr)
             else:
-                self.incoming_call_win(msg,m)
+                self.incoming_call_win(msg,addr)
             
     def incoming_call_linux(self,msg,addr):    
         try:
             icon = self.icon_file
             if self.member_info.has_key(addr) and self.member_info[addr].has_key("avatar"):
                 icon = self.avatar_dir+"/"+self.member_info[addr]["avatar"]
-            subprocess.call(["notify-send","--icon="+icon, msg + " [" + addr + "]"])
+            subprocess.call(["notify-send","--icon="+icon, msg + " [" + self.members[addr] + "]"])
         except:
             print "notify error"
             pass
@@ -305,6 +306,18 @@ class lunch_server(lunch_default_config):
         finally: 
             s.close()                    
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
+            
+    def write_info_html(self):
+        indexhtml = open(self.html_dir+"/index.html","w")
+        indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' ><table>")
+        if len(self.member_info)>0:
+            for ip,d in self.member_info.iteritems():
+                indexhtml.write("<tr><td>"+str(ip)+"</td>")
+                if d.has_key("avatar"):
+                    indexhtml.write("<td><img width='200' src=\"avatars/"+d["avatar"]+"\" /></td>")
+                indexhtml.write("</tr>")
+        indexhtml.write("</table>")
+        indexhtml.close()
     
 if __name__ == "__main__":
     l = lunch_server()
