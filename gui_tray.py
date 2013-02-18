@@ -10,7 +10,7 @@ def highlight_icon(c):
     return True
 
 def reset_icon(c):
-    lanschi.c.reset_new_msgs()
+    lanschi.reset_new_msgs()
     statusicon.set_blinking(False)
     
 def show_menu(icon, button, time, menu):
@@ -24,7 +24,8 @@ if __name__ == "__main__":
     
     global lanschi
     lanschi = lunchinator()
-    lanschi.c.disable_auto_update()
+    lanschi.start()
+    lanschi.disable_auto_update()
 
     pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(sys.path[0]+"/images/glyphicons_053_alarm_black.png",25,25)
     global statusicon
@@ -32,8 +33,6 @@ if __name__ == "__main__":
     statusicon = gtk.status_icon_new_from_pixbuf(pixbuf)
     statusicon.connect("popup-menu", show_menu, lanschi.menu)
     statusicon.connect("activate", reset_icon)
-#    no double-click event
-#    statusicon.connect("activate", msg_window, lanschi.c)
     
-    gobject.timeout_add(2000, highlight_icon, lanschi.c)
+    gobject.timeout_add(2000, highlight_icon, lanschi)
     gtk.main()

@@ -5,18 +5,63 @@ import lunch_server
 import lunch_client
 import time
 import socket
-import threading
-
-class lserver_thread(threading.Thread): 
+import threading                  
+        
+class lunchinator(threading.Thread):
+    menu = None
     ls = lunch_server.lunch_server()
-    def __init__(self): 
-        #auto-update may be working...
-        #self.ls.auto_update = False
-        threading.Thread.__init__(self) 
- 
+    
+    def __init__(self):           
+        threading.Thread.__init__(self)    
+        self.init_menu()      
+    
     def run(self):
-        self.ls.start_server()
+        self.ls.start_server()      
+    
+    def init_menu(self):
+        #create the settings submenu
+        settings_menu = gtk.Menu()
+        avatar_item = gtk.CheckMenuItem("Avatar")
+        debug_item = gtk.CheckMenuItem("Debug Output")
+        settings_item = gtk.CheckMenuItem("More Settings")
+        
+        debug_item.set_active(self.ls.get_debug())
             
+        debug_item.connect("activate", self.toggle_debug_mode)
+        
+        avatar_item.show()
+        debug_item.show()
+        settings_item.show()
+        
+        settings_menu.append(avatar_item)
+        settings_menu.append(debug_item)
+        settings_menu.append(settings_item)
+        
+        #main menu
+        self.menu = gtk.Menu()    
+        menu_items = gtk.MenuItem("Call for lunch")
+        msg_items = gtk.MenuItem("Show/Send messages")
+        settings_item = gtk.MenuItem("Settings")
+        exit_item = gtk.MenuItem("Exit")
+                
+        menu_items.connect("activate", send_msg, self, "lunch")
+        msg_items.connect("activate", msg_window, self)
+        settings_item.set_submenu(settings_menu)
+        exit_item.connect("activate", self.quit)
+        
+        menu_items.show()         
+        msg_items.show()
+        settings_item.show() 
+        exit_item.show()
+        
+        self.menu.append(menu_items)
+        self.menu.append(msg_items)  
+        self.menu.append(settings_item)
+        self.menu.append(exit_item) 
+        
+    def toggle_debug_mode(self,w):
+        self.ls.set_debug(w.get_active())
+        
     def stop_server(self,w):        
         if self.isAlive():
             self.ls.running = False
@@ -48,43 +93,9 @@ class lserver_thread(threading.Thread):
                   
     def quit(self,w): 
         self.stop_server(w)
-        sys.exit(0)        
+        sys.exit(0)  
         
-class lunchinator():
-    menu = None
-    c = None
-    
-    def __init__(self):
-        self.c = lserver_thread()
-        self.c.start()
         
-        #create the settings submenu
-        settings_menu = gtk.Menu()
-        avatar_item = gtk.MenuItem("Avatar")
-        avatar_item.show()
-        settings_menu.append(avatar_item)
-        
-        #main menu
-        self.menu = gtk.Menu()    
-        menu_items = gtk.MenuItem("Call for lunch")
-        msg_items = gtk.MenuItem("Show/Send messages")
-        settings_item = gtk.MenuItem("Settings")
-        exit_item = gtk.MenuItem("Exit")
-                
-        menu_items.connect("activate", send_msg, self.c, "lunch")
-        msg_items.connect("activate", msg_window, self.c)
-        settings_item.set_submenu(settings_menu)
-        exit_item.connect("activate", self.c.quit)
-        
-        menu_items.show()         
-        msg_items.show()
-        settings_item.show() 
-        exit_item.show()
-        
-        self.menu.append(menu_items)
-        self.menu.append(msg_items)  
-        self.menu.append(settings_item)
-        self.menu.append(exit_item)            
     
 def send_msg(w,*data):
     lc = lunch_client.lunch_client()

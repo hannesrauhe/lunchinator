@@ -139,6 +139,7 @@ class lunch_server(lunch_default_config):
         except:
             print "Unexpected error while handling HELO call: ", sys.exc_info()[0]
             print "The data send was:",data
+        
     
     def incoming_call(self,msg,addr):
         mtime = localtime()

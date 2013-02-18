@@ -30,8 +30,10 @@ if __name__ == "__main__":
     ind.set_status (appindicator.STATUS_ACTIVE)
     
     lanschi = lunchinator()
+    lanschi.start()
             
     ind.set_menu(lanschi.menu)
     
-    gobject.timeout_add(2000, highlight_icon, lanschi.c)
+    
+    gobject.timeout_add(2000, highlight_icon, lanschi)
     gtk.main()

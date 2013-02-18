@@ -21,3 +21,15 @@ class lunch_default_config(object):
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
             
+    def get_debug(self):
+        return self.debug
+        
+    def set_debug(self,activate):
+        if activate:
+            f = open(self.main_config_dir+"/debug.cfg",'w')
+            f.write("debugging activated because this file exists")
+            f.close()
+        else:
+            os.remove(self.main_config_dir+"/debug.cfg")
+        self.debug = activate
+            
