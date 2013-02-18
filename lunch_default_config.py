@@ -11,6 +11,8 @@ class lunch_default_config(object):
     members_file = main_config_dir+"/lunch_members.cfg"
     avatar_dir = main_config_dir+"/avatars/"
     html_dir = main_config_dir
+    http_server = False
+    http_port = 50002
     
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30
@@ -24,9 +26,14 @@ class lunch_default_config(object):
             
     def read_config_from_hd(self):                     
         self.debug = False
+        self.http_server = False
+        
         for config_path in self.config_dirs:                
             if os.path.exists(config_path+"/debug.cfg"):
-                self.debug = True
+                self.debug = True            
+                
+            if os.path.exists(config_path+"/http_server.cfg"):
+                self.http_server = True
                 
             if os.path.exists(config_path+"/username.cfg"):
                 with open(config_path+"/username.cfg") as f:
@@ -50,6 +57,9 @@ class lunch_default_config(object):
     def get_debug(self):
         return self.debug
         
+    def get_http_server(self):
+        return self.http_server
+        
     def set_debug(self,activate):
         if activate:
             f = open(self.main_config_dir+"/debug.cfg",'w')
@@ -58,6 +68,15 @@ class lunch_default_config(object):
         else:
             os.remove(self.main_config_dir+"/debug.cfg")
         self.debug = activate
+        
+    def set_http_server(self,activate):
+        if activate:
+            f = open(self.main_config_dir+"/http_server.cfg",'w')
+            f.write("Http Server will run on port: "+str(self.http_port)+" because this file exists")
+            f.close()
+        else:
+            os.remove(self.main_config_dir+"/http_server.cfg")
+        self.http_server = activate
         
     def get_avatar(self):
         return self.avatar_file
