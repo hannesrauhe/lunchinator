@@ -20,7 +20,8 @@ class lunch_avatar(lunch_default_config):
         file_name, file_ext = os.path.splitext(file_path)    
         avatar_name = self.md5_for_file(file_path)+file_ext
         shutil.copy(file_path,self.avatar_dir+"/"+avatar_name )
-        
+        if self.debug:
+            print "using",file_path,"as avatar - copied: ",avatar_name
         
         f = open(self.main_config_dir+"/avatar.cfg",'w')
         f.truncate()

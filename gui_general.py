@@ -3,6 +3,7 @@ import gobject
 import gtk
 import lunch_server
 import lunch_client
+import lunch_avatar
 import time
 import socket
 import threading                  
@@ -26,8 +27,10 @@ class lunchinator(threading.Thread):
         settings_item = gtk.CheckMenuItem("More Settings")
         
         debug_item.set_active(self.ls.get_debug())
+        avatar_item.set_active(len(self.ls.get_avatar())>0)
             
         debug_item.connect("activate", self.toggle_debug_mode)
+        avatar_item.connect("activate", self.select_avatar)
         
         avatar_item.show()
         debug_item.show()
@@ -61,6 +64,29 @@ class lunchinator(threading.Thread):
         
     def toggle_debug_mode(self,w):
         self.ls.set_debug(w.get_active())
+        
+    def select_avatar(self,w):
+        chooser = gtk.FileChooserDialog(title="Choose your avatar",action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                                  buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK))
+        chooser.set_default_response(gtk.RESPONSE_OK)
+        fi = gtk.FileFilter()
+        fi.set_name("Images")
+        fi.add_mime_type("image/png")
+        fi.add_mime_type("image/jpeg")
+        fi.add_mime_type("image/gif")
+        fi.add_pattern("*.png")
+        fi.add_pattern("*.jpg")
+        fi.add_pattern("*.gif")
+        fi.add_pattern("*.tif")
+        fi.add_pattern("*.xpm")
+        chooser.add_filter(fi)
+        chooser.run()
+        response = chooser.run()
+        if response == gtk.RESPONSE_OK:   
+            filename = chooser.get_filename()
+            l_av = lunch_avatar.lunch_avatar()
+            l_av.use_as_avatar(filename)
+        chooser.destroy()       
         
     def stop_server(self,w):        
         if self.isAlive():

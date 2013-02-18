@@ -1,4 +1,4 @@
-import sys,os
+import sys,os,getpass
 
 class lunch_default_config(object):
     audio_file ="sonar.wav"
@@ -20,6 +20,32 @@ class lunch_default_config(object):
     def __init__(self):
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
+        self.read_config_from_hd()
+            
+    def read_config_from_hd(self):                     
+        self.debug = False
+        for config_path in self.config_dirs:                
+            if os.path.exists(config_path+"/debug.cfg"):
+                self.debug = True
+                
+            if os.path.exists(config_path+"/username.cfg"):
+                with open(config_path+"/username.cfg") as f:
+                    self.user_name = f.readline().strip()
+                    
+            if os.path.exists(config_path+"/avatar.cfg"):
+                with open(config_path+"/avatar.cfg") as f:
+                    self.avatar_file = f.readline().strip()
+                    
+            if os.path.exists(config_path+"/sound.cfg"):
+                with open(config_path+"/sound.cfg") as f:
+                    audio_file = f.readline().strip()
+                    if os.path.exists(config_path+"/sounds/"+audio_file):
+                        self.audio_file = audio_file
+                    else:
+                        print "configured audio file "+audio_file+" does not exist in sounds folder, using old one: "+self.audio_file  
+        
+        if self.user_name=="":
+            self.user_name = getpass.getuser()  
             
     def get_debug(self):
         return self.debug
@@ -32,4 +58,7 @@ class lunch_default_config(object):
         else:
             os.remove(self.main_config_dir+"/debug.cfg")
         self.debug = activate
+        
+    def get_avatar(self):
+        return self.avatar_file
             

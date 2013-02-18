@@ -18,34 +18,15 @@ class lunch_server(lunch_default_config):
     member_info = {}
     lclient = lunch_client()
     
+    def __init__(self):
+        lunch_default_config.__init__(self)        
+        self.read_config()
+        
     '''will be called every ten seconds'''
-    def read_config(self):             
-        self.debug = False
-        for config_path in self.config_dirs:                
-            if os.path.exists(config_path+"/debug.cfg"):
-                self.debug = True
-                
-            if os.path.exists(config_path+"/username.cfg"):
-                with open(config_path+"/username.cfg") as f:
-                    self.user_name = f.readline().strip()
-                    
-            if os.path.exists(config_path+"/avatar.cfg"):
-                with open(config_path+"/avatar.cfg") as f:
-                    self.avatar_file = f.readline().strip()
-                    
-            if os.path.exists(config_path+"/sound.cfg"):
-                with open(config_path+"/sound.cfg") as f:
-                    audio_file = f.readline().strip()
-                    if os.path.exists(config_path+"/sounds/"+audio_file):
-                        self.audio_file = audio_file
-                    else:
-                        print "configured audio file "+audio_file+" does not exist in sounds folder, using old one: "+self.audio_file                        
-                        
+    def read_config(self):                    
+        self.read_config_from_hd()
         if len(self.members)==0:
             self.members=self.init_members_from_file()
-        
-        if self.user_name=="":
-            self.user_name = getpass.getuser()
         
     def get_user_name(self):
         return self.user_name
@@ -265,10 +246,8 @@ class lunch_server(lunch_default_config):
         print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service"
         self.running = True
         self.my_master=-1 #the peer i use as master
-        self.user_name=getpass.getuser()
         announce_name=0 #how often did I announce my name
         
-        self.read_config()
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try: 
             s.bind(("", 50000)) 
