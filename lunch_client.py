@@ -38,7 +38,6 @@ class lunch_client(lunch_default_config):
                 except:
                     #print "Exception while sending msg %s to %s:"%(ip,name), sys.exc_info()[0]
                     continue        
-            s.sendto(msg, ("127.0.0.1", 50000))
         else:
             for ip,name in hosts.items():
                 #print ip.strip()
@@ -48,7 +47,6 @@ class lunch_client(lunch_default_config):
                 except:
                     #print "Exception while sending msg %s to %s:"%(ip,name), sys.exc_info()[0]
                     continue
-            s.sendto(msg, ("127.0.0.1", 50000))
         
         s.close() 
         return i
