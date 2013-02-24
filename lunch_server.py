@@ -3,7 +3,7 @@ from lunch_datathread import *
 from lunch_client import *
 from lunch_default_config import *
 
-from time import strftime, localtime, time, mktime
+from time import strftime, localtime, time, mktime, gmtime
 import socket,subprocess,sys,os,ctypes,getpass,json
         
 class lunch_server(lunch_default_config):    
@@ -59,7 +59,9 @@ class lunch_server(lunch_default_config):
         if os.path.exists(self.messages_file):
             try:
                 f = open(self.messages_file,'r')    
-                messages = json.loads(f.read())
+                tmp_msg = json.load(f)
+                for m in tmp_msg:
+                    messages.append([localtime(m[0]),m[1],m[2]])
                 f.close()
             except:
                 print "Could not read messages file",self.messages_file, ",but it seems to exist"
@@ -67,13 +69,18 @@ class lunch_server(lunch_default_config):
     
     def write_messages_to_file(self):
         try:
-            if len(self.last_messages)>1:
+            if len(self.last_messages)>0:
                 f = open(self.messages_file,'w')
                 f.truncate()
-                f.write(json.dumps(self.last_messages))
-                f.close();
+                try:
+                    msg = []
+                    for m in self.last_messages:
+                        msg.append([mktime(m[0]),m[1],m[2]])
+                    json.dump(msg,f)
+                finally:
+                    f.close();
         except:
-            print "Could not write messages to",self.messages_file
+            print "Could not write messages to",self.messages_file, sys.exc_info()[0]
         
     
     def incoming_event(self,data,addr):   
@@ -194,7 +201,7 @@ class lunch_server(lunch_default_config):
             
         print "%s: [%s] %s" % (t,m,msg)
         
-        self.last_messages.insert(0,(mtime,addr,msg))
+        self.last_messages.insert(0,[mtime,addr,msg])
         self.new_msg = True
         self.write_messages_to_file()
         
