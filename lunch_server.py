@@ -27,9 +27,54 @@ class lunch_server(lunch_default_config):
         self.read_config_from_hd()
         if len(self.members)==0:
             self.members=self.init_members_from_file()
+        if len(self.last_messages)==0:
+            self.last_messages=self.init_messages_from_file()
+            
+            
+    def init_members_from_file(self):
+        members = {}
+        if os.path.exists(self.members_file):
+            f = open(self.members_file,'r')    
+            for hostn in f.readlines():
+                try:
+                    members[socket.gethostbyname(hostn.strip())]=hostn.strip()
+                except:
+                    print "cannot find host specified by",self.members_file,"with name",hostn
+            f.close()
+        return members
+    
+    def write_members_to_file(self):
+        try:
+            if len(self.members)>1:
+                f = open(self.members_file,'w')
+                f.truncate()
+                for m in self.members.keys():
+                    f.write(m+"\n")
+                f.close();
+        except:
+            print "Could not write members to",self.members_file
+            
+    def init_messages_from_file(self):
+        messages = {}
+        if os.path.exists(self.messages_file):
+            try:
+                f = open(self.messages_file,'r')    
+                messages = json.loads(f.read())
+                f.close()
+            except:
+                print "Could not read messages file",self.messages_file, ",but it seems to exist"
+        return messages
+    
+    def write_messages_to_file(self):
+        try:
+            if len(self.last_messages)>1:
+                f = open(self.messages_file,'w')
+                f.truncate()
+                f.write(json.dumps(self.last_messages))
+                f.close();
+        except:
+            print "Could not write messages to",self.messages_file
         
-    def get_user_name(self):
-        return self.user_name
     
     def incoming_event(self,data,addr):   
         if addr[0].startswith("127."):
@@ -152,6 +197,7 @@ class lunch_server(lunch_default_config):
         self.last_messages.insert(0,(mtime,addr,msg))
         self.new_msg = True
         
+        
         if not msg.startswith("ignore"):
             if sys.platform.startswith('linux'):
                 self.incoming_call_linux(msg,addr)
@@ -199,29 +245,6 @@ class lunch_server(lunch_default_config):
             except:
                 print "eject error (close)"
                 pass
-            
-    def init_members_from_file(self):
-        members = {}
-        if os.path.exists(self.members_file):
-            f = open(self.members_file,'r')    
-            for hostn in f.readlines():
-                try:
-                    members[socket.gethostbyname(hostn.strip())]=hostn.strip()
-                except:
-                    print "cannot find host specified by",self.members_file,"with name",hostn
-        return members
-    
-    def write_members_to_file(self):
-        try:
-            if len(self.members)>1:
-                f = open(self.members_file,'w')
-                f.truncate()
-                for m in self.members.keys():
-                    f.write(m+"\n")
-                f.close();
-        except:
-            print "Could not write",self.members_file
-
     
     def remove_inactive_members(self):
         try:

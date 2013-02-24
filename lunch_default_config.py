@@ -9,6 +9,7 @@ class lunch_default_config(object):
     auto_update = True    
     main_config_dir = os.getenv("HOME")+"/.lunchinator"
     members_file = main_config_dir+"/lunch_members.cfg"
+    messages_file = main_config_dir+"/messages"
     avatar_dir = main_config_dir+"/avatars/"
     html_dir = main_config_dir
     http_server = False
@@ -59,6 +60,9 @@ class lunch_default_config(object):
         
     def get_http_server(self):
         return self.http_server
+        
+    def get_user_name(self):
+        return self.user_name
         
     def set_debug(self,activate):
         if activate:
