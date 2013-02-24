@@ -14,8 +14,7 @@ def reset_icon(c):
     statusicon.set_blinking(False)
     
 def show_menu(icon, button, time, menu):
-    lanschi.c.reset_new_msgs()
-    statusicon.set_blinking(False)
+    reset_icon(None)
     menu.show_all()
     menu.popup(None, None, gtk.status_icon_position_menu, button, time, statusicon)
     

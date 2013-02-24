@@ -55,7 +55,7 @@ class lunch_server(lunch_default_config):
             print "Could not write members to",self.members_file
             
     def init_messages_from_file(self):
-        messages = {}
+        messages = []
         if os.path.exists(self.messages_file):
             try:
                 f = open(self.messages_file,'r')    
