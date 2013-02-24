@@ -196,6 +196,7 @@ class lunch_server(lunch_default_config):
         
         self.last_messages.insert(0,(mtime,addr,msg))
         self.new_msg = True
+        self.write_messages_to_file()
         
         
         if not msg.startswith("ignore"):
