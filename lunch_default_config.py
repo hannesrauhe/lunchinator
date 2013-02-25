@@ -1,7 +1,7 @@
 import sys,os,getpass
 
 class lunch_default_config(object):
-    audio_file ="sonar.wav"
+    audio_file = sys.path[0]+"/sounds/sonar.wav"
     user_name = ""
     avatar_file = ""
     
@@ -14,11 +14,11 @@ class lunch_default_config(object):
     html_dir = main_config_dir
     http_server = False
     http_port = 50002
+    show_pic_fallback = sys.path[0]+"/images/webcam.jpg"
     show_pic_url = "http://webcam.wdf.sap.corp:1080/images/canteen_bac.jpeg"
     
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30
-    config_dirs = [sys.path[0],main_config_dir]
     icon_file = sys.path[0]+"/images/mini_breakfast.png"
     
     def __init__(self):
@@ -29,29 +29,30 @@ class lunch_default_config(object):
     def read_config_from_hd(self):                     
         self.debug = False
         self.http_server = False
-        
-        for config_path in self.config_dirs:                
-            if os.path.exists(config_path+"/debug.cfg"):
-                self.debug = True            
+                        
+        if os.path.exists(self.main_config_dir+"/debug.cfg"):
+            self.debug = True            
+            
+        if os.path.exists(self.main_config_dir+"/http_server.cfg"):
+            self.http_server = True
+            
+        if os.path.exists(self.main_config_dir+"/username.cfg"):
+            with open(self.main_config_dir+"/username.cfg") as f:
+                self.user_name = f.readline().strip()
                 
-            if os.path.exists(config_path+"/http_server.cfg"):
-                self.http_server = True
+        if os.path.exists(self.main_config_dir+"/avatar.cfg"):
+            with open(self.main_config_dir+"/avatar.cfg") as f:
+                self.avatar_file = f.readline().strip()
                 
-            if os.path.exists(config_path+"/username.cfg"):
-                with open(config_path+"/username.cfg") as f:
-                    self.user_name = f.readline().strip()
-                    
-            if os.path.exists(config_path+"/avatar.cfg"):
-                with open(config_path+"/avatar.cfg") as f:
-                    self.avatar_file = f.readline().strip()
-                    
-            if os.path.exists(config_path+"/sound.cfg"):
-                with open(config_path+"/sound.cfg") as f:
-                    audio_file = f.readline().strip()
-                    if os.path.exists(config_path+"/sounds/"+audio_file):
-                        self.audio_file = audio_file
-                    else:
-                        print "configured audio file "+audio_file+" does not exist in sounds folder, using old one: "+self.audio_file  
+        if os.path.exists(self.main_config_dir+"/sound.cfg"):
+            with open(self.main_config_dir+"/sound.cfg") as f:
+                audio_file = f.readline().strip()
+                if os.path.exists(self.main_config_dir+"/sounds/"+audio_file):
+                    self.audio_file = self.main_config_dir+"/sounds/"+audio_file
+                elif os.path.exists(sys.path[0]+"/sounds/"+audio_file):
+                    self.audio_file = sys.path[0]+"/sounds/"+audio_file
+                else:
+                    print "configured audio file "+audio_file+" does not exist in sounds folder, using old one: "+self.audio_file  
         
         if self.user_name=="":
             self.user_name = getpass.getuser()  

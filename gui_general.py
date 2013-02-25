@@ -251,8 +251,37 @@ class MessageTable(UpdatingTable):
             st.append(i)
         return st
         
+class UpdatingImage():
+    gtkimage = None
+    ls = None
+    def __init__(self,box,ls):
+        self.ls = ls
+        if self.ls.show_pic_url:
+            try:     
+                self.gtkimage = gtk.Image() 
+                self.gtkimage.set_from_file(self.ls.show_pic_fallback)
+                self.gtkimage.show()
+                box.pack_start(self.gtkimage, True, True, 0)
+                gobject.timeout_add(1000, self.timeout)        
+            except:
+                print "Something went wrong when trying to display the fallback image",self.ls.show_pic_fallback
+                pass      
+            
+    def timeout(self): 
+        if self.ls.show_pic_url:
+            try:
+                #todo disable proxy for now
+                proxy_handler = urllib2.ProxyHandler({})
+                opener = urllib2.build_opener(proxy_handler)
+                response=opener.open(self.ls.show_pic_url)
+                loader=gtk.gdk.PixbufLoader()
+                loader.write(response.read())
+                loader.close()   
+                self.gtkimage.set_from_pixbuf(loader.get_pixbuf())               
+            except:
+                print "Something went wrong when trying to display the webcam image"
+                pass      
         
-    
 def msg_window(w, c):    
     c.reset_new_msgs() 
     
@@ -262,27 +291,12 @@ def msg_window(w, c):
     window.set_position(gtk.WIN_POS_CENTER)
     window.set_title("Lunchinator")
     
+    box0 = gtk.HBox(False, 0)
     box1 = gtk.VBox(False, 0)
     box2 = gtk.HBox(False, 0)    
     msgt = MessageTable(box2,c)    
     memt = MembersTable(box2,c)
     box1.pack_start(box2, False, False, 0)
-    if c.ls.show_pic_url:
-        try:
-            #todo disable proxy for now
-            proxy_handler = urllib2.ProxyHandler({})
-            opener = urllib2.build_opener(proxy_handler)
-            response=opener.open(c.ls.show_pic_url)
-            loader=gtk.gdk.PixbufLoader()
-            loader.write(response.read())
-            loader.close()     
-            gtkimage = gtk.Image() 
-            gtkimage.set_from_pixbuf(loader.get_pixbuf())
-            gtkimage.show()
-            box2.pack_start(gtkimage, True, True, 0)
-        except:
-            print ""
-            pass
     box2.show()
     
     box2 = gtk.HBox(False, 0)
@@ -306,9 +320,13 @@ def msg_window(w, c):
     
     box1.pack_start(box2, False, False, 0)
     box2.show()
-    
-    window.add(box1)   
+           
     box1.show()
+    box0.pack_start(box1)
+    webcam = UpdatingImage(box0,c.ls)
+    box0.show()
+    
+    window.add(box0)
     window.show()
     entry.connect("activate", send_msg, c)
     entry.connect_object("activate", gtk.Widget.destroy, window)

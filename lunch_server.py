@@ -230,7 +230,7 @@ class lunch_server(lunch_default_config):
                 pass
         
             try:
-                subprocess.call(["play", "-q", sys.path[0]+"/sounds/"+self.audio_file])    
+                subprocess.call(["play", "-q", self.audio_file])    
             except:
                 print "sound error"
                 pass
