@@ -272,7 +272,7 @@ def msg_window(w, c):
             #todo disable proxy for now
             proxy_handler = urllib2.ProxyHandler({})
             opener = urllib2.build_opener(proxy_handler)
-            response=opener.urlopen(c.ls.show_pic_url)
+            response=opener.open(c.ls.show_pic_url)
             loader=gtk.gdk.PixbufLoader()
             loader.write(response.read())
             loader.close()     
@@ -281,6 +281,7 @@ def msg_window(w, c):
             gtkimage.show()
             box2.pack_start(gtkimage, True, True, 0)
         except:
+            print ""
             pass
     box2.show()
     
