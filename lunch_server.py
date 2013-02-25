@@ -159,11 +159,11 @@ class lunch_server(lunch_default_config):
                 
             elif "HELO"==cmd:
                 #someone tells me his name
-                if addr[0] in self.members:
-                    self.members[addr[0]]=value
-                else:
-                    self.members[addr[0]]={'name':value}                                        
+                if addr[0] not in self.members:   
+                    self.members[addr[0]]=value           
                     self.write_members_to_file()
+                else:                    
+                    self.members[addr[0]]=value
                 
                 if addr[0] in self.member_info:                    
                     self.member_info[addr[0]]['name']=value
