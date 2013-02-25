@@ -7,7 +7,10 @@ import lunch_avatar
 import lunch_http
 import time
 import socket
-import threading                  
+import threading
+
+import urllib2
+                 
         
 class lunchinator(threading.Thread):
     menu = None
@@ -264,6 +267,15 @@ def msg_window(w, c):
     msgt = MessageTable(box2,c)    
     memt = MembersTable(box2,c)
     box1.pack_start(box2, False, False, 0)
+    if c.ls.show_pic_url:
+        response=urllib2.urlopen(c.ls.show_pic_url)
+        loader=gtk.gdk.PixbufLoader()
+        loader.write(response.read())
+        loader.close()     
+        gtkimage = gtk.Image() 
+        gtkimage.set_from_pixbuf(loader.get_pixbuf())
+        gtkimage.show()
+        box2.pack_start(gtkimage, True, True, 0)
     box2.show()
     
     box2 = gtk.HBox(False, 0)

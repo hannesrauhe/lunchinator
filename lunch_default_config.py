@@ -14,6 +14,7 @@ class lunch_default_config(object):
     html_dir = main_config_dir
     http_server = False
     http_port = 50002
+    show_pic_url = "http://webcam.wdf.sap.corp:1080/images/canteen_bac.jpeg"
     
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30
