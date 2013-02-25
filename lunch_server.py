@@ -86,10 +86,9 @@ class lunch_server(lunch_default_config):
     def incoming_event(self,data,addr):   
         if addr[0].startswith("127."):
             return     
-        
-        (cmd, value) = data.split(" ",1)
                 
-        try:
+        try:        
+            (cmd, value) = data.split(" ",1)
             if cmd.startswith("HELO_UPDATE"):
                 t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
                 up_f = open(self.main_config_dir+"/update","w")
