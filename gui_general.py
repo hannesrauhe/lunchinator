@@ -268,14 +268,20 @@ def msg_window(w, c):
     memt = MembersTable(box2,c)
     box1.pack_start(box2, False, False, 0)
     if c.ls.show_pic_url:
-        response=urllib2.urlopen(c.ls.show_pic_url)
-        loader=gtk.gdk.PixbufLoader()
-        loader.write(response.read())
-        loader.close()     
-        gtkimage = gtk.Image() 
-        gtkimage.set_from_pixbuf(loader.get_pixbuf())
-        gtkimage.show()
-        box2.pack_start(gtkimage, True, True, 0)
+        try:
+            #todo disable proxy for now
+            proxy_handler = urllib2.ProxyHandler({})
+            opener = urllib2.build_opener(proxy_handler)
+            response=opener.urlopen(c.ls.show_pic_url)
+            loader=gtk.gdk.PixbufLoader()
+            loader.write(response.read())
+            loader.close()     
+            gtkimage = gtk.Image() 
+            gtkimage.set_from_pixbuf(loader.get_pixbuf())
+            gtkimage.show()
+            box2.pack_start(gtkimage, True, True, 0)
+        except:
+            pass
     box2.show()
     
     box2 = gtk.HBox(False, 0)
