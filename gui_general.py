@@ -170,7 +170,7 @@ class UpdatingTable(object):
         self.scrollTree.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.scrollTree.set_border_width(10)
         self.scrollTree.add_with_viewport(self.treeView)  
-        self.scrollTree.set_size_request(400, 250)   
+        self.scrollTree.set_size_request(400, 350)   
         self.treeView.show()
         self.scrollTree.show()   
         box.pack_start(self.scrollTree, True, False, 3)
