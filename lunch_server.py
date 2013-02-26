@@ -221,13 +221,13 @@ class lunch_server(lunch_default_config):
             print "notify error"
             pass
     
-        if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765:
+        if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765 and msg.startswith("lunch"):
             try:
                 subprocess.call(["eject", "-T", "/dev/cdrom"])
             except:
                 print "eject error (open)"
                 pass
-        
+            
             try:
                 subprocess.call(["play", "-q", self.audio_file])    
             except:
@@ -241,7 +241,7 @@ class lunch_server(lunch_default_config):
                 pass
         
     def incoming_call_win(self,msg,addr):    
-        if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765:
+        if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765 and msg.startswith("lunch"):
             try:
                 ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
             except:
