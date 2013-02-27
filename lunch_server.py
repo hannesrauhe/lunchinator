@@ -95,7 +95,7 @@ class lunch_server(lunch_default_config):
                 if self.auto_update:
                     print "%s: [%s] update" % (t,addr[0])
                     up_f = open(self.main_config_dir+"/update","w")
-                    up_f.write(t,": ["+addr[0]+"] update")
+                    up_f.write(t+": ["+addr[0]+"] update")
                     up_f.close()
                     os.chdir(sys.path[0])
                     subprocess.call(["git","stash"])
