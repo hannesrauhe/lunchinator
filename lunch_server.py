@@ -146,16 +146,11 @@ class lunch_server(lunch_default_config):
                     ds = DataSenderThread(addr[0],fileToSend)
                     ds.start()
                 else:
-                    print "File",fileToSend,"not found"                    
-                                    
-            elif cmd.startswith("HELO_MASTER"):
-                #deprecated
-                if addr[0] in self.members:
-                    self.members[addr[0]]=value
-                else:
-                    self.members[addr[0]]={'name':value}                                        
-                    self.write_members_to_file()
-                self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
+                    print "File",fileToSend,"not found"      
+                
+            elif cmd.startswith("HELO_INFO"):
+                #someone sends his info
+                self.member_info[addr[0]] = json.loads(value)              
                 
             elif "HELO"==cmd:
                 #someone tells me his name
@@ -169,6 +164,15 @@ class lunch_server(lunch_default_config):
                     self.member_info[addr[0]]['name']=value
                 else:
                     self.member_info[addr[0]]={'name':value}
+                                    
+            elif cmd.startswith("HELO_MASTER"):
+                #deprecated
+                if addr[0] in self.members:
+                    self.members[addr[0]]=value
+                else:
+                    self.members[addr[0]]={'name':value}                                        
+                    self.write_members_to_file()
+                self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                     
             else:
                 print "unknown command",cmd,"with value",value
@@ -264,13 +268,17 @@ class lunch_server(lunch_default_config):
         except:
             print "Something went wrong while trying to clean up the members-table"
             
+    def build_info_string(self):
+        return json.dumps({"avatar": self.avatar_file,
+                           "name": self.user_name,
+                           "next_lunch_begin":self.next_lunch_begin,
+                           "next_lunch_end":self.next_lunch_end})
+            
     '''ask for the dictionary and send over own information'''
     def call_for_dict(self):
         try:
             if len(self.members.keys())>self.peer_nr:
-                self.lclient.call("HELO_REQUEST_DICT "+json.dumps({"avatar": self.avatar_file,
-                                                             "name": self.user_name}),
-                                                             client=self.members.keys()[self.peer_nr])
+                self.lclient.call("HELO_REQUEST_DICT "+self.build_info_string(),client=self.members.keys()[self.peer_nr])
             self.peer_nr=(self.peer_nr+1) % len(self.members)
         except:
             print "Something went wrong while trying to send a call to the new master"

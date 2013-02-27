@@ -21,6 +21,8 @@ class lunch_default_config(object):
     show_pic_url = "http://webcam.wdf.sap.corp:1080/images/canteen_bac.jpeg"
     default_lunch_begin = "12:15"
     default_lunch_end = "12:45"
+    next_lunch_begin = "12:15"
+    next_lunch_end = "12:45"
     alarm_begin_time = "11:30"
     alarm_end_time = "13:00"
     
