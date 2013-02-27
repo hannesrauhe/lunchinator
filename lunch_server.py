@@ -340,6 +340,15 @@ class lunch_server(lunch_default_config):
                 indexhtml.write("</tr>")
         indexhtml.write("</table>")
         indexhtml.close()
+            
+    def get_last_msgs(self):  
+        return self.last_messages
+    
+    def get_members(self):  
+        return self.members
+
+    def get_member_timeout(self):  
+        return self.member_timeout    
     
 if __name__ == "__main__":
     l = lunch_server()

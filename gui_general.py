@@ -15,6 +15,7 @@ import urllib2
 class lunchinator(threading.Thread):
     menu = None
     ls = lunch_server.lunch_server()
+    lc = lunch_client.lunch_client()
     lanschi_http = None
     
     def __init__(self):           
@@ -41,7 +42,7 @@ class lunchinator(threading.Thread):
             
         debug_item.connect("activate", self.toggle_debug_mode)
         http_server_item.connect("activate",self.toggle_http_server)
-        avatar_item.connect("activate", self.select_avatar)
+        avatar_item.connect("activate", self.window_select_avatar)
                 
         settings_menu.append(avatar_item)
         settings_menu.append(debug_item)
@@ -56,8 +57,8 @@ class lunchinator(threading.Thread):
         settings_item = gtk.MenuItem("Settings")
         exit_item = gtk.MenuItem("Exit")
                 
-        menu_items.connect("activate", send_msg, self, "lunch")
-        msg_items.connect("activate", msg_window, self)
+        menu_items.connect("activate", self.clicked_send_msg, "lunch")
+        msg_items.connect("activate", self.window_msg)
         settings_item.set_submenu(settings_menu)
         exit_item.connect("activate", self.quit)
         
@@ -83,7 +84,7 @@ class lunchinator(threading.Thread):
         else:
             self.lanschi_http.stop_server()
         
-    def select_avatar(self,w):
+    def window_select_avatar(self,w):
         chooser = gtk.FileChooserDialog(title="Choose your avatar",action=gtk.FILE_CHOOSER_ACTION_OPEN,
                                   buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK))
         chooser.set_default_response(gtk.RESPONSE_OK)
@@ -113,15 +114,6 @@ class lunchinator(threading.Thread):
             print "server stopped" 
         else:
             print "server not running"
-            
-    def get_last_msgs(self,w):  
-        return self.ls.last_messages
-    
-    def get_members(self):  
-        return self.ls.members
-
-    def get_member_timeout(self):  
-        return self.ls.member_timeout
     
     def check_new_msgs(self):
         return self.ls.new_msg
@@ -131,40 +123,85 @@ class lunchinator(threading.Thread):
         
     def disable_auto_update(self):
         self.ls.auto_update=False
-
-    def set_user_name(self,name):
-        self.ls.user_name=name
                   
     def quit(self,w): 
         self.stop_server(w)
         if self.ls.get_http_server():
             self.lanschi_http.stop_server()
-        sys.exit(0)  
+        sys.exit(0)     
         
         
+    def window_msg(self, w):    
+        self.reset_new_msgs() 
+        
+        window = gtk.Window(gtk.WINDOW_TOPLEVEL)
     
-def send_msg(w,*data):
-    lc = lunch_client.lunch_client()
-    c = data[0]
-    if len(data)>1:
-        lc.call(data[1],hosts=c.get_members())
-    else:
-        lc.call(w.get_text())
-    w.set_text("")
+        window.set_border_width(10)
+        window.set_position(gtk.WIN_POS_CENTER)
+        window.set_title("Lunchinator")
         
-def add_host(w,*data):
-    hostn = w.get_text()
-    c = data[0]
-    try:
-        c.t.ls.members[socket.gethostbyname(hostn.strip())]=hostn.strip()
-    except:
-        d = gtk.MessageDialog(parent=None, flags=0, type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK, message_format=None)
-        d.set_markup("Cannot add host: Hostname unknown")
-        d.run()
+        box0 = gtk.HBox(False, 0)
+        box1 = gtk.VBox(False, 0)
+        box2 = gtk.HBox(False, 0)    
+        msgt = MessageTable(box2,self.ls)    
+        memt = MembersTable(box2,self.ls)
+        box1.pack_start(box2, False, False, 0)
+        box2.show()
+        
+        box2 = gtk.HBox(False, 0)
+        entry = gtk.Entry()    
+        box2.pack_start(entry, True, True, 0)
+        entry.show()
+        button = gtk.Button("Send Msg")
+        box2.pack_start(button, True, False, 0)
+        button.show()
+        
+    #    box1.pack_start(box2, False, False, 0)
+    #    box2.show()
+    #        
+    #    box2 = gtk.HBox(False, 0)
+        entry2 = gtk.Entry()    
+        box2.pack_start(entry2, True, True, 0)
+        entry2.show()
+        button2 = gtk.Button("Add Host")
+        box2.pack_start(button2, True, False, 0)
+        button2.show()
+        
+        box1.pack_start(box2, False, False, 0)
+        box2.show()
+               
+        box1.show()
+        box0.pack_start(box1)
+        webcam = UpdatingImage(box0,self.ls)
+        box0.show()
+        
+        window.add(box0)
+        window.show()
+        entry.connect("activate", self.clicked_send_msg)
+        button.connect_object("clicked", gtk.Widget.activate, entry)
+        entry2.connect("activate", self.clicked_add_host)
+        button2.connect_object("clicked", gtk.Widget.activate, entry2)      
+            
+    def clicked_send_msg(self,w,*data):
+        if len(data):
+            self.lc.call(data[0],hosts=self.ls.get_members())
+        else:
+            self.lc.call(w.get_text())
+            w.set_text("")
+        
+    def clicked_add_host(self,w):
+        hostn = w.get_text()
+        try:
+            self.ls.members[socket.gethostbyname(hostn.strip())]=hostn.strip()
+            w.set_text("")
+        except:
+            d = gtk.MessageDialog(parent=None, flags=0, type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK, message_format=None)
+            d.set_markup("Cannot add host: Hostname unknown")
+            d.run()
 
 class UpdatingTable(object):    
-    def __init__(self,box,c):
-        self.c = c        
+    def __init__(self,box,ls):
+        self.ls = ls        
         self.treeView = gtk.TreeView(self.create_model())
         self.fill_treeview()
         self.scrollTree = gtk.ScrolledWindow()
@@ -195,8 +232,8 @@ class UpdatingTable(object):
         return None
     
 class MembersTable(UpdatingTable):    
-    def __init__(self,box,c):
-        UpdatingTable.__init__(self,box,c)        
+    def __init__(self,box,ls):
+        UpdatingTable.__init__(self,box,ls)        
         
     def fill_treeview(self):        
         rendererText = gtk.CellRendererText()
@@ -215,8 +252,8 @@ class MembersTable(UpdatingTable):
         self.treeView.append_column(column)
     
     def create_model(self):
-        me = self.c.get_members()
-        ti = self.c.get_member_timeout()
+        me = self.ls.get_members()
+        ti = self.ls.get_member_timeout()
         st = gtk.ListStore(str, str, int)
         for ip in me.keys():
             member_entry=("","","")
@@ -229,8 +266,8 @@ class MembersTable(UpdatingTable):
         return st
     
 class MessageTable(UpdatingTable):
-    def __init__(self,box,c):
-        UpdatingTable.__init__(self,box,c)     
+    def __init__(self,box,ls):
+        UpdatingTable.__init__(self,box,ls)     
         
     def fill_treeview(self):
         rendererText = gtk.CellRendererText()
@@ -249,11 +286,11 @@ class MessageTable(UpdatingTable):
         self.treeView.append_column(column)
     
     def create_model(self):
-        m = self.c.get_last_msgs(None)
+        m = self.ls.get_last_msgs()
         st = gtk.ListStore(str, str, str)
         for i in m:
-            if i[1] in self.c.get_members():
-                i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),self.c.get_members()[i[1]],i[2])
+            if i[1] in self.ls.get_members():
+                i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),self.ls.get_members()[i[1]],i[2])
             else:
                 i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),i[1],i[2])
             st.append(i)
@@ -291,54 +328,3 @@ class UpdatingImage():
                 print "Something went wrong when trying to display the webcam image"
                 return False
         return False
-        
-def msg_window(w, c):    
-    c.reset_new_msgs() 
-    
-    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-
-    window.set_border_width(10)
-    window.set_position(gtk.WIN_POS_CENTER)
-    window.set_title("Lunchinator")
-    
-    box0 = gtk.HBox(False, 0)
-    box1 = gtk.VBox(False, 0)
-    box2 = gtk.HBox(False, 0)    
-    msgt = MessageTable(box2,c)    
-    memt = MembersTable(box2,c)
-    box1.pack_start(box2, False, False, 0)
-    box2.show()
-    
-    box2 = gtk.HBox(False, 0)
-    entry = gtk.Entry()    
-    box2.pack_start(entry, True, True, 0)
-    entry.show()
-    button = gtk.Button("Send Msg")
-    box2.pack_start(button, True, False, 0)
-    button.show()
-    
-#    box1.pack_start(box2, False, False, 0)
-#    box2.show()
-#        
-#    box2 = gtk.HBox(False, 0)
-    entry2 = gtk.Entry()    
-    box2.pack_start(entry2, True, True, 0)
-    entry2.show()
-    button2 = gtk.Button("Add Host")
-    box2.pack_start(button2, True, False, 0)
-    button2.show()
-    
-    box1.pack_start(box2, False, False, 0)
-    box2.show()
-           
-    box1.show()
-    box0.pack_start(box1)
-    webcam = UpdatingImage(box0,c.ls)
-    box0.show()
-    
-    window.add(box0)
-    window.show()
-    entry.connect("activate", send_msg, c)
-    button.connect_object("clicked", gtk.Widget.activate, entry)
-    entry2.connect("activate", add_host, c)
-    button2.connect_object("clicked", gtk.Widget.activate, entry2) 
