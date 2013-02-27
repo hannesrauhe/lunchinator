@@ -150,6 +150,7 @@ def send_msg(w,*data):
         lc.call(data[1],hosts=c.get_members())
     else:
         lc.call(w.get_text())
+    w.set_text("")
         
 def add_host(w,*data):
     hostn = w.get_text()
@@ -174,11 +175,18 @@ class UpdatingTable(object):
         self.treeView.show()
         self.scrollTree.show()   
         box.pack_start(self.scrollTree, True, False, 3)
-        gobject.timeout_add(100, self.timeout)        
+        gobject.timeout_add(1000, self.timeout)        
         
     def timeout(self):
-        self.treeView.set_model(self.create_model())
-        return True
+        try:
+            sortCol,sortOrder = self.treeView.get_model().get_sort_column_id()
+            st = self.create_model()
+            if sortCol!=None:
+                st.set_sort_column_id(sortCol,sortOrder)
+            self.treeView.set_model(st)
+            return True
+        except:
+            return False
     
     def fill_treeview(self):
         return None
@@ -217,7 +225,7 @@ class MembersTable(UpdatingTable):
             else:
                 member_entry = (ip,me[ip],-1)            
             st.append(member_entry)
-        st.set_sort_column_id(2,gtk.SORT_DESCENDING)
+        st.set_sort_column_id(1,gtk.SORT_ASCENDING)
         return st
     
 class MessageTable(UpdatingTable):
@@ -245,9 +253,9 @@ class MessageTable(UpdatingTable):
         st = gtk.ListStore(str, str, str)
         for i in m:
             if i[1] in self.c.get_members():
-                i=(time.strftime("%a, %d.%m.%Y %H:%M:%S", i[0]),self.c.get_members()[i[1]],i[2])
+                i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),self.c.get_members()[i[1]],i[2])
             else:
-                i=(time.strftime("%a, %d.%m.%Y %H:%M:%S", i[0]),i[1],i[2])
+                i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),i[1],i[2])
             st.append(i)
         return st
         
@@ -277,10 +285,12 @@ class UpdatingImage():
                 loader=gtk.gdk.PixbufLoader()
                 loader.write(response.read())
                 loader.close()   
-                self.gtkimage.set_from_pixbuf(loader.get_pixbuf())               
+                self.gtkimage.set_from_pixbuf(loader.get_pixbuf())  
+                return True             
             except:
                 print "Something went wrong when trying to display the webcam image"
-                pass      
+                return False
+        return False
         
 def msg_window(w, c):    
     c.reset_new_msgs() 
@@ -329,7 +339,6 @@ def msg_window(w, c):
     window.add(box0)
     window.show()
     entry.connect("activate", send_msg, c)
-    entry.connect_object("activate", gtk.Widget.destroy, window)
     button.connect_object("clicked", gtk.Widget.activate, entry)
     entry2.connect("activate", add_host, c)
     button2.connect_object("clicked", gtk.Widget.activate, entry2) 
