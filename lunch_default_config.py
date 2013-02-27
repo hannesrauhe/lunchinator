@@ -1,25 +1,34 @@
 import sys,os,getpass
 
 class lunch_default_config(object):
-    audio_file = sys.path[0]+"/sounds/sonar.wav"
-    user_name = ""
-    avatar_file = ""
-    
-    debug = False
-    auto_update = True    
+    '''unchangeable for now'''
     main_config_dir = os.getenv("HOME")+"/.lunchinator"
+    icon_file = sys.path[0]+"/images/mini_breakfast.png"
     members_file = main_config_dir+"/lunch_members.cfg"
     messages_file = main_config_dir+"/messages"
     avatar_dir = main_config_dir+"/avatars/"
     html_dir = main_config_dir
-    http_server = False
-    http_port = 50002
-    show_pic_fallback = sys.path[0]+"/images/webcam.jpg"
-    show_pic_url = "http://webcam.wdf.sap.corp:1080/images/canteen_bac.jpeg"
     
+    '''changed by using files'''
+    audio_file = sys.path[0]+"/sounds/sonar.wav"
+    user_name = ""
+    avatar_file = ""    
+    debug = False 
+    http_server = False
+    
+    '''file settings.cfg standard section '''
+    auto_update = True   
+    show_pic_url = "http://webcam.wdf.sap.corp:1080/images/canteen_bac.jpeg"
+    default_lunch_begin = "12:15"
+    default_lunch_end = "12:45"
+    alarm_begin_time = "11:30"
+    alarm_end_time = "13:00"
+    
+    '''file settings.cfg advanced section '''
+    http_port = 50002
+    show_pic_fallback = sys.path[0]+"/images/webcam.jpg"    
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30
-    icon_file = sys.path[0]+"/images/mini_breakfast.png"
     
     def __init__(self):
         if not os.path.exists(self.avatar_dir):
