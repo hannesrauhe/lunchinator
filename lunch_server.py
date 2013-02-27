@@ -91,18 +91,18 @@ class lunch_server(lunch_default_config):
             (cmd, value) = data.split(" ",1)
             if cmd.startswith("HELO_UPDATE"):
                 t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
-                up_f = open(self.main_config_dir+"/update","w")
-                up_f.write(t,": ["+addr+"] update")
-                up_f.close()
                 self.update_request = True
                 if self.auto_update:
-                    print "%s: [%s] update" % (t,addr)
+                    print "%s: [%s] update" % (t,addr[0])
+                    up_f = open(self.main_config_dir+"/update","w")
+                    up_f.write(t,": ["+addr[0]+"] update")
+                    up_f.close()
                     os.chdir(sys.path[0])
                     subprocess.call(["git","stash"])
                     subprocess.call(["git","pull"])
                     sys.exit(0)
                 else:
-                    print "%s: %s issued an update but updates are disabled" % (t,addr)
+                    print "%s: %s issued an update but updates are disabled" % (t,addr[0])
                 
             elif cmd.startswith("HELO_REQUEST_DICT"):
                 self.member_info[addr[0]] = json.loads(value)
