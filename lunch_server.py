@@ -100,7 +100,7 @@ class lunch_server(lunch_default_config):
                     os.chdir(sys.path[0])
                     subprocess.call(["git","stash"])
                     subprocess.call(["git","pull"])
-                    sys.exit(0)
+                    os._exit(0)
                 else:
                     print "%s: %s issued an update but updates are disabled" % (t,addr[0])
                 
