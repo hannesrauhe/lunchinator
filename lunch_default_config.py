@@ -112,7 +112,9 @@ class lunch_default_config(object):
         if self.debug:
             print name,value
         return value
-    
+        
+    def write_config_to_hd(self): 
+        self.config_file.write(self.main_config_dir+'/settings.cfg')
             
     def get_debug(self):
         return self.debug
@@ -122,6 +124,12 @@ class lunch_default_config(object):
         
     def get_user_name(self):
         return self.user_name
+    
+    def get_icon_file(self):
+        return self.icon_file
+
+    def get_avatar_dir(self):
+        return self.avatar_dir
         
     def set_debug(self,activate):
         if activate:

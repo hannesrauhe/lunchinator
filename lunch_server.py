@@ -6,8 +6,8 @@ from iface_called_plugin import *
 from time import strftime, localtime, time, mktime, gmtime
 import socket,subprocess,sys,os,ctypes,getpass,json
 
-
 from yapsy.PluginManager import PluginManagerSingleton
+from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 
         
 class lunch_server(lunch_default_config):    
@@ -26,11 +26,24 @@ class lunch_server(lunch_default_config):
     def __init__(self):
         lunch_default_config.__init__(self)        
         self.read_config()
+        PluginManagerSingleton.setBehaviour([
+            ConfigurablePluginManager,
+        ])
         self.plugin_manager = PluginManagerSingleton.get()
+        self.plugin_manager.app = self
+        self.plugin_manager.setConfigParser(self.config_file,self.write_config_to_hd)
         self.plugin_manager.setPluginPlaces(self.plugin_dirs)
         self.plugin_manager.setCategoriesFilter({
            "called" : iface_called_plugin
            })
+        self.plugin_manager.collectPlugins()
+        self.plugin_manager.deactivatePluginByName("Notify")
+        for info in self.plugin_manager.getAllPlugins():
+            print info.plugin_object # an instance of the class you extended from IPlugin
+            print info.name
+            print info.version
+            print info.website
+        
         
     '''will be called every ten seconds'''
     def read_config(self):                    
@@ -226,52 +239,6 @@ class lunch_server(lunch_default_config):
                 
             for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
                 pluginInfo.plugin_object.process_message(msg,addr,member_info)
-            if sys.platform.startswith('linux'):
-                self.incoming_call_linux(msg,addr)
-            else:
-                self.incoming_call_win(msg,addr)
-            
-    def incoming_call_linux(self,msg,addr):    
-        try:
-            icon = self.icon_file
-            if self.member_info.has_key(addr) and self.member_info[addr].has_key("avatar"):
-                icon = self.avatar_dir+"/"+self.member_info[addr]["avatar"]
-            subprocess.call(["notify-send","--icon="+icon, msg + " [" + self.members[addr] + "]"])
-        except:
-            print "notify error"
-            pass
-    
-        if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765 and msg.startswith("lunch"):
-            try:
-                subprocess.call(["eject", "-T", "/dev/cdrom"])
-            except:
-                print "eject error (open)"
-                pass
-            
-            try:
-                subprocess.call(["play", "-q", self.audio_file])    
-            except:
-                print "sound error"
-                pass
-        
-            try:
-                subprocess.call(["eject", "-T", "/dev/cdrom"])
-            except:
-                print "eject error (close)"
-                pass
-        
-    def incoming_call_win(self,msg,addr):    
-        if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765 and msg.startswith("lunch"):
-            try:
-                ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
-            except:
-                print "eject error (open)"
-                pass
-            try:
-                ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
-            except:
-                print "eject error (close)"
-                pass
     
     def remove_inactive_members(self):
         try:

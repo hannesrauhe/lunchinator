@@ -1,9 +1,9 @@
 [Core]
-Name = Notify Plugin
+Name = Notify
 Module = notify
 
 [Documentation]
-Author = John Smith
+Author = Hannes Rauhe
 Version = 0.1
-Website = http://lotsofplugins.com
-Description = My first plugin
+Website = http://launchpad.de
+Description = The standard notify plugin for the lunchinator shows a message on the screen and opens the CD/plays a sound at lunchtime

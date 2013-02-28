@@ -1,4 +1,4 @@
-from yapsy import IPlugin
+from yapsy.IPlugin import IPlugin
 
 class iface_called_plugin(IPlugin):
     def process_message(self,msg,ip,member_info):
