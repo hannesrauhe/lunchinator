@@ -272,7 +272,8 @@ class lunch_server(lunch_default_config):
         return json.dumps({"avatar": self.avatar_file,
                            "name": self.user_name,
                            "next_lunch_begin":self.next_lunch_begin,
-                           "next_lunch_end":self.next_lunch_end})
+                           "next_lunch_end":self.next_lunch_end,
+                           "version":self.version_short})
             
     '''ask for the dictionary and send over own information'''
     def call_for_dict(self):

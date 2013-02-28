@@ -10,6 +10,7 @@ class lunch_default_config(object):
     html_dir = main_config_dir
     show_pic_fallback = sys.path[0]+"/images/webcam.jpg"    
     version = "unknown"
+    version_short = "unknown"
     
     ''' not in files'''    
     next_lunch_begin = "12:15"
@@ -42,6 +43,7 @@ class lunch_default_config(object):
             os.chdir(sys.path[0])
             p = subprocess.Popen(["git","log","-1"],stdout=subprocess.PIPE)
             self.version, err = p.communicate()
+            self.version_short = self.version.splitlines()[2][5:].strip()
         except:
             pass
         self.config_file = ConfigParser.RawConfigParser()
