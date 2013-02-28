@@ -1,4 +1,4 @@
-import sys,os,getpass,ConfigParser,types
+import sys,os,getpass,ConfigParser,types,subprocess
 
 class lunch_default_config(object):
     '''unchangeable for now'''
@@ -9,6 +9,7 @@ class lunch_default_config(object):
     avatar_dir = main_config_dir+"/avatars/"
     html_dir = main_config_dir
     show_pic_fallback = sys.path[0]+"/images/webcam.jpg"    
+    version = "unknown"
     
     ''' not in files'''    
     next_lunch_begin = "12:15"
@@ -37,6 +38,12 @@ class lunch_default_config(object):
     def __init__(self):
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
+        try:
+            os.chdir(sys.path[0])
+            p = subprocess.Popen(["git","log","-1"],stdout=subprocess.PIPE)
+            self.version, err = p.communicate()
+        except:
+            pass
         self.config_file = ConfigParser.RawConfigParser()
         self.read_config_from_hd()
             

@@ -331,14 +331,16 @@ class lunch_server(lunch_default_config):
             
     def write_info_html(self):
         indexhtml = open(self.html_dir+"/index.html","w")
-        indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' ><table>")
+        indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' ><table>\n")
         if len(self.member_info)>0:
             for ip,d in self.member_info.iteritems():
-                indexhtml.write("<tr><td>"+str(ip)+"</td>")
+                indexhtml.write("<tr><td>"+str(ip)+"</td>\n")
                 if d.has_key("avatar"):
-                    indexhtml.write("<td><img width='200' src=\"avatars/"+d["avatar"]+"\" /></td>")
-                indexhtml.write("</tr>")
-        indexhtml.write("</table>")
+                    indexhtml.write("<td><img width='200' src=\"avatars/"+d["avatar"]+"\" /></td>\n")
+                indexhtml.write("<td>"+str(d)+"</td>\n")                
+                indexhtml.write("</tr>\n")
+        indexhtml.write("</table>\n")
+        indexhtml.write(self.version)
         indexhtml.close()
             
     def get_last_msgs(self):  
