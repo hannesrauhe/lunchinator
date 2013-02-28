@@ -331,18 +331,25 @@ class lunch_server(lunch_default_config):
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
             
     def write_info_html(self):
-        indexhtml = open(self.html_dir+"/index.html","w")
-        indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' ><table>\n")
-        if len(self.member_info)>0:
-            for ip,d in self.member_info.iteritems():
-                indexhtml.write("<tr><td>"+str(ip)+"</td>\n")
-                if d.has_key("avatar"):
-                    indexhtml.write("<td><img width='200' src=\"avatars/"+d["avatar"]+"\" /></td>\n")
-                indexhtml.write("<td>"+str(d)+"</td>\n")                
-                indexhtml.write("</tr>\n")
-        indexhtml.write("</table>\n")
-        indexhtml.write(self.version)
-        indexhtml.close()
+        try:
+            indexhtml = open(self.html_dir+"/index.html","w")
+            indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' ><table>\n")
+            if len(self.member_info)>0:
+                for ip,d in self.member_info.iteritems():
+                    indexhtml.write("<tr><td>"+str(ip)+"</td>\n")
+                    if d.has_key("avatar") and d["avatar"] and os.path.exists(self.avatar_dir+"/"+d["avatar"]):
+                        indexhtml.write("<td><img width='200' src=\"avatars/"+d["avatar"]+"\" /></td>\n")
+                    else:
+                        indexhtml.write("<td></td>\n")
+                    indexhtml.write("<td>")
+                    for k,v in d.iteritems():
+                        indexhtml.write(k+": "+v+"<br />\n")                
+                    indexhtml.write("</td></tr>\n")
+            indexhtml.write("</table>\n")
+            indexhtml.write(self.version)
+            indexhtml.close()
+        except:
+            pass
             
     def get_last_msgs(self):  
         return self.last_messages
