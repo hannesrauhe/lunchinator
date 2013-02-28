@@ -1,4 +1,4 @@
-import sys,os,getpass
+import sys,os,getpass,ConfigParser,types
 
 class lunch_default_config(object):
     '''unchangeable for now'''
@@ -8,6 +8,11 @@ class lunch_default_config(object):
     messages_file = main_config_dir+"/messages"
     avatar_dir = main_config_dir+"/avatars/"
     html_dir = main_config_dir
+    show_pic_fallback = sys.path[0]+"/images/webcam.jpg"    
+    
+    ''' not in files'''    
+    next_lunch_begin = "12:15"
+    next_lunch_end = "12:45"
     
     '''changed by using files'''
     audio_file = sys.path[0]+"/sounds/sonar.wav"
@@ -21,23 +26,34 @@ class lunch_default_config(object):
     show_pic_url = "http://webcam.wdf.sap.corp:1080/images/canteen_bac.jpeg"
     default_lunch_begin = "12:15"
     default_lunch_end = "12:45"
-    next_lunch_begin = "12:15"
-    next_lunch_end = "12:45"
     alarm_begin_time = "11:30"
     alarm_end_time = "13:00"
     
     '''file settings.cfg advanced section '''
     http_port = 50002
-    show_pic_fallback = sys.path[0]+"/images/webcam.jpg"    
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30
     
     def __init__(self):
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
+        self.config_file = ConfigParser.RawConfigParser()
         self.read_config_from_hd()
             
-    def read_config_from_hd(self):                     
+    def read_config_from_hd(self): 
+        self.config_file.read(self.main_config_dir+'/settings.cfg')
+        
+        self.auto_update = self.read_value_from_config_file(self.auto_update,"general","auto_update")
+        self.show_pic_url = self.read_value_from_config_file(self.show_pic_url,"general","show_pic_url")
+        self.default_lunch_begin = self.read_value_from_config_file(self.default_lunch_begin,"general","default_lunch_begin")
+        self.default_lunch_end = self.read_value_from_config_file(self.default_lunch_end,"general","default_lunch_end")
+        self.alarm_begin_time = self.read_value_from_config_file(self.alarm_begin_time,"general","alarm_begin_time")
+        self.alarm_end_time= self.read_value_from_config_file(self.alarm_end_time,"general","alarm_end_time")
+        
+        self.http_port = self.read_value_from_config_file(self.http_port, "advanced", "http_port")
+        self.peer_timeout = self.read_value_from_config_file(self.peer_timeout, "advanced", "peer_timeout")
+        self.mute_timeout = self.read_value_from_config_file(self.mute_timeout, "advanced", "mute_timeout")
+                     
         self.debug = False
         self.http_server = False
                         
@@ -67,6 +83,26 @@ class lunch_default_config(object):
         
         if self.user_name=="":
             self.user_name = getpass.getuser()  
+            
+    def read_value_from_config_file(self,value,section,name):
+        try:
+            if type(value) is types.BooleanType:
+                value = self.config_file.getboolean(section,name)
+            elif type(value) is types.IntType:
+                value = self.config_file.getint(section,name)
+            else:
+                value = self.config_file.get(section,name)
+        except ConfigParser.NoOptionError:
+            pass
+        except:
+            if self.debug:
+                print "error while reading",name,"from config file"
+            else:
+                pass
+        if self.debug:
+            print name,value
+        return value
+    
             
     def get_debug(self):
         return self.debug
