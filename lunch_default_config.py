@@ -11,6 +11,7 @@ class lunch_default_config(object):
     show_pic_fallback = sys.path[0]+"/images/webcam.jpg"    
     version = "unknown"
     version_short = "unknown"
+    plugin_dirs = [main_config_dir+"/plugins",sys.path[0]+"/plugins"]
     
     ''' not in files'''    
     next_lunch_begin = "12:15"

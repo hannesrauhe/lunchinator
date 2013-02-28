@@ -2,9 +2,13 @@
 from lunch_datathread import *
 from lunch_client import *
 from lunch_default_config import *
-
+from iface_called_plugin import *
 from time import strftime, localtime, time, mktime, gmtime
 import socket,subprocess,sys,os,ctypes,getpass,json
+
+
+from yapsy.PluginManager import PluginManagerSingleton
+
         
 class lunch_server(lunch_default_config):    
     running = False
@@ -17,10 +21,16 @@ class lunch_server(lunch_default_config):
     member_timeout = {}
     member_info = {}
     lclient = lunch_client()
+    plugin_manager = None
     
     def __init__(self):
         lunch_default_config.__init__(self)        
         self.read_config()
+        self.plugin_manager = PluginManagerSingleton.get()
+        self.plugin_manager.setPluginPlaces(self.plugin_dirs)
+        self.plugin_manager.setCategoriesFilter({
+           "called" : iface_called_plugin
+           })
         
     '''will be called every ten seconds'''
     def read_config(self):                    
@@ -210,6 +220,12 @@ class lunch_server(lunch_default_config):
         
         
         if not msg.startswith("ignore"):
+            member_info = {}
+            if self.member_info.has_key(addr):
+                member_info = self.member_info[addr]
+                
+            for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
+                pluginInfo.plugin_object.process_message(msg,addr,member_info)
             if sys.platform.startswith('linux'):
                 self.incoming_call_linux(msg,addr)
             else:
