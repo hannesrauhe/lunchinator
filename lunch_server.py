@@ -37,11 +37,6 @@ class lunch_server(lunch_default_config):
            "called" : iface_called_plugin
            })
         self.plugin_manager.collectPlugins()
-        for info in self.plugin_manager.getAllPlugins():
-            print info.plugin_object.is_activated # an instance of the class you extended from IPlugin
-            print info.name
-            print info.version
-            print info.website
         
         
     '''will be called every ten seconds'''
@@ -132,9 +127,7 @@ class lunch_server(lunch_default_config):
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
-                        self.lclient.call("HELO_REQUEST_AVATAR ",client=addr[0])
-                self.write_info_html()
-                        
+                        self.lclient.call("HELO_REQUEST_AVATAR ",client=addr[0])                        
                 
             elif cmd.startswith("HELO_DICT"):
                 #the master send me the list of members - yeah
@@ -197,7 +190,17 @@ class lunch_server(lunch_default_config):
                 self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                     
             else:
-                print "unknown command",cmd,"with value",value
+                print "unknown command",cmd,"with value",value        
+                
+            member_info = {}
+            if self.member_info.has_key(addr[0]):
+                member_info = self.member_info[addr[0]]
+            try:
+                for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
+                    if pluginInfo.plugin_object.is_activated:
+                        pluginInfo.plugin_object.process_event(cmd,value,addr[0],member_info)
+            except:
+                print "plugin error while processing event message", sys.exc_info()
         except:
             print "Unexpected error while handling HELO call: ", sys.exc_info()[0]
             print "The data send was:",data
@@ -317,27 +320,10 @@ class lunch_server(lunch_default_config):
         finally: 
             s.close()                    
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
-            
-    def write_info_html(self):
-        try:
-            indexhtml = open(self.html_dir+"/index.html","w")
-            indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' ><table>\n")
-            if len(self.member_info)>0:
-                for ip,d in self.member_info.iteritems():
-                    indexhtml.write("<tr><td>"+str(ip)+"</td>\n")
-                    if d.has_key("avatar") and d["avatar"] and os.path.exists(self.avatar_dir+"/"+d["avatar"]):
-                        indexhtml.write("<td><img width='200' src=\"avatars/"+d["avatar"]+"\" /></td>\n")
-                    else:
-                        indexhtml.write("<td></td>\n")
-                    indexhtml.write("<td>")
-                    for k,v in d.iteritems():
-                        indexhtml.write(k+": "+v+"<br />\n")                
-                    indexhtml.write("</td></tr>\n")
-            indexhtml.write("</table>\n")
-            indexhtml.write(self.version)
-            indexhtml.close()
-        except:
-            pass
+            self.write_config_to_hd()
+            for pluginInfo in self.plugin_manager.getAllPlugins():
+                if pluginInfo.plugin_object.is_activated:
+                    pluginInfo.plugin_object.deactivate()
             
     def get_last_msgs(self):  
         return self.last_messages

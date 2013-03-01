@@ -1,0 +1,9 @@
+[Core]
+Name = HTTP Server
+Module = lunch_http
+
+[Documentation]
+Author = Hannes Rauhe
+Version = 0.1
+Website = http://launchpad.de
+Description = A http server which makes additional informations available via the webbrowser

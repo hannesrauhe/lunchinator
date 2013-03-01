@@ -4,10 +4,9 @@ import gtk
 import lunch_server
 import lunch_client
 import lunch_avatar
-import lunch_http
 import time
 import socket
-import threading
+import threading,os
 
 import urllib2
                  
@@ -20,10 +19,7 @@ class lunchinator(threading.Thread):
     
     def __init__(self):           
         threading.Thread.__init__(self)    
-        self.init_menu()      
-        if self.ls.get_http_server():            
-            self.lanschi_http = lunch_http.lunch_http(self.ls)
-            self.lanschi_http.start()
+        self.init_menu() 
     
     def run(self):
         self.ls.start_server()      
@@ -33,20 +29,16 @@ class lunchinator(threading.Thread):
         settings_menu = gtk.Menu()
         avatar_item = gtk.CheckMenuItem("Avatar")
         debug_item = gtk.CheckMenuItem("Debug Output")
-        http_server_item = gtk.CheckMenuItem("Run HTTP Server")
         settings_item = gtk.CheckMenuItem("More Settings")
         
         debug_item.set_active(self.ls.get_debug())
-        http_server_item.set_active(self.ls.get_http_server())
         avatar_item.set_active(len(self.ls.get_avatar())>0)
             
         debug_item.connect("activate", self.toggle_debug_mode)
-        http_server_item.connect("activate",self.toggle_http_server)
         avatar_item.connect("activate", self.window_select_avatar)
                 
         settings_menu.append(avatar_item)
         settings_menu.append(debug_item)
-        settings_menu.append(http_server_item)
         settings_menu.append(settings_item)
         settings_menu.show_all()
         
@@ -88,19 +80,12 @@ class lunchinator(threading.Thread):
         
     def toggle_debug_mode(self,w):
         self.ls.set_debug(w.get_active())
-        
-    def toggle_http_server(self,w):   
-        self.ls.set_http_server(w.get_active()) 
-        if w.get_active():
-            #give the actual lunch_server thread with its configuration-variables to the http_server
-            self.lanschi_http = lunch_http.lunch_http(self.ls)
-            self.lanschi_http.start()
-        else:
-            self.lanschi_http.stop_server()
             
     def toggle_plugin(self,w):
-        print w
-#        self.ls.plugin_manager.activatePluginByName("Notify","called")
+        if w.get_active():
+            self.ls.plugin_manager.activatePluginByName(w.get_label(),"called")
+        else:
+            self.ls.plugin_manager.deactivatePluginByName(w.get_label(),"called")
         
     def window_select_avatar(self,w):
         chooser = gtk.FileChooserDialog(title="Choose your avatar",action=gtk.FILE_CHOOSER_ACTION_OPEN,
@@ -144,9 +129,7 @@ class lunchinator(threading.Thread):
                   
     def quit(self,w): 
         self.stop_server(w)
-        if self.ls.get_http_server():
-            self.lanschi_http.stop_server()
-        sys.exit(0)     
+        os._exit(0)     
         
         
     def window_msg(self, w):    

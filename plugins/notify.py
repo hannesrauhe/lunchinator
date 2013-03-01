@@ -59,5 +59,5 @@ class Notify(iface_called_plugin):
             print "eject error (close)"
             pass
         
-    def process_event(self,msg,ip,member_info):
+    def process_event(self,cmd,value,ip,member_info):
         pass
