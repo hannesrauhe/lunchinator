@@ -1,4 +1,4 @@
-import sys,os,getpass,ConfigParser,types,subprocess
+import sys,os,getpass,ConfigParser,types,subprocess,logging
 
 class lunch_default_config(object):
     '''unchangeable for now'''
@@ -95,6 +95,11 @@ class lunch_default_config(object):
         
         if self.user_name=="":
             self.user_name = getpass.getuser()  
+        
+        if self.debug:
+            logging.basicConfig(level=logging.DEBUG)
+        else:
+            logging.basicConfig(level=logging.ERROR)
             
     def read_value_from_config_file(self,value,section,name):
         try:

@@ -8,7 +8,6 @@ import socket,subprocess,sys,os,ctypes,getpass,json
 
 from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
-
         
 class lunch_server(lunch_default_config):    
     running = False
@@ -23,7 +22,7 @@ class lunch_server(lunch_default_config):
     lclient = lunch_client()
     plugin_manager = None
     
-    def __init__(self):
+    def __init__(self):            
         lunch_default_config.__init__(self)        
         self.read_config()
         PluginManagerSingleton.setBehaviour([
