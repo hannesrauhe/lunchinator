@@ -104,6 +104,8 @@ class lunch_default_config(object):
                 value = self.config_file.getint(section,name)
             else:
                 value = self.config_file.get(section,name)
+        except ConfigParser.NoSectionError:
+            self.config_file.add_section(section)
         except ConfigParser.NoOptionError:
             pass
         except:
