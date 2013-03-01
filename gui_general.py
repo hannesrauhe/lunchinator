@@ -50,26 +50,40 @@ class lunchinator(threading.Thread):
         settings_menu.append(settings_item)
         settings_menu.show_all()
         
+        
+        #create the plugin submenu
+        plugin_menu = gtk.Menu()
+        for  info in self.ls.plugin_manager.getAllPlugins():
+            p_item = gtk.CheckMenuItem(info.name)            
+            p_item.set_active(info.plugin_object.is_activated)                
+            p_item.connect("activate", self.toggle_plugin)                    
+            plugin_menu.append(p_item)
+        plugin_menu.show_all()
+        
         #main menu
         self.menu = gtk.Menu()    
         menu_items = gtk.MenuItem("Call for lunch")
         msg_items = gtk.MenuItem("Show/Send messages")
         settings_item = gtk.MenuItem("Settings")
+        plugin_item = gtk.MenuItem("PlugIns")
         exit_item = gtk.MenuItem("Exit")
                 
         menu_items.connect("activate", self.clicked_send_msg, "lunch")
         msg_items.connect("activate", self.window_msg)
         settings_item.set_submenu(settings_menu)
+        plugin_item.set_submenu(plugin_menu)
         exit_item.connect("activate", self.quit)
         
         menu_items.show()         
         msg_items.show()
         settings_item.show() 
+        plugin_item.show() 
         exit_item.show()
         
         self.menu.append(menu_items)
         self.menu.append(msg_items)  
         self.menu.append(settings_item)
+        self.menu.append(plugin_item)
         self.menu.append(exit_item) 
         
     def toggle_debug_mode(self,w):
@@ -83,6 +97,10 @@ class lunchinator(threading.Thread):
             self.lanschi_http.start()
         else:
             self.lanschi_http.stop_server()
+            
+    def toggle_plugin(self,w):
+        print w
+#        self.ls.plugin_manager.activatePluginByName("Notify","called")
         
     def window_select_avatar(self,w):
         chooser = gtk.FileChooserDialog(title="Choose your avatar",action=gtk.FILE_CHOOSER_ACTION_OPEN,

@@ -47,11 +47,13 @@ class lunch_default_config(object):
             self.version_short = self.version.splitlines()[2][5:].strip()
         except:
             pass
-        self.config_file = ConfigParser.RawConfigParser()
+        self.config_file = ConfigParser.SafeConfigParser()
         self.read_config_from_hd()
             
     def read_config_from_hd(self): 
         self.config_file.read(self.main_config_dir+'/settings.cfg')
+        
+        self.user_name = self.read_value_from_config_file(self.user_name,"general","user_name")
         
         self.auto_update = self.read_value_from_config_file(self.auto_update,"general","auto_update")
         self.show_pic_url = self.read_value_from_config_file(self.show_pic_url,"general","show_pic_url")
@@ -75,7 +77,7 @@ class lunch_default_config(object):
             
         if os.path.exists(self.main_config_dir+"/username.cfg"):
             with open(self.main_config_dir+"/username.cfg") as f:
-                self.user_name = f.readline().strip()
+                self.set_user_name(f.readline().strip())
                 
         if os.path.exists(self.main_config_dir+"/avatar.cfg"):
             with open(self.main_config_dir+"/avatar.cfg") as f:
@@ -114,7 +116,7 @@ class lunch_default_config(object):
         return value
         
     def write_config_to_hd(self): 
-        self.config_file.write(self.main_config_dir+'/settings.cfg')
+        self.config_file.write(open(self.main_config_dir+'/settings.cfg','w'))
             
     def get_debug(self):
         return self.debug
@@ -130,6 +132,15 @@ class lunch_default_config(object):
 
     def get_avatar_dir(self):
         return self.avatar_dir
+        
+    def get_avatar(self):
+        return self.avatar_file
+        
+    def set_user_name(self,name,force_write=False):
+        self.user_name = name
+        self.config_file.set('general', 'user_name', str(name))
+        if not force_write:
+            self.write_config_to_hd()
         
     def set_debug(self,activate):
         if activate:
@@ -148,7 +159,5 @@ class lunch_default_config(object):
         else:
             os.remove(self.main_config_dir+"/http_server.cfg")
         self.http_server = activate
-        
-    def get_avatar(self):
-        return self.avatar_file
             
+    

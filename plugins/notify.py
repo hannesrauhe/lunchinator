@@ -9,55 +9,55 @@ class Notify(iface_called_plugin):
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
         
-    def process_message(self,msg,addr,member_info):   
-        print "Notify"
+    def process_message(self,msg,addr,member_info):
+        if sys.platform.startswith('linux'):    
+            try:
+                icon = self.ls.get_icon_file()
+                if member_info.has_key("avatar"):
+                    icon = self.ls.get_avatar_dir()+"/"+member_info["avatar"]
+    #            print ["notify-send","--icon="+icon, msg + " [" + member_info["name"] + "]"]
+                subprocess.call(["notify-send","--icon="+icon, msg + " [" + member_info["name"] + "]"])
+            except:
+                print "notify error"
+        else:
+            self.incoming_call_win(msg,addr,member_info)
+            
+    def process_lunch_call(self,msg,ip,member_info):
         if sys.platform.startswith('linux'):
             self.incoming_call_linux(msg,addr,member_info)
         else:
             self.incoming_call_win(msg,addr,member_info)
             
-    def incoming_call_linux(self,msg,addr,member_info):    
+    def incoming_call_linux(self,msg,addr,member_info):       
         try:
-            icon = self.ls.get_icon_file()
-            if member_info.has_key("avatar"):
-                icon = self.ls.get_avatar_dir()+"/"+member_info["avatar"]
-#            print ["notify-send","--icon="+icon, msg + " [" + member_info["name"] + "]"]
-            subprocess.call(["notify-send","--icon="+icon, msg + " [" + member_info["name"] + "]"])
+            subprocess.call(["eject", "-T", "/dev/cdrom"])
         except:
-            print "notify error"
+            print "eject error (open)"
+            pass
+        
+        try:
+            subprocess.call(["play", "-q", self.audio_file])    
+        except:
+            print "sound error"
             pass
     
-        if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765 and msg.startswith("lunch"):
-            try:
-                subprocess.call(["eject", "-T", "/dev/cdrom"])
-            except:
-                print "eject error (open)"
-                pass
-            
-            try:
-                subprocess.call(["play", "-q", self.audio_file])    
-            except:
-                print "sound error"
-                pass
-        
-            try:
-                subprocess.call(["eject", "-T", "/dev/cdrom"])
-            except:
-                print "eject error (close)"
-                pass
+        try:
+            subprocess.call(["eject", "-T", "/dev/cdrom"])
+        except:
+            print "eject error (close)"
+            pass
         
     def incoming_call_win(self,msg,addr,member_info):    
-        if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765 and msg.startswith("lunch"):
-            try:
-                ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
-            except:
-                print "eject error (open)"
-                pass
-            try:
-                ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
-            except:
-                print "eject error (close)"
-                pass
+        try:
+            ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
+        except:
+            print "eject error (open)"
+            pass
+        try:
+            ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
+        except:
+            print "eject error (close)"
+            pass
         
     def process_event(self,msg,ip,member_info):
         pass

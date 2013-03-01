@@ -37,9 +37,8 @@ class lunch_server(lunch_default_config):
            "called" : iface_called_plugin
            })
         self.plugin_manager.collectPlugins()
-        self.plugin_manager.deactivatePluginByName("Notify")
         for info in self.plugin_manager.getAllPlugins():
-            print info.plugin_object # an instance of the class you extended from IPlugin
+            print info.plugin_object.is_activated # an instance of the class you extended from IPlugin
             print info.name
             print info.version
             print info.website
@@ -238,7 +237,13 @@ class lunch_server(lunch_default_config):
                 member_info = self.member_info[addr]
                 
             for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
-                pluginInfo.plugin_object.process_message(msg,addr,member_info)
+                if pluginInfo.plugin_object.is_activated:
+                    pluginInfo.plugin_object.process_message(msg,addr,member_info)                
+            
+            if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765 and msg.startswith("lunch"):
+                for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
+                    if pluginInfo.plugin_object.is_activated:
+                        pluginInfo.plugin_object.process_lunch_call(msg,addr,member_info)   
     
     def remove_inactive_members(self):
         try:
