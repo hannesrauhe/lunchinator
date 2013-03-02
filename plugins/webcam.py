@@ -13,11 +13,11 @@ class webcam(iface_gui_plugin):
         
     def activate(self):
         iface_gui_plugin.activate(self)
-        if self.hasConfigOption("fallback_pic"):
+        if not self.hasConfigOption("fallback_pic"):
             self.setConfigOption("fallback_pic",sys.path[0]+"/images/webcam.jpg" )
-        if self.hasConfigOption("pic_url"):
+        if not self.hasConfigOption("pic_url"):
             self.setConfigOption("pic_url","http://webcam.wdf.sap.corp:1080/images/canteen_bac.jpeg" )
-        if self.hasConfigOption("timeout"):
+        if not self.hasConfigOption("timeout"):
             self.setConfigOption("timeout","5" )
         
     def deactivate(self):
@@ -39,6 +39,9 @@ class UpdatingImage():
     timeout = 5
     fallback_pic = None
     def __init__(self,box,fallback_pic,pic_url,timeout):
+        self.fallback_pic = fallback_pic
+        self.pic_url = pic_url
+        self.timeout = timeout
         try:     
             self.gtkimage = gtk.Image() 
             self.gtkimage.set_from_file(self.fallback_pic)

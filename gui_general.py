@@ -49,7 +49,7 @@ class lunchinator(threading.Thread):
             for  info in self.ls.plugin_manager.getPluginsOfCategory(p_cat):
                 p_item = gtk.CheckMenuItem(info.name)            
                 p_item.set_active(info.plugin_object.is_activated)                
-                p_item.connect("activate", self.toggle_plugin)                    
+                p_item.connect("activate", self.toggle_plugin,p_cat)                    
                 plugin_menu.append(p_item)
         plugin_menu.show_all()
         
@@ -82,12 +82,11 @@ class lunchinator(threading.Thread):
     def toggle_debug_mode(self,w):
         self.ls.set_debug(w.get_active())
             
-    def toggle_plugin(self,w):
-        print "toggle"
+    def toggle_plugin(self,w,*data):
         if w.get_active():
-            self.ls.plugin_manager.activatePluginByName(w.get_label(),"called")
+            self.ls.plugin_manager.activatePluginByName(w.get_label(),data[0])
         else:
-            self.ls.plugin_manager.deactivatePluginByName(w.get_label(),"called")
+            self.ls.plugin_manager.deactivatePluginByName(w.get_label(),data[0])
         
     def window_select_avatar(self,w):
         chooser = gtk.FileChooserDialog(title="Choose your avatar",action=gtk.FILE_CHOOSER_ACTION_OPEN,
@@ -142,7 +141,7 @@ class lunchinator(threading.Thread):
         window.set_border_width(10)
         window.set_position(gtk.WIN_POS_CENTER)
         window.set_title("Lunchinator")
-        
+
         box0 = gtk.HBox(False, 0)
         box1 = gtk.VBox(False, 0)
         box2 = gtk.HBox(False, 0)    

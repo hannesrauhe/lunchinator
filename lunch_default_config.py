@@ -8,7 +8,6 @@ class lunch_default_config(object):
     messages_file = main_config_dir+"/messages"
     avatar_dir = main_config_dir+"/avatars/"
     html_dir = main_config_dir
-    show_pic_fallback = sys.path[0]+"/images/webcam.jpg"    
     version = "unknown"
     version_short = "unknown"
     plugin_dirs = [main_config_dir+"/plugins",sys.path[0]+"/plugins"]
@@ -26,7 +25,6 @@ class lunch_default_config(object):
     
     '''file settings.cfg standard section '''
     auto_update = True   
-    show_pic_url = "http://webcam.wdf.sap.corp:1080/images/canteen_bac.jpeg"
     default_lunch_begin = "12:15"
     default_lunch_end = "12:45"
     alarm_begin_time = "11:30"
@@ -56,7 +54,6 @@ class lunch_default_config(object):
         self.user_name = self.read_value_from_config_file(self.user_name,"general","user_name")
         
         self.auto_update = self.read_value_from_config_file(self.auto_update,"general","auto_update")
-        self.show_pic_url = self.read_value_from_config_file(self.show_pic_url,"general","show_pic_url")
         self.default_lunch_begin = self.read_value_from_config_file(self.default_lunch_begin,"general","default_lunch_begin")
         self.default_lunch_end = self.read_value_from_config_file(self.default_lunch_end,"general","default_lunch_end")
         self.alarm_begin_time = self.read_value_from_config_file(self.alarm_begin_time,"general","alarm_begin_time")
