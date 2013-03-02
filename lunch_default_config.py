@@ -21,7 +21,6 @@ class lunch_default_config(object):
     user_name = ""
     avatar_file = ""    
     debug = False 
-    http_server = False
     
     '''file settings.cfg standard section '''
     auto_update = True   
@@ -69,16 +68,13 @@ class lunch_default_config(object):
         if os.path.exists(self.main_config_dir+"/debug.cfg"):
             self.debug = True            
             
-        if os.path.exists(self.main_config_dir+"/http_server.cfg"):
-            self.http_server = True
-            
         if os.path.exists(self.main_config_dir+"/username.cfg"):
             with open(self.main_config_dir+"/username.cfg") as f:
                 self.set_user_name(f.readline().strip())
                 
         if os.path.exists(self.main_config_dir+"/avatar.cfg"):
             with open(self.main_config_dir+"/avatar.cfg") as f:
-                self.avatar_file = f.readline().strip()
+                self.set_avatar_file(f.readline().strip())
                 
         if os.path.exists(self.main_config_dir+"/sound.cfg"):
             with open(self.main_config_dir+"/sound.cfg") as f:
@@ -155,13 +151,14 @@ class lunch_default_config(object):
             os.remove(self.main_config_dir+"/debug.cfg")
         self.debug = activate
         
-    def set_http_server(self,activate):
-        if activate:
-            f = open(self.main_config_dir+"/http_server.cfg",'w')
-            f.write("Http Server will run on port: "+str(self.http_port)+" because this file exists")
-            f.close()
-        else:
-            os.remove(self.main_config_dir+"/http_server.cfg")
-        self.http_server = activate
+    def set_avatar_file(self,file_name,force_write=False):  
+        if not os.path.exists(self.avatar_dir+"/"+file_name):
+            print "avatar does not exist:",file_name
+            return
+        self.avatar_file = file_name
+        self.config_file.set('general', 'avatar_file', str(file_name))
+        if not force_write:
+            self.write_config_to_hd()
+        
             
     

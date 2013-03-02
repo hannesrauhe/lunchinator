@@ -1,8 +1,12 @@
 #!/usr/bin/python
 from lunch_default_config import *
 import socket,sys,os,hashlib,shutil
+import os, sys
+import Image
 
-class lunch_avatar(lunch_default_config):     
+class lunch_avatar(lunch_default_config):
+    size = 128, 128
+         
     def md5_for_file(self,file_path, block_size=2**20):
         f = open(file_path,'rb')
         md5 = hashlib.md5()
@@ -23,16 +27,24 @@ class lunch_avatar(lunch_default_config):
         if self.debug:
             print "using",file_path,"as avatar - copied: ",avatar_name
         
-        f = open(self.main_config_dir+"/avatar.cfg",'w')
-        f.truncate()
-        f.write(avatar_name)
-        f.close();
-    
-if __name__ == "__main__":
-    lpic = lunch_avatar()
-    if len(sys.argv)>1:
-        file_path = sys.argv[1]
-    else:
-        file_path = lpic.main_config_dir+"/userpic.jpg"
+        self.set_avatar_file(avatar_name, True)
         
+    def scale_image(self,infile,outfile):
+        if infile != outfile:
+            try:
+                im = Image.open(infile)
+                im.thumbnail(self.size, Image.ANTIALIAS)
+                im.save(outfile, "JPEG")
+            except IOError:
+                print "cannot create thumbnail for '%s'" % infile
+    
+if __name__ == "__main__":    
+    lpic = lunch_avatar()
+    
+    file_path = lpic.main_config_dir+"/userpic.jpg"
+    if len(sys.argv)>1:
+        infile = sys.argv[1]
+        if os.path.exists(infile):
+            lpic.scale_image(infile, file_path)
+    
     lpic.use_as_avatar(file_path)
