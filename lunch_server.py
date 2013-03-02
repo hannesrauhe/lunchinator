@@ -2,7 +2,7 @@
 from lunch_datathread import *
 from lunch_client import *
 from lunch_default_config import *
-from iface_called_plugin import *
+from iface_plugins import *
 from time import strftime, localtime, time, mktime, gmtime
 import socket,subprocess,sys,os,ctypes,getpass,json
 
@@ -33,7 +33,8 @@ class lunch_server(lunch_default_config):
         self.plugin_manager.setConfigParser(self.config_file,self.write_config_to_hd)
         self.plugin_manager.setPluginPlaces(self.plugin_dirs)
         self.plugin_manager.setCategoriesFilter({
-           "called" : iface_called_plugin
+           "called" : iface_called_plugin,
+           "gui" : iface_gui_plugin
            })
         self.plugin_manager.collectPlugins()
         

@@ -1,0 +1,9 @@
+[Core]
+Name = Webcam
+Module = webcam
+
+[Documentation]
+Author = Hannes Rauhe
+Version = 0.1
+Website = http://launchpad.de
+Description = Adds the picture of a webcam which is periodically downloaded from an web address 

@@ -1,5 +1,5 @@
 
-from iface_called_plugin import *
+from iface_plugins import *
 from time import localtime
 import subprocess,sys,ctypes
 from yapsy.PluginManager import PluginManagerSingleton

@@ -45,11 +45,12 @@ class lunchinator(threading.Thread):
         
         #create the plugin submenu
         plugin_menu = gtk.Menu()
-        for  info in self.ls.plugin_manager.getAllPlugins():
-            p_item = gtk.CheckMenuItem(info.name)            
-            p_item.set_active(info.plugin_object.is_activated)                
-            p_item.connect("activate", self.toggle_plugin)                    
-            plugin_menu.append(p_item)
+        for p_cat in ['called','gui']:
+            for  info in self.ls.plugin_manager.getPluginsOfCategory(p_cat):
+                p_item = gtk.CheckMenuItem(info.name)            
+                p_item.set_active(info.plugin_object.is_activated)                
+                p_item.connect("activate", self.toggle_plugin)                    
+                plugin_menu.append(p_item)
         plugin_menu.show_all()
         
         #main menu
@@ -82,6 +83,7 @@ class lunchinator(threading.Thread):
         self.ls.set_debug(w.get_active())
             
     def toggle_plugin(self,w):
+        print "toggle"
         if w.get_active():
             self.ls.plugin_manager.activatePluginByName(w.get_label(),"called")
         else:
@@ -173,7 +175,12 @@ class lunchinator(threading.Thread):
                
         box1.show()
         box0.pack_start(box1)
-        webcam = UpdatingImage(box0,self.ls)
+        try:
+            for pluginInfo in self.ls.plugin_manager.getPluginsOfCategory("gui"):
+                if pluginInfo.plugin_object.is_activated:
+                    pluginInfo.plugin_object.add_horizontal(box0)
+        except:
+            print "error while including plugin", sys.exc_info()
         box0.show()
         
         window.add(box0)
@@ -297,35 +304,3 @@ class MessageTable(UpdatingTable):
             st.append(i)
         return st
         
-class UpdatingImage():
-    gtkimage = None
-    ls = None
-    def __init__(self,box,ls):
-        self.ls = ls
-        if self.ls.show_pic_url:
-            try:     
-                self.gtkimage = gtk.Image() 
-                self.gtkimage.set_from_file(self.ls.show_pic_fallback)
-                self.gtkimage.show()
-                box.pack_start(self.gtkimage, True, True, 0)
-                gobject.timeout_add(1000, self.timeout)        
-            except:
-                print "Something went wrong when trying to display the fallback image",self.ls.show_pic_fallback
-                pass      
-            
-    def timeout(self): 
-        if self.ls.show_pic_url:
-            try:
-                #todo disable proxy for now
-                proxy_handler = urllib2.ProxyHandler({})
-                opener = urllib2.build_opener(proxy_handler)
-                response=opener.open(self.ls.show_pic_url)
-                loader=gtk.gdk.PixbufLoader()
-                loader.write(response.read())
-                loader.close()   
-                self.gtkimage.set_from_pixbuf(loader.get_pixbuf())  
-                return True             
-            except:
-                print "Something went wrong when trying to display the webcam image"
-                return False
-        return False

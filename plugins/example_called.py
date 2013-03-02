@@ -1,4 +1,5 @@
-from iface_called_plugin import *
+
+from iface_plugins import *
 from yapsy.PluginManager import PluginManagerSingleton
 
 class twitter_status(iface_called_plugin):
