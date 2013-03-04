@@ -38,6 +38,9 @@ class lunch_server(lunch_default_config):
            })
         self.plugin_manager.collectPlugins()
         
+    def call_all_members(self,msg):        
+        self.lclient.call(msg,hosts=self.members)   
+        
         
     '''will be called every ten seconds'''
     def read_config(self):                    
