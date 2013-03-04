@@ -44,9 +44,12 @@ class twitter_status(iface_called_plugin):
             
     def process_lunch_call(self,msg,ip,member_info):
         if self.twitter:
-            self.twitter.statuses.update(status="Lunchtime!")
+            statustxt = "Lunchtime!"
+            if member_info and member_info.has_key("name"):
+                statustxt += " "+member_info["name"]
+            self.twitter.statuses.update(status=statustxt[:140])
         else:
-            print "twitter integration did not work"
+            print "twitter integration did not work",sys.exc_info()[0]
     
     def process_event(self,cmd,value,ip,member_info):
         pass
