@@ -25,8 +25,9 @@ class http_server_thread(threading.Thread):
         
         print "Stopping HTTP Server"
         
-    def stop_server(self):            
-        self.server.shutdown()
+    def stop_server(self):
+        if self.server:            
+            self.server.shutdown()
         
 
 class lunch_http(iface_called_plugin):
