@@ -6,4 +6,4 @@ Module = panic_button
 Author = Hannes Rauhe
 Version = 0.1
 Website = http://launchpad.de
-Description = if you have an usb panic button you can call for lunch - make sure, you have sufficient rights after connecting - might need debugging depending on the vendor
+Description = if you have an usb panic button you can call for lunch - make sure, you have sufficient rights after connecting - might need debugging depending on the vendor - todo: config variables are not used yet (missing str2hex...)
