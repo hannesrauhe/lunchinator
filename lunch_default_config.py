@@ -135,6 +135,9 @@ class lunch_default_config(object):
         
     def get_avatar(self):
         return self.avatar_file
+    
+    def get_alarm_begin_as_int(self):
+        return 0
         
     def set_user_name(self,name,force_write=False):
         self.user_name = name
