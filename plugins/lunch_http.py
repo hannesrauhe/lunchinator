@@ -47,9 +47,10 @@ class lunch_http(iface_called_plugin):
             self.write_info_html()
         
     def deactivate(self):
-        print "trying to stop"
+        print "trying to stop HTTP Server"
         if self.s_thread:
             self.s_thread.stop_server()
+            self.s_thread.join()
         iface_called_plugin.deactivate(self)
         
     def process_message(self,msg,addr,member_info):
