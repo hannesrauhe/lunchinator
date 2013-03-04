@@ -25,9 +25,9 @@ class Notify(iface_called_plugin):
             
     def process_lunch_call(self,msg,ip,member_info):
         if sys.platform.startswith('linux'):
-            self.incoming_call_linux(msg,addr,member_info)
+            self.incoming_call_linux(msg,ip,member_info)
         else:
-            self.incoming_call_win(msg,addr,member_info)
+            self.incoming_call_win(msg,ip,member_info)
             
     def incoming_call_linux(self,msg,addr,member_info):       
         try:
@@ -37,7 +37,7 @@ class Notify(iface_called_plugin):
             pass
         
         try:
-            subprocess.call(["play", "-q", self.audio_file])    
+            subprocess.call(["play", "-q", self.ls.audio_file])    
         except:
             print "sound error"
             pass
