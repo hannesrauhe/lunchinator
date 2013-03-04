@@ -14,12 +14,15 @@ class Notify(iface_called_plugin):
         if sys.platform.startswith('linux'):    
             try:
                 icon = self.ls.get_icon_file()
+                name = " ["+addr+"]"
                 if member_info.has_key("avatar"):
                     icon = self.ls.get_avatar_dir()+"/"+member_info["avatar"]
     #            print ["notify-send","--icon="+icon, msg + " [" + member_info["name"] + "]"]
-                subprocess.call(["notify-send","--icon="+icon, msg + " [" + member_info["name"] + "]"])
+                if member_info.has_key("name"):
+                    name = " [" + member_info["name"] + "]"
+                subprocess.call(["notify-send","--icon="+icon, msg + name])
             except:
-                print "notify error"
+                print "notify error",sys.exc_info()[0]
         else:
             self.incoming_call_win(msg,addr,member_info)
             
