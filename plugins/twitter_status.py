@@ -47,6 +47,7 @@ class twitter_status(iface_called_plugin):
             statustxt = "Lunchtime!"
             if member_info and member_info.has_key("name"):
                 statustxt += " "+member_info["name"]
+            print "pushing to twitter",statustxt
             self.twitter.statuses.update(status=statustxt[:140])
         else:
             print "twitter integration did not work",sys.exc_info()[0]
