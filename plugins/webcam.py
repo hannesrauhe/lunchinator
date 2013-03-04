@@ -36,12 +36,12 @@ class webcam(iface_gui_plugin):
 
 class UpdatingImage():
     pic_url = None
-    timeout = 5
+    timeout = 5000
     fallback_pic = None
     def __init__(self,box,fallback_pic,pic_url,timeout):
         self.fallback_pic = fallback_pic
         self.pic_url = pic_url
-        self.timeout = timeout
+        self.timeout = int(timeout)*1000
         try:     
             self.gtkimage = gtk.Image() 
             self.gtkimage.set_from_file(self.fallback_pic)
@@ -49,8 +49,7 @@ class UpdatingImage():
             box.pack_start(self.gtkimage, True, True, 0)
             gobject.timeout_add(self.timeout, self.update)        
         except:
-            print "Something went wrong when trying to display the fallback image",self.ls.show_pic_fallback
-            pass      
+            print "Something went wrong when trying to display the fallback image",self.fallback_pis,sys.exc_info()[0]
             
     def update(self): 
         try:
