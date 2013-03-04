@@ -117,7 +117,7 @@ class lunch_server(lunch_default_config):
                     os.chdir(sys.path[0])
                     subprocess.call(["git","stash"])
                     subprocess.call(["git","pull"])
-                    os._exit(0)
+                    self.running = False
                 else:
                     print "%s: %s issued an update but updates are disabled" % (t,addr[0])
                 
@@ -324,6 +324,7 @@ class lunch_server(lunch_default_config):
             for pluginInfo in self.plugin_manager.getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:
                     pluginInfo.plugin_object.deactivate()
+            os._exit(0)
             
     def get_last_msgs(self):  
         return self.last_messages
