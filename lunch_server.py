@@ -243,8 +243,8 @@ class lunch_server(lunch_default_config):
                 if pluginInfo.plugin_object.is_activated:
                     pluginInfo.plugin_object.process_message(msg,addr,member_info)                
             
-            if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765 and msg.startswith("lunch"):
-#            if msg.startswith("lunch"):
+#            if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765 and msg.startswith("lunch"):
+            if msg.startswith("lunch"):
                 for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
                     if pluginInfo.plugin_object.is_activated:
                         pluginInfo.plugin_object.process_lunch_call(msg,addr,member_info)   
