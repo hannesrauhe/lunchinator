@@ -83,6 +83,13 @@ class lunchinator(threading.Thread):
         self.ls.set_debug(w.get_active())
             
     def toggle_plugin(self,w,*data):
+#        p = self.ls.plugin_manager.getPluginByName(w.get_label(),data[0])
+#        resp = p.plugin_object.show_options()
+#        if resp == 1:
+#            self.ls.plugin_manager.activatePluginByName(w.get_label(),data[0])
+#        else:
+#            self.ls.plugin_manager.deactivatePluginByName(w.get_label(),data[0])
+#        w.set_active(resp)
         if w.get_active():
             self.ls.plugin_manager.activatePluginByName(w.get_label(),data[0])
         else:
@@ -205,6 +212,7 @@ class lunchinator(threading.Thread):
             d = gtk.MessageDialog(parent=None, flags=0, type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK, message_format=None)
             d.set_markup("Cannot add host: Hostname unknown")
             d.run()
+            d.destroy()
 
 class UpdatingTable(object):    
     def __init__(self,box,ls):

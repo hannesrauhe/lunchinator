@@ -1,4 +1,5 @@
 from yapsy.IPlugin import IPlugin
+import gtk
 
 class iface_plugin(IPlugin):
     def activate(self):
@@ -14,6 +15,16 @@ class iface_plugin(IPlugin):
         Just call the parent class's method
         """
         IPlugin.deactivate(self)
+        
+    def show_options(self):        
+        d = gtk.Dialog(title="Activate Plugin")
+        d.add_buttons("Save & Activate",1,"Save & Deactivate",0,"Cancel",-1)
+        resp = d.run()
+        d.destroy()
+        if resp==-1:
+            return self.is_activated
+        else:
+            return resp
         
 class iface_gui_plugin(iface_plugin):    
     def activate(self):
