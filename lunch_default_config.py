@@ -2,7 +2,7 @@ import sys,os,getpass,ConfigParser,types,subprocess,logging
 
 class lunch_default_config(object):
     '''unchangeable for now'''
-    main_config_dir = os.getenv("HOME")+"/.lunchinator"
+    main_config_dir = os.getenv("HOME")+"/.lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+"/.lunchinator"
     icon_file = sys.path[0]+"/images/mini_breakfast.png"
     members_file = main_config_dir+"/lunch_members.cfg"
     messages_file = main_config_dir+"/messages"

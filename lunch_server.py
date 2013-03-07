@@ -144,8 +144,8 @@ class lunch_server(lunch_default_config):
                 ext_members = json.loads(data.split(" ",1)[1].strip())
                 self.members.update(ext_members)
                 self.members = dict((k, v) for k, v in self.members.items() if not k.startswith("127"))
-                if self.my_master==-1:                    
-                    self.lclient.call("HELO "+self.get_user_name(),hosts=self.members)
+                if self.my_master==-1:
+                    self.call_all_members("HELO_INFO "+self.build_info_string())
                     
                 self.my_master = addr[0]                                    
                 if not os.path.exists(self.members_file):
@@ -182,6 +182,7 @@ class lunch_server(lunch_default_config):
                 if addr[0] not in self.members:   
                     self.members[addr[0]]=value           
                     self.write_members_to_file()
+                    self.call_all_members("HELO_INFO "+self.build_info_string())
                 else:                    
                     self.members[addr[0]]=value
                 

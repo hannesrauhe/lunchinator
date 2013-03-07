@@ -2,7 +2,6 @@
 from lunch_default_config import *
 import socket,sys,os,hashlib,shutil
 import os, sys
-import Image
 
 class lunch_avatar(lunch_default_config):
     size = 128, 128
@@ -32,6 +31,7 @@ class lunch_avatar(lunch_default_config):
     def scale_image(self,infile,outfile):
         if infile != outfile:
             try:
+                import Image
                 im = Image.open(infile)
                 im.thumbnail(self.size, Image.ANTIALIAS)
                 im.save(outfile, "JPEG")
