@@ -1,0 +1,9 @@
+[Core]
+Name = Lunch Menu
+Module = lunch_menu
+
+[Documentation]
+Author = Hannes Rauhe
+Version = 0.1
+Website = http://launchpad.de
+Description = Displays the lunch menu downloaded from the internet

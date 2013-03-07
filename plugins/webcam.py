@@ -22,12 +22,10 @@ class webcam(iface_gui_plugin):
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
-        
-    def add_vertical(self, box):
-        pass
     
-    def add_horizontal(self, box):
-        webcam = UpdatingImage(box,self.getConfigOption("fallback_pic"),self.getConfigOption("pic_url"),int(self.getConfigOption("timeout")))
+    def create_widget(self):
+        webcam = UpdatingImage(self.getConfigOption("fallback_pic"),self.getConfigOption("pic_url"),int(self.getConfigOption("timeout")))
+        return webcam.gtkimage
     
     def add_menu(self,menu):
         pass
@@ -38,7 +36,7 @@ class UpdatingImage():
     pic_url = None
     timeout = 5000
     fallback_pic = None
-    def __init__(self,box,fallback_pic,pic_url,timeout):
+    def __init__(self,fallback_pic,pic_url,timeout):
         self.fallback_pic = fallback_pic
         self.pic_url = pic_url
         self.timeout = int(timeout)*1000
@@ -46,7 +44,6 @@ class UpdatingImage():
             self.gtkimage = gtk.Image() 
             self.gtkimage.set_from_file(self.fallback_pic)
             self.gtkimage.show()
-            box.pack_start(self.gtkimage, True, True, 0)
             gobject.timeout_add(self.timeout, self.update)        
         except:
             print "Something went wrong when trying to display the fallback image",self.fallback_pis,sys.exc_info()[0]

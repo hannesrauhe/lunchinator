@@ -181,12 +181,23 @@ class lunchinator(threading.Thread):
                
         box1.show()
         box0.pack_start(box1)
+        plugin_widgets = []
         try:
             for pluginInfo in self.ls.plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
-                    pluginInfo.plugin_object.add_horizontal(box0)
+                    plugin_widgets.append((pluginInfo.name,pluginInfo.plugin_object.create_widget()))
         except:
             print "error while including plugin", sys.exc_info()
+        if len(plugin_widgets)==1:
+            box0.size_allocate(gtk.gdk.Rectangle(0,0,100,100))
+            box0.pack_start(plugin_widgets[0][1], True, True, 0)
+        elif len(plugin_widgets)>1:
+            nb = gtk.Notebook()
+            nb.set_tab_pos(gtk.POS_TOP)
+            for name,widget in plugin_widgets:
+                nb.append_page(widget,gtk.Label(name))
+            nb.show()
+            box0.pack_start(nb, True, True, 0)
         box0.show()
         
         window.add(box0)

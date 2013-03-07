@@ -1,0 +1,38 @@
+
+from iface_plugins import *
+from yapsy.PluginManager import PluginManagerSingleton
+import gtk,gobject,urllib2,sys
+    
+class lunch_menu(iface_gui_plugin):
+    ls = None
+    
+    def __init__(self):
+        super(lunch_menu, self).__init__()
+        manager = PluginManagerSingleton.get()
+        self.ls = manager.app
+        
+    def activate(self):
+        iface_gui_plugin.activate(self)
+        if not self.hasConfigOption("url"):
+            self.setConfigOption("url","http://155.56.69.85:1081/lunch_de.txt" )
+        
+    def deactivate(self):
+        iface_gui_plugin.deactivate(self)
+    
+    def create_widget(self):
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        textview = gtk.TextView()
+        textview.set_size_request(400,200)
+        textview.set_wrap_mode(gtk.WRAP_WORD)
+        textbuffer = textview.get_buffer()
+        sw.add(textview)
+        sw.show()
+        textview.show()
+        resp = urllib2.urlopen(self.getConfigOption("url"))
+        txt = resp.read()
+        textbuffer.set_text(txt.decode('latin1'))
+        return sw
+    
+    def add_menu(self,menu):
+        pass

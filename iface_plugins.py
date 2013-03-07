@@ -41,11 +41,8 @@ class iface_gui_plugin(iface_plugin):
         """
         iface_plugin.deactivate(self)
         
-    def add_vertical(self, box):
-        pass
-    
-    def add_horizontal(self, box):
-        pass
+    def create_widget(self):
+        return gtk.Label("The plugin should show its content here")
     
     def add_menu(self,menu):
         pass
