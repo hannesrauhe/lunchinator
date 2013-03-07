@@ -149,38 +149,51 @@ class lunchinator(threading.Thread):
         window.set_position(gtk.WIN_POS_CENTER)
         window.set_title("Lunchinator")
 
+        # Contains box1 and plug-ins
         box0 = gtk.HBox(False, 0)
-        box1 = gtk.VBox(False, 0)
-        box2 = gtk.HBox(False, 0)    
-        msgt = MessageTable(box2,self.ls)    
-        memt = MembersTable(box2,self.ls)
-        box1.pack_start(box2, False, False, 0)
-        box2.show()
+
+        tablesPane = gtk.HPaned()
         
-        box2 = gtk.HBox(False, 0)
+        # create HBox in VBox for each table
+        # Create message table
+        msgtVBox = gtk.VBox()
+        msgtHBox = gtk.HBox()
+        msgt = MessageTable(self.ls)
+        msgtVBox.pack_start(msgt.scrollTree, True, True, 0)
+        
         entry = gtk.Entry()    
-        box2.pack_start(entry, True, True, 0)
+        msgtHBox.pack_start(entry, True, True, 3)
         entry.show()
         button = gtk.Button("Send Msg")
-        box2.pack_start(button, True, False, 0)
+        msgtHBox.pack_start(button, False, True, 10)
         button.show()
-        
-    #    box1.pack_start(box2, False, False, 0)
-    #    box2.show()
-    #        
-    #    box2 = gtk.HBox(False, 0)
+        msgtVBox.pack_start(msgtHBox, False, True, 0)
+        msgtHBox.show()
+
+        tablesPane.add1(msgtVBox)
+        msgtVBox.show()
+
+        # Create members table
+        memtVBox = gtk.VBox()
+        memtHBox = gtk.HBox()
+        memt = MembersTable(self.ls)
+        memtVBox.pack_start(memt.scrollTree, True, True, 0)
+
         entry2 = gtk.Entry()    
-        box2.pack_start(entry2, True, True, 0)
+        memtHBox.pack_start(entry2, True, True, 3)
         entry2.show()
         button2 = gtk.Button("Add Host")
-        box2.pack_start(button2, True, False, 0)
+        memtHBox.pack_start(button2, False, True, 10)
         button2.show()
+        memtVBox.pack_start(memtHBox, False, True, 0)
+        memtHBox.show()
         
-        box1.pack_start(box2, False, False, 0)
-        box2.show()
-               
-        box1.show()
-        box0.pack_start(box1)
+        tablesPane.add2(memtVBox)
+        memtVBox.show()
+
+        box0.pack_start(tablesPane, True, True, 0)
+        tablesPane.show()
+        
         plugin_widgets = []
         try:
             for pluginInfo in self.ls.plugin_manager.getPluginsOfCategory("gui"):
@@ -226,18 +239,17 @@ class lunchinator(threading.Thread):
             d.destroy()
 
 class UpdatingTable(object):    
-    def __init__(self,box,ls):
+    def __init__(self,ls):
         self.ls = ls        
         self.treeView = gtk.TreeView(self.create_model())
         self.fill_treeview()
         self.scrollTree = gtk.ScrolledWindow()
         self.scrollTree.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        self.scrollTree.set_border_width(10)
+        self.scrollTree.set_border_width(5)
         self.scrollTree.add_with_viewport(self.treeView)  
         self.scrollTree.set_size_request(400, 350)   
         self.treeView.show()
         self.scrollTree.show()   
-        box.pack_start(self.scrollTree, True, False, 3)
         gobject.timeout_add(1000, self.timeout)        
         
     def timeout(self):
@@ -258,8 +270,8 @@ class UpdatingTable(object):
         return None
     
 class MembersTable(UpdatingTable):    
-    def __init__(self,box,ls):
-        UpdatingTable.__init__(self,box,ls)        
+    def __init__(self,ls):
+        UpdatingTable.__init__(self,ls)        
         
     def fill_treeview(self):        
         rendererText = gtk.CellRendererText()
@@ -292,8 +304,8 @@ class MembersTable(UpdatingTable):
         return st
     
 class MessageTable(UpdatingTable):
-    def __init__(self,box,ls):
-        UpdatingTable.__init__(self,box,ls)     
+    def __init__(self,ls):
+        UpdatingTable.__init__(self,ls)     
         
     def fill_treeview(self):
         rendererText = gtk.CellRendererText()
