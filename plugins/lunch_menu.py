@@ -31,7 +31,7 @@ class lunch_menu(iface_gui_plugin):
         textview.show()
         resp = urllib2.urlopen(self.getConfigOption("url"))
         txt = resp.read()
-        textbuffer.set_text(txt.decode('latin1'))
+        textbuffer.set_text(txt.decode('cp1252'))
         return sw
     
     def add_menu(self,menu):
