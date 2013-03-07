@@ -18,7 +18,7 @@ class iface_plugin(IPlugin):
         
     def create_options_widget(self):
         w = gtk.VBox()
-        w.pack_start(gtk.Label(self.category_name))
+        w.pack_start(gtk.Label("Options will go here - change $HOME/.lunchinator/settings.cfg manually for now"))
         return w
         
 class iface_gui_plugin(iface_plugin):    
