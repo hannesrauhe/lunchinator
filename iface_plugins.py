@@ -16,15 +16,10 @@ class iface_plugin(IPlugin):
         """
         IPlugin.deactivate(self)
         
-    def show_options(self):        
-        d = gtk.Dialog(title="Activate Plugin")
-        d.add_buttons("Save & Activate",1,"Save & Deactivate",0,"Cancel",-1)
-        resp = d.run()
-        d.destroy()
-        if resp==-1:
-            return self.is_activated
-        else:
-            return resp
+    def create_options_widget(self):
+        w = gtk.VBox()
+        w.pack_start(gtk.Label(self.category_name))
+        return w
         
 class iface_gui_plugin(iface_plugin):    
     def activate(self):

@@ -28,6 +28,9 @@ class lunch_server(lunch_default_config):
         PluginManagerSingleton.setBehaviour([
             ConfigurablePluginManager,
         ])
+        load_standard_plugins = False
+        if not self.config_file.has_section("Plugin Management"):
+            load_standard_plugins = True
         self.plugin_manager = PluginManagerSingleton.get()
         self.plugin_manager.app = self
         self.plugin_manager.setConfigParser(self.config_file,self.write_config_to_hd)
@@ -37,6 +40,10 @@ class lunch_server(lunch_default_config):
            "gui" : iface_gui_plugin
            })
         self.plugin_manager.collectPlugins()
+        if load_standard_plugins:
+            self.plugin_manager.activatePluginByName("Notify", "called")
+            self.plugin_manager.activatePluginByName("Webcam", "gui")
+            self.plugin_manager.activatePluginByName("Lunch Menu", "gui")
         
     def call_all_members(self,msg):        
         self.lclient.call(msg,hosts=self.members)   

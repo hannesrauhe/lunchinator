@@ -29,13 +29,14 @@ class lunchinator(threading.Thread):
         settings_menu = gtk.Menu()
         avatar_item = gtk.CheckMenuItem("Avatar")
         debug_item = gtk.CheckMenuItem("Debug Output")
-        settings_item = gtk.CheckMenuItem("More Settings")
+        settings_item = gtk.MenuItem("More Settings")
         
         debug_item.set_active(self.ls.get_debug())
         avatar_item.set_active(len(self.ls.get_avatar())>0)
             
         debug_item.connect("activate", self.toggle_debug_mode)
         avatar_item.connect("activate", self.window_select_avatar)
+        settings_item.connect("activate",self.window_settings)        
                 
         settings_menu.append(avatar_item)
         settings_menu.append(debug_item)
@@ -224,6 +225,28 @@ class lunchinator(threading.Thread):
             d.set_markup("Cannot add host: Hostname unknown")
             d.run()
             d.destroy()
+            
+    def window_settings(self,w):
+        self.reset_new_msgs() 
+        
+                
+        d = gtk.Dialog(title="Lunchinator Settings",buttons=("Save",gtk.RESPONSE_APPLY,"Cancel",gtk.RESPONSE_CANCEL))
+        nb = gtk.Notebook()
+        nb.set_tab_pos(gtk.POS_LEFT)
+        plugin_widgets=[]        
+        try:
+            for pluginInfo in self.ls.plugin_manager.getAllPlugins():
+                if pluginInfo.plugin_object.is_activated:
+                    plugin_widgets.append((pluginInfo.name,pluginInfo.plugin_object.create_options_widget()))
+        except:
+            print "error while including plugin", sys.exc_info()
+        for name,widget in plugin_widgets:
+            nb.append_page(widget,gtk.Label(name))
+        nb.show_all()
+        d.get_content_area().pack_start(nb, True, True, 0)
+        resp = d.run()
+        d.destroy()
+        
 
 class UpdatingTable(object):    
     def __init__(self,box,ls):
