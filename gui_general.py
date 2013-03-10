@@ -1,4 +1,4 @@
-import sys
+import sys,types
 import gobject
 import gtk
 import lunch_server
@@ -240,12 +240,34 @@ class lunchinator(threading.Thread):
             d.destroy()
             
     def window_settings(self,w):
-        self.reset_new_msgs() 
-        
+        self.reset_new_msgs()        
                 
         d = gtk.Dialog(title="Lunchinator Settings",buttons=("Save",gtk.RESPONSE_APPLY,"Cancel",gtk.RESPONSE_CANCEL))
         nb = gtk.Notebook()
         nb.set_tab_pos(gtk.POS_LEFT)
+        options = ['user_name','audio_file','auto_update',"default_lunch_begin","default_lunch_end"]
+        t = gtk.Table(len(options),2,True)
+        i=0
+        for o in options:
+            methodname = "get_"+o
+            v = ""
+            e = ""
+            if hasattr(self.ls, methodname): 
+                _member = getattr(self.ls, methodname)
+                v = _member()
+            if type(v)==types.IntType:
+                e = gtk.Label("int")
+            if type(v)==types.BooleanType:
+                e = gtk.CheckButton()
+                e.set_active(v)
+            else:
+                e = gtk.Entry()
+                e.set_text(v)
+            t.attach(gtk.Label(o),0,1,i,i+1)
+            t.attach(e,1,2,i,i+1)
+            i+=1
+        nb.append_page(t,gtk.Label("General"))
+            
         plugin_widgets=[]        
         try:
             for pluginInfo in self.ls.plugin_manager.getAllPlugins():
@@ -357,3 +379,6 @@ class MessageTable(UpdatingTable):
             st.append(i)
         return st
         
+if __name__ == "__main__":
+    l = lunchinator()
+    l.window_settings(None)

@@ -3,11 +3,9 @@ import sys,os,getpass,ConfigParser,types,subprocess,logging
 class lunch_default_config(object):
     '''unchangeable for now'''
     main_config_dir = os.getenv("HOME")+"/.lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+"/.lunchinator"
-    icon_file = sys.path[0]+"/images/mini_breakfast.png"
     members_file = main_config_dir+"/lunch_members.cfg"
     messages_file = main_config_dir+"/messages"
     avatar_dir = main_config_dir+"/avatars/"
-    html_dir = main_config_dir
     version = "unknown"
     version_short = "unknown"
     plugin_dirs = [main_config_dir+"/plugins",sys.path[0]+"/plugins"]
@@ -30,7 +28,6 @@ class lunch_default_config(object):
     alarm_end_time = "13:00"
     
     '''file settings.cfg advanced section '''
-    http_port = 50002
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30
     
@@ -58,12 +55,10 @@ class lunch_default_config(object):
         self.alarm_begin_time = self.read_value_from_config_file(self.alarm_begin_time,"general","alarm_begin_time")
         self.alarm_end_time= self.read_value_from_config_file(self.alarm_end_time,"general","alarm_end_time")
         
-        self.http_port = self.read_value_from_config_file(self.http_port, "advanced", "http_port")
         self.peer_timeout = self.read_value_from_config_file(self.peer_timeout, "advanced", "peer_timeout")
         self.mute_timeout = self.read_value_from_config_file(self.mute_timeout, "advanced", "mute_timeout")
                      
         self.debug = False
-        self.http_server = False
                         
         if os.path.exists(self.main_config_dir+"/debug.cfg"):
             self.debug = True            
@@ -119,22 +114,23 @@ class lunch_default_config(object):
         self.config_file.write(open(self.main_config_dir+'/settings.cfg','w'))
             
     def get_debug(self):
-        return self.debug
-        
-    def get_http_server(self):
-        return self.http_server
-        
+        return self.debug          
     def get_user_name(self):
-        return self.user_name
-    
+        return self.user_name    
+    def get_auto_update(self):
+        return self.auto_update    
+    def get_audio_file(self):
+        return self.audio_file    
     def get_icon_file(self):
         return self.icon_file
-
     def get_avatar_dir(self):
-        return self.avatar_dir
-        
+        return self.avatar_dir        
     def get_avatar(self):
         return self.avatar_file
+    def get_default_lunch_begin(self):
+        return self.default_lunch_begin
+    def get_default_lunch_end(self):
+        return self.default_lunch_end
     
     def get_alarm_begin_as_int(self):
         return 0

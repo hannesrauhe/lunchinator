@@ -4,16 +4,21 @@ from time import localtime
 import subprocess,sys,ctypes
 from yapsy.PluginManager import PluginManagerSingleton
 
-class Notify(iface_called_plugin):
+class Notify(iface_called_plugin):    
     def __init__(self):
         super(Notify, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
         
+    def activate(self):        
+        iface_called_plugin.activate(self)
+        if not self.hasConfigOption("icon_file"):
+            self.setConfigOption("icon_file",sys.path[0]+"/images/mini_breakfast.png" )
+            
     def process_message(self,msg,addr,member_info):
         if sys.platform.startswith('linux'):    
             try:
-                icon = self.ls.get_icon_file()
+                icon = self.getConfigOption("icon_file")
                 name = " ["+addr+"]"
                 if member_info.has_key("avatar"):
                     icon = self.ls.get_avatar_dir()+"/"+member_info["avatar"]

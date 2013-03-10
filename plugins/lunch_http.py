@@ -7,19 +7,21 @@ import lunch_default_config
 import threading, SimpleHTTPServer, SocketServer, os
 
 class http_server_thread(threading.Thread):
-    config = None
+    port = 50002
+    html_dir = None
     server = None
     
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, port,html_dir):
+        self.port = int(port)
+        self.html_dir = html_dir
         threading.Thread.__init__(self)
         
     def run(self):
-        print "Starting the HTTP Server on Port",self.config.http_port
+        print "Starting the HTTP Server on Port",self.port
         os.chdir(self.config.html_dir)
         SocketServer.ThreadingTCPServer.allow_reuse_address = True
         Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
-        self.server = SocketServer.TCPServer(("", self.config.http_port), Handler)
+        self.server = SocketServer.TCPServer(("", self.html_dir), Handler)
 
         self.server.serve_forever()
         
@@ -39,9 +41,12 @@ class lunch_http(iface_called_plugin):
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
         
+        
     def activate(self):
         iface_called_plugin.activate(self)
-        self.s_thread = http_server_thread(self.ls)
+        if not self.hasConfigOption("http_port"):
+            self.setConfigOption("http_port","50002" )
+        self.s_thread = http_server_thread(self.getConfigOption("http_port"),self.ls.main_config_dir)
         self.s_thread.start()
         if not os.path.exists(self.ls.html_dir+"/index.html"):
             self.write_info_html()
