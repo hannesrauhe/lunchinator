@@ -337,22 +337,32 @@ class MembersTable(UpdatingTable):
         self.treeView.append_column(column)
     
         rendererText = gtk.CellRendererText()
-        column = gtk.TreeViewColumn("LastSeen", rendererText, text=2)
+        column = gtk.TreeViewColumn("LunchTime", rendererText, text=2, background=4)
         column.set_sort_column_id(2)
+        self.treeView.append_column(column)
+    
+        rendererText = gtk.CellRendererText()
+        column = gtk.TreeViewColumn("LastSeen", gtk.CellRendererText(), text=3)
+        column.set_sort_column_id(3)
         self.treeView.append_column(column)
     
     def create_model(self):
         me = self.ls.get_members()
         ti = self.ls.get_member_timeout()
-        st = gtk.ListStore(str, str, int)
+        inf = self.ls.get_member_info()
+        st = gtk.ListStore(str, str, str, int, str)
         for ip in me.keys():
-            member_entry=("","","")
-            if(ti.has_key(ip)):
-                member_entry = (ip,me[ip],int(time.time()-ti[ip]))
-            else:
-                member_entry = (ip,me[ip],-1)            
-            st.append(member_entry)
-        st.set_sort_column_id(1,gtk.SORT_ASCENDING)
+            member_entry=[ip,me[ip],"-",-1,"#FFFFFF"]
+            if inf.has_key(ip) and inf[ip].has_key("next_lunch_begin") and inf[ip].has_key("next_lunch_end"):
+                member_entry[2]=inf[ip]["next_lunch_begin"]+"-"+inf[ip]["next_lunch_end"]  
+                if self.ls.is_now_in_time_span(inf[ip]["next_lunch_begin"],inf[ip]["next_lunch_end"]):
+                    member_entry[4]="#00FF00"
+                else:
+                    member_entry[4]="#FF0000"
+            if ti.has_key(ip):
+                member_entry[3]=int(time.time()-ti[ip])        
+            st.append(tuple(member_entry))
+        st.set_sort_column_id(2,gtk.SORT_ASCENDING)
         return st
     
 class MessageTable(UpdatingTable):

@@ -43,7 +43,17 @@ class lunch_server(lunch_default_config):
         if load_standard_plugins:
             self.plugin_manager.activatePluginByName("Notify", "called")
             self.plugin_manager.activatePluginByName("Webcam", "gui")
-            self.plugin_manager.activatePluginByName("Lunch Menu", "gui")
+            self.plugin_manager.activatePluginByName("Lunch Menu", "gui")        
+            
+        
+    def is_now_in_time_span(self,begin,end):
+        try:
+            begin_hour,_,begin_min = begin.partition(":")
+            end_hour,_,end_min = end.partition(":")
+            return localtime()[3]*60+localtime()[4] >= int(begin_hour)*60+int(begin_min) and localtime()[3]*60+localtime()[4] <= int(end_hour)*60+int(end_min)
+        except:
+            print "don't know how to handle time span",begin,end,sys.exc_info()
+            return False;
         
     def call_all_members(self,msg):        
         self.lclient.call(msg,hosts=self.members)   
@@ -182,7 +192,8 @@ class lunch_server(lunch_default_config):
                 if addr[0] not in self.members:   
                     self.members[addr[0]]=value           
                     self.write_members_to_file()
-                    self.call_all_members("HELO_INFO "+self.build_info_string())
+                    self.lclient.call("HELO_INFO "+self.build_info_string(),client=addr[0])
+                    self.call_all_members()
                 else:                    
                     self.members[addr[0]]=value
                 
@@ -346,6 +357,9 @@ class lunch_server(lunch_default_config):
 
     def get_member_timeout(self):  
         return self.member_timeout    
+    
+    def get_member_info(self):  
+        return self.member_info    
     
 if __name__ == "__main__":
     l = lunch_server()
