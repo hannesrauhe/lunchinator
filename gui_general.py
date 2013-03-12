@@ -210,6 +210,7 @@ class lunchinator(threading.Thread):
             nb.set_tab_pos(gtk.POS_TOP)
             for name,widget in plugin_widgets:
                 nb.append_page(widget,gtk.Label(name))
+                nb.set_tab_reorderable(widget, True)
             nb.show()
             box0.pack_start(nb, True, True, 0)
         box0.show()
