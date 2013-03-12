@@ -246,7 +246,7 @@ class lunchinator(threading.Thread):
         d = gtk.Dialog(title="Lunchinator Settings",buttons=("Save",gtk.RESPONSE_APPLY,"Cancel",gtk.RESPONSE_CANCEL))
         nb = gtk.Notebook()
         nb.set_tab_pos(gtk.POS_LEFT)
-        options = ['user_name','audio_file','auto_update',"default_lunch_begin","default_lunch_end"]
+        options = ['user_name','audio_file','auto_update',"default_lunch_begin","default_lunch_end","alarm_begin_time","alarm_end_time","mute_timeout"]
         t = gtk.Table(len(options),2,True)
         i=0
         for o in options:
@@ -257,8 +257,9 @@ class lunchinator(threading.Thread):
                 _member = getattr(self.ls, methodname)
                 v = _member()
             if type(v)==types.IntType:
-                e = gtk.Label("int")
-            if type(v)==types.BooleanType:
+                adjustment = gtk.Adjustment(value=v, lower=0, upper=1000000, step_incr=1, page_incr=0, page_size=0)
+                e = gtk.SpinButton(adjustment)
+            elif type(v)==types.BooleanType:
                 e = gtk.CheckButton()
                 e.set_active(v)
             else:

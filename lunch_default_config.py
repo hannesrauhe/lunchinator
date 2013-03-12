@@ -26,8 +26,6 @@ class lunch_default_config(object):
     default_lunch_end = "12:45"
     alarm_begin_time = "11:30"
     alarm_end_time = "13:00"
-    
-    '''file settings.cfg advanced section '''
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30
     
@@ -55,8 +53,8 @@ class lunch_default_config(object):
         self.alarm_begin_time = self.read_value_from_config_file(self.alarm_begin_time,"general","alarm_begin_time")
         self.alarm_end_time= self.read_value_from_config_file(self.alarm_end_time,"general","alarm_end_time")
         
-        self.peer_timeout = self.read_value_from_config_file(self.peer_timeout, "advanced", "peer_timeout")
-        self.mute_timeout = self.read_value_from_config_file(self.mute_timeout, "advanced", "mute_timeout")
+        self.peer_timeout = self.read_value_from_config_file(self.peer_timeout, "general", "peer_timeout")
+        self.mute_timeout = self.read_value_from_config_file(self.mute_timeout, "general", "mute_timeout")
                      
         self.debug = False
                         
@@ -131,10 +129,13 @@ class lunch_default_config(object):
         return self.default_lunch_begin
     def get_default_lunch_end(self):
         return self.default_lunch_end
+    def get_alarm_begin_time(self):
+        return self.alarm_begin_time
+    def get_alarm_end_time(self):
+        return self.alarm_end_time
+    def get_mute_timeout(self):
+        return self.mute_timeout
     
-    def get_alarm_begin_as_int(self):
-        return 0
-        
     def set_user_name(self,name,force_write=False):
         self.user_name = name
         self.config_file.set('general', 'user_name', str(name))

@@ -236,18 +236,13 @@ class lunch_server(lunch_default_config):
         if addr in self.members:
             m = self.members[addr]
             
+        mute_alarm = False
         if len(self.last_messages)>0:
             last = self.last_messages[0]            
-            if msg==last[2] and mktime(mtime)-mktime(last[0])<self.mute_timeout:
+            if mktime(mtime)-mktime(last[0])<self.mute_timeout:
                 if self.debug:
-                    print "a second message with the same text arrived within",self.mute_timeout, "seconds: "
-                    print "%s: [%s] %s" % (t,m,msg)
-                return
-            if addr==last[1] and mktime(mtime)-mktime(last[0])<self.mute_timeout:
-                if self.debug:
-                    print "somebody sent two msgs in a row - was muted: "
-                    print "%s: [%s] %s" % (t,m,msg)
-                return
+                    print "message will not trigger alarm: %s: [%s] %s" % (t,m,msg)
+                mute_alarm = True
             
         print "%s: [%s] %s" % (t,m,msg)
         
@@ -265,8 +260,7 @@ class lunch_server(lunch_default_config):
                 if pluginInfo.plugin_object.is_activated:
                     pluginInfo.plugin_object.process_message(msg,addr,member_info)                
             
-            if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765 and msg.startswith("lunch"):
-#            if msg.startswith("lunch"):
+            if not mute_alarm and msg.startswith("lunch") and self.is_now_in_time_span(self.alarm_begin_time, self.alarm_end_time):
                 for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
                     if pluginInfo.plugin_object.is_activated:
                         pluginInfo.plugin_object.process_lunch_call(msg,addr,member_info)   
