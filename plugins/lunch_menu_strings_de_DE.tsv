@@ -1,0 +1,22 @@
+soupSource	Suppe
+mainDishesSource	Hauptgericht
+mainDishesOrSource	Oder
+supplementsSource	Beilagen
+dessertsSource	Dessert
+dateFormatSource	"%A, %d. %B"
+weekdaySeparator	","
+lunchMenuURL	http://155.56.69.85:1081/lunch_de.txt
+monday	Montag
+tuesday	Dienstag
+wednesday	Mittwoch
+thursday	Donnerstag
+friday	Freitag
+saturday	Samstag
+sunday	Sonntag
+today	Heute
+soupDisplayed	Suppe
+mainDishesDisplayed	Hauptgerichte
+supplementsDisplayed	Beilagen
+dessertsDisplayed	Desserts
+lunchMenuFor	Menü am
+dateFormatDisplayed	"%A, den %d. %B"
