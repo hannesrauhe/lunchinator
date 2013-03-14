@@ -354,7 +354,9 @@ class MembersTable(UpdatingTable):
         self.treeView.append_column(column)
     
     def create_model(self):
-        return gtk.ListStore(str, str, str, int, str)
+        ls = gtk.ListStore(str, str, str, int, str)
+        ls.set_sort_column_id(2,gtk.SORT_ASCENDING)
+        return ls
     
     def update_model(self):
         me = self.ls.get_members()
@@ -372,7 +374,6 @@ class MembersTable(UpdatingTable):
             if ti.has_key(ip):
                 member_entry[3]=int(time.time()-ti[ip])        
             self.listStore.append(tuple(member_entry))
-        #self.listStore.set_sort_column_id(2,gtk.SORT_ASCENDING)
     
 class MessageTable(UpdatingTable):
     def __init__(self,ls):
@@ -395,7 +396,10 @@ class MessageTable(UpdatingTable):
         self.treeView.append_column(column)
     
     def create_model(self):
-        return gtk.ListStore(str, str, str)
+        ls = gtk.ListStore(str, str, str)
+        # TODO sort by date?
+        #ls.set_sort_column_id(0,gtk.SORT_ASCENDING)
+        return ls
     
     def update_model(self):
         m = self.ls.get_last_msgs()
