@@ -180,6 +180,15 @@ class ConfigurablePluginManager(PluginManagerDecorator):
 		"""
 		section_name = "%s Plugin: %s" % (category_name,plugin_name)
 		return self.config_parser.get(section_name,option_name)
+	
+	def getOptionsListFromPlugin(self, 
+							 category_name, plugin_name):
+		"""
+		@author Hannes Rauhe 
+		To be called from a plugin object, give a list of options registered by the plugin
+		"""
+		section_name = "%s Plugin: %s" % (category_name,plugin_name)
+		return self.config_parser.options(section_name)
 
 
 	def __decoratePluginObject(self, category_name, plugin_name, plugin_object):
@@ -200,6 +209,9 @@ class ConfigurablePluginManager(PluginManagerDecorator):
 																		   plugin_name,
 																		   x)
 		plugin_object.hasConfigOption.__doc__ = self.hasOptionFromPlugin.__doc__
+		plugin_object.getOptionsList = lambda x: self.getOptionsListFromPlugin(category_name,
+																		   plugin_name)
+		plugin_object.getOptionsList.__doc__ = self.getOptionsListFromPlugin.__doc__
 
 	def activatePluginByName(self, plugin_name, category_name="Default", save_state=True):
 		"""
