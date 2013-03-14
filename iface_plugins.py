@@ -17,10 +17,17 @@ class iface_plugin(IPlugin):
         IPlugin.deactivate(self)
         
     def create_options_widget(self):
-        w = gtk.VBox()
-        w.pack_start(gtk.Label("Options will go here - change $HOME/.lunchinator/settings.cfg manually for now"))
-        print self.getOptionsList(True)
-        return w
+        options = self.getConfigOptionsList(True)
+        t = gtk.Table(len(options),2,True)
+        i=0
+        for o in options:
+            v = self.getConfigOption(o)
+            e = gtk.Entry()
+            e.set_text(v)
+            t.attach(gtk.Label(o),0,1,i,i+1)
+            t.attach(e,1,2,i,i+1)
+            i+=1
+        return t
         
 class iface_gui_plugin(iface_plugin):    
     def activate(self):

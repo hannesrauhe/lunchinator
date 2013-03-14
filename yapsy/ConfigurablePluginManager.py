@@ -209,9 +209,9 @@ class ConfigurablePluginManager(PluginManagerDecorator):
 																		   plugin_name,
 																		   x)
 		plugin_object.hasConfigOption.__doc__ = self.hasOptionFromPlugin.__doc__
-		plugin_object.getOptionsList = lambda x: self.getOptionsListFromPlugin(category_name,
+		plugin_object.getConfigOptionsList = lambda x: self.getOptionsListFromPlugin(category_name,
 																		   plugin_name)
-		plugin_object.getOptionsList.__doc__ = self.getOptionsListFromPlugin.__doc__
+		plugin_object.getConfigOptionsList.__doc__ = self.getOptionsListFromPlugin.__doc__
 
 	def activatePluginByName(self, plugin_name, category_name="Default", save_state=True):
 		"""
