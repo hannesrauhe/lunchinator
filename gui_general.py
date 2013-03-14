@@ -210,6 +210,7 @@ class lunchinator(threading.Thread):
             nb.set_tab_pos(gtk.POS_TOP)
             for name,widget in plugin_widgets:
                 nb.insert_page_in_order(widget,name)
+                nb.set_tab_reorderable(widget, True)
             nb.show()
             box0.pack_start(nb, True, True, 0)
         box0.show()
@@ -220,7 +221,7 @@ class lunchinator(threading.Thread):
         button.connect_object("clicked", gtk.Widget.activate, entry)
         entry2.connect("activate", self.clicked_add_host)
         button2.connect_object("clicked", gtk.Widget.activate, entry2)
-        window.connect("delete-event",lambda w: sys.stdout.write(nb.get_order()))      
+        window.connect("delete-event",lambda w,x: sys.stdout.write(str(nb.get_order())+str(x)))      
             
     def clicked_send_msg(self,w,*data):
         if len(data):
@@ -246,7 +247,7 @@ class lunchinator(threading.Thread):
         d = gtk.Dialog(title="Lunchinator Settings",buttons=("Save",gtk.RESPONSE_APPLY,"Cancel",gtk.RESPONSE_CANCEL))
         nb = gtk.Notebook()
         nb.set_tab_pos(gtk.POS_LEFT)
-        options = ['user_name','audio_file','auto_update',"default_lunch_begin","default_lunch_end"]
+        options = ['user_name','audio_file','auto_update',"default_lunch_begin","default_lunch_end","alarm_begin_time","alarm_end_time","mute_timeout"]
         t = gtk.Table(len(options),2,True)
         i=0
         for o in options:
@@ -257,8 +258,9 @@ class lunchinator(threading.Thread):
                 _member = getattr(self.ls, methodname)
                 v = _member()
             if type(v)==types.IntType:
-                e = gtk.Label("int")
-            if type(v)==types.BooleanType:
+                adjustment = gtk.Adjustment(value=v, lower=0, upper=1000000, step_incr=1, page_incr=0, page_size=0)
+                e = gtk.SpinButton(adjustment)
+            elif type(v)==types.BooleanType:
                 e = gtk.CheckButton()
                 e.set_active(v)
             else:
@@ -278,16 +280,25 @@ class lunchinator(threading.Thread):
             print "error while including plugin", sys.exc_info()
         for name,widget in plugin_widgets:
             nb.append_page(widget,gtk.Label(name))
-        nb.show_all()
+        nb.show_all()        
+        warn_label1 = gtk.Label("NOT YET IMPLEMENTED")
+        warn_label1.show()
+        warn_label2 = gtk.Label("Options will go here - change $HOME/.lunchinator/settings.cfg manually for now")
+        warn_label2.show()
+        d.get_content_area().pack_start(warn_label1, True, True, 0)
+        d.get_content_area().pack_start(warn_label2, True, True, 0)
         d.get_content_area().pack_start(nb, True, True, 0)
         resp = d.run()
         d.destroy()
         
 
-class UpdatingTable(object):    
+class UpdatingTable(object):
+    listStore = None
     def __init__(self,ls):
-        self.ls = ls        
-        self.treeView = gtk.TreeView(self.create_model())
+        self.ls = ls
+        self.listStore = self.create_model()
+        self.update_model()
+        self.treeView = gtk.TreeView(self.listStore)
         self.fill_treeview()
         self.scrollTree = gtk.ScrolledWindow()
         self.scrollTree.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -301,10 +312,10 @@ class UpdatingTable(object):
     def timeout(self):
         try:
             sortCol,sortOrder = self.treeView.get_model().get_sort_column_id()
-            st = self.create_model()
-            if sortCol!=None:
-                st.set_sort_column_id(sortCol,sortOrder)
-            self.treeView.set_model(st)
+            self.update_model()
+            #if sortCol!=None:
+              #  st.set_sort_column_id(sortCol,sortOrder)
+            #self.treeView.set_model(self.listStore)
             return True
         except:
             return False
@@ -314,6 +325,9 @@ class UpdatingTable(object):
     
     def create_model(self):
         return None
+    
+    def update_model(self):
+        pass
     
 class MembersTable(UpdatingTable):    
     def __init__(self,ls):
@@ -331,23 +345,36 @@ class MembersTable(UpdatingTable):
         self.treeView.append_column(column)
     
         rendererText = gtk.CellRendererText()
-        column = gtk.TreeViewColumn("LastSeen", rendererText, text=2)
+        column = gtk.TreeViewColumn("LunchTime", rendererText, text=2, background=4)
         column.set_sort_column_id(2)
         self.treeView.append_column(column)
     
+        rendererText = gtk.CellRendererText()
+        column = gtk.TreeViewColumn("LastSeen", gtk.CellRendererText(), text=3)
+        column.set_sort_column_id(3)
+        self.treeView.append_column(column)
+    
     def create_model(self):
+        ls = gtk.ListStore(str, str, str, int, str)
+        ls.set_sort_column_id(2,gtk.SORT_ASCENDING)
+        return ls
+    
+    def update_model(self):
         me = self.ls.get_members()
         ti = self.ls.get_member_timeout()
-        st = gtk.ListStore(str, str, int)
+        inf = self.ls.get_member_info()
+        self.listStore.clear()
         for ip in me.keys():
-            member_entry=("","","")
-            if(ti.has_key(ip)):
-                member_entry = (ip,me[ip],int(time.time()-ti[ip]))
-            else:
-                member_entry = (ip,me[ip],-1)            
-            st.append(member_entry)
-        st.set_sort_column_id(1,gtk.SORT_ASCENDING)
-        return st
+            member_entry=[ip,me[ip],"-",-1,"#FFFFFF"]
+            if inf.has_key(ip) and inf[ip].has_key("next_lunch_begin") and inf[ip].has_key("next_lunch_end"):
+                member_entry[2]=inf[ip]["next_lunch_begin"]+"-"+inf[ip]["next_lunch_end"]  
+                if self.ls.is_now_in_time_span(inf[ip]["next_lunch_begin"],inf[ip]["next_lunch_end"]):
+                    member_entry[4]="#00FF00"
+                else:
+                    member_entry[4]="#FF0000"
+            if ti.has_key(ip):
+                member_entry[3]=int(time.time()-ti[ip])        
+            self.listStore.append(tuple(member_entry))
     
 class MessageTable(UpdatingTable):
     def __init__(self,ls):
@@ -370,15 +397,21 @@ class MessageTable(UpdatingTable):
         self.treeView.append_column(column)
     
     def create_model(self):
+        ls = gtk.ListStore(str, str, str)
+        # TODO sort by date?
+        #ls.set_sort_column_id(0,gtk.SORT_ASCENDING)
+        return ls
+    
+    def update_model(self):
         m = self.ls.get_last_msgs()
-        st = gtk.ListStore(str, str, str)
+        self.listStore.clear()
         for i in m:
             if i[1] in self.ls.get_members():
                 i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),self.ls.get_members()[i[1]],i[2])
             else:
                 i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),i[1],i[2])
-            st.append(i)
-        return st
+            self.listStore.append(i)
+        return self.listStore
     
 class StoredOrderNotebook(gtk.Notebook):
     order = []

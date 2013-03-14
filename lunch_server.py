@@ -43,7 +43,17 @@ class lunch_server(lunch_default_config):
         if load_standard_plugins:
             self.plugin_manager.activatePluginByName("Notify", "called")
             self.plugin_manager.activatePluginByName("Webcam", "gui")
-            self.plugin_manager.activatePluginByName("Lunch Menu", "gui")
+            self.plugin_manager.activatePluginByName("Lunch Menu", "gui")        
+            
+        
+    def is_now_in_time_span(self,begin,end):
+        try:
+            begin_hour,_,begin_min = begin.partition(":")
+            end_hour,_,end_min = end.partition(":")
+            return localtime()[3]*60+localtime()[4] >= int(begin_hour)*60+int(begin_min) and localtime()[3]*60+localtime()[4] <= int(end_hour)*60+int(end_min)
+        except:
+            print "don't know how to handle time span",begin,end,sys.exc_info()
+            return False;
         
     def call_all_members(self,msg):        
         self.lclient.call(msg,hosts=self.members)   
@@ -182,7 +192,8 @@ class lunch_server(lunch_default_config):
                 if addr[0] not in self.members:   
                     self.members[addr[0]]=value           
                     self.write_members_to_file()
-                    self.call_all_members("HELO_INFO "+self.build_info_string())
+                    self.lclient.call("HELO_INFO "+self.build_info_string(),client=addr[0])
+                    self.call_all_members()
                 else:                    
                     self.members[addr[0]]=value
                 
@@ -225,18 +236,13 @@ class lunch_server(lunch_default_config):
         if addr in self.members:
             m = self.members[addr]
             
+        mute_alarm = False
         if len(self.last_messages)>0:
             last = self.last_messages[0]            
-            if msg==last[2] and mktime(mtime)-mktime(last[0])<self.mute_timeout:
+            if mktime(mtime)-mktime(last[0])<self.mute_timeout:
                 if self.debug:
-                    print "a second message with the same text arrived within",self.mute_timeout, "seconds: "
-                    print "%s: [%s] %s" % (t,m,msg)
-                return
-            if addr==last[1] and mktime(mtime)-mktime(last[0])<self.mute_timeout:
-                if self.debug:
-                    print "somebody sent two msgs in a row - was muted: "
-                    print "%s: [%s] %s" % (t,m,msg)
-                return
+                    print "message will not trigger alarm: %s: [%s] %s" % (t,m,msg)
+                mute_alarm = True
             
         print "%s: [%s] %s" % (t,m,msg)
         
@@ -254,8 +260,7 @@ class lunch_server(lunch_default_config):
                 if pluginInfo.plugin_object.is_activated:
                     pluginInfo.plugin_object.process_message(msg,addr,member_info)                
             
-            if localtime()[3]*60+localtime()[4] >= 705 and localtime()[3]*60+localtime()[4] <= 765 and msg.startswith("lunch"):
-#            if msg.startswith("lunch"):
+            if not mute_alarm and msg.startswith("lunch") and self.is_now_in_time_span(self.alarm_begin_time, self.alarm_end_time):
                 for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
                     if pluginInfo.plugin_object.is_activated:
                         pluginInfo.plugin_object.process_lunch_call(msg,addr,member_info)   
@@ -346,6 +351,9 @@ class lunch_server(lunch_default_config):
 
     def get_member_timeout(self):  
         return self.member_timeout    
+    
+    def get_member_info(self):  
+        return self.member_info    
     
 if __name__ == "__main__":
     l = lunch_server()
