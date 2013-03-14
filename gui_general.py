@@ -291,10 +291,13 @@ class lunchinator(threading.Thread):
         d.destroy()
         
 
-class UpdatingTable(object):    
+class UpdatingTable(object):
+    listStore = None
     def __init__(self,ls):
-        self.ls = ls        
-        self.treeView = gtk.TreeView(self.create_model())
+        self.ls = ls
+        self.listStore = self.create_model()
+        self.update_model()
+        self.treeView = gtk.TreeView(self.listStore)
         self.fill_treeview()
         self.scrollTree = gtk.ScrolledWindow()
         self.scrollTree.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -308,10 +311,10 @@ class UpdatingTable(object):
     def timeout(self):
         try:
             sortCol,sortOrder = self.treeView.get_model().get_sort_column_id()
-            st = self.create_model()
-            if sortCol!=None:
-                st.set_sort_column_id(sortCol,sortOrder)
-            self.treeView.set_model(st)
+            self.update_model()
+            #if sortCol!=None:
+              #  st.set_sort_column_id(sortCol,sortOrder)
+            #self.treeView.set_model(self.listStore)
             return True
         except:
             return False
@@ -321,6 +324,9 @@ class UpdatingTable(object):
     
     def create_model(self):
         return None
+    
+    def update_model(self):
+        pass
     
 class MembersTable(UpdatingTable):    
     def __init__(self,ls):
@@ -348,10 +354,13 @@ class MembersTable(UpdatingTable):
         self.treeView.append_column(column)
     
     def create_model(self):
+        return gtk.ListStore(str, str, str, int, str)
+    
+    def update_model(self):
         me = self.ls.get_members()
         ti = self.ls.get_member_timeout()
         inf = self.ls.get_member_info()
-        st = gtk.ListStore(str, str, str, int, str)
+        self.listStore.clear()
         for ip in me.keys():
             member_entry=[ip,me[ip],"-",-1,"#FFFFFF"]
             if inf.has_key(ip) and inf[ip].has_key("next_lunch_begin") and inf[ip].has_key("next_lunch_end"):
@@ -362,9 +371,8 @@ class MembersTable(UpdatingTable):
                     member_entry[4]="#FF0000"
             if ti.has_key(ip):
                 member_entry[3]=int(time.time()-ti[ip])        
-            st.append(tuple(member_entry))
-        st.set_sort_column_id(2,gtk.SORT_ASCENDING)
-        return st
+            self.listStore.append(tuple(member_entry))
+        #self.listStore.set_sort_column_id(2,gtk.SORT_ASCENDING)
     
 class MessageTable(UpdatingTable):
     def __init__(self,ls):
@@ -387,15 +395,18 @@ class MessageTable(UpdatingTable):
         self.treeView.append_column(column)
     
     def create_model(self):
+        return gtk.ListStore(str, str, str)
+    
+    def update_model(self):
         m = self.ls.get_last_msgs()
-        st = gtk.ListStore(str, str, str)
+        self.listStore.clear()
         for i in m:
             if i[1] in self.ls.get_members():
                 i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),self.ls.get_members()[i[1]],i[2])
             else:
                 i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),i[1],i[2])
-            st.append(i)
-        return st
+            self.listStore.append(i)
+        return self.listStore
         
 if __name__ == "__main__":
     l = lunchinator()
