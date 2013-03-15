@@ -24,26 +24,7 @@ class lunchinator(threading.Thread):
     def run(self):
         self.ls.start_server()      
     
-    def init_menu(self):
-        #create the settings submenu
-        settings_menu = gtk.Menu()
-        avatar_item = gtk.CheckMenuItem("Avatar")
-        debug_item = gtk.CheckMenuItem("Debug Output")
-        settings_item = gtk.MenuItem("More Settings")
-        
-        debug_item.set_active(self.ls.get_debug())
-        avatar_item.set_active(len(self.ls.get_avatar())>0)
-            
-        debug_item.connect("activate", self.toggle_debug_mode)
-        avatar_item.connect("activate", self.window_select_avatar)
-        settings_item.connect("activate",self.window_settings)        
-                
-        settings_menu.append(avatar_item)
-        settings_menu.append(debug_item)
-        settings_menu.append(settings_item)
-        settings_menu.show_all()
-        
-        
+    def init_menu(self):        
         #create the plugin submenu
         plugin_menu = gtk.Menu()
         for p_cat in ['called','gui']:
@@ -64,7 +45,7 @@ class lunchinator(threading.Thread):
                 
         menu_items.connect("activate", self.clicked_send_msg, "lunch")
         msg_items.connect("activate", self.window_msg)
-        settings_item.set_submenu(settings_menu)
+        settings_item.connect("activate", self.window_settings)
         plugin_item.set_submenu(plugin_menu)
         exit_item.connect("activate", self.quit)
         
@@ -79,18 +60,8 @@ class lunchinator(threading.Thread):
         self.menu.append(settings_item)
         self.menu.append(plugin_item)
         self.menu.append(exit_item) 
-        
-    def toggle_debug_mode(self,w):
-        self.ls.set_debug(w.get_active())
             
     def toggle_plugin(self,w,*data):
-#        p = self.ls.plugin_manager.getPluginByName(w.get_label(),data[0])
-#        resp = p.plugin_object.show_options()
-#        if resp == 1:
-#            self.ls.plugin_manager.activatePluginByName(w.get_label(),data[0])
-#        else:
-#            self.ls.plugin_manager.deactivatePluginByName(w.get_label(),data[0])
-#        w.set_active(resp)
         if w.get_active():
             self.ls.plugin_manager.activatePluginByName(w.get_label(),data[0])
         else:
@@ -247,7 +218,7 @@ class lunchinator(threading.Thread):
         d = gtk.Dialog(title="Lunchinator Settings",buttons=("Save",gtk.RESPONSE_APPLY,"Cancel",gtk.RESPONSE_CANCEL))
         nb = gtk.Notebook()
         nb.set_tab_pos(gtk.POS_LEFT)
-        options = ['user_name','audio_file','auto_update',"default_lunch_begin","default_lunch_end","alarm_begin_time","alarm_end_time","mute_timeout"]
+        options = ['user_name','audio_file','avatar','auto_update','debug',"default_lunch_begin","default_lunch_end","alarm_begin_time","alarm_end_time","mute_timeout"]
         t = gtk.Table(len(options),2,True)
         i=0
         for o in options:

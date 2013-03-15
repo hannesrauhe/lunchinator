@@ -10,21 +10,18 @@ class webcam(iface_gui_plugin):
         super(webcam, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
+        self.options = {"fallback_pic":sys.path[0]+"/images/webcam.jpg",
+                        "pic_url":"http://webcam.wdf.sap.corp:1080/images/canteen_bac.jpeg",
+                        "timeout":5}
         
     def activate(self):
         iface_gui_plugin.activate(self)
-        if not self.hasConfigOption("fallback_pic"):
-            self.setConfigOption("fallback_pic",sys.path[0]+"/images/webcam.jpg" )
-        if not self.hasConfigOption("pic_url"):
-            self.setConfigOption("pic_url","http://webcam.wdf.sap.corp:1080/images/canteen_bac.jpeg" )
-        if not self.hasConfigOption("timeout"):
-            self.setConfigOption("timeout","5" )
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self):
-        webcam = UpdatingImage(self.getConfigOption("fallback_pic"),self.getConfigOption("pic_url"),int(self.getConfigOption("timeout")))
+        webcam = UpdatingImage(self.options["fallback_pic"],self.options["pic_url"],self.options["timeout"])
         return webcam.gtkimage
     
     def add_menu(self,menu):
