@@ -199,9 +199,23 @@ class lunchinator(threading.Thread):
         try:
             for pluginInfo in self.ls.plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
-                    plugin_widgets.append((pluginInfo.name,pluginInfo.plugin_object.create_widget()))
+                    try:
+                        plugin_widgets.append((pluginInfo.name,pluginInfo.plugin_object.create_widget()))
+                    except:
+                        sw = gtk.ScrolledWindow()
+                        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+                        textview = gtk.TextView()
+                        textview.set_size_request(400,200)
+                        textview.set_wrap_mode(gtk.WRAP_WORD)
+                        textbuffer = textview.get_buffer()
+                        sw.add(textview)
+                        sw.show()
+                        textview.show()
+                        textbuffer.set_text("Error while including plugin"+str(sys.exc_info()))                                      
+                        plugin_widgets.append((pluginInfo.name,sw))
+                        print "error while including plugin",pluginInfo.name, sys.exc_info()
         except:
-            print "error while including plugin", sys.exc_info()
+            print "error while including plugins", sys.exc_info()
         if len(plugin_widgets)==1:
             box0.size_allocate(gtk.gdk.Rectangle(0,0,100,100))
             box0.pack_start(plugin_widgets[0][1], True, True, 0)
@@ -274,9 +288,13 @@ class lunchinator(threading.Thread):
         try:
             for pluginInfo in self.ls.plugin_manager.getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:
-                    plugin_widgets.append((pluginInfo.name,pluginInfo.plugin_object.create_options_widget()))
+                    try:
+                        plugin_widgets.append((pluginInfo.name,pluginInfo.plugin_object.create_options_widget()))
+                    except:
+                        plugin_widgets.append((pluginInfo.name,gtk.Label("Error while including plugin")))
+                        print "error while including plugin",pluginInfo.name, sys.exc_info()
         except:
-            print "error while including plugin", sys.exc_info()
+            print "error while including plugins", sys.exc_info()
         for name,widget in plugin_widgets:
             nb.append_page(widget,gtk.Label(name))
         nb.show_all()        
