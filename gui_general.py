@@ -235,7 +235,7 @@ class lunchinator(threading.Thread):
         button.connect_object("clicked", gtk.Widget.activate, entry)
         entry2.connect("activate", self.clicked_add_host)
         button2.connect_object("clicked", gtk.Widget.activate, entry2)
-        window.connect("delete-event",lambda w,x: sys.stdout.write(str(nb.get_order())+str(x)))      
+#        window.connect("delete-event",lambda w,x: sys.stdout.write(str(nb.get_order())+str(x)))      
             
     def clicked_send_msg(self,w,*data):
         if len(data):
