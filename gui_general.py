@@ -220,10 +220,10 @@ class lunchinator(threading.Thread):
             box0.size_allocate(gtk.gdk.Rectangle(0,0,100,100))
             box0.pack_start(plugin_widgets[0][1], True, True, 0)
         elif len(plugin_widgets)>1:
-            nb = gtk.Notebook()
+            nb = StoredOrderNotebook(["Webcam"])
             nb.set_tab_pos(gtk.POS_TOP)
             for name,widget in plugin_widgets:
-                nb.append_page(widget,gtk.Label(name))
+                nb.insert_page_in_order(widget,name)
                 nb.set_tab_reorderable(widget, True)
             nb.show()
             box0.pack_start(nb, True, True, 0)
@@ -234,7 +234,8 @@ class lunchinator(threading.Thread):
         entry.connect("activate", self.clicked_send_msg)
         button.connect_object("clicked", gtk.Widget.activate, entry)
         entry2.connect("activate", self.clicked_add_host)
-        button2.connect_object("clicked", gtk.Widget.activate, entry2)      
+        button2.connect_object("clicked", gtk.Widget.activate, entry2)
+        window.connect("delete-event",lambda w,x: sys.stdout.write(str(nb.get_order())+str(x)))      
             
     def clicked_send_msg(self,w,*data):
         if len(data):
@@ -429,6 +430,20 @@ class MessageTable(UpdatingTable):
                 i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),i[1],i[2])
             self.listStore.append(i)
         return self.listStore
+    
+class StoredOrderNotebook(gtk.Notebook):
+    order = []
+    unorder = []
+    def __init__(self,order):
+        gtk.Notebook.__init__(self)
+        self.order = order
+    
+    def insert_page_in_order(self, w, name):
+        self.unorder.append(name)
+        self.append_page(w, gtk.Label(name))
+        
+    def get_order(self):
+        return self.order
         
 if __name__ == "__main__":
     l = lunchinator()
