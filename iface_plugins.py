@@ -40,11 +40,11 @@ class iface_plugin(IPlugin):
                     
         
     def create_options_widget(self):
-        options = self.getConfigOptionsList(True)
-        t = gtk.Table(len(options),2,True)
+        if not self.options:
+            return None
+        t = gtk.Table(len(self.options),2,False)
         i=0
         for o,v in self.options.iteritems():
-            v = ""
             e = ""
             if type(v)==types.IntType:
                 adjustment = gtk.Adjustment(value=v, lower=0, upper=1000000, step_incr=1, page_incr=0, page_size=0)
@@ -58,7 +58,28 @@ class iface_plugin(IPlugin):
             t.attach(gtk.Label(o),0,1,i,i+1)
             t.attach(e,1,2,i,i+1)
             i+=1
+            self.option_widgets[o]=e
         return t
+    
+    def save_options_widget_data(self):
+        if not self.option_widgets:
+            return
+        for o,e in self.option_widgets.iteritems():
+            v = self.options[o]
+            new_v = v
+            if type(v)==types.IntType:
+                new_v = e.get_value_as_int()
+            elif type(v)==types.BooleanType:
+                new_v = e.get_active()
+            else:
+                new_v = e.get_text()
+            if new_v!=v:
+                self.options[o]=new_v
+                self.setConfigOption(o,str(new_v))
+        self.discard_options_widget_data()
+    
+    def discard_options_widget_data(self):
+        self.option_widgets = {}
         
 class iface_gui_plugin(iface_plugin):    
     def activate(self):

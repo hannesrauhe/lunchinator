@@ -261,7 +261,9 @@ class lunchinator(threading.Thread):
             for pluginInfo in self.ls.plugin_manager.getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:
                     try:
-                        plugin_widgets.append((pluginInfo.name,pluginInfo.plugin_object.create_options_widget()))
+                        w = pluginInfo.plugin_object.create_options_widget()
+                        if w:
+                            plugin_widgets.append((pluginInfo.name,w))
                     except:
                         plugin_widgets.append((pluginInfo.name,gtk.Label("Error while including plugin")))
                         print "error while including plugin",pluginInfo.name, sys.exc_info()
@@ -269,16 +271,21 @@ class lunchinator(threading.Thread):
             print "error while including plugins", sys.exc_info()
         for name,widget in plugin_widgets:
             nb.append_page(widget,gtk.Label(name))
-        nb.show_all()        
-        warn_label1 = gtk.Label("NOT YET IMPLEMENTED")
-        warn_label1.show()
-        warn_label2 = gtk.Label("Options will go here - change $HOME/.lunchinator/settings.cfg manually for now")
-        warn_label2.show()
-        d.get_content_area().pack_start(warn_label1, True, True, 0)
-        d.get_content_area().pack_start(warn_label2, True, True, 0)
+        nb.show_all()
         d.get_content_area().pack_start(nb, True, True, 0)
         resp = d.run()
+        for pluginInfo in self.ls.plugin_manager.getAllPlugins():
+            if pluginInfo.plugin_object.is_activated:
+                if resp==gtk.RESPONSE_APPLY:
+                    try:
+                        pluginInfo.plugin_object.save_options_widget_data()
+                    except:
+                        print "was not able to save data for plugin",pluginInfo.name, sys.exc_info()
+                else:
+                    pluginInfo.plugin_object.discard_options_widget_data()
+            
         d.destroy()
+
         
 
 class UpdatingTable(object):
