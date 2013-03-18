@@ -40,13 +40,12 @@ class lunch_http(iface_called_plugin):
         super(lunch_http, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
+        self.options = {"http_port":50002}
         
         
     def activate(self):
         iface_called_plugin.activate(self)
-        if not self.hasConfigOption("http_port"):
-            self.setConfigOption("http_port","50002" )
-        self.s_thread = http_server_thread(self.getConfigOption("http_port"),self.ls.main_config_dir)
+        self.s_thread = http_server_thread(self.options["http_port"],self.ls.main_config_dir)
         self.s_thread.start()
         if not os.path.exists(self.ls.html_dir+"/index.html"):
             self.write_info_html()
