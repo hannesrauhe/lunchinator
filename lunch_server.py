@@ -39,7 +39,10 @@ class lunch_server(lunch_default_config):
            "called" : iface_called_plugin,
            "gui" : iface_gui_plugin
            })
-        self.plugin_manager.collectPlugins()
+        try:
+            self.plugin_manager.collectPlugins()
+        except:
+            print "problem when loading plugin",sys.exc_info()
         if load_standard_plugins:
             self.plugin_manager.activatePluginByName("Notify", "called")
             self.plugin_manager.activatePluginByName("Webcam", "gui")
