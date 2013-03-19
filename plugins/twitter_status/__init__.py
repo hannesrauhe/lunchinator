@@ -13,6 +13,7 @@ class twitter_status(iface_called_plugin):
         super(twitter_status, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
+        self.options = {"key":"","secret":""}
         
     def activate(self):
         iface_called_plugin.activate(self)

@@ -15,16 +15,13 @@ class panic_button(iface_called_plugin):
         super(panic_button, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
+        self.options={"idVendor":"0x1d34",
+                      "idProduct":"0x000d",
+                      "panic_msg":"lunch panic" }
         
     def activate(self):
         iface_called_plugin.activate(self)
-        if not self.hasConfigOption("idVendor"):
-            self.setConfigOption("idVendor","0x1d34")
-        if not self.hasConfigOption("idProduct"):
-            self.setConfigOption("idProduct","0x000d" )
-        if not self.hasConfigOption("panic_msg"):
-            self.setConfigOption("panic_msg","lunch panic" )
-        self.panic_thread = panic_button_listener(self.getConfigOption("idVendor"),self.getConfigOption("idProduct"),self.getConfigOption("panic_msg"),self.ls)
+        self.panic_thread = panic_button_listener(self.options["idVendor"],self.options["idProduct"],self.options["panic_msg"],self.ls)
         self.panic_thread.start()
         
         

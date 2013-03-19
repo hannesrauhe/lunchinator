@@ -10,11 +10,10 @@ class lunch_menu(iface_gui_plugin):
         super(lunch_menu, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
+        self.options = {"url":"http://155.56.69.85:1081/lunch_de.txt" }
         
     def activate(self):
         iface_gui_plugin.activate(self)
-        if not self.hasConfigOption("url"):
-            self.setConfigOption("url","http://155.56.69.85:1081/lunch_de.txt" )
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
@@ -29,7 +28,7 @@ class lunch_menu(iface_gui_plugin):
         sw.add(textview)
         sw.show()
         textview.show()
-        resp = urllib2.urlopen(self.getConfigOption("url"))
+        resp = urllib2.urlopen(self.options["url"])
         txt = resp.read()
         textbuffer.set_text(txt.decode('cp1252'))
         return sw
