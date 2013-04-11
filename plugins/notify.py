@@ -9,7 +9,7 @@ class Notify(iface_called_plugin):
         super(Notify, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
-        self.options = {"icon_file":sys.path[0]+"/images/mini_breakfast.png" }
+        self.options = {"icon_file":sys.path[0]+"/images/mini_breakfast.png","audio_file":sys.path[0]+"/sounds/sonar.wav" }
         
     def activate(self):        
         iface_called_plugin.activate(self)
@@ -44,7 +44,7 @@ class Notify(iface_called_plugin):
             pass
         
         try:
-            subprocess.call(["play", "-q", self.ls.audio_file])    
+            subprocess.call(["play", "-q", self.options["audio_file"]])    
         except:
             print "sound error"
             pass
