@@ -110,9 +110,21 @@ class lunch_default_config(object):
         
     def write_config_to_hd(self): 
         self.config_file.write(open(self.main_config_dir+'/settings.cfg','w'))
+        
+    #special handling for debug 
+    def set_debug(self,activate):
+        if activate:
+            f = open(self.main_config_dir+"/debug.cfg",'w')
+            f.write("debugging activated because this file exists")
+            f.close()
+        else:
+            os.remove(self.main_config_dir+"/debug.cfg")
+        self.debug = activate
             
     def get_debug(self):
-        return self.debug          
+        return self.debug
+    
+    #the rest is read from/written to the config file          
     def get_user_name(self):
         return self.user_name    
     def get_auto_update(self):
@@ -141,15 +153,6 @@ class lunch_default_config(object):
         self.config_file.set('general', 'user_name', str(name))
         if not force_write:
             self.write_config_to_hd()
-        
-    def set_debug(self,activate):
-        if activate:
-            f = open(self.main_config_dir+"/debug.cfg",'w')
-            f.write("debugging activated because this file exists")
-            f.close()
-        else:
-            os.remove(self.main_config_dir+"/debug.cfg")
-        self.debug = activate
         
     def set_avatar_file(self,file_name,force_write=False):  
         if not os.path.exists(self.avatar_dir+"/"+file_name):

@@ -1,9 +1,11 @@
 from yapsy.IPlugin import IPlugin
 import gtk,types
 
-class iface_plugin(IPlugin):
-    options = None
-    option_widgets = {}
+class iface_plugin(IPlugin):    
+    def __init__(self):
+        self.options = None
+        self.option_widgets = {}
+        super(iface_plugin, self).__init__()
     
     def activate(self):
         """

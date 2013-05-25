@@ -232,29 +232,6 @@ class lunchinator(threading.Thread):
         d = gtk.Dialog(title="Lunchinator Settings",buttons=("Save",gtk.RESPONSE_APPLY,"Cancel",gtk.RESPONSE_CANCEL))
         nb = gtk.Notebook()
         nb.set_tab_pos(gtk.POS_LEFT)
-        options = ['user_name','audio_file','avatar','auto_update','debug',"default_lunch_begin","default_lunch_end","alarm_begin_time","alarm_end_time","mute_timeout"]
-        t = gtk.Table(len(options),2,True)
-        i=0
-        for o in options:
-            methodname = "get_"+o
-            v = ""
-            e = ""
-            if hasattr(self.ls, methodname): 
-                _member = getattr(self.ls, methodname)
-                v = _member()
-            if type(v)==types.IntType:
-                adjustment = gtk.Adjustment(value=v, lower=0, upper=1000000, step_incr=1, page_incr=0, page_size=0)
-                e = gtk.SpinButton(adjustment)
-            elif type(v)==types.BooleanType:
-                e = gtk.CheckButton()
-                e.set_active(v)
-            else:
-                e = gtk.Entry()
-                e.set_text(v)
-            t.attach(gtk.Label(o),0,1,i,i+1)
-            t.attach(e,1,2,i,i+1)
-            i+=1
-        nb.append_page(t,gtk.Label("General"))
             
         plugin_widgets=[]        
         try:
@@ -274,6 +251,9 @@ class lunchinator(threading.Thread):
         nb.show_all()
         d.get_content_area().pack_start(nb, True, True, 0)
         resp = d.run()
+        
+        #save on exit
+        
         for pluginInfo in self.ls.plugin_manager.getAllPlugins():
             if pluginInfo.plugin_object.is_activated:
                 if resp==gtk.RESPONSE_APPLY:

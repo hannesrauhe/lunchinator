@@ -46,7 +46,10 @@ class lunch_server(lunch_default_config):
         if load_standard_plugins:
             self.plugin_manager.activatePluginByName("Notify", "called")
             self.plugin_manager.activatePluginByName("Webcam", "gui")
-            self.plugin_manager.activatePluginByName("Lunch Menu", "gui")        
+            self.plugin_manager.activatePluginByName("Lunch Menu", "gui")   
+        
+        #always load the settings plugin
+        self.plugin_manager.activatePluginByName("General Settings", "called")     
             
         
     def is_now_in_time_span(self,begin,end):
