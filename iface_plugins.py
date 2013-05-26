@@ -83,6 +83,21 @@ class iface_plugin(IPlugin):
     def discard_options_widget_data(self):
         self.option_widgets = {}
         
+class iface_general_plugin(iface_plugin):    
+    def activate(self):
+        """
+        Call the parent class's acivation method
+        """
+        iface_plugin.activate(self)
+        return
+
+
+    def deactivate(self):
+        """
+        Just call the parent class's method
+        """
+        iface_plugin.deactivate(self)
+
 class iface_gui_plugin(iface_plugin):    
     def activate(self):
         """

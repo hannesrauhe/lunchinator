@@ -1,7 +1,7 @@
 from iface_plugins import *
 from yapsy.PluginManager import PluginManagerSingleton
     
-class gui_settings(iface_called_plugin):
+class gui_settings(iface_general_plugin):
     ls = None
     
     def __init__(self):

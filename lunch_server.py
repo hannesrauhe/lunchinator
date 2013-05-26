@@ -36,6 +36,7 @@ class lunch_server(lunch_default_config):
         self.plugin_manager.setConfigParser(self.config_file,self.write_config_to_hd)
         self.plugin_manager.setPluginPlaces(self.plugin_dirs)
         self.plugin_manager.setCategoriesFilter({
+           "general" : iface_general_plugin,
            "called" : iface_called_plugin,
            "gui" : iface_gui_plugin
            })

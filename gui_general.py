@@ -27,7 +27,7 @@ class lunchinator(threading.Thread):
     def init_menu(self):        
         #create the plugin submenu
         plugin_menu = gtk.Menu()
-        for p_cat in ['called','gui']:
+        for p_cat in ['general','called','gui']:
             for  info in self.ls.plugin_manager.getPluginsOfCategory(p_cat):
                 p_item = gtk.CheckMenuItem(info.name)            
                 p_item.set_active(info.plugin_object.is_activated)                

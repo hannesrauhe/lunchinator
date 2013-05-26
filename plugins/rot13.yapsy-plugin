@@ -1,0 +1,9 @@
+[Core]
+Name = ROT13
+Module = rot13
+
+[Documentation]
+Author = Hannes Rauhe
+Version = 0.1
+Website = http://launchpad.de
+Description = Adds cryptography :-D

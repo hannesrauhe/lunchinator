@@ -7,7 +7,7 @@ import usb
 import lunch_client
 import subprocess
     
-class panic_button(iface_called_plugin):
+class panic_button(iface_general_plugin):
     ls = None
     panic_thread = None
     
