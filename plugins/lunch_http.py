@@ -6,19 +6,16 @@ from yapsy.PluginManager import PluginManagerSingleton
 import lunch_default_config
 import threading, SimpleHTTPServer, SocketServer, os
 
-class http_server_thread(threading.Thread):
-    port = 50002
-    html_dir = None
-    server = None
-    
+class http_server_thread(threading.Thread):    
     def __init__(self, port,html_dir):
         self.port = int(port)
         self.html_dir = html_dir
+        self.server = None
         threading.Thread.__init__(self)
         
     def run(self):
         print "Starting the HTTP Server on Port",self.port
-        os.chdir(self.config.html_dir)
+        os.chdir(self.html_dir)
         SocketServer.ThreadingTCPServer.allow_reuse_address = True
         Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
         self.server = SocketServer.TCPServer(("", self.html_dir), Handler)
