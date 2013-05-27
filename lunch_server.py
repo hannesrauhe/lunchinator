@@ -284,11 +284,16 @@ class lunch_server(lunch_default_config):
             print "Something went wrong while trying to clean up the members-table"
             
     def build_info_string(self):
-        return json.dumps({"avatar": self.avatar_file,
-                           "name": self.user_name,
-                           "next_lunch_begin":self.next_lunch_begin,
-                           "next_lunch_end":self.next_lunch_end,
-                           "version":self.version_short})
+        info_d = {"avatar": self.avatar_file,
+                   "name": self.user_name,
+                   "next_lunch_begin":self.default_lunch_begin,
+                   "next_lunch_end":self.default_lunch_end,
+                   "version":self.version_short}
+        if self.next_lunch_begin:
+            info_d["next_lunch_begin"] = self.next_lunch_begin
+        if self.next_lunch_end:
+            info_d["next_lunch_end"] = self.next_lunch_end
+        return json.dumps(info_d)
             
     '''ask for the dictionary and send over own information'''
     def call_for_dict(self):

@@ -11,8 +11,8 @@ class lunch_default_config(object):
     plugin_dirs = [main_config_dir+"/plugins",sys.path[0]+"/plugins"]
     
     ''' not in files'''    
-    next_lunch_begin = "12:15"
-    next_lunch_end = "12:45"
+    next_lunch_begin = None
+    next_lunch_end = None
     
     '''changed by using files'''
     audio_file = sys.path[0]+"/sounds/sonar.wav"
