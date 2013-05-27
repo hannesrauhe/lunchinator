@@ -18,7 +18,7 @@ class http_server_thread(threading.Thread):
         os.chdir(self.html_dir)
         SocketServer.ThreadingTCPServer.allow_reuse_address = True
         Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
-        self.server = SocketServer.TCPServer(("", self.html_dir), Handler)
+        self.server = SocketServer.TCPServer(("", self.port), Handler)
 
         self.server.serve_forever()
         
