@@ -50,7 +50,7 @@ class lunch_server(lunch_default_config):
             self.plugin_manager.activatePluginByName("Lunch Menu", "gui")   
         
         #always load the settings plugin
-        self.plugin_manager.activatePluginByName("General Settings", "called")     
+        self.plugin_manager.activatePluginByName("General Settings", "general")     
             
         
     def is_now_in_time_span(self,begin,end):
