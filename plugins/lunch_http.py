@@ -40,14 +40,14 @@ class lunch_http(iface_called_plugin):
         super(lunch_http, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
-        self.options = {"http_port":50002}
+        self.options = {"http_port":50002,"html_dir":self.ls.main_config_dir}
         
         
     def activate(self):
         iface_called_plugin.activate(self)
-        self.s_thread = http_server_thread(self.options["http_port"],self.ls.main_config_dir)
+        self.s_thread = http_server_thread(self.options["http_port"],self.options["html_dir"])
         self.s_thread.start()
-        if not os.path.exists(self.ls.html_dir+"/index.html"):
+        if not os.path.exists(self.options["html_dir"]+"/index.html"):
             self.write_info_html()
         
     def deactivate(self):
@@ -69,7 +69,7 @@ class lunch_http(iface_called_plugin):
                 
     def write_info_html(self):
         try:
-            indexhtml = open(self.ls.html_dir+"/index.html","w")
+            indexhtml = open(self.options["html_dir"]+"/index.html","w")
             indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' ><table>\n")
             if len(self.ls.member_info)>0:
                 for ip,d in self.ls.member_info.iteritems():
