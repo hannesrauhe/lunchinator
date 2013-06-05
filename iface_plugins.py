@@ -1,5 +1,5 @@
 from yapsy.IPlugin import IPlugin
-import gtk,types
+import types
 
 class iface_plugin(IPlugin):    
     def __init__(self):
@@ -42,6 +42,7 @@ class iface_plugin(IPlugin):
                     
         
     def create_options_widget(self):
+        import gtk
         if not self.options:
             return None
         t = gtk.Table(len(self.options),2,False)
