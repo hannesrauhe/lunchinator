@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import appindicator
+import appindicator,platform
 from gui_general import *
     
 def highlight_icon(c):
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     
     icon_a = "news-feed"
     icon_b = "gksu-root-terminal"
-    if len(sys.argv)>1 and sys.argv[1]=="--distrib-release=12.04":        
+    if int(platform.linux_distribution()[1].split(".")[0])>=12:        
         icon_a = sys.path[0]+"/images/glyphicons_053_alarm.png"
         icon_b = sys.path[0]+"/images/glyphicons_053_alarm_red.png"
     

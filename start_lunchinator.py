@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import subprocess,platform,os
 from lunch_default_config import *
 
