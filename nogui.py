@@ -59,7 +59,7 @@ if __name__ == "__main__":
         except:
             print "Unexpected error:", sys.exc_info()[0]
             print sys.exc_info()[1]
-        print "members:"
+        print "members:",
         for m_ip,m_info in l.ls.get_member_info().iteritems():
             if "name" in m_info:
                 print m_info["name"],
