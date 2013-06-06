@@ -15,6 +15,7 @@ class lunchinator_nogui(threading.Thread):
         threading.Thread.__init__(self)
         self.cmddict = {
                "help": [self.print_help,"prints out this text :-)"],
+                "members": [self.print_members,"prints the list of members"],
                "call": [self.ls.call_all_members,"calls for lunch"],
                "q": [self.stop_server, "exit"]}
     
@@ -49,7 +50,7 @@ class lunchinator_nogui(threading.Thread):
             
     def print_members(self):
         print "members:",
-        for m_ip,m_info in ls.get_member_info().iteritems():
+        for m_ip,m_info in self.ls.get_member_info().iteritems():
             if "name" in m_info:
                 print m_info["name"],
             else:
