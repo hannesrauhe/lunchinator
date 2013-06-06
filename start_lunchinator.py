@@ -29,4 +29,4 @@ while os.path.exists("update"):
             subprocess.Popen([pythonex_wo_console,"gui_tray.py"])        
     except ImportError, e:
         #start the CLI-Version if gtk is not available
-        subprocess.call(["python","nogui.py"])
+        subprocess.call(["python","nogui.py"],stdin=subprocess.PIPE)
