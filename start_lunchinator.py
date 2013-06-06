@@ -14,11 +14,11 @@ config_object = lunch_default_config()
 subprocess.call(["git","stash"])
 subprocess.call(["git","pull"])
 
-fhandle = file("update", 'a')
+fhandle = file(config_object.main_config_dir+"/update", 'a')
 fhandle.close()
 
-while os.path.exists("update"):        
-    os.remove("update")
+while os.path.exists(config_object.main_config_dir+"/update"):        
+    os.remove(config_object.main_config_dir+"/update")
     try:
         import gtk
         try:
