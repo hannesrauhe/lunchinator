@@ -10,8 +10,8 @@ print "We are on",platform.system(),platform.release(),platform.version()
 
 config_object = lunch_default_config()
 
-subprocess.call("git stash")
-subprocess.call("git pull")
+subprocess.call(["git","stash"])
+subprocess.call(["git","pull"])
 
 fhandle = file("update", 'a')
 fhandle.close()
@@ -29,4 +29,4 @@ while os.path.exists("update"):
             subprocess.Popen([pythonex_wo_console,"gui_tray.py"])        
     except ImportError, e:
         #start the CLI-Version if gtk is not available
-        subprocess.call("python nogui.py")
+        subprocess.call(["python","nogui.py"])
