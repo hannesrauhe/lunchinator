@@ -341,6 +341,8 @@ class lunch_server(lunch_default_config):
                         if self.my_master==-1:
                             print "no master found yet"
                         print self.members.keys()
+        except socket.error as e:
+            print e
         finally: 
             s.close()                    
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
