@@ -24,10 +24,10 @@ while os.path.exists("update"):
         try:
             #on ubuntu start the indicator
             import appindicator
-            subprocess.Popen(["python","indicator_applet.py"])
+            subprocess.call(["python","indicator_applet.py"])
         except ImportError, e:
             #start the tray icon on windows and other linxu flavors
-            subprocess.Popen([pythonex_wo_console,"gui_tray.py"])        
+            subprocess.call([pythonex_wo_console,"gui_tray.py"])        
     except ImportError, e:
         #start the CLI-Version if gtk is not available
         subprocess.call(["python","nogui.py"])
