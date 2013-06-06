@@ -1,5 +1,5 @@
 import subprocess,platform,os
-import lunch_default_config
+from lunch_default_config import *
 
 pythonex_wo_console = "python"
 
