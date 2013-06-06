@@ -46,6 +46,14 @@ class lunchinator_nogui(threading.Thread):
                 self.cmddict[cmd][0]()
         else:
             print "command not known"
+            
+    def print_members(self):
+        print "members:",
+        for m_ip,m_info in ls.get_member_info().iteritems():
+            if "name" in m_info:
+                print m_info["name"],
+            else:
+                print m_ip,
         
 if __name__ == "__main__":
     l = lunchinator_nogui()
@@ -59,11 +67,5 @@ if __name__ == "__main__":
         except:
             print "Unexpected error:", sys.exc_info()[0]
             print sys.exc_info()[1]
-        print "members:",
-        for m_ip,m_info in l.ls.get_member_info().iteritems():
-            if "name" in m_info:
-                print m_info["name"],
-            else:
-                print m_ip,
         print
     l.stop_server()
