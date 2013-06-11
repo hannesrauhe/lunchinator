@@ -30,6 +30,8 @@ class lunch_default_config(object):
     mute_timeout = 30
     
     def __init__(self):
+        if not os.path.exists(self.main_config_dir):
+            os.makedirs(self.main_config_dir)
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
         try:

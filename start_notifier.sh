@@ -1,4 +1,5 @@
 #!/bin/bash
+#this is the bash file you can use to start the lunchinator on linux - should be replaces by start_lunchinator.py sooner or later
 
 . /etc/*release
 

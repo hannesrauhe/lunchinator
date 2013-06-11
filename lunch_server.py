@@ -200,7 +200,6 @@ class lunch_server(lunch_default_config):
                     self.members[addr[0]]=value           
                     self.write_members_to_file()
                     self.lclient.call("HELO_INFO "+self.build_info_string(),client=addr[0])
-                    self.call_all_members()
                 else:                    
                     self.members[addr[0]]=value
                 
@@ -232,7 +231,8 @@ class lunch_server(lunch_default_config):
                 print "plugin error while processing event message", sys.exc_info()
         except:
             print "Unexpected error while handling HELO call: ", sys.exc_info()[0]
-            print "The data send was:",data
+            print sys.exc_info()[1]
+            print "The data received was:",data
         
     
     def incoming_call(self,msg,addr):
@@ -346,6 +346,8 @@ class lunch_server(lunch_default_config):
                         if self.my_master==-1:
                             print "no master found yet"
                         print self.members.keys()
+        except socket.error as e:
+            print e
         finally: 
             s.close()                    
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
