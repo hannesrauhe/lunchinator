@@ -20,7 +20,7 @@ class panic_button(iface_general_plugin):
                       "panic_msg":"lunch panic" }
         
     def activate(self):
-        iface_called_plugin.activate(self)
+        iface_general_plugin.activate(self)
         self.panic_thread = panic_button_listener(self.options["idVendor"],self.options["idProduct"],self.options["panic_msg"],self.ls)
         self.panic_thread.start()
         
@@ -30,7 +30,7 @@ class panic_button(iface_general_plugin):
         if self.panic_thread:
             self.panic_thread.stop_daemon()
             self.panic_thread.join()
-        iface_called_plugin.deactivate(self)
+        iface_general_plugin.deactivate(self)
     
     
 
