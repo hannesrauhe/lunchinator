@@ -39,7 +39,7 @@ class l_avatar(object):
         return config_ob.avatar_dir+"/"+avatar_name
     
 if __name__ == "__main__":    
-    lpic = lunch_avatar()
+    lpic = l_avatar()
     
     file_path = lpic.main_config_dir+"/userpic.jpg"
     if len(sys.argv)>1:

@@ -64,30 +64,8 @@ class lunchinator(threading.Thread):
         if w.get_active():
             self.ls.plugin_manager.activatePluginByName(w.get_label(),data[0])
         else:
-            self.ls.plugin_manager.deactivatePluginByName(w.get_label(),data[0])
-        
-    def window_select_avatar(self,w):
-        chooser = gtk.FileChooserDialog(title="Choose your avatar",action=gtk.FILE_CHOOSER_ACTION_OPEN,
-                                  buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK))
-        chooser.set_default_response(gtk.RESPONSE_OK)
-        fi = gtk.FileFilter()
-        fi.set_name("Images")
-        fi.add_mime_type("image/png")
-        fi.add_mime_type("image/jpeg")
-        fi.add_mime_type("image/gif")
-        fi.add_pattern("*.png")
-        fi.add_pattern("*.jpg")
-        fi.add_pattern("*.gif")
-        fi.add_pattern("*.tif")
-        fi.add_pattern("*.xpm")
-        chooser.add_filter(fi)
-        chooser.run()
-        response = chooser.run()
-        if response == gtk.RESPONSE_OK:   
-            filename = chooser.get_filename()
-            l_av = lunch_avatar.lunch_avatar()
-            l_av.use_as_avatar(filename)
-        chooser.destroy()       
+            self.ls.plugin_manager.deactivatePluginByName(w.get_label(),data[0])  
+        self.ls.write_config_to_hd()
         
     def stop_server(self,w):        
         if self.isAlive():

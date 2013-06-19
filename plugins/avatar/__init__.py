@@ -24,17 +24,22 @@ class avatar(iface_general_plugin):
         dialog = gtk.FileChooserDialog(title="Choose Avatar Picture",action=gtk.FILE_CHOOSER_ACTION_OPEN,
                                   buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK))
         
-        filter = gtk.FileFilter()
-        filter.set_name("Pictures")
-        filter.add_pattern("*")
-        dialog.add_filter(filter)
+        fi = gtk.FileFilter()
+        fi.set_name("Images")
+        fi.add_mime_type("image/png")
+        fi.add_mime_type("image/jpeg")
+        fi.add_mime_type("image/gif")
+        fi.add_pattern("*.png")
+        fi.add_pattern("*.jpg")
+        fi.add_pattern("*.gif")
+        fi.add_pattern("*.tif")
+        fi.add_pattern("*.xpm")
+        dialog.add_filter(fi)
         
         response = dialog.run()
         if response == gtk.RESPONSE_OK:
             l = l_avatar()
             gtkimg.set_from_file( l.use_as_avatar( self.ls, dialog.get_filename() ) )
-        elif response == gtk.RESPONSE_CANCEL:
-            print 'Closed, no files selected'
         dialog.destroy()
     
     def create_options_widget(self):
