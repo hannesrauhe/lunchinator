@@ -1,7 +1,7 @@
 from iface_plugins import *
 from yapsy.PluginManager import PluginManagerSingleton
 import gtk
-from lunch_avatar import lunch_avatar
+from l_avatar import l_avatar
 
 class avatar(iface_general_plugin):
     ls = None

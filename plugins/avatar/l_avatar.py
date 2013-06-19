@@ -4,7 +4,7 @@ import socket,sys,os,hashlib,shutil
 import os, sys
 import Image
 
-class lunch_avatar(object):
+class l_avatar(object):
     size = 128, 128
          
     def md5_for_file(self,file_path, block_size=2**20):
