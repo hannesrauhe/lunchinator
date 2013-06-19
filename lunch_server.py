@@ -351,7 +351,7 @@ class lunch_server(lunch_default_config):
         finally: 
             s.close()                    
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
-            self.write_config_to_hd()
+#            self.write_config_to_hd()
             for pluginInfo in self.plugin_manager.getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:
                     pluginInfo.plugin_object.deactivate()

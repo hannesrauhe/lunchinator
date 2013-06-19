@@ -31,7 +31,7 @@ class avatar(iface_general_plugin):
         
         response = dialog.run()
         if response == gtk.RESPONSE_OK:
-            l = lunch_avatar()
+            l = l_avatar()
             gtkimg.set_from_file( l.use_as_avatar( self.ls, dialog.get_filename() ) )
         elif response == gtk.RESPONSE_CANCEL:
             print 'Closed, no files selected'
