@@ -153,7 +153,7 @@ class lunch_default_config(object):
     def set_user_name(self,name,force_write=False):
         self.user_name = name
         self.config_file.set('general', 'user_name', str(name))
-        if not force_write:
+        if force_write:
             self.write_config_to_hd()
         
     def set_avatar_file(self,file_name,force_write=False):  
@@ -162,7 +162,7 @@ class lunch_default_config(object):
             return
         self.avatar_file = file_name
         self.config_file.set('general', 'avatar_file', str(file_name))
-        if not force_write:
+        if force_write:
             self.write_config_to_hd()
         
             
