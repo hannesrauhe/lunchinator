@@ -3,7 +3,6 @@ import gobject
 import gtk
 import lunch_server
 import lunch_client
-import lunch_avatar
 import time
 import socket
 import threading,os

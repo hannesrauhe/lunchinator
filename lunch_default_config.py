@@ -137,6 +137,8 @@ class lunch_default_config(object):
         return self.icon_file
     def get_avatar_dir(self):
         return self.avatar_dir        
+    def get_avatar_file(self):
+        return self.get_avatar()
     def get_avatar(self):
         return self.avatar_file
     def get_default_lunch_begin(self):

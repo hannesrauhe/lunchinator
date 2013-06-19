@@ -8,7 +8,7 @@ class gui_settings(iface_general_plugin):
         super(gui_settings, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
-        option_names = ['user_name','audio_file','avatar','auto_update',"default_lunch_begin","default_lunch_end","alarm_begin_time","alarm_end_time","mute_timeout"]
+        option_names = ['user_name','audio_file','auto_update',"default_lunch_begin","default_lunch_end","alarm_begin_time","alarm_end_time","mute_timeout"]
         self.options = {}
         for o in option_names:
             methodname = "get_"+o

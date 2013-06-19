@@ -1,0 +1,9 @@
+[Core]
+Name = Avatar
+Module = avatar
+
+[Documentation]
+Author = Hannes Rauhe
+Version = 0.1
+Website = http://launchpad.de
+Description = Allows you to set a custom avatar
