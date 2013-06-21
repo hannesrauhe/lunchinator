@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import appindicator,platform
+import appindicator,platform,subprocess
 from gui_general import *
     
 def highlight_icon(c):
@@ -16,11 +16,11 @@ if __name__ == "__main__":
     #you need this to use threads and GTK
     gobject.threads_init()
     
-    icon_a = "news-feed"
-    icon_b = "gksu-root-terminal"
-    if int(platform.linux_distribution()[1].split(".")[0])>=12:        
-        icon_a = sys.path[0]+"/images/glyphicons_053_alarm.png"
-        icon_b = sys.path[0]+"/images/glyphicons_053_alarm_red.png"
+    if not os.path.exists('/usr/share/icons/ubuntu-mono-light/status/24/lunchinator.svg') or \
+       not os.path.exists('/usr/share/icons/ubuntu-mono-dark/status/24/lunchinator.svg'):
+        subprocess.call(['gksudo', sys.path[0]+'/install-lunch-icons.sh'])
+    icon_a = "lunchinator"
+    icon_b = "lunchinatorred"
     
     global ind
     ind = appindicator.Indicator ("lunch notifier",
