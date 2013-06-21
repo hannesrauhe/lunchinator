@@ -18,7 +18,7 @@ if __name__ == "__main__":
     
     if not os.path.exists('/usr/share/icons/ubuntu-mono-light/status/24/lunchinator.svg') or \
        not os.path.exists('/usr/share/icons/ubuntu-mono-dark/status/24/lunchinator.svg'):
-        subprocess.call(['gksudo', sys.path[0]+'/install-lunch-icons.sh'])
+        subprocess.call(['gksudo', sys.path[0]+'/install-lunch-icons.sh lunch'])
     icon_a = "lunchinator"
     icon_b = "lunchinatorred"
     
