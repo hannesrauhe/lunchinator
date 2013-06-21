@@ -35,4 +35,8 @@ if __name__ == "__main__":
     ind.set_menu(lanschi.menu)
     
     gobject.timeout_add(2000, highlight_icon, lanschi)
-    gtk.main()
+    try:
+        gtk.main()
+    finally:
+        lanschi.stop_server(None)
+        os._exit(0)
