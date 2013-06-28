@@ -18,12 +18,28 @@ if __name__ == "__main__":
     
     #you need this to use threads and GTK
     gobject.threads_init()
-    
+
+    icon_a = None
+    icon_b = None
     if not os.path.exists('/usr/share/icons/ubuntu-mono-light/status/24/lunchinator.svg') or \
        not os.path.exists('/usr/share/icons/ubuntu-mono-dark/status/24/lunchinator.svg'):
+        message = gtk.MessageDialog(type=gtk.MESSAGE_INFO, buttons=gtk.BUTTONS_OK)
+        message.set_markup("Lunchinator will now install icons into the Ubuntu theme folders. You will have to enter your sudo password.")
+        message.run()
+        message.destroy()
         subprocess.call(['gksudo', sys.path[0]+'/install-lunch-icons.sh lunch'])
-    icon_a = "lunchinator"
-    icon_b = "lunchinatorred"
+        
+        if not os.path.exists('/usr/share/icons/ubuntu-mono-light/status/24/lunchinator.svg') or \
+           not os.path.exists('/usr/share/icons/ubuntu-mono-dark/status/24/lunchinator.svg'):
+            # something went wrong - use old icons
+            icon_a = "news-feed"
+            icon_b = "gksu-root-terminal"
+            if int(platform.linux_distribution()[1].split(".")[0])>=12:        
+                icon_a = sys.path[0]+"/images/glyphicons_053_alarm.png"
+                icon_b = sys.path[0]+"/images/glyphicons_053_alarm_red.png"
+    else:
+        icon_a = "lunchinator"
+        icon_b = "lunchinatorred"
     
     global ind
     ind = appindicator.Indicator ("lunch notifier",
