@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import appindicator,platform,subprocess
 from gui_general import *
+from lunch_options import optionParser
     
 def highlight_icon(c):
 #    if len(c.get_members())==0:
@@ -13,6 +14,8 @@ def highlight_icon(c):
         
     
 if __name__ == "__main__": 
+    (options, args) = optionParser.parse_args()
+    
     #you need this to use threads and GTK
     gobject.threads_init()
     
@@ -28,8 +31,8 @@ if __name__ == "__main__":
                                 appindicator.CATEGORY_COMMUNICATIONS)
     ind.set_attention_icon(icon_b)
     ind.set_status (appindicator.STATUS_ACTIVE)
-    
-    lanschi = lunchinator()
+        
+    lanschi = lunchinator(options.noUpdates)
     lanschi.start()
             
     ind.set_menu(lanschi.menu)

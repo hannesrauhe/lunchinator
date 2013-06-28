@@ -6,18 +6,20 @@ import lunch_client
 import time
 import socket
 import threading,os
+from lunch_options import optionParser
 
 import urllib2
                  
         
 class lunchinator(threading.Thread):
     menu = None
-    ls = lunch_server.lunch_server()
+    ls = None
     lc = lunch_client.lunch_client()
     lanschi_http = None
     
-    def __init__(self):           
-        threading.Thread.__init__(self)    
+    def __init__(self, noUpdates = False):           
+        threading.Thread.__init__(self)  
+        self.ls = lunch_server.lunch_server(noUpdates)  
         self.init_menu() 
     
     def run(self):

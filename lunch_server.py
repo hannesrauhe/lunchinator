@@ -8,6 +8,8 @@ import socket,subprocess,sys,os,ctypes,getpass,json
 
 from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
+
+EXIT_CODE_UPDATE = 2
         
 class lunch_server(lunch_default_config):    
     running = False
@@ -21,9 +23,12 @@ class lunch_server(lunch_default_config):
     member_info = {}
     lclient = lunch_client()
     plugin_manager = None
+    no_updates = False
     
-    def __init__(self):            
-        lunch_default_config.__init__(self)        
+    def __init__(self, noUpdates = False):            
+        lunch_default_config.__init__(self)
+        self.no_updates = noUpdates      
+        self.exitCode = 0  
         self.read_config()
         PluginManagerSingleton.setBehaviour([
             ConfigurablePluginManager,
@@ -136,15 +141,13 @@ class lunch_server(lunch_default_config):
             if cmd.startswith("HELO_UPDATE"):
                 t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
                 self.update_request = True
-                if self.auto_update:
+                if self.auto_update and not self.no_updates:
                     print "%s: [%s] update" % (t,addr[0])
-                    up_f = open(self.main_config_dir+"/update","w")
-                    up_f.write(t+": ["+addr[0]+"] update")
-                    up_f.close()
                     os.chdir(sys.path[0])
                     subprocess.call(["git","stash"])
                     subprocess.call(["git","pull"])
                     self.running = False
+                    self.exitCode = EXIT_CODE_UPDATE
                 else:
                     print "%s: %s issued an update but updates are disabled" % (t,addr[0])
                 
@@ -355,7 +358,7 @@ class lunch_server(lunch_default_config):
             for pluginInfo in self.plugin_manager.getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:
                     pluginInfo.plugin_object.deactivate()
-            os._exit(0)
+            os._exit(self.exitCode)
             
     def get_last_msgs(self):  
         return self.last_messages
