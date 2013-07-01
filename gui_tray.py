@@ -19,10 +19,12 @@ def show_menu(icon, button, time, menu):
     menu.popup(None, None, gtk.status_icon_position_menu, button, time, statusicon)
     
 if __name__ == "__main__":
+    (options, args) = optionParser.parse_args()
+    
     gobject.threads_init()
     
     global lanschi
-    lanschi = lunchinator()
+    lanschi = lunchinator(options.noUpdates)
     lanschi.start()
 
     pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(sys.path[0]+"/images/glyphicons_053_alarm_black.png",25,25)

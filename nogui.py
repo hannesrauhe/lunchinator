@@ -5,14 +5,16 @@ import lunch_avatar
 import time
 import socket
 import threading,os
+from lunch_options import optionParser
         
 class lunchinator_nogui(threading.Thread):
     menu = None
-    ls = lunch_server.lunch_server()
+    ls = None
     lc = lunch_client.lunch_client()
     
-    def __init__(self):           
+    def __init__(self, noUpdates = False):
         threading.Thread.__init__(self)
+        self.ls = lunch_server.lunch_server(noUpdates)
         self.cmddict = {
                "help": [self.print_help,"prints out this text :-)"],
                 "members": [self.print_members,"prints the list of members"],
@@ -57,7 +59,8 @@ class lunchinator_nogui(threading.Thread):
                 print m_ip,
         
 if __name__ == "__main__":
-    l = lunchinator_nogui()
+    (options, args) = optionParser.parse_args()
+    l = lunchinator_nogui(options.noUpdates)
     l.start()
     time.sleep(1)
     cmd = ""
