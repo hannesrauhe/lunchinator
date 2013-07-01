@@ -143,8 +143,13 @@ class lunch_server(lunch_default_config):
                 self.update_request = True
                 if self.auto_update and not self.no_updates:
                     print "%s: [%s] update" % (t,addr[0])
-                    os.chdir(sys.path[0])
                     self.running = False
+                    
+                    #for compatibility with old update-script (which will not be updated/restarted automatically :-("
+                    up_f = open(self.main_config_dir+"/update","w")
+                    up_f.write(t+": ["+addr[0]+"] update")
+                    up_f.close()
+                    #new update-script:
                     self.exitCode = EXIT_CODE_UPDATE
                 else:
                     print "%s: %s issued an update but updates are disabled" % (t,addr[0])

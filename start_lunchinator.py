@@ -12,6 +12,7 @@ print "We are on",platform.system(),platform.release(),platform.version()
 
 config_object = lunch_default_config()
 
+os.chdir(sys.path[0])
 
 shouldRestart = True
 while shouldRestart: 
