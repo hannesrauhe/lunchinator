@@ -144,8 +144,6 @@ class lunch_server(lunch_default_config):
                 if self.auto_update and not self.no_updates:
                     print "%s: [%s] update" % (t,addr[0])
                     os.chdir(sys.path[0])
-                    subprocess.call(["git","stash"])
-                    subprocess.call(["git","pull"])
                     self.running = False
                     self.exitCode = EXIT_CODE_UPDATE
                 else:

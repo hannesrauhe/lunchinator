@@ -12,11 +12,14 @@ print "We are on",platform.system(),platform.release(),platform.version()
 
 config_object = lunch_default_config()
 
-#subprocess.call(["git","stash"])
-subprocess.call(["git","pull"])
 
 shouldRestart = True
 while shouldRestart: 
+    #subprocess.call(["git","stash"])
+    if subprocess.call(["git","pull"])!=0:
+        print "git pull did not work. The Update mechanism therefore does not work."
+        print "If you do not know, what to do now:"
+        print "it should be safe to call 'git stash' in the lunchinator directory and call 'python ./start_lunchinator.py' again."
     shouldRestart = False       
     try:
         import gtk
