@@ -27,7 +27,9 @@ if __name__ == "__main__":
         message.set_markup("Lunchinator will now install icons into the Ubuntu theme folders. You will have to enter your sudo password.")
         message.run()
         message.destroy()
-        subprocess.call(['gksudo', sys.path[0]+'/install-lunch-icons.sh lunch'])
+        if subprocess.call(['gksudo', sys.path[0]+'/install-lunch-icons.sh lunch'])==0:
+            print "restarting after icons were installed"
+            os._exit(lunch_server.EXIT_CODE_UPDATE)
         
         if not os.path.exists('/usr/share/icons/ubuntu-mono-light/status/24/lunchinator.svg') or \
            not os.path.exists('/usr/share/icons/ubuntu-mono-dark/status/24/lunchinator.svg'):
