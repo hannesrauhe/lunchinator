@@ -23,13 +23,16 @@ if __name__ == "__main__":
     icon_b = None
     if not os.path.exists('/usr/share/icons/ubuntu-mono-light/status/24/lunchinator.svg') or \
        not os.path.exists('/usr/share/icons/ubuntu-mono-dark/status/24/lunchinator.svg'):
-        message = gtk.MessageDialog(type=gtk.MESSAGE_INFO, buttons=gtk.BUTTONS_OK)
-        message.set_markup("Lunchinator will now install icons into the Ubuntu theme folders. You will have to enter your sudo password.")
-        message.run()
+        message = gtk.MessageDialog(type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO)
+        message.set_markup("Do you want to install the Lunchinator icons into the Ubuntu theme folders? You will have to enter your sudo password.")
+        gtkresponse = message.run()
         message.destroy()
-        if subprocess.call(['gksudo', sys.path[0]+'/install-lunch-icons.sh lunch'])==0:
-            print "restarting after icons were installed"
-            os._exit(lunch_server.EXIT_CODE_UPDATE)
+        if gtkresponse==gtk.RESPONSE_YES:
+            if subprocess.call(['gksudo', sys.path[0]+'/install-lunch-icons.sh lunch'])==0:
+                print "restarting after icons were installed"
+                os._exit(lunch_server.EXIT_CODE_UPDATE)
+            else:
+                print "icons were not installed because of an error"
         
         if not os.path.exists('/usr/share/icons/ubuntu-mono-light/status/24/lunchinator.svg') or \
            not os.path.exists('/usr/share/icons/ubuntu-mono-dark/status/24/lunchinator.svg'):
