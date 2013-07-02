@@ -3,9 +3,11 @@ import subprocess,platform,os
 from lunch_default_config import *
 from lunch_server import EXIT_CODE_UPDATE
 
-pythonex_wo_console = "python"
+pythonex_wo_console = "/usr/bin/python"
+pythonex_w_console = "/usr/bin/python"
 
 if platform.system()=="Windows":
+    pythonex_w_console = "/usr/bin/python"
     pythonex_wo_console = "pythonw"
     
 print "We are on",platform.system(),platform.release(),platform.version()
@@ -27,7 +29,7 @@ while shouldRestart:
         try:
             #on ubuntu start the indicator
             import appindicator
-            returnCode = subprocess.call(["python","indicator_applet.py","--autoUpdate"])
+            returnCode = subprocess.call([pythonex_wo_console,"indicator_applet.py","--autoUpdate"])
             if returnCode == EXIT_CODE_UPDATE:
                 shouldRestart = True
         except ImportError, e:
@@ -35,4 +37,4 @@ while shouldRestart:
             subprocess.call([pythonex_wo_console,"gui_tray.py","--autoUpdate"])        
     except ImportError, e:
         #start the CLI-Version if gtk is not available
-        subprocess.call(["python","nogui.py"])
+        subprocess.call([pythonex_w_console,"nogui.py"])
