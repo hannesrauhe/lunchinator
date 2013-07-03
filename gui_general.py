@@ -37,7 +37,7 @@ class lunchinator(threading.Thread):
         #main menu
         self.menu = gtk.Menu()    
         menu_items = gtk.MenuItem("Call for lunch")
-        msg_items = gtk.MenuItem("Show/Send messages")
+        msg_items = gtk.MenuItem("Show Lunchinator")
         settings_item = gtk.MenuItem("Settings")
         plugin_item = gtk.MenuItem("PlugIns")
         exit_item = gtk.MenuItem("Exit")
