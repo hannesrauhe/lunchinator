@@ -5,6 +5,7 @@ class lunch_default_config(object):
     main_config_dir = os.getenv("HOME")+"/.lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+"/.lunchinator"
     members_file = main_config_dir+"/lunch_members.cfg"
     messages_file = main_config_dir+"/messages"
+    log_file = main_config_dir+"/lunchinator.log"
     avatar_dir = main_config_dir+"/avatars/"
     version = "unknown"
     version_short = "unknown"
@@ -34,12 +35,14 @@ class lunch_default_config(object):
             os.makedirs(self.main_config_dir)
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
+        logging.basicConfig(filename=self.log_file,level=logging.WARNING)
         try:
             os.chdir(sys.path[0])
             p = subprocess.Popen(["git","log","-1"],stdout=subprocess.PIPE)
             self.version, err = p.communicate()
             self.version_short = self.version.splitlines()[2][5:].strip()
         except:
+            logging.warn("git log could not be executed correctly - version information not available")
             pass
         self.config_file = ConfigParser.SafeConfigParser()
         self.read_config_from_hd()
@@ -79,7 +82,7 @@ class lunch_default_config(object):
                 elif os.path.exists(sys.path[0]+"/sounds/"+audio_file):
                     self.audio_file = sys.path[0]+"/sounds/"+audio_file
                 else:
-                    print "configured audio file "+audio_file+" does not exist in sounds folder, using old one: "+self.audio_file  
+                    logging.warn("configured audio file %s does not exist in sounds folder, using old one: %s",audio_file,self.audio_file)  
         
         if self.user_name=="":
             self.user_name = getpass.getuser()  
@@ -87,7 +90,7 @@ class lunch_default_config(object):
         if self.debug:
             logging.basicConfig(level=logging.DEBUG)
         else:
-            logging.basicConfig(level=logging.ERROR)
+            logging.basicConfig(level=logging.WARNING)
             
     def read_value_from_config_file(self,value,section,name):
         try:
@@ -102,12 +105,7 @@ class lunch_default_config(object):
         except ConfigParser.NoOptionError:
             pass
         except:
-            if self.debug:
-                print "error while reading",name,"from config file"
-            else:
-                pass
-        if self.debug:
-            print name,value
+            logging.error("error while reading %s from config file",name)
         return value
         
     def write_config_to_hd(self): 
@@ -160,7 +158,7 @@ class lunch_default_config(object):
         
     def set_avatar_file(self,file_name,force_write=False):  
         if not os.path.exists(self.avatar_dir+"/"+file_name):
-            print "avatar does not exist:",file_name
+            logging.error("avatar does not exist: %s",file_name)
             return
         self.avatar_file = file_name
         self.config_file.set('general', 'avatar_file', str(file_name))

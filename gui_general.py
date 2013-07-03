@@ -3,9 +3,7 @@ import gobject
 import gtk
 import lunch_server
 import lunch_client
-import time
-import socket
-import threading,os
+import time, socket,logging,threading,os
 from lunch_options import optionParser
 
 import urllib2
@@ -163,9 +161,9 @@ class lunchinator(threading.Thread):
                         textview.show()
                         textbuffer.set_text("Error while including plugin"+str(sys.exc_info()))                                      
                         plugin_widgets.append((pluginInfo.name,sw))
-                        print "error while including plugin",pluginInfo.name, sys.exc_info()
+                        logging.error("error while including plugin %s %s",pluginInfo.name, str(sys.exc_info()))
         except:
-            print "error while including plugins", sys.exc_info()
+            logging.error("error while including plugins %s", str(sys.exc_info()))
         if len(plugin_widgets)==1:
             box0.size_allocate(gtk.gdk.Rectangle(0,0,100,100))
             box0.pack_start(plugin_widgets[0][1], True, True, 0)
@@ -222,9 +220,9 @@ class lunchinator(threading.Thread):
                             plugin_widgets.append((pluginInfo.name,w))
                     except:
                         plugin_widgets.append((pluginInfo.name,gtk.Label("Error while including plugin")))
-                        print "error while including plugin",pluginInfo.name, sys.exc_info()
+                        logging.error("while including plugin %s in settings window: %s",pluginInfo.name, str(sys.exc_info()))
         except:
-            print "error while including plugins", sys.exc_info()
+            logging.error("error while including plugins in settings window: %s", str(sys.exc_info()))
         for name,widget in plugin_widgets:
             nb.append_page(widget,gtk.Label(name))
         nb.show_all()
@@ -239,7 +237,7 @@ class lunchinator(threading.Thread):
                     try:
                         pluginInfo.plugin_object.save_options_widget_data()
                     except:
-                        print "was not able to save data for plugin",pluginInfo.name, sys.exc_info()
+                        logging.error("was not able to save data for plugin %s: %s",pluginInfo.name, str(sys.exc_info()))
                 else:
                     pluginInfo.plugin_object.discard_options_widget_data()
             
