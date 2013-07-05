@@ -1,18 +1,15 @@
 #!/usr/bin/python
-import subprocess,platform,os
-from lunch_default_config import *
+import subprocess,platform,os,sys
 from lunch_server import EXIT_CODE_UPDATE
 
 pythonex_wo_console = "/usr/bin/python"
 pythonex_w_console = "/usr/bin/python"
 
 if platform.system()=="Windows":
-    pythonex_w_console = "/usr/bin/python"
+    pythonex_w_console = "python"
     pythonex_wo_console = "pythonw"
     
 print "We are on",platform.system(),platform.release(),platform.version()
-
-config_object = lunch_default_config()
 
 os.chdir(sys.path[0])
 

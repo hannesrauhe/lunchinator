@@ -1,4 +1,4 @@
-import sys,os,getpass,ConfigParser,types,subprocess,logging
+import sys,os,getpass,ConfigParser,types,subprocess,logging,logging.handlers
 
 class lunch_default_config(object):
     '''unchangeable for now'''
@@ -30,19 +30,26 @@ class lunch_default_config(object):
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30
     
+    lunch_logger = logging.getLogger("LunchinatorLogger")
+    
     def __init__(self):
         if not os.path.exists(self.main_config_dir):
             os.makedirs(self.main_config_dir)
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
-        logging.basicConfig(filename=self.log_file,level=logging.WARNING)
+        self.lunch_logger.setLevel(logging.WARNING)
+        loghandler = logging.handlers.RotatingFileHandler(self.log_file,'a',0,9)
+        loghandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        self.lunch_logger.addHandler(loghandler)
+        loghandler.doRollover()
+        
         try:
             os.chdir(sys.path[0])
             p = subprocess.Popen(["git","log","-1"],stdout=subprocess.PIPE)
             self.version, err = p.communicate()
             self.version_short = self.version.splitlines()[2][5:].strip()
         except:
-            logging.warn("git log could not be executed correctly - version information not available")
+            self.lunch_logger.warn("git log could not be executed correctly - version information not available")
             pass
         self.config_file = ConfigParser.SafeConfigParser()
         self.read_config_from_hd()
@@ -82,15 +89,15 @@ class lunch_default_config(object):
                 elif os.path.exists(sys.path[0]+"/sounds/"+audio_file):
                     self.audio_file = sys.path[0]+"/sounds/"+audio_file
                 else:
-                    logging.warn("configured audio file %s does not exist in sounds folder, using old one: %s",audio_file,self.audio_file)  
+                    self.lunch_logger.warn("configured audio file %s does not exist in sounds folder, using old one: %s",audio_file,self.audio_file)  
         
         if self.user_name=="":
             self.user_name = getpass.getuser()  
         
         if self.debug:
-            logging.basicConfig(level=logging.DEBUG)
+            self.lunch_logger.setLevel(logging.DEBUG)
         else:
-            logging.basicConfig(level=logging.WARNING)
+            self.lunch_logger.setLevel(logging.WARNING)
             
     def read_value_from_config_file(self,value,section,name):
         try:
@@ -105,7 +112,7 @@ class lunch_default_config(object):
         except ConfigParser.NoOptionError:
             pass
         except:
-            logging.error("error while reading %s from config file",name)
+            self.lunch_logger.error("error while reading %s from config file",name)
         return value
         
     def write_config_to_hd(self): 
@@ -158,7 +165,7 @@ class lunch_default_config(object):
         
     def set_avatar_file(self,file_name,force_write=False):  
         if not os.path.exists(self.avatar_dir+"/"+file_name):
-            logging.error("avatar does not exist: %s",file_name)
+            self.lunch_logger.error("avatar does not exist: %s",file_name)
             return
         self.avatar_file = file_name
         self.config_file.set('general', 'avatar_file', str(file_name))

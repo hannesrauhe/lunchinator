@@ -48,7 +48,7 @@ class lunch_server(lunch_default_config):
         try:
             self.plugin_manager.collectPlugins()
         except:
-            logging.error("problem when loading plugin: %s",sys.exc_info())
+            self.lunch_logger.error("problem when loading plugin: %s",sys.exc_info())
         if load_standard_plugins:
             self.plugin_manager.activatePluginByName("Notify", "called")
             self.plugin_manager.activatePluginByName("Webcam", "gui")
@@ -64,7 +64,7 @@ class lunch_server(lunch_default_config):
             end_hour,_,end_min = end.partition(":")
             return localtime()[3]*60+localtime()[4] >= int(begin_hour)*60+int(begin_min) and localtime()[3]*60+localtime()[4] <= int(end_hour)*60+int(end_min)
         except:
-            logging.error("don't know how to handle time span %s",begin,end,sys.exc_info())
+            self.lunch_logger.error("don't know how to handle time span %s",begin,end,sys.exc_info())
             return False;
         
     def call_all_members(self,msg):        
@@ -88,7 +88,7 @@ class lunch_server(lunch_default_config):
                 try:
                     members[socket.gethostbyname(hostn.strip())]=hostn.strip()
                 except:
-                    logging.warn("cannot find host specified in members_file by %s with name %s",self.members_file,hostn)
+                    self.lunch_logger.warn("cannot find host specified in members_file by %s with name %s",self.members_file,hostn)
             f.close()
         return members
     
@@ -101,7 +101,7 @@ class lunch_server(lunch_default_config):
                     f.write(m+"\n")
                 f.close();
         except:
-            logging.error("Could not write members to %s",self.members_file)
+            self.lunch_logger.error("Could not write members to %s",self.members_file)
             
     def init_messages_from_file(self):
         messages = []
@@ -113,7 +113,7 @@ class lunch_server(lunch_default_config):
                     messages.append([localtime(m[0]),m[1],m[2]])
                 f.close()
             except:
-                logging.error("Could not read messages file %s,but it seems to exist",self.messages_file)
+                self.lunch_logger.error("Could not read messages file %s,but it seems to exist",self.messages_file)
         return messages
     
     def write_messages_to_file(self):
@@ -129,7 +129,7 @@ class lunch_server(lunch_default_config):
                 finally:
                     f.close();
         except:
-            logging.error("Could not write messages to %s: %s",self.messages_file, sys.exc_info()[0])
+            self.lunch_logger.error("Could not write messages to %s: %s",self.messages_file, sys.exc_info()[0])
         
     
     def incoming_event(self,data,addr):   
@@ -142,7 +142,7 @@ class lunch_server(lunch_default_config):
                 t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
                 self.update_request = True
                 if self.auto_update and not self.no_updates:
-                    logging.info("%s: [%s] update",t,addr[0])
+                    self.lunch_logger.info("%s: [%s] update",t,addr[0])
                     self.running = False
                     
                     #for compatibility with old update-script (which will not be updated/restarted automatically :-("
@@ -152,7 +152,7 @@ class lunch_server(lunch_default_config):
                     #new update-script:
                     self.exitCode = EXIT_CODE_UPDATE
                 else:
-                    logging.info("%s: %s issued an update but updates are disabled", t,addr[0])
+                    self.lunch_logger.info("%s: %s issued an update but updates are disabled", t,addr[0])
                 
             elif cmd.startswith("HELO_REQUEST_DICT"):
                 self.member_info[addr[0]] = json.loads(value)
@@ -183,7 +183,7 @@ class lunch_server(lunch_default_config):
                     dr = DataReceiverThread(addr[0],file_size,self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"])
                     dr.start()
                 else:
-                    logging.error("%s tried to send his avatar, but I don't know where to safe it",addr[0])
+                    self.lunch_logger.error("%s tried to send his avatar, but I don't know where to safe it",addr[0])
                 
             elif cmd.startswith("HELO_REQUEST_AVATAR"):
                 #someone wants my pic 
@@ -194,7 +194,7 @@ class lunch_server(lunch_default_config):
                     ds = DataSenderThread(addr[0],fileToSend)
                     ds.start()
                 else:
-                    logging.error("Want to send file %, but cannot find it",fileToSend)      
+                    self.lunch_logger.error("Want to send file %, but cannot find it",fileToSend)      
                 
             elif cmd.startswith("HELO_INFO"):
                 #someone sends his info
@@ -224,7 +224,7 @@ class lunch_server(lunch_default_config):
                 self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                     
             else:
-                logging.error("received unknown command from %s: %s with value %s",addr[0],cmd,value)        
+                self.lunch_logger.error("received unknown command from %s: %s with value %s",addr[0],cmd,value)        
                 
             member_info = {}
             if self.member_info.has_key(addr[0]):
@@ -234,11 +234,11 @@ class lunch_server(lunch_default_config):
                     try:
                         pluginInfo.plugin_object.process_event(cmd,value,addr[0],member_info)
                     except:
-                        logging.error("plugin error in %s while processing event message %s", pluginInfo.name, sys.exc_info())
+                        self.lunch_logger.error("plugin error in %s while processing event message %s", pluginInfo.name, sys.exc_info())
         except:
-            logging.critical("Unexpected error while handling HELO call: %s", sys.exc_info()[0])
-            logging.critical(sys.exc_info()[1])
-            logging.critical("The data received was: %",data)
+            self.lunch_logger.critical("Unexpected error while handling HELO call: %s", sys.exc_info()[0])
+            self.lunch_logger.critical(sys.exc_info()[1])
+            self.lunch_logger.critical("The data received was: %",data)
         
     
     def incoming_call(self,msg,addr):
@@ -253,7 +253,7 @@ class lunch_server(lunch_default_config):
         if len(self.last_messages)>0:
             last = self.last_messages[0]            
             if mktime(mtime)-mktime(last[0])<self.mute_timeout:
-                logging.debug("message will not trigger alarm: %s: [%s] %s",t,m,msg)
+                self.lunch_logger.debug("message will not trigger alarm: %s: [%s] %s",t,m,msg)
                 mute_alarm = True
             
         print "%s: [%s] %s" % (t,m,msg)
@@ -286,7 +286,7 @@ class lunch_server(lunch_default_config):
                 else:
                     del self.members[ip]
         except:
-            logging.error("Something went wrong while trying to clean up the members-table")
+            self.lunch_logger.error("Something went wrong while trying to clean up the members-table")
             
     def build_info_string(self):
         info_d = {"avatar": self.avatar_file,
@@ -307,7 +307,7 @@ class lunch_server(lunch_default_config):
                 self.lclient.call("HELO_REQUEST_DICT "+self.build_info_string(),client=self.members.keys()[self.peer_nr])
             self.peer_nr=(self.peer_nr+1) % len(self.members)
         except:
-            logging.error("Something went wrong while trying to send a call to the new master")
+            self.lunch_logger.error("Something went wrong while trying to send a call to the new master")
             
         
     def start_server(self):
@@ -349,11 +349,11 @@ class lunch_server(lunch_default_config):
                             announce_name+=1
                     if self.debug:
                         if self.my_master==-1:
-                            logging.debug("no master found yet")
-                        logging.debug(str(self.members.keys()))
+                            self.lunch_logger.debug("no master found yet")
+                        self.lunch_logger.debug(str(self.members.keys()))
         except socket.error as e:
             print e
-            logging.critical("stopping lunchinator because: %s",e)
+            self.lunch_logger.critical("stopping lunchinator because: %s",e)
         finally: 
             s.close()                    
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
