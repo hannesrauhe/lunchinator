@@ -7,6 +7,7 @@ class rot13(iface_gui_plugin):
     
     def __init__(self):
         super(rot13, self).__init__()
+        self.w = rot13box()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
 #        self.options = {"fallback_pic":sys.path[0]+"/images/webcam.jpg",
@@ -20,7 +21,7 @@ class rot13(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self):
-        return rot13box().create_widget()
+        return self.w.create_widget()
     
     def add_menu(self,menu):
         pass

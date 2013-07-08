@@ -10,14 +10,16 @@ class rot13box(object):
         rot13 = string.maketrans( 
             "ABCDEFGHIJKLMabcdefghijklmNOPQRSTUVWXYZnopqrstuvwxyz", 
             "NOPQRSTUVWXYZnopqrstuvwxyzABCDEFGHIJKLMabcdefghijklm")
-        w.set_text(string.translate(w.get_text(), rot13))
+        plain = w.get_text()
+        if plain:
+            w.set_text(string.translate(plain, rot13))
         
     def create_widget(self):  
-        self.but.connect_object("clicked", self.enc, self.entry)
         memtVBox = gtk.VBox()
         memtVBox.pack_start(self.entry, False, True, 10)
         memtVBox.pack_start(self.but, False, False, 10)
         memtVBox.show_all()
+        self.but.connect_object("clicked", self.enc, self.entry)
         return memtVBox
     
 #standalone
