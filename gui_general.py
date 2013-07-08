@@ -158,7 +158,7 @@ class lunchinator(threading.Thread):
                         textview.show()
                         textbuffer.set_text("Error while including plugin"+str(sys.exc_info()))                                      
                         plugin_widgets.append((pluginInfo.name,sw))
-                        self.ls.lunch_logger.error("error while including plugin %s %s",pluginInfo.name, str(sys.exc_info()))
+                        self.ls.lunch_logger.error("error while including plugin %s with options: %s  %s",pluginInfo.name, str(pluginInfo.plugin_object.options), str(sys.exc_info()))
         except:
             self.ls.lunch_logger.error("error while including plugins %s", str(sys.exc_info()))
         if len(plugin_widgets)==1:
