@@ -4,7 +4,9 @@
 #it sends a message to the members saved in the members-file, 
 #no guarantees that you reach everyone in the peer group
 
-import sys,lunch_server
+import sys
+import __preamble
+from lunchinator import lunch_server
 
 if __name__ == "__main__":
     msg = "lunch"
@@ -16,7 +18,7 @@ if __name__ == "__main__":
         print cli,":",
     print msg
     
-    c = lunch_server.lunch_server()
+    c = lunch_server.lunch_server(False,False)
     recv_nr=c.call(msg,client=cli)
     print "sent to",recv_nr,"clients"
     

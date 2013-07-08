@@ -20,12 +20,13 @@ class panic_button(iface_general_plugin):
         
     def activate(self):
         iface_general_plugin.activate(self)
+        self.ls.lunch_logger.info("Starting panic button listener")
         self.panic_thread = panic_button_listener(self.options["idVendor"],self.options["idProduct"],self.options["panic_msg"],self.ls)
         self.panic_thread.start()
         
         
     def deactivate(self):
-        print "Stopping panic button listener"
+        self.ls.lunch_logger.info("Stopping panic button listener")
         if self.panic_thread:
             self.panic_thread.stop_daemon()
             self.panic_thread.join()
@@ -50,6 +51,7 @@ class panic_button_listener(threading.Thread):
     def findButton(self):
         for bus in usb.busses():
             for dev in bus.devices:
+                #TODO (Hannes): read from options
                 if dev.idVendor == 0x1d34 and dev.idProduct == 0x000d:
                     return dev
                 

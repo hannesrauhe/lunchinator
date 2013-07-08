@@ -23,17 +23,16 @@ class lunch_server(lunch_default_config):
     plugin_manager = None
     no_updates = False
     
-    def __init__(self, noUpdates = False):            
+    #TODO: if started with plugins: make sure they are deactivated when destroying lunchinator (destructor anyone?)
+    def __init__(self, noUpdates = False, withPlugins = True):            
         lunch_default_config.__init__(self)
         self.no_updates = noUpdates      
         self.exitCode = 0  
         self.read_config()
+        
         PluginManagerSingleton.setBehaviour([
             ConfigurablePluginManager,
         ])
-        load_standard_plugins = False
-        if not self.config_file.has_section("Plugin Management"):
-            load_standard_plugins = True
         self.plugin_manager = PluginManagerSingleton.get()
         self.plugin_manager.app = self
         self.plugin_manager.setConfigParser(self.config_file,self.write_config_to_hd)
@@ -43,18 +42,22 @@ class lunch_server(lunch_default_config):
            "called" : iface_called_plugin,
            "gui" : iface_gui_plugin
            })
-        try:
-            self.plugin_manager.collectPlugins()
-        except:
-            self.lunch_logger.error("problem when loading plugin: %s",sys.exc_info())
-        if load_standard_plugins:
-            self.plugin_manager.activatePluginByName("Notify", "called")
-            self.plugin_manager.activatePluginByName("Webcam", "gui")
-            self.plugin_manager.activatePluginByName("Lunch Menu", "gui")   
-        
-        #always load the settings plugin
-        self.plugin_manager.activatePluginByName("General Settings", "general")     
+        if withPlugins:
+            try:
+                self.plugin_manager.collectPlugins()
+            except:
+                self.lunch_logger.error("problem when loading plugin: %s",sys.exc_info())
+                
+            #if started for the first time, load standard plugins
+            if not self.config_file.has_section("Plugin Management"):
+                self.plugin_manager.activatePluginByName("Notify", "called")
+                self.plugin_manager.activatePluginByName("Webcam", "gui")
+                self.plugin_manager.activatePluginByName("Lunch Menu", "gui")   
             
+            #always load the settings plugin
+            self.plugin_manager.activatePluginByName("General Settings", "general")  
+        else:
+            self.lunch_logger.info("lunchinator initialised without plugins")   
         
     def is_now_in_time_span(self,begin,end):
         try:

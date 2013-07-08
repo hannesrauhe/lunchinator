@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import subprocess,platform,os,sys
-from lunch_server import EXIT_CODE_UPDATE
+from lunchinator.lunch_server import EXIT_CODE_UPDATE
 
 pythonex_wo_console = "/usr/bin/python"
 pythonex_w_console = "/usr/bin/python"
