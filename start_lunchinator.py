@@ -15,6 +15,7 @@ os.chdir(sys.path[0])
 
 shouldRestart = True
 while shouldRestart: 
+    returnCode = 0
     #subprocess.call(["git","stash"])
     if subprocess.call(["git","pull"])!=0:
         print "git pull did not work. The Update mechanism therefore does not work."
@@ -27,11 +28,12 @@ while shouldRestart:
             #on ubuntu start the indicator
             import appindicator
             returnCode = subprocess.call([pythonex_wo_console,"indicator_applet.py","--autoUpdate"])
-            if returnCode == EXIT_CODE_UPDATE:
-                shouldRestart = True
         except ImportError, e:
             #start the tray icon on windows and other linxu flavors
-            subprocess.call([pythonex_wo_console,"gui_tray.py","--autoUpdate"])        
+            returnCode = subprocess.call([pythonex_wo_console,"gui_tray.py","--autoUpdate"])        
     except ImportError, e:
         #start the CLI-Version if gtk is not available
-        subprocess.call([pythonex_w_console,"nogui.py"])
+        returnCode = subprocess.call([pythonex_w_console,"nogui.py"])
+        
+    if returnCode == EXIT_CODE_UPDATE:
+        shouldRestart = True

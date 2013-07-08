@@ -37,11 +37,13 @@ class lunch_default_config(object):
             os.makedirs(self.main_config_dir)
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
-        self.lunch_logger.setLevel(logging.WARNING)
+        self.lunch_logger.setLevel(logging.INFO)
         loghandler = logging.handlers.RotatingFileHandler(self.log_file,'a',0,9)
         loghandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
         self.lunch_logger.addHandler(loghandler)
         loghandler.doRollover()
+        self.lunch_logger.info("Starting Lunchinator")
+        self.lunch_logger.setLevel(logging.WARNING)
         
         try:
             os.chdir(sys.path[0])
