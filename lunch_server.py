@@ -1,6 +1,5 @@
 #!/usr/bin/python
 from lunch_datathread import *
-from lunch_client import *
 from lunch_default_config import *
 from iface_plugins import *
 from time import strftime, localtime, time, mktime, gmtime
@@ -21,7 +20,6 @@ class lunch_server(lunch_default_config):
     members = {}
     member_timeout = {}
     member_info = {}
-    lclient = lunch_client()
     plugin_manager = None
     no_updates = False
     
@@ -67,8 +65,50 @@ class lunch_server(lunch_default_config):
             self.lunch_logger.error("don't know how to handle time span %s",begin,end,sys.exc_info())
             return False;
         
+    def call(self,msg,client='',hosts={}):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        i=0
+        #print "sending",msg,"to",
+        if client:
+            self.lunch_logger.debug("Sending message %s to %s",msg,client)
+            #print client
+            try:
+                s.sendto(msg, (client.strip(), 50000)) 
+                i+=1
+            except:
+                self.lunch_logger.error("Exception while sending msg %s to %s: %s",msg,client, str(sys.exc_info()[0]))
+        elif 0==len(hosts):
+            members = self.members
+            if 0==len(members):
+                members = self.init_members_from_file()            
+            if 0==len(members):
+                self.lunch_logger("Cannot send message, no peers connected, no peer found in members file")
+                return 0
+            self.lunch_logger.debug("Sending message %s to %s",msg,str(members))
+            for ip,name in members.items():
+                try:
+                    s.sendto(msg, (ip.strip(), 50000))
+                    i+=1
+                except:
+                    self.lunch_logger.error("Exception while sending msg %s to %s: %s",msg,client, str(sys.exc_info()[0]))
+                    continue        
+        else:
+            self.lunch_logger.debug("Sending message %s to %s",msg,str(hosts))
+            for ip,name in hosts.items():
+                #print ip.strip()
+                try:
+                    s.sendto(msg, (ip.strip(), 50000))
+                    i+=1
+                except:
+                    self.lunch_logger.error("Exception while sending msg %s to %s: %s",msg,client, str(sys.exc_info()[0]))
+                    continue
+        
+        s.close() 
+        return i
+        
+    '''short for the call function above for backward compatibility'''
     def call_all_members(self,msg):        
-        self.lclient.call(msg,hosts=self.members)   
+        self.call(msg,hosts=self.members)   
         
         
     '''will be called every ten seconds'''
@@ -156,11 +196,11 @@ class lunch_server(lunch_default_config):
                 
             elif cmd.startswith("HELO_REQUEST_DICT"):
                 self.member_info[addr[0]] = json.loads(value)
-                self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
+                self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
-                        self.lclient.call("HELO_REQUEST_AVATAR ",client=addr[0])                        
+                        self.call("HELO_REQUEST_AVATAR ",client=addr[0])                        
                 
             elif cmd.startswith("HELO_DICT"):
                 #the master send me the list of members - yeah
@@ -190,7 +230,7 @@ class lunch_server(lunch_default_config):
                 fileToSend = self.avatar_dir+"/"+self.avatar_file
                 if os.path.exists(fileToSend):
                     fileSize = os.path.getsize(fileToSend)
-                    self.lclient.call("HELO_AVATAR "+str(fileSize), addr[0])
+                    self.call("HELO_AVATAR "+str(fileSize), addr[0])
                     ds = DataSenderThread(addr[0],fileToSend)
                     ds.start()
                 else:
@@ -205,7 +245,7 @@ class lunch_server(lunch_default_config):
                 if addr[0] not in self.members:   
                     self.members[addr[0]]=value           
                     self.write_members_to_file()
-                    self.lclient.call("HELO_INFO "+self.build_info_string(),client=addr[0])
+                    self.call("HELO_INFO "+self.build_info_string(),client=addr[0])
                 else:                    
                     self.members[addr[0]]=value
                 
@@ -221,7 +261,7 @@ class lunch_server(lunch_default_config):
                 else:
                     self.members[addr[0]]={'name':value}                                        
                     self.write_members_to_file()
-                self.lclient.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
+                self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                     
             else:
                 self.lunch_logger.error("received unknown command from %s: %s with value %s",addr[0],cmd,value)        
@@ -304,12 +344,12 @@ class lunch_server(lunch_default_config):
     def call_for_dict(self):
         try:
             if len(self.members.keys())>self.peer_nr:
-                self.lclient.call("HELO_REQUEST_DICT "+self.build_info_string(),client=self.members.keys()[self.peer_nr])
+                self.call("HELO_REQUEST_DICT "+self.build_info_string(),client=self.members.keys()[self.peer_nr])
             self.peer_nr=(self.peer_nr+1) % len(self.members)
         except:
             self.lunch_logger.error("Something went wrong while trying to send a call to the new master")
             
-        
+    '''listening method - should be started in its own thread'''    
     def start_server(self):
         print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service"
         self.running = True
@@ -340,7 +380,7 @@ class lunch_server(lunch_default_config):
                     else:
                         if announce_name==10:
                             #it's time to announce my name again and switch the master
-                            self.lclient.call("HELO "+self.get_user_name(),hosts=self.members)
+                            self.call("HELO "+self.get_user_name(),hosts=self.members)
                             announce_name=0
                             self.remove_inactive_members()
                             self.call_for_dict()
@@ -355,7 +395,11 @@ class lunch_server(lunch_default_config):
             print e
             self.lunch_logger.critical("stopping lunchinator because: %s",e)
         finally: 
-            s.close()                    
+            try:
+                s.close()  
+            except:
+                pass
+            self.lunch_logger.info("Lunchinator stopped")                  
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
 #            self.write_config_to_hd()
             for pluginInfo in self.plugin_manager.getAllPlugins():

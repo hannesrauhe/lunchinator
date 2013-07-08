@@ -2,7 +2,6 @@ import sys,types
 import gobject
 import gtk
 import lunch_server
-import lunch_client
 import time, socket,logging,threading,os
 from lunch_options import optionParser
 
@@ -12,8 +11,6 @@ import urllib2
 class lunchinator(threading.Thread):
     menu = None
     ls = None
-    lc = lunch_client.lunch_client()
-    lanschi_http = None
     
     def __init__(self, noUpdates = False):           
         threading.Thread.__init__(self)  
@@ -187,9 +184,9 @@ class lunchinator(threading.Thread):
             
     def clicked_send_msg(self,w,*data):
         if len(data):
-            self.lc.call(data[0],hosts=self.ls.get_members())
+            self.ls.call_all_members(data[0])
         else:
-            self.lc.call(w.get_text())
+            self.ls.call_all_members(w.get_text())
             w.set_text("")
         
     def clicked_add_host(self,w):

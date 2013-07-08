@@ -1,7 +1,5 @@
 import sys,types
 import lunch_server
-import lunch_client
-import lunch_avatar
 import time
 import socket
 import threading,os
@@ -10,7 +8,6 @@ from lunch_options import optionParser
 class lunchinator_nogui(threading.Thread):
     menu = None
     ls = None
-    lc = lunch_client.lunch_client()
     
     def __init__(self, noUpdates = False):
         threading.Thread.__init__(self)
