@@ -1,7 +1,7 @@
 import sys,types
 import gobject
 import gtk
-import lunch_server
+from lunchinator.lunch_server import *
 import time, socket,logging,threading,os
 from lunch_options import optionParser
 
@@ -14,7 +14,7 @@ class lunchinator(threading.Thread):
     
     def __init__(self, noUpdates = False):           
         threading.Thread.__init__(self)  
-        self.ls = lunch_server.lunch_server(noUpdates)  
+        self.ls = lunch_server(noUpdates)  
         self.init_menu() 
     
     def run(self):

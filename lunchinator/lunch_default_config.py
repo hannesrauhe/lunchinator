@@ -37,6 +37,7 @@ class lunch_default_config(object):
             os.makedirs(self.main_config_dir)
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
+#        logging.basicConfig(filename=self.log_file+".plugins",level=logging.WARNING)
         self.lunch_logger.setLevel(logging.INFO)
         loghandler = logging.handlers.RotatingFileHandler(self.log_file,'a',0,9)
         loghandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
@@ -98,8 +99,10 @@ class lunch_default_config(object):
         
         if self.debug:
             self.lunch_logger.setLevel(logging.DEBUG)
+            logging.basicConfig(level=logging.DEBUG)
         else:
             self.lunch_logger.setLevel(logging.WARNING)
+            logging.basicConfig(level=logging.WARNING)
             
     def read_value_from_config_file(self,value,section,name):
         try:

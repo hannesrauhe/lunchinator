@@ -3,7 +3,6 @@ from iface_plugins import *
 from time import localtime
 import subprocess,sys,ctypes
 from yapsy.PluginManager import PluginManagerSingleton
-import lunch_default_config
 import threading, SimpleHTTPServer, SocketServer, os
 
 class http_server_thread(threading.Thread):    

@@ -4,7 +4,6 @@ from yapsy.PluginManager import PluginManagerSingleton
 import gtk,gobject,urllib2,sys,threading
 import time
 import usb
-import lunch_client
 import subprocess
     
 class panic_button(iface_general_plugin):

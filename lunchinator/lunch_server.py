@@ -217,8 +217,7 @@ class lunch_server(lunch_default_config):
             elif cmd.startswith("HELO_AVATAR"):
                 #someone want's to send me his pic via TCP
                 file_size=int(value.strip())
-                if self.debug:
-                    print "Receiving file of size",file_size
+                self.lunch_logger.debug("Receiving file of size %d",file_size)
                 if self.member_info[addr[0]].has_key("avatar"):
                     dr = DataReceiverThread(addr[0],file_size,self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"])
                     dr.start()
@@ -387,10 +386,9 @@ class lunch_server(lunch_default_config):
                         else:
                             #just wait for the next time when i have to announce my name
                             announce_name+=1
-                    if self.debug:
-                        if self.my_master==-1:
-                            self.lunch_logger.debug("no master found yet")
-                        self.lunch_logger.debug(str(self.members.keys()))
+                    if self.my_master==-1:
+                        self.lunch_logger.debug("no master found yet")
+                    self.lunch_logger.debug(str(self.members.keys()))
         except socket.error as e:
             print e
             self.lunch_logger.critical("stopping lunchinator because: %s",e)
@@ -418,7 +416,3 @@ class lunch_server(lunch_default_config):
     
     def get_member_info(self):  
         return self.member_info    
-    
-if __name__ == "__main__":
-    l = lunch_server()
-    l.start_server()

@@ -1,5 +1,4 @@
 #!/usr/bin/python
-from lunch_default_config import *
 import socket,sys,os,hashlib,shutil
 import os, sys
 import Image
