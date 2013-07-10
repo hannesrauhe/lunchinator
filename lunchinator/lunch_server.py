@@ -22,11 +22,13 @@ class lunch_server(lunch_default_config):
     member_info = {}
     plugin_manager = None
     no_updates = False
+    with_plugins = True
     
     #TODO: if started with plugins: make sure they are deactivated when destroying lunchinator (destructor anyone?)
     def __init__(self, noUpdates = False, withPlugins = True):            
         lunch_default_config.__init__(self)
-        self.no_updates = noUpdates      
+        self.no_updates = noUpdates
+        self.with_plugins = withPlugins      
         self.exitCode = 0  
         self.read_config()
         
@@ -41,23 +43,7 @@ class lunch_server(lunch_default_config):
            "general" : iface_general_plugin,
            "called" : iface_called_plugin,
            "gui" : iface_gui_plugin
-           })
-        if withPlugins:
-            try:
-                self.plugin_manager.collectPlugins()
-            except:
-                self.lunch_logger.error("problem when loading plugin: %s",sys.exc_info())
-                
-            #if started for the first time, load standard plugins
-            if not self.config_file.has_section("Plugin Management"):
-                self.plugin_manager.activatePluginByName("Notify", "called")
-                self.plugin_manager.activatePluginByName("Webcam", "gui")
-                self.plugin_manager.activatePluginByName("Lunch Menu", "gui")   
-            
-            #always load the settings plugin
-            self.plugin_manager.activatePluginByName("General Settings", "general")  
-        else:
-            self.lunch_logger.info("lunchinator initialised without plugins")   
+           }) 
         
     def is_now_in_time_span(self,begin,end):
         try:
@@ -356,8 +342,21 @@ class lunch_server(lunch_default_config):
         print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service"
         self.running = True
         self.my_master=-1 #the peer i use as master
-        announce_name=0 #how often did I announce my name
+        announce_name=0 #how often did I announce my name        
         
+        if self.with_plugins:
+            try:
+                self.plugin_manager.collectPlugins()
+            except:
+                self.lunch_logger.error("problem when loading plugin: %s",sys.exc_info())
+            
+            #always load these plugins
+            self.plugin_manager.activatePluginByName("General Settings", "general") 
+            self.plugin_manager.activatePluginByName("Notify", "called") 
+        else:
+            self.lunch_logger.info("lunchinator initialised without plugins")  
+            
+            
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try: 
             s.bind(("", 50000)) 
