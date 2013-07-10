@@ -44,6 +44,7 @@ class lunch_server(lunch_default_config):
            "called" : iface_called_plugin,
            "gui" : iface_gui_plugin
            }) 
+        self.init_done = threading.Event()
         
     def is_now_in_time_span(self,begin,end):
         try:
@@ -361,6 +362,7 @@ class lunch_server(lunch_default_config):
         try: 
             s.bind(("", 50000)) 
             s.settimeout(5.0)
+            self.init_done.set()
             while self.running:
                 try:
                     daten, addr = s.recvfrom(1024) 

@@ -15,7 +15,6 @@ class lunchinator(threading.Thread):
     def __init__(self, noUpdates = False):           
         threading.Thread.__init__(self)  
         self.ls = lunch_server(noUpdates)  
-        self.init_menu() 
     
     def run(self):
         self.ls.start_server()      
@@ -56,6 +55,7 @@ class lunchinator(threading.Thread):
         self.menu.append(settings_item)
         self.menu.append(plugin_item)
         self.menu.append(exit_item) 
+        return self.menu
             
     def toggle_plugin(self,w,*data):
         if w.get_active():

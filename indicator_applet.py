@@ -55,8 +55,9 @@ if __name__ == "__main__":
         
     lanschi = lunchinator(options.noUpdates)
     lanschi.start()
+    lanschi.ls.init_done.wait()
             
-    ind.set_menu(lanschi.menu)
+    ind.set_menu(lanschi.init_menu())
     
     gobject.timeout_add(2000, highlight_icon, lanschi)
     try:
