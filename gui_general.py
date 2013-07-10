@@ -9,7 +9,7 @@ import urllib2
                  
         
 class lunchinator(threading.Thread):
-    menu = None
+    _menu = None
     ls = None
     
     def __init__(self, noUpdates = False):           
@@ -30,8 +30,8 @@ class lunchinator(threading.Thread):
                 plugin_menu.append(p_item)
         plugin_menu.show_all()
         
-        #main menu
-        self.menu = gtk.Menu()    
+        #main _menu
+        self._menu = gtk.Menu()    
         menu_items = gtk.MenuItem("Call for lunch")
         msg_items = gtk.MenuItem("Show Lunchinator")
         settings_item = gtk.MenuItem("Settings")
@@ -50,12 +50,12 @@ class lunchinator(threading.Thread):
         plugin_item.show() 
         exit_item.show()
         
-        self.menu.append(menu_items)
-        self.menu.append(msg_items)  
-        self.menu.append(settings_item)
-        self.menu.append(plugin_item)
-        self.menu.append(exit_item) 
-        return self.menu
+        self._menu.append(menu_items)
+        self._menu.append(msg_items)  
+        self._menu.append(settings_item)
+        self._menu.append(plugin_item)
+        self._menu.append(exit_item) 
+        return self._menu
             
     def toggle_plugin(self,w,*data):
         if w.get_active():
