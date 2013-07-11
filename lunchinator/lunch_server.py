@@ -187,6 +187,7 @@ class lunch_server(lunch_default_config):
             elif cmd.startswith("HELO_REQUEST_DICT"):
                 self.member_info[addr[0]] = json.loads(value)
                 self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
+                self.call("HELO_INFO "+self.build_info_string())
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
