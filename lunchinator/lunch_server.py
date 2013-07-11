@@ -159,8 +159,22 @@ class lunch_server(lunch_default_config):
                 finally:
                     f.close();
         except:
-            self.lunch_logger.error("Could not write messages to %s: %s",self.messages_file, sys.exc_info()[0])
-        
+            self.lunch_logger.error("Could not write messages to %s: %s",self.messages_file, sys.exc_info()[0])    
+    
+    def build_info_string(self):
+        info_d = {"avatar": self.avatar_file,
+                   "name": self.user_name,
+                   "next_lunch_begin":self.default_lunch_begin,
+                   "next_lunch_end":self.default_lunch_end,
+                   "version":self.version_short}
+        if self.next_lunch_begin:
+            info_d["next_lunch_begin"] = self.next_lunch_begin
+        if self.next_lunch_end:
+            info_d["next_lunch_end"] = self.next_lunch_end
+        return json.dumps(info_d)
+    
+    def send_info_around(self):
+        self.call("HELO_INFO "+self.build_info_string())            
     
     def incoming_event(self,data,addr):   
         if addr[0].startswith("127."):
@@ -187,7 +201,7 @@ class lunch_server(lunch_default_config):
             elif cmd.startswith("HELO_REQUEST_DICT"):
                 self.member_info[addr[0]] = json.loads(value)
                 self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
-                self.call("HELO_INFO "+self.build_info_string())
+                self.send_info_around()
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
@@ -199,7 +213,7 @@ class lunch_server(lunch_default_config):
                 self.members.update(ext_members)
                 self.members = dict((k, v) for k, v in self.members.items() if not k.startswith("127"))
                 if self.my_master==-1:
-                    self.call_all_members("HELO_INFO "+self.build_info_string())
+                    self.send_info_around()
                     
                 self.my_master = addr[0]                                    
                 if not os.path.exists(self.members_file):
@@ -317,18 +331,6 @@ class lunch_server(lunch_default_config):
                     del self.members[ip]
         except:
             self.lunch_logger.error("Something went wrong while trying to clean up the members-table")
-            
-    def build_info_string(self):
-        info_d = {"avatar": self.avatar_file,
-                   "name": self.user_name,
-                   "next_lunch_begin":self.default_lunch_begin,
-                   "next_lunch_end":self.default_lunch_end,
-                   "version":self.version_short}
-        if self.next_lunch_begin:
-            info_d["next_lunch_begin"] = self.next_lunch_begin
-        if self.next_lunch_end:
-            info_d["next_lunch_end"] = self.next_lunch_end
-        return json.dumps(info_d)
             
     '''ask for the dictionary and send over own information'''
     def call_for_dict(self):

@@ -239,6 +239,7 @@ class lunchinator(threading.Thread):
                     pluginInfo.plugin_object.discard_options_widget_data()
             
         d.destroy()
+        self.ls.send_info_around()
 
         
 
