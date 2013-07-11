@@ -16,6 +16,7 @@ class lunch_server(lunch_default_config):
     new_msg = False
     my_master = -1    
     peer_nr=0 #the number of the peer i contacted to be my master
+    mute_time_until=0
     last_messages = []
     members = {}
     member_timeout = {}
@@ -293,34 +294,32 @@ class lunch_server(lunch_default_config):
         if addr in self.members:
             m = self.members[addr]
             
-        mute_alarm = False
-        if len(self.last_messages)>0:
-            last = self.last_messages[0]            
-            if mktime(mtime)-mktime(last[0])<self.mute_timeout:
-                self.lunch_logger.debug("message will not trigger alarm: %s: [%s] %s",t,m,msg)
-                mute_alarm = True
-            
         print "%s: [%s] %s" % (t,m,msg)
         
         self.last_messages.insert(0,[mtime,addr,msg])
         self.new_msg = True
-        self.write_messages_to_file()
-        
+        self.write_messages_to_file()        
         
         if not msg.startswith("ignore"):
             member_info = {}
             if self.member_info.has_key(addr):
-                member_info = self.member_info[addr]
-                
+                member_info = self.member_info[addr]         
+                                
             for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
                 if pluginInfo.plugin_object.is_activated:
-                    pluginInfo.plugin_object.process_message(msg,addr,member_info)                
+                    pluginInfo.plugin_object.process_message(msg,addr,member_info)
             
-            if not mute_alarm and msg.startswith("lunch") and self.is_now_in_time_span(self.alarm_begin_time, self.alarm_end_time):
-                for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
-                    if pluginInfo.plugin_object.is_activated:
-                        pluginInfo.plugin_object.process_lunch_call(msg,addr,member_info)   
-    
+            if msg.startswith("lunch") and self.is_now_in_time_span(self.alarm_begin_time, self.alarm_end_time):
+                timenum = mktime(mtime)
+                if timenum>self.mute_time_until:
+                    self.mute_time_until=timenum+self.mute_timeout
+                    for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
+                        if pluginInfo.plugin_object.is_activated:
+                            pluginInfo.plugin_object.process_lunch_call(msg,addr,member_info)
+                else:
+                    self.lunch_logger.debug("messages will not trigger alarm: %s: [%s] %s until %s",t,m,msg,strftime("%a, %d %b %Y %H:%M:%S", localtime(self.mute_time_until)))
+      
+                    
     def remove_inactive_members(self):
         try:
             for ip in self.members.keys():
@@ -399,6 +398,8 @@ class lunch_server(lunch_default_config):
         except socket.error as e:
             print e
             self.lunch_logger.critical("stopping lunchinator because: %s",e)
+        except:
+            self.lunch_logger.critical("stopping - Critical error: %s", str(sys.exc_info())) 
         finally: 
             try:
                 s.close()  
