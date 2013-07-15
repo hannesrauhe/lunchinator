@@ -1,5 +1,5 @@
 import sys,types
-import lunch_server
+from lunchinator.lunch_server import *
 import time
 import socket
 import threading,os
@@ -11,7 +11,7 @@ class lunchinator_nogui(threading.Thread):
     
     def __init__(self, noUpdates = False):
         threading.Thread.__init__(self)
-        self.ls = lunch_server.lunch_server(noUpdates)
+        self.ls = lunch_server(noUpdates)
         self.cmddict = {
                "help": [self.print_help,"prints out this text :-)"],
                 "members": [self.print_members,"prints the list of members"],
