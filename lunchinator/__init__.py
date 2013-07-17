@@ -1,1 +1,1 @@
-__all__ = ["gui_general", "lunch_datathread", "lunch_default_config", "lunch_server", "iface_plugins"]
+__all__ = ["gui_general", "lunch_default_config", "lunch_server", "iface_plugins"]

@@ -1,4 +1,10 @@
 #!/usr/bin/python
+#
+#in general you should use start_lunchinator.py in the root-directory to use the lunchinator
+#
+#this script can be used to start the lunchinator as GTK tray icon without self-updating functionality
+
+import __preamble
 from lunchinator.gui_general import *
     
 def highlight_icon(c):

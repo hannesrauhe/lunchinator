@@ -1,55 +1,49 @@
 INSTALL DEPENDENCIES
 =======
- sudo apt-get install sox libnotify-bin expect-dev
+ sudo apt-get install sox libnotify-bin
 
 Open Up port 50000/UDP on your machine
 Additionally open Up port 50001/TCP on your machine
 
 
-USAGE WITH GUI
+USAGE
 =============
 
-execute (Alt-F2 recommended) start_notifier.sh
-output will be logged to .lunch_calls
+execute (Alt-F2 recommended) start_lunchinator.py
 
 first time usage:
-click on the icon (RSS-standard icon next to the clock) and on "Show/Send Messages"
-write a hostname/IP of one of the lunch peers (e.g. luder) to the right bottom text field, click on "add host" and wait a few seconds
+*write a hostname/IP of one of the lunch peers (e.g. luder) to the right bottom text field, click on "add host" and wait a few seconds
+OR
+*another peer/colleague can add your hostname/IP to its list the same way
 
-CLI
-===
-If you don't have a GUI or no pyGTK, you can also use the CLI.
-Before you start, check if you have a lunch_members.cfg file with at least one peer. If you don't have one:
+PLUGINS
+=======
 
- mkdir -P $HOME/.lunchinator
- echo "luder" >> $HOME/.lunchinator/lunch_members.cfg
+Most of the functionality you can see is implemented in Plugins. The core program does just relay/store messages and finds peers.
 
-
-start the server:
- lunch_server.py 
-
-to send a call:
- lunch_client.py <message>
-
-CONFIG
-======
-Configuration is done by adding/modifying files to the .lunchinator dir in your home.
-
-Put your username in username.cfg.
-If you want another sound-file put a wav-file to the sounds-dir and write the filename to sound.cfg
+*activated by default:
+-General Settings (to be able to change settings via GUI)
+-Notify (to open/close optical drive, show a notification (depends on libnotify) and play a sound on linux (depends on sox)
+-Avatar (to set a picture as your avatar - you can see other pictures in the norification without this plugin)
 
 Details
 ======
-The bash script pulls the newest version from git and executes the indicator applet on ubuntu and the general tray icon on every other system (pygtk needed)
 
-HOW IT WORKS
-============
+start_lunchinator.py will start 
+*an appindicator on Ubuntu 10.04 and newer, (bin/indicator_applet.py 
+*a GTK tray icon on any system, where pyGTK is available (bin/gui_tray.py)
+*or the CLI version, if no GTK is available (bin/nogui.py)
+
+The start_lunchinator.py script also pulls changes from the git repository on start and updates/restarts the lunchinator,
+if somebody called "HELO_UPDATE smth"
+
+The indicator plugin will install its icons to the ubuntu theme directory (after asking)
+
+Configuration is done by adding/modifying files to/in the .lunchinator dir in your home or via GUI (Settings).
+Logs are stored in ~/.lunchinator/lunchinator.log
+
 lunch_server listens on incoming UDP connections on Port 50000
 ATM it will not parse incoming messages - it will simply show a notice (and open/close your DVD and play a sound at lunch time)
 (Exception: Messages starting with HELO are there to communicate user names etc.)
 From time to time, the lunch_server will write all members to lunch_members.cfg
 
-lunch_client sends a message to all clients that are in the lunch_members.cfg file (which is in the git repository)
-additional all clients that announce theirself will get a message as well (doesn't work from cli, only from gui)
-
-the other *.py-files are there for the gui/tray-icon/indicator-applet

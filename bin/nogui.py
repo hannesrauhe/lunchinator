@@ -1,8 +1,12 @@
-import sys,types
+#!/usr/bin/python
+#
+#in general you should use start_lunchinator.py in the root-directory to use the lunchinator
+#
+#this script can be used to start the lunchinator as stripped down CLI-application without self-updating functionality
+
+import __preamble
 from lunchinator.lunch_server import *
-import time
-import socket
-import threading,os
+import time,socket,threading,os,sys,types
         
 class lunchinator_nogui(threading.Thread):
     menu = None

@@ -1,4 +1,10 @@
 #!/usr/bin/python
+#
+#in general you should use start_lunchinator.py in the root-directory to use the lunchinator
+#
+#this script can be used to start the lunchinator as appindicator without self-updating functionality
+
+import __preamble
 import appindicator,platform,subprocess
 from lunchinator.gui_general import *
     
@@ -27,7 +33,7 @@ if __name__ == "__main__":
         gtkresponse = message.run()
         message.destroy()
         if gtkresponse==gtk.RESPONSE_YES:
-            if subprocess.call(['gksudo', sys.path[0]+'/install-lunch-icons.sh lunch'])==0:
+            if subprocess.call(['gksudo', sys.path[0]+'/bin/install-lunch-icons.sh lunch'])==0:
                 print "restarting after icons were installed"
                 os._exit(lunch_server.EXIT_CODE_UPDATE)
             else:
