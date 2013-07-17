@@ -1,5 +1,5 @@
 from yapsy.PluginManager import PluginManagerSingleton
-from iface_plugins import *
+from lunchinator.iface_plugins import *
 from rot13 import *
 
 class rot13(iface_gui_plugin):

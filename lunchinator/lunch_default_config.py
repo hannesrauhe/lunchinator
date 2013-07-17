@@ -1,5 +1,20 @@
 import sys,os,getpass,ConfigParser,types,subprocess,logging,logging.handlers
+from optparse import OptionParser
 
+'''integrate the cli-parser into the default_config sooner or later'''
+class lunch_options_parser(object):
+    def parse_args(self):
+        usage = "usage: %prog [options]"
+        optionParser = OptionParser(usage = usage)
+        optionParser.add_option("-v", "--verbose",
+                          action = "store_true", dest = "verbose", default = False,
+                          help = "Enable verbose output")
+        optionParser.add_option("--autoUpdate",
+                          default = True, dest = "noUpdates", action = "store_false",
+                          help = "Automatically pull updates from Git.")
+        return optionParser.parse_args()
+
+    
 class lunch_default_config(object):
     '''unchangeable for now'''
     main_config_dir = os.getenv("HOME")+"/.lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+"/.lunchinator"

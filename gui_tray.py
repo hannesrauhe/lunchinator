@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from gui_general import *
+from lunchinator.gui_general import *
     
 def highlight_icon(c):
     if c.check_new_msgs():
@@ -19,7 +19,7 @@ def show_menu(icon, button, time, menu):
     menu.popup(None, None, gtk.status_icon_position_menu, button, time, statusicon)
     
 if __name__ == "__main__":
-    (options, args) = optionParser.parse_args()
+    (options, args) = lunch_options_parser().parse_args()
     
     gobject.threads_init()
     

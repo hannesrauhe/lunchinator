@@ -1,10 +1,7 @@
-
-from iface_plugins import *
+from lunchinator.iface_plugins import *
 from yapsy.PluginManager import PluginManagerSingleton
 import gtk,gobject,urllib2,sys,threading
-import time
-import usb
-import subprocess
+import time,usb,subprocess
     
 class panic_button(iface_general_plugin):
     ls = None

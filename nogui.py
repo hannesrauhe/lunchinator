@@ -3,7 +3,6 @@ from lunchinator.lunch_server import *
 import time
 import socket
 import threading,os
-from lunch_options import optionParser
         
 class lunchinator_nogui(threading.Thread):
     menu = None
@@ -56,7 +55,7 @@ class lunchinator_nogui(threading.Thread):
                 print m_ip,
         
 if __name__ == "__main__":
-    (options, args) = optionParser.parse_args()
+    (options, args) = lunch_options_parser().parse_args()
     l = lunchinator_nogui(options.noUpdates)
     l.start()
     time.sleep(1)

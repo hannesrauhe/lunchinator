@@ -1,4 +1,4 @@
-from iface_plugins import *
+from lunchinator.iface_plugins import *
 from yapsy.PluginManager import PluginManagerSingleton
     
 class gui_settings(iface_general_plugin):

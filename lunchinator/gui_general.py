@@ -3,7 +3,6 @@ import gobject
 import gtk
 from lunchinator.lunch_server import *
 import time, socket,logging,threading,os
-from lunch_options import optionParser
 
 import urllib2
                  
@@ -377,7 +376,3 @@ class StoredOrderNotebook(gtk.Notebook):
         
     def get_order(self):
         return self.order
-        
-if __name__ == "__main__":
-    l = lunchinator()
-    l.window_settings(None)

@@ -1,5 +1,4 @@
-
-from iface_plugins import *
+from lunchinator.iface_plugins import *
 from time import localtime
 import subprocess,sys,ctypes
 from yapsy.PluginManager import PluginManagerSingleton

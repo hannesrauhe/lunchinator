@@ -1,7 +1,6 @@
 #!/usr/bin/python
 import appindicator,platform,subprocess
-from gui_general import *
-from lunch_options import optionParser
+from lunchinator.gui_general import *
     
 def highlight_icon(c):
 #    if len(c.get_members())==0:
@@ -14,7 +13,7 @@ def highlight_icon(c):
         
     
 if __name__ == "__main__": 
-    (options, args) = optionParser.parse_args()
+    (options, args) = lunch_options_parser().parse_args()
     
     #you need this to use threads and GTK
     gobject.threads_init()

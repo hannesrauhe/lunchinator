@@ -1,5 +1,4 @@
-
-from iface_plugins import *
+from lunchinator.iface_plugins import *
 from yapsy.PluginManager import PluginManagerSingleton
 import gtk,gobject,urllib2,sys
     
