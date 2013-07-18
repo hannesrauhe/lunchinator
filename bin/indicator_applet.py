@@ -6,6 +6,7 @@
 
 import __preamble
 import appindicator,platform,subprocess
+from lunchinator.lunch_server import EXIT_CODE_UPDATE
 from lunchinator.gui_general import *
     
 def highlight_icon(c):
@@ -35,7 +36,7 @@ if __name__ == "__main__":
         if gtkresponse==gtk.RESPONSE_YES:
             if subprocess.call(['gksudo', sys.path[0]+'/bin/install-lunch-icons.sh lunch'])==0:
                 print "restarting after icons were installed"
-                os._exit(lunch_server.EXIT_CODE_UPDATE)
+                os._exit(EXIT_CODE_UPDATE)
             else:
                 print "icons were not installed because of an error"
         
