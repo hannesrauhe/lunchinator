@@ -243,7 +243,6 @@ class lunchinator(threading.Thread):
         
 
 class UpdatingTable(object):
-    listStore = None
     def __init__(self,ls):
         self.ls = ls
         self.listStore = self.create_model()
