@@ -269,7 +269,7 @@ class lunch_server(lunch_default_config):
                 self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                     
             else:
-                self.lunch_logger.error("received unknown command from %s: %s with value %s",addr[0],cmd,value)        
+                self.lunch_logger.warning("received unknown command from %s: %s with value %s",addr[0],cmd,value)        
                 
             member_info = {}
             if self.member_info.has_key(addr[0]):

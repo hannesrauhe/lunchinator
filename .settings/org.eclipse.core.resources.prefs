@@ -3,4 +3,6 @@ encoding//plugins/lunch_menu_structured/__init__.py=utf-8
 encoding//plugins/lunch_menu_structured/lunch_menu_structured_gui.py=utf-8
 encoding//yapsy/ConfigurablePluginManager.py=utf-8
 encoding//yapsy/IPlugin.py=utf-8
+encoding//yapsy/IPluginLocator.py=utf-8
 encoding//yapsy/PluginManager.py=utf-8
+encoding//yapsy/__init__.py=utf-8
