@@ -57,7 +57,7 @@ class lunchinator_nogui(threading.Thread):
                 print m_info["name"],
             else:
                 print m_ip,
-        
+
 if __name__ == "__main__":
     (options, args) = lunch_options_parser().parse_args()
     l = lunchinator_nogui(options.noUpdates)

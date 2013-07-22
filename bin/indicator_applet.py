@@ -17,7 +17,6 @@ def highlight_icon(c):
     else:
         ind.set_status(appindicator.STATUS_ACTIVE)
     return True
-        
     
 if __name__ == "__main__": 
     (options, args) = lunch_options_parser().parse_args()

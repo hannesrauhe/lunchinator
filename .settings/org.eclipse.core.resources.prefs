@@ -5,4 +5,5 @@ encoding//yapsy/ConfigurablePluginManager.py=utf-8
 encoding//yapsy/IPlugin.py=utf-8
 encoding//yapsy/IPluginLocator.py=utf-8
 encoding//yapsy/PluginManager.py=utf-8
+encoding//yapsy/PluginManagerDecorator.py=utf-8
 encoding//yapsy/__init__.py=utf-8
