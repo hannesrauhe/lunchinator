@@ -16,7 +16,7 @@ def trace(frame, event, arg):
 
 
 if __name__ == "__main__":
-    sys.settrace(trace)
+#    sys.settrace(trace)
     ls = lunch_server()
     ls.start_server()
     
