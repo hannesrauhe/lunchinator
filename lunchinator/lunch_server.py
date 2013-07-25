@@ -202,7 +202,6 @@ class lunch_server(lunch_default_config):
             elif cmd.startswith("HELO_REQUEST_DICT"):
                 self.member_info[addr[0]] = json.loads(value)
                 self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
-                self.send_info_around()
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
@@ -243,7 +242,11 @@ class lunch_server(lunch_default_config):
                 
             elif cmd.startswith("HELO_INFO"):
                 #someone sends his info
-                self.member_info[addr[0]] = json.loads(value)              
+                self.member_info[addr[0]] = json.loads(value)      
+                #Request avatar if not there yet
+                if self.member_info[addr[0]].has_key("avatar"):
+                    if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
+                        self.call("HELO_REQUEST_AVATAR ",client=addr[0])          
                 
             elif "HELO"==cmd:
                 #someone tells me his name
