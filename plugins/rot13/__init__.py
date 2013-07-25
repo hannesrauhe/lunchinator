@@ -21,6 +21,8 @@ class rot13(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self):
+        if (len(self.ls.last_messages)):
+            self.w.encodeText(self.ls.get_last_msgs()[0][2])
         return self.w.create_widget()
     
     def add_menu(self,menu):

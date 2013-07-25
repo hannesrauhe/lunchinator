@@ -6,6 +6,10 @@ class rot13box(object):
         self.entry = gtk.Entry()  
         self.but = gtk.Button("ROT13")
         
+    def encodeText(self,text):
+        self.entry.set_text(text)
+        self.enc(self.entry)
+        
     def enc(self,w):        
         rot13 = string.maketrans( 
             "ABCDEFGHIJKLMabcdefghijklmNOPQRSTUVWXYZnopqrstuvwxyz", 
