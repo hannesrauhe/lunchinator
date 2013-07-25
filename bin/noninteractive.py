@@ -16,7 +16,8 @@ def trace(frame, event, arg):
 
 
 if __name__ == "__main__":
+    (options, args) = lunch_options_parser().parse_args()
 #    sys.settrace(trace)
-    ls = lunch_server()
+    ls = lunch_server(options.noUpdates)
     ls.start_server()
     

@@ -7,5 +7,5 @@ mkdir -p $LUNCHINATOR_CONFIG_DIR
 
 while true; do
 	git pull;
-	python ./noninteractive.py;
+	python ./noninteractive.py --autoUpdate;
 done
