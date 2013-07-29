@@ -253,7 +253,7 @@ class lunch_server(lunch_default_config):
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
-                        self.call("HELO_REQUEST_AVATAR ",client=addr[0])          
+                        self.call("HELO_REQUEST_AVATAR "+str(self.tcp_port),client=addr[0])          
                 
             elif "HELO"==cmd:
                 #someone tells me his name
