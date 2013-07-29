@@ -4,15 +4,17 @@ class DataSenderThread(threading.Thread):
     receiver = ""
     file_path = ''
     con = None
+    tcp_port = 50001
     
-    def __init__(self, receiver, file_path): 
+    def __init__(self, receiver, file_path, tcp_port = 50001): 
         threading.Thread.__init__(self) 
         self.receiver = receiver
         self.file_path = file_path
+        self.tcp_port = tcp_port
         
     def _sendFile(self):
         try:
-            self.con.connect((self.receiver, 50001))            
+            self.con.connect((self.receiver, self.tcp_port))            
         except socket.error as e:
             print "Could not initiate connection to",self.receiver,e.strerror
             raise
@@ -46,12 +48,14 @@ class DataReceiverThread(threading.Thread):
     size = ""
     file_path = ''
     con = None
+    tcp_port = 50001
     
-    def __init__(self, sender, size, file_path): 
+    def __init__(self, sender, size, file_path,tcp_port = 50001): 
         threading.Thread.__init__(self) 
         self.sender = sender
         self.size = size
         self.file_path = file_path
+        self.tcp_port = tcp_port
         
     def _receiveFile(self):
         writefile = open(self.file_path, 'wb')
@@ -68,7 +72,7 @@ class DataReceiverThread(threading.Thread):
     def run(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try: 
-            s.bind(("", 50001)) 
+            s.bind(("", self.tcp_port)) 
             s.settimeout(30.0)
             s.listen(1)
             self.con, addr = s.accept()
