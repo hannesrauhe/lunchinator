@@ -205,7 +205,7 @@ class lunch_server(lunch_default_config):
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
-                        self.call("HELO_REQUEST_AVATAR "+str(self.tcp_port),client=addr[0])                        
+                        self.call("HELO_REQUEST_AVATAR ",client=addr[0])                        
                 
             elif cmd.startswith("HELO_DICT"):
                 #the master send me the list of members - yeah
@@ -222,27 +222,20 @@ class lunch_server(lunch_default_config):
             elif cmd.startswith("HELO_AVATAR"):
                 #someone want's to send me his pic via TCP
                 file_size=int(value.strip())
-                self.lunch_logger.info("Receiving file of size %d on port %d",file_size,self.tcp_port)
+                self.lunch_logger.debug("Receiving file of size %d",file_size)
                 if self.member_info[addr[0]].has_key("avatar"):
-                    dr = DataReceiverThread(addr[0],file_size,self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"],self.tcp_port)
+                    dr = DataReceiverThread(addr[0],file_size,self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"])
                     dr.start()
                 else:
                     self.lunch_logger.error("%s tried to send his avatar, but I don't know where to safe it",addr[0])
                 
             elif cmd.startswith("HELO_REQUEST_AVATAR"):
                 #someone wants my pic 
-                other_tcp_port = 50001
-                try:                    
-                    other_tcp_port=int(value.strip())
-                except:
-                    self.lunch_logger.error("%s requested avatar, I could not parse the port from value %s, using standard %d",str(addr[0]),str(value),other_tcp_port)
-                    
                 fileToSend = self.avatar_dir+"/"+self.avatar_file
                 if os.path.exists(fileToSend):
                     fileSize = os.path.getsize(fileToSend)
-                    self.lunch_logger.info("Sending file of size %d to %s : %d",fileSize,str(addr[0]),other_tcp_port)
                     self.call("HELO_AVATAR "+str(fileSize), addr[0])
-                    ds = DataSenderThread(addr[0],fileToSend, other_tcp_port)
+                    ds = DataSenderThread(addr[0],fileToSend)
                     ds.start()
                 else:
                     self.lunch_logger.error("Want to send file %, but cannot find it",fileToSend)      
@@ -253,7 +246,7 @@ class lunch_server(lunch_default_config):
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
-                        self.call("HELO_REQUEST_AVATAR "+str(self.tcp_port),client=addr[0])          
+                        self.call("HELO_REQUEST_AVATAR ",client=addr[0])          
                 
             elif "HELO"==cmd:
                 #someone tells me his name
