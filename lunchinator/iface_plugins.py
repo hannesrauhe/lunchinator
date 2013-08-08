@@ -1,10 +1,13 @@
 from yapsy.IPlugin import IPlugin
+from yapsy.PluginManager import PluginManagerSingleton
 import types
 
 class iface_plugin(IPlugin):    
     def __init__(self):
         self.options = None
         self.option_widgets = {}
+        manager = PluginManagerSingleton.get()
+        self.logger = manager.app.lunch_logger
         super(iface_plugin, self).__init__()
     
     def activate(self):

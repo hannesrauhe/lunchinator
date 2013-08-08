@@ -193,10 +193,6 @@ class lunch_default_config(object):
             return
         self.avatar_file = file_name
         self.config_file.set('general', 'avatar_file', str(file_name))
-        #legacy: write the filename to the avatar.cfg if user still has that
-        if os.path.exists(self.main_config_dir+"/avatar.cfg"):
-            with open(self.main_config_dir+"/avatar.cfg",'w') as f:
-                f.write(file_name)
         if force_write:
             self.write_config_to_hd()
         
