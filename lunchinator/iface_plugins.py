@@ -8,6 +8,7 @@ class iface_plugin(IPlugin):
         self.option_widgets = {}
         manager = PluginManagerSingleton.get()
         self.logger = manager.app.lunch_logger
+        self.shared_dict = manager.app.shared_dict
         super(iface_plugin, self).__init__()
     
     def activate(self):

@@ -23,7 +23,13 @@ class rot13(iface_gui_plugin):
     def create_widget(self):
         if (len(self.ls.last_messages)):
             self.w.encodeText(self.ls.get_last_msgs()[0][2])
-        return self.w.create_widget()
+        if self.shared_dict.has_key("tdtnotify_file"):
+            gtkimage = gtk.Image() 
+            gtkimage.set_from_file(self.shared_dict["tdtnotify_file"])
+            gtkimage.show()
+            return self.w.create_widget(gtkimage)
+        else:
+            return self.w.create_widget()
     
     def add_menu(self,menu):
         pass

@@ -46,6 +46,7 @@ class lunch_server(lunch_default_config):
            "gui" : iface_gui_plugin
            }) 
         self.init_done = threading.Event()
+        self.shared_dict = {} #for plugins
         
     def is_now_in_time_span(self,begin,end):
         try:

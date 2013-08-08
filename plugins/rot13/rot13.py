@@ -18,10 +18,12 @@ class rot13box(object):
         if plain:
             w.set_text(string.translate(plain, rot13))
         
-    def create_widget(self):  
+    def create_widget(self,additional_widget=None):  
         memtVBox = gtk.VBox()
         memtVBox.pack_start(self.entry, False, True, 10)
         memtVBox.pack_start(self.but, False, False, 10)
+        if additional_widget:
+            memtVBox.pack_start(additional_widget, False, False, 10)
         memtVBox.show_all()
         self.but.connect_object("clicked", self.enc, self.entry)
         return memtVBox
