@@ -1,0 +1,9 @@
+[Core]
+Name = TDTNotify
+Module = tdtnotify
+
+[Documentation]
+Author = Hannes Rauhe
+Version = 0.1
+Website = http://launchpad.de
+Description = Shows the latest picture from the last post of a tumblr blog
