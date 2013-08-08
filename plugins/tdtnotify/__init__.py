@@ -9,7 +9,7 @@ class tdtnotify(iface_called_plugin):
         super(tdtnotify, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
-        self.options = {"icon_file":sys.path[0]+"/images/mini_breakfast.png","blog_name":"tittendestages"}
+        self.options = {"icon_file":sys.path[0]+"/images/mini_breakfast.png","blog_name":"tittendestages","trigger_word":""}
         
     def activate(self):        
         iface_called_plugin.activate(self)
@@ -20,7 +20,7 @@ class tdtnotify(iface_called_plugin):
         iface_called_plugin.deactivate(self)
             
     def process_message(self,msg,addr,member_info):
-        if sys.platform.startswith('linux'):    
+        if sys.platform.startswith('linux') and (len(self.options['trigger_word'])==0 or msg.find(self.options['trigger_word'])!=-1):    
             try:
                 icon = self.options["icon_file"]
                 name = " ["+addr+"]"
@@ -39,8 +39,6 @@ class tdtnotify(iface_called_plugin):
                 subprocess.call(["notify-send","--icon="+icon, msg + name])
             except:
                 self.logger.error("TDT notify error "+str(sys.exc_info()[0]))
-        else:
-            self.incoming_call_win(msg,addr,member_info)
             
     def process_lunch_call(self,msg,ip,member_info):
         if sys.platform.startswith('linux'):
