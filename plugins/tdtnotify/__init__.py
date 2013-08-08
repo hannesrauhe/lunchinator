@@ -44,7 +44,7 @@ class tdtnotify(iface_called_plugin):
                 self.localFile.truncate()
                 self.localFile.write(pic.read())
                 self.localFile.flush()
-                subprocess.call(["notify-send","--icon="+icon, msg + name])
+                subprocess.call(["notify-send","--icon="+icon, name, msg])
                 self.last_time = time.time()
                 self.rotate_counter+=1
             except:

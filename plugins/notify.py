@@ -23,7 +23,7 @@ class Notify(iface_called_plugin):
     #            print ["notify-send","--icon="+icon, msg + " [" + member_info["name"] + "]"]
                 if member_info.has_key("name"):
                     name = " [" + member_info["name"] + "]"
-                subprocess.call(["notify-send","--icon="+icon, msg + name])
+                subprocess.call(["notify-send","--icon="+icon, name, msg])
             except:
                 print "notify error",sys.exc_info()[0]
         else:
