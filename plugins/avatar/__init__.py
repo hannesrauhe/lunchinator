@@ -1,4 +1,5 @@
 from lunchinator.iface_plugins import iface_general_plugin
+from yapsy.PluginManager import PluginManagerSingleton
 import gtk
 from l_avatar import l_avatar
 
