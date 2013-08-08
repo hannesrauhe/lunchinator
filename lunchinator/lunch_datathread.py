@@ -16,7 +16,7 @@ class DataSenderThread(threading.Thread):
         try:
             self.con.connect((self.receiver, self.tcp_port))            
         except socket.error as e:
-            print "Could not initiate connection to",self.receiver,e.strerror
+            print "Could not initiate connection to",self.receiver,"on Port",self.tcp_port,e.strerror
             raise
         
         sendfile = open(self.file_path, 'rb')           
