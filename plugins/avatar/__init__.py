@@ -1,5 +1,4 @@
-from lunchinator.iface_plugins import *
-from yapsy.PluginManager import PluginManagerSingleton
+from lunchinator.iface_plugins import iface_general_plugin
 import gtk
 from l_avatar import l_avatar
 
@@ -22,7 +21,7 @@ class avatar(iface_general_plugin):
     
     def _chooseFile(self,gtkimg):        
         dialog = gtk.FileChooserDialog(title="Choose Avatar Picture",action=gtk.FILE_CHOOSER_ACTION_OPEN,
-                                  buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK))
+                            buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK))
         
         fi = gtk.FileFilter()
         fi.set_name("Images")

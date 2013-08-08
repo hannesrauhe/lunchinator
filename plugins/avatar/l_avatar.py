@@ -1,6 +1,6 @@
 #!/usr/bin/python
-import socket,sys,os,hashlib,shutil
-import os, sys
+import hashlib, shutil
+import os
 import Image
 
 class l_avatar(object):
@@ -36,12 +36,3 @@ class l_avatar(object):
         
         config_ob.set_avatar_file(avatar_name, True)
         return config_ob.avatar_dir+"/"+avatar_name
-    
-if __name__ == "__main__":    
-    lpic = l_avatar()
-    
-    file_path = lpic.main_config_dir+"/userpic.jpg"
-    if len(sys.argv)>1:
-        file_path =sys.argv[1]
-    
-    lpic.use_as_avatar(file_path)

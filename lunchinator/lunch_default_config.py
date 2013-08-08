@@ -160,8 +160,6 @@ class lunch_default_config(object):
         return self.auto_update    
     def get_audio_file(self):
         return self.audio_file    
-    def get_icon_file(self):
-        return self.icon_file
     def get_avatar_dir(self):
         return self.avatar_dir        
     def get_avatar_file(self):
