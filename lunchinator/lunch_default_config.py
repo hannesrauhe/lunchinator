@@ -35,6 +35,7 @@ class lunch_default_config(object):
     user_name = ""
     avatar_file = ""    
     debug = False 
+    tcp_port = 50001
     
     '''file settings.cfg standard section '''
     auto_update = True   
@@ -76,6 +77,7 @@ class lunch_default_config(object):
         self.config_file.read(self.main_config_dir+'/settings.cfg')
         
         self.user_name = self.read_value_from_config_file(self.user_name,"general","user_name")
+        self.tcp_port = self.read_value_from_config_file(self.tcp_port,"general","tcp_port")
         
         self.auto_update = self.read_value_from_config_file(self.auto_update,"general","auto_update")
         self.default_lunch_begin = self.read_value_from_config_file(self.default_lunch_begin,"general","default_lunch_begin")
@@ -176,6 +178,8 @@ class lunch_default_config(object):
         return self.alarm_end_time
     def get_mute_timeout(self):
         return self.mute_timeout
+    def get_tcp_port(self):
+        return self.tcp_port
     
     def set_user_name(self,name,force_write=False):
         self.user_name = name
