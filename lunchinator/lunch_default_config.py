@@ -83,10 +83,13 @@ class lunch_default_config(object):
         self.default_lunch_begin = self.read_value_from_config_file(self.default_lunch_begin,"general","default_lunch_begin")
         self.default_lunch_end = self.read_value_from_config_file(self.default_lunch_end,"general","default_lunch_end")
         self.alarm_begin_time = self.read_value_from_config_file(self.alarm_begin_time,"general","alarm_begin_time")
-        self.alarm_end_time= self.read_value_from_config_file(self.alarm_end_time,"general","alarm_end_time")
+        self.alarm_end_time = self.read_value_from_config_file(self.alarm_end_time,"general","alarm_end_time")
         
         self.peer_timeout = self.read_value_from_config_file(self.peer_timeout, "general", "peer_timeout")
         self.mute_timeout = self.read_value_from_config_file(self.mute_timeout, "general", "mute_timeout")
+        
+        #not shown in settings-plugin - handled by avatar-plugin
+        self.avatar_file =  self.read_value_from_config_file(self.alarm_end_time,"general","avatar_file")
                      
         self.debug = False
                         
