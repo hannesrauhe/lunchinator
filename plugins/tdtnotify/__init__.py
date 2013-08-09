@@ -61,6 +61,9 @@ class tdtnotify(iface_called_plugin):
         
     def process_event(self,cmd,value,ip,member_info):
         if cmd=="HELO_TDTNOTIFY_NEW_PIC" or (time.time()-self.last_time) > (60*self.options["polling_time"]):
+            if not cmd=="HELO_TDTNOTIFY_NEW_PIC":
+                self.ls.call("HELO_TDTNOTIFY_POLL "+str(self.options["polling_time"]))
+                
             if self.download_pic(value=="force"):
                 self.ls.call("HELO_TDTNOTIFY_NEW_PIC "+self.pic_url)
                 self.notify()       
