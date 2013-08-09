@@ -24,6 +24,7 @@ class tdtnotify(iface_called_plugin):
     
     def deactivate(self):        
         self.localFile.close()
+        del self.shared_dict["tdtnotify_file"]
         iface_called_plugin.deactivate(self)
             
     def process_message(self,msg,addr,member_info):
