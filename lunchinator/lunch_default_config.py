@@ -29,15 +29,11 @@ class lunch_default_config(object):
     ''' not in files'''    
     next_lunch_begin = None
     next_lunch_end = None
-    
-    '''changed by using files'''
     audio_file = sys.path[0]+"/sounds/sonar.wav"
     user_name = ""
     avatar_file = ""    
     debug = False 
     tcp_port = 50001
-    
-    '''file settings.cfg standard section '''
     auto_update = True   
     default_lunch_begin = "12:15"
     default_lunch_end = "12:45"
@@ -45,6 +41,7 @@ class lunch_default_config(object):
     alarm_end_time = "13:00"
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30
+    reset_icon_time = 5
     
     lunch_logger = logging.getLogger("LunchinatorLogger")
     
@@ -87,6 +84,7 @@ class lunch_default_config(object):
         
         self.peer_timeout = self.read_value_from_config_file(self.peer_timeout, "general", "peer_timeout")
         self.mute_timeout = self.read_value_from_config_file(self.mute_timeout, "general", "mute_timeout")
+        self.reset_icon_time = self.read_value_from_config_file(self.reset_icon_time, "general", "reset_icon_time")
         
         #not shown in settings-plugin - handled by avatar-plugin
         self.avatar_file =  self.read_value_from_config_file(self.alarm_end_time,"general","avatar_file")
@@ -181,6 +179,8 @@ class lunch_default_config(object):
         return self.mute_timeout
     def get_tcp_port(self):
         return self.tcp_port
+    def get_reset_icon_time(self):
+        return self.reset_icon_time
     
     def set_user_name(self,name,force_write=False):
         self.user_name = name

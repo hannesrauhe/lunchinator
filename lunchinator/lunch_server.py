@@ -384,6 +384,8 @@ class lunch_server(lunch_default_config):
             s.settimeout(5.0)
             self.init_done.set()
             while self.running:
+                if self.new_msg and (time()-mktime(self.last_messages[0][0]))>(self.reset_icon_time*60):
+                    self.new_msg=False
                 try:
                     daten, addr = s.recvfrom(1024) 
                     
@@ -411,7 +413,7 @@ class lunch_server(lunch_default_config):
                             #just wait for the next time when i have to announce my name
                             announce_name+=1
                     if self.my_master==-1:
-                        self.lunch_logger.debug("no master found yet")
+                        self.lunch_logger.info("no master found yet")
                     self.lunch_logger.debug(str(self.members.keys()))
         except socket.error as e:
             print e
