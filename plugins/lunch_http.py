@@ -12,7 +12,7 @@ class http_server_thread(threading.Thread):
         threading.Thread.__init__(self)
         
     def run(self):
-        print "Starting the HTTP Server on Port",self.port
+        self.logger.info("Starting the HTTP Server on Port %d"%self.port)
         os.chdir(self.html_dir)
         SocketServer.ThreadingTCPServer.allow_reuse_address = True
         Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
@@ -20,7 +20,7 @@ class http_server_thread(threading.Thread):
 
         self.server.serve_forever()
         
-        print "Stopping HTTP Server"
+        self.logger.info("Stopping HTTP Server")
         
     def stop_server(self):
         if self.server:            
@@ -59,7 +59,7 @@ class lunch_http(iface_called_plugin):
         pass
     
     def process_event(self,cmd,value,ip,member_info):
-        if cmd in ["HELO_INFO","HELO_DICT","HELO_MASTER"]:
+        if cmd in ["HELO_INFO","HELO_DICT","HELO_REQUEST_DICT"]:
             self.write_info_html()
                 
     def write_info_html(self):
@@ -81,4 +81,4 @@ class lunch_http(iface_called_plugin):
             indexhtml.write(self.ls.version)
             indexhtml.close()
         except:
-            print "problem while writing html file"
+            self.logger("problem while writing html file")
