@@ -12,7 +12,6 @@ class http_server_thread(threading.Thread):
         threading.Thread.__init__(self)
         
     def run(self):
-        self.logger.info("Starting the HTTP Server on Port %d"%self.port)
         os.chdir(self.html_dir)
         SocketServer.ThreadingTCPServer.allow_reuse_address = True
         Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
@@ -20,7 +19,6 @@ class http_server_thread(threading.Thread):
 
         self.server.serve_forever()
         
-        self.logger.info("Stopping HTTP Server")
         
     def stop_server(self):
         if self.server:            
@@ -40,8 +38,10 @@ class lunch_http(iface_called_plugin):
         
     def activate(self):
         iface_called_plugin.activate(self)
+        self.logger.info("Starting the HTTP Server on Port %d"%self.options["http_port"])
         self.s_thread = http_server_thread(self.options["http_port"],self.options["html_dir"])
         self.s_thread.start()
+        self.logger.info("Stopping HTTP Server")
         if not os.path.exists(self.options["html_dir"]+"/index.html"):
             self.write_info_html()
         
