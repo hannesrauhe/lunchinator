@@ -41,12 +41,11 @@ class lunch_http(iface_called_plugin):
         self.logger.info("Starting the HTTP Server on Port %d"%self.options["http_port"])
         self.s_thread = http_server_thread(self.options["http_port"],self.options["html_dir"])
         self.s_thread.start()
-        self.logger.info("Stopping HTTP Server")
         if not os.path.exists(self.options["html_dir"]+"/index.html"):
             self.write_info_html()
         
     def deactivate(self):
-        print "trying to stop HTTP Server"
+        self.logger.info("Stopping HTTP Server")
         if self.s_thread:
             self.s_thread.stop_server()
             self.s_thread.join()
