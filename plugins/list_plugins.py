@@ -33,7 +33,7 @@ class list_plugins(iface_gui_plugin):
             txt+=pluginInfo.name + " - "
 #            txt+=pluginInfo.path +" "
 #            txt+=pluginInfo.version +" "
-            txt+=str(pluginInfo.author) +", "
+#            txt+=str(pluginInfo.author) +", "
 #            txt+=pluginInfo.copyright +" "
 #            txt+=pluginInfo.website +" "
             txt+=pluginInfo.description +" "

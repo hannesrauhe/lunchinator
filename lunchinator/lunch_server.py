@@ -246,8 +246,7 @@ class lunch_server(lunch_default_config):
                     ds = DataSenderThread(addr[0],fileToSend, other_tcp_port)
                     ds.start()
                 else:
-                    self.lunch_logger.error("Want to send file %s, but cannot find it"%(fileToSend))      
-                
+                    self.lunch_logger.error("Want to send file %s, but cannot find it"%(fileToSend))     
             elif cmd.startswith("HELO_INFO"):
                 #someone sends his info
                 self.member_info[addr[0]] = json.loads(value)      

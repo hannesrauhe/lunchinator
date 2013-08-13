@@ -87,7 +87,7 @@ class lunch_default_config(object):
         self.reset_icon_time = self.read_value_from_config_file(self.reset_icon_time, "general", "reset_icon_time")
         
         #not shown in settings-plugin - handled by avatar-plugin
-        self.avatar_file =  self.read_value_from_config_file(self.alarm_end_time,"general","avatar_file")
+        self.avatar_file =  self.read_value_from_config_file(self.avatar_file,"general","avatar_file")
                      
         self.debug = False
                         
