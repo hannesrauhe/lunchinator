@@ -5,5 +5,5 @@ Module = twitter_status
 [Documentation]
 Author = Hannes Rauhe
 Version = 0.1
-Website = http://launchpad.de
+Website = http://www.lunchinator.de
 Description = Posts lunch to your timeline if you get a lunchcall

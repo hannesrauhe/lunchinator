@@ -5,5 +5,5 @@ Module = list_plugins
 [Documentation]
 Author = Hannes Rauhe
 Version = 0.1
-Website = http://launchpad.de
+Website = http://www.lunchinator.de
 Description = Displays the information about available plugins
