@@ -47,7 +47,7 @@ class Notify(iface_called_plugin):
             self.logger.error("notify error: sound error")
     
         try:
-            subprocess.call(["notify error: eject", "-T", "/dev/cdrom"])
+            subprocess.call(["eject", "-T", "/dev/cdrom"])
         except:
             self.logger.error("notify error: eject error (close)")
         
