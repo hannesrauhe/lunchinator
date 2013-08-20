@@ -236,7 +236,6 @@ class lunchinator(threading.Thread):
         plugin_widgets=[]        
         try:
             for pluginInfo in self.ls.plugin_manager.getAllPlugins():
-                print pluginInfo.name
                 if pluginInfo.plugin_object.is_activated:
                     try:
                         w = pluginInfo.plugin_object.create_options_widget()
