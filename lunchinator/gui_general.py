@@ -16,17 +16,26 @@ class lunchinator(threading.Thread):
         self.ls = lunch_server(noUpdates)  
     
     def run(self):
-        self.ls.start_server()      
+        self.ls.start_server()   
+        
+    def getPlugins(self, cats):
+        allPlugins = {}
+        for p_cat in cats:
+            for info in self.ls.plugin_manager.getPluginsOfCategory(p_cat):
+                allPlugins[info.name] = (p_cat, info.plugin_object)
+        return allPlugins
+           
     
     def init_menu(self):        
         #create the plugin submenu
         plugin_menu = gtk.Menu()
-        for p_cat in ['general','called','gui']:
-            for  info in self.ls.plugin_manager.getPluginsOfCategory(p_cat):
-                p_item = gtk.CheckMenuItem(info.name)            
-                p_item.set_active(info.plugin_object.is_activated)                
-                p_item.connect("activate", self.toggle_plugin,p_cat)                    
-                plugin_menu.append(p_item)
+        
+        allPlugins= self.getPlugins(['general','called','gui'])
+        for pluginName in sorted(allPlugins.iterkeys()):
+            p_item = gtk.CheckMenuItem(pluginName)            
+            p_item.set_active(allPlugins[pluginName][1].is_activated)                
+            p_item.connect("activate", self.toggle_plugin,allPlugins[pluginName][0])                    
+            plugin_menu.prepend(p_item)
         plugin_menu.show_all()
         
         #main _menu
