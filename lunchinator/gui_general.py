@@ -13,7 +13,8 @@ class lunchinator(threading.Thread):
     
     def __init__(self, noUpdates = False):           
         threading.Thread.__init__(self)  
-        self.ls = lunch_server(noUpdates)  
+        self.ls = lunch_server(noUpdates)
+        self.nb = None
     
     def run(self):
         self.ls.start_server()   
@@ -153,7 +154,7 @@ class lunchinator(threading.Thread):
             for pluginInfo in self.ls.plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
                     try:
-                        plugin_widgets.append((pluginInfo.name,pluginInfo.plugin_object.create_widget()))
+                        plugin_widgets.append((pluginInfo,pluginInfo.plugin_object.create_widget()))
                     except:
                         sw = gtk.ScrolledWindow()
                         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -165,21 +166,25 @@ class lunchinator(threading.Thread):
                         sw.show()
                         textview.show()
                         textbuffer.set_text("Error while including plugin"+str(sys.exc_info()))                                      
-                        plugin_widgets.append((pluginInfo.name,sw))
+                        plugin_widgets.append((pluginInfo,sw))
                         self.ls.lunch_logger.error("error while including plugin %s with options: %s  %s",pluginInfo.name, str(pluginInfo.plugin_object.options), str(sys.exc_info()))
         except:
             self.ls.lunch_logger.error("error while including plugins %s", str(sys.exc_info()))
+            
+        plugin_widgets.sort(key=lambda tup: tup[0].name)
+        plugin_widgets.sort(key=lambda tup: tup[0].plugin_object.sortOrder)
+            
         if len(plugin_widgets)==1:
             box0.size_allocate(gtk.gdk.Rectangle(0,0,100,100))
             box0.pack_start(plugin_widgets[0][1], True, True, 0)
         elif len(plugin_widgets)>1:
-            nb = StoredOrderNotebook(["Webcam"])
-            nb.set_tab_pos(gtk.POS_TOP)
-            for name,widget in plugin_widgets:
-                nb.insert_page_in_order(widget,name)
-                nb.set_tab_reorderable(widget, True)
-            nb.show()
-            box0.pack_start(nb, True, True, 0)
+            self.nb = StoredOrderNotebook(["Webcam"])
+            self.nb.set_tab_pos(gtk.POS_TOP)
+            for info,widget in plugin_widgets:
+                self.nb.insert_page_in_order(widget,info)
+                self.nb.set_tab_reorderable(widget, True)
+            self.nb.show()
+            box0.pack_start(self.nb, True, True, 0)
         box0.show()
         
         window.add(box0)
@@ -188,7 +193,20 @@ class lunchinator(threading.Thread):
         button.connect_object("clicked", gtk.Widget.activate, entry)
         entry2.connect("activate", self.clicked_add_host)
         button2.connect_object("clicked", gtk.Widget.activate, entry2)
-#        window.connect("delete-event",lambda w,x: sys.stdout.write(str(nb.get_order())+str(x)))      
+        window.connect("delete-event", self.windowClosed)      
+            
+    def windowClosed(self, w, *data):
+        try:
+            order = []
+            for i in range(len(self.nb)):
+                widget = self.nb.get_nth_page(i)
+                order.append(self.nb.get_tab_label_text(widget))
+            for pluginInfo in self.ls.plugin_manager.getPluginsOfCategory("gui"):
+                pluginInfo.plugin_object.sortOrder = order.index(pluginInfo.name)
+                pluginInfo.plugin_object.save_sort_order()
+            
+        except:
+            self.ls.lunch_logger.error("error while including plugins %s", str(sys.exc_info()))
             
     def clicked_send_msg(self,w,*data):
         if len(data):
@@ -218,6 +236,7 @@ class lunchinator(threading.Thread):
         plugin_widgets=[]        
         try:
             for pluginInfo in self.ls.plugin_manager.getAllPlugins():
+                print pluginInfo.name
                 if pluginInfo.plugin_object.is_activated:
                     try:
                         w = pluginInfo.plugin_object.create_options_widget()
@@ -372,15 +391,14 @@ class MessageTable(UpdatingTable):
         return self.listStore
     
 class StoredOrderNotebook(gtk.Notebook):
-    order = []
-    unorder = []
     def __init__(self,order):
         gtk.Notebook.__init__(self)
         self.order = order
+        self.widgets = []
     
-    def insert_page_in_order(self, w, name):
-        self.unorder.append(name)
-        self.append_page(w, gtk.Label(name))
+    def insert_page_in_order(self, w, info):
+        self.widgets.append(w)
+        self.append_page(w, gtk.Label(info.name))
         
     def get_order(self):
         return self.order

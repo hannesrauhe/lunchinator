@@ -103,7 +103,11 @@ class iface_general_plugin(iface_plugin):
         """
         iface_plugin.deactivate(self)
 
-class iface_gui_plugin(iface_plugin):    
+class iface_gui_plugin(iface_plugin):
+    def __init__(self):
+        super(iface_gui_plugin, self).__init__()
+        self.sortOrder = -1
+    
     def activate(self):
         """
         Call the parent class's acivation method
@@ -117,6 +121,20 @@ class iface_gui_plugin(iface_plugin):
         Just call the parent class's method
         """
         iface_plugin.deactivate(self)
+        
+        
+    def read_options_from_file(self):
+        super(iface_gui_plugin, self).read_options_from_file()
+        
+        if self.hasConfigOption("sort_order"):
+            new_v = self.getConfigOption("sort_order")
+            try:
+                self.sortOrder = int(new_v)
+            except:
+                print "could not read sort order configuration"
+        
+    def save_sort_order(self):
+        self.setConfigOption("sort_order",str(self.sortOrder))
         
     def create_widget(self):
         return gtk.Label("The plugin should show its content here")
