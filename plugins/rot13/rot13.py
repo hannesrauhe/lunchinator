@@ -3,13 +3,17 @@ import string #fixed typo was using
 
 class rot13box(object):
     def __init__(self):
-        self.entry = gtk.Entry()  
-        self.but = gtk.Button("ROT13")
+        self.entry = None
+        self.but = None
         self.add_widget = None
+        self.buffer = None
         
     def encodeText(self,text):
-        self.entry.set_text(text)
-        self.enc(self.entry)
+        if self.entry is not None:
+            self.entry.set_text(text)
+            self.enc(self.entry)
+        else:
+            self.buffer = text
         
     def enc(self,w):        
         rot13 = string.maketrans( 
@@ -21,7 +25,12 @@ class rot13box(object):
         if self.add_widget:
             self.add_widget.show()
         
-    def create_widget(self,additional_widget=None):  
+    def create_widget(self,additional_widget=None):
+        self.entry = gtk.Entry()  
+        self.but = gtk.Button("ROT13")
+        if self.buffer is not None:
+            self.encodeText(self.buffer)
+        
         memtVBox = gtk.VBox()
         memtVBox.pack_start(self.entry, False, True, 10)
         memtVBox.pack_start(self.but, False, False, 10)
