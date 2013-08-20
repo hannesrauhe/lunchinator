@@ -178,10 +178,10 @@ class lunchinator(threading.Thread):
             box0.size_allocate(gtk.gdk.Rectangle(0,0,100,100))
             box0.pack_start(plugin_widgets[0][1], True, True, 0)
         elif len(plugin_widgets)>1:
-            self.nb = StoredOrderNotebook(["Webcam"])
+            self.nb = gtk.Notebook()
             self.nb.set_tab_pos(gtk.POS_TOP)
             for info,widget in plugin_widgets:
-                self.nb.insert_page_in_order(widget,info)
+                self.nb.append_page(widget, gtk.Label(info.name))
                 self.nb.set_tab_reorderable(widget, True)
             self.nb.show()
             box0.pack_start(self.nb, True, True, 0)
@@ -389,15 +389,3 @@ class MessageTable(UpdatingTable):
             self.listStore.append(i)
         return self.listStore
     
-class StoredOrderNotebook(gtk.Notebook):
-    def __init__(self,order):
-        gtk.Notebook.__init__(self)
-        self.order = order
-        self.widgets = []
-    
-    def insert_page_in_order(self, w, info):
-        self.widgets.append(w)
-        self.append_page(w, gtk.Label(info.name))
-        
-    def get_order(self):
-        return self.order
