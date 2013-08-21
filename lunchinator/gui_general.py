@@ -202,11 +202,11 @@ class lunchinator(threading.Thread):
                 widget = self.nb.get_nth_page(i)
                 order.append(self.nb.get_tab_label_text(widget))
             for pluginInfo in self.ls.plugin_manager.getPluginsOfCategory("gui"):
-                pluginInfo.plugin_object.sortOrder = order.index(pluginInfo.name)
-                pluginInfo.plugin_object.save_sort_order()
-            
+                if pluginInfo.name in order:
+                    pluginInfo.plugin_object.sortOrder = order.index(pluginInfo.name)
+                    pluginInfo.plugin_object.save_sort_order()
         except:
-            self.ls.lunch_logger.error("error while including plugins %s", str(sys.exc_info()))
+            self.ls.lunch_logger.error("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
             
     def clicked_send_msg(self,w,*data):
         if len(data):
