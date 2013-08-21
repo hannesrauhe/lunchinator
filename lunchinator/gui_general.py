@@ -67,10 +67,16 @@ class lunchinator(threading.Thread):
         return self._menu
             
     def toggle_plugin(self,w,*data):
+        p_name = w.get_label()
+        p_cat = data[0] 
         if w.get_active():
-            self.ls.plugin_manager.activatePluginByName(w.get_label(),data[0])
+            po = self.ls.plugin_manager.activatePluginByName(p_name,p_cat)
+            if p_cat=="gui" and self.nb:
+                self.nb.insert_page(self.window_msgCheckCreatePluginWidget(po,p_name), gtk.Label(p_name),0)
+                self.nb.show()
+                self.nb.set_current_page(0)
         else:
-            self.ls.plugin_manager.deactivatePluginByName(w.get_label(),data[0])  
+            self.ls.plugin_manager.deactivatePluginByName(p_name,p_cat)  
         self.ls.write_config_to_hd()
         
     def stop_server(self,w):        
@@ -93,7 +99,24 @@ class lunchinator(threading.Thread):
     def quit(self,w): 
         self.stop_server(w)
         os._exit(0)     
-        
+      
+    def window_msgCheckCreatePluginWidget(self,plugin_object,p_name):
+        sw = None
+        try:
+            sw = plugin_object.create_widget()
+        except:
+            self.ls.lunch_logger.error("while including plugin %s with options: %s  %s"%(p_name, str(plugin_object.options), str(sys.exc_info())))
+            sw = gtk.ScrolledWindow()
+            sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+            textview = gtk.TextView()
+            textview.set_size_request(400,200)
+            textview.set_wrap_mode(gtk.WRAP_WORD)
+            textbuffer = textview.get_buffer()
+            sw.add(textview)
+            sw.show()
+            textview.show()
+            textbuffer.set_text("Error while including plugin "+str(sys.exc_info()))     
+        return sw
         
     def window_msg(self, w):    
         self.reset_new_msgs() 
@@ -153,21 +176,7 @@ class lunchinator(threading.Thread):
         try:
             for pluginInfo in self.ls.plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
-                    try:
-                        plugin_widgets.append((pluginInfo,pluginInfo.plugin_object.create_widget()))
-                    except:
-                        sw = gtk.ScrolledWindow()
-                        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-                        textview = gtk.TextView()
-                        textview.set_size_request(400,200)
-                        textview.set_wrap_mode(gtk.WRAP_WORD)
-                        textbuffer = textview.get_buffer()
-                        sw.add(textview)
-                        sw.show()
-                        textview.show()
-                        textbuffer.set_text("Error while including plugin "+str(sys.exc_info()))                                      
-                        plugin_widgets.append((pluginInfo,sw))
-                        self.ls.lunch_logger.error("while including plugin %s with options: %s  %s"%(pluginInfo.name, str(pluginInfo.plugin_object.options), str(sys.exc_info())))
+                    plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(pluginInfo.plugin_object,pluginInfo.name)))                    
         except:
             self.ls.lunch_logger.error("while including plugins %s"%str(sys.exc_info()))
             
@@ -193,9 +202,9 @@ class lunchinator(threading.Thread):
         button.connect_object("clicked", gtk.Widget.activate, entry)
         entry2.connect("activate", self.clicked_add_host)
         button2.connect_object("clicked", gtk.Widget.activate, entry2)
-        window.connect("delete-event", self.windowClosed)      
+        window.connect("delete-event", self.window_msgClosed)      
             
-    def windowClosed(self, w, *data):
+    def window_msgClosed(self, w, *data):
         try:
             order = []
             for i in range(len(self.nb)):
@@ -207,6 +216,7 @@ class lunchinator(threading.Thread):
                     pluginInfo.plugin_object.save_sort_order()
         except:
             self.ls.lunch_logger.error("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
+        self.nb = None
             
     def clicked_send_msg(self,w,*data):
         if len(data):
