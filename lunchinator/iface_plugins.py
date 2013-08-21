@@ -131,7 +131,7 @@ class iface_gui_plugin(iface_plugin):
             try:
                 self.sortOrder = int(new_v)
             except:
-                print "could not read sort order configuration"
+                self.logger.warning("could not read sort order configuration")
         
     def save_sort_order(self):
         self.setConfigOption("sort_order",str(self.sortOrder))

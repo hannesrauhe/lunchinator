@@ -165,11 +165,11 @@ class lunchinator(threading.Thread):
                         sw.add(textview)
                         sw.show()
                         textview.show()
-                        textbuffer.set_text("Error while including plugin"+str(sys.exc_info()))                                      
+                        textbuffer.set_text("Error while including plugin "+str(sys.exc_info()))                                      
                         plugin_widgets.append((pluginInfo,sw))
-                        self.ls.lunch_logger.error("error while including plugin %s with options: %s  %s",pluginInfo.name, str(pluginInfo.plugin_object.options), str(sys.exc_info()))
+                        self.ls.lunch_logger.error("while including plugin %s with options: %s  %s"%(pluginInfo.name, str(pluginInfo.plugin_object.options), str(sys.exc_info())))
         except:
-            self.ls.lunch_logger.error("error while including plugins %s", str(sys.exc_info()))
+            self.ls.lunch_logger.error("while including plugins %s"%str(sys.exc_info()))
             
         plugin_widgets.sort(key=lambda tup: tup[0].name)
         plugin_widgets.sort(key=lambda tup: tup[0].plugin_object.sortOrder)
