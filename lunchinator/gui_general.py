@@ -71,10 +71,18 @@ class lunchinator(threading.Thread):
         p_cat = data[0] 
         if w.get_active():
             po = self.ls.plugin_manager.activatePluginByName(p_name,p_cat)
+            pi = self.ls.plugin_manager.getPluginByName(p_name,p_cat)
             if p_cat=="gui" and self.nb:
-                self.nb.insert_page(self.window_msgCheckCreatePluginWidget(po,p_name), gtk.Label(p_name),0)
+                index = 0
+                if pi.plugin_object.sortOrder >= 0:
+                    index = pi.plugin_object.sortOrder
+                    if index > len(self.nb):
+                        index = len(self.nb)
+                widget = self.window_msgCheckCreatePluginWidget(po,p_name)
+                self.nb.insert_page(widget, gtk.Label(p_name),index)
+                self.nb.set_tab_reorderable(widget, True)
                 self.nb.show()
-                self.nb.set_current_page(0)
+                self.nb.set_current_page(index)
         else:
             self.ls.plugin_manager.deactivatePluginByName(p_name,p_cat)  
         self.ls.write_config_to_hd()
