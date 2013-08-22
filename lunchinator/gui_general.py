@@ -255,7 +255,7 @@ class lunchinator(threading.Thread):
                         plugin_widgets.append((pluginInfo.name,gtk.Label("Error while including plugin")))
                         self.ls.lunch_logger.error("while including plugin %s in settings window: %s",pluginInfo.name, str(sys.exc_info()))
         except:
-            self.ls.lunch_logger.error("error while including plugins in settings window: %s", str(sys.exc_info()))
+            self.ls.lunch_logger.error("while including plugins in settings window: %s", str(sys.exc_info()))
         for name,widget in plugin_widgets:
             nb.append_page(widget,gtk.Label(name))
         nb.show_all()

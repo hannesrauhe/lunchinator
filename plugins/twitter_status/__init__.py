@@ -90,6 +90,7 @@ class twitter_status(iface_called_plugin):
                 for ment in ments:
                     tweet_user = ment['user']["screen_name"]
                     tweet_text = ment['text']
+                    reply = ""
                     if tweet_user in self.other_twitter_users.values():
                         if "lunch" in tweet_text:
                             reply = "OK, @%s, I called for lunch"%(tweet_user)
@@ -98,7 +99,7 @@ class twitter_status(iface_called_plugin):
                         self.ls.call("Remote call by %s: %s"%(tweet_user,tweet_text))
                     else:
                         reply = "Sorry, @%s, you're not authorized to call"%(tweet_user)
-                self.twitter.statuses.update(status=reply[:140])
+                    self.twitter.statuses.update(status=reply[:140])
             
     def create_options_widget(self):
         import gtk
