@@ -49,7 +49,7 @@ class twitter_status(iface_called_plugin):
                 self.ls.call("HELO_TWITTER_REMOTE %s"%self.remote_account)
             except:
                 self.is_remote_account = False
-                self.logger.error("Authentication with twitter was unsuccessful. Check your key and secret.",sys.exc_info()[0])
+                self.logger.error("Authentication with twitter was unsuccessful. Check your key and secret. %s"%str(sys.exc_info()))
         else:
             self.is_remote_account = False
         
