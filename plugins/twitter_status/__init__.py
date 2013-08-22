@@ -95,7 +95,7 @@ class twitter_status(iface_called_plugin):
                             reply = "OK, @%s, I called for lunch"%(tweet_user)
                         else:
                             reply = "OK, @%s, I sent your message around"%(tweet_user)
-                        self.ls.call("Remote call by %s: %s"%(tweet_user,tweet_text),client="lu256131")
+                        self.ls.call("Remote call by %s: %s"%(tweet_user,tweet_text))
                     else:
                         reply = "Sorry, @%s, you're not authorized to call"%(tweet_user)
                 self.twitter.statuses.update(status=reply[:140])
