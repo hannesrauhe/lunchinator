@@ -12,7 +12,7 @@ class twitter_status(iface_called_plugin):
         super(twitter_status, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
-        self.options = {"key":"","secret":"","twitter_account":""}
+        self.options = {"key":"","secret":"","twitter_account":"","polling_time":1}
         self.last_time=0
         self.last_since_id=0
         self.other_twitter_users={}
@@ -37,9 +37,7 @@ class twitter_status(iface_called_plugin):
                 #for when I'm bored -> implementing remote calls via twitter
                 ments = self.twitter.statuses.mentions_timeline()
                 if len(ments):
-                    self.last_since_id = ments[0].id_str
-                    pp = pprint.PrettyPrinter()
-                    pp.pprint(ments)
+                    self.last_since_id = ments[0]['id']
                 else:
                     self.last_since_id = 0
                 self.last_time = time.time()
@@ -58,8 +56,7 @@ class twitter_status(iface_called_plugin):
         
     def process_message(self,msg,addr,member_info):
         pass
-#        if (time.time()-self.last_time) > (60*1):
-#            self.twitter.statuses.mentions_timeline()
+
             
     def process_lunch_call(self,msg,ip,member_info):
         if self.twitter:
@@ -73,7 +70,7 @@ class twitter_status(iface_called_plugin):
     
     def process_event(self,cmd,value,ip,member_info):
         if cmd=="HELO_TWITTER_USER":
-            self.other_twitter_users[ip]=value
+            self.other_twitter_users[ip]=value[1:] if value[0]=="@" else value
         elif cmd=="HELO_TWITTER_REMOTE":
             self.remote_account = value
             self.remote_user = member_info["name"] if member_info.has_key("name") else ip
@@ -84,9 +81,24 @@ class twitter_status(iface_called_plugin):
                 self.logger.warning("No Twitter Account given - Remote Calls won't work")
                 
         
-        if self.is_remote_account and (time.time()-self.last_time) > (60*5):
-            self.ls.call("HELO_TWITTER_REMOTE %s"%self.remote_account)
+        if self.is_remote_account and (time.time()-self.last_time) > (60*self.options["polling_time"]):
             self.last_time=time.time()
+            self.ls.call("HELO_TWITTER_REMOTE %s"%self.remote_account)
+            ments = self.twitter.statuses.mentions_timeline(since_id=self.last_since_id)
+            if len(ments):
+                self.last_since_id = ments[0]['id']
+                for ment in ments:
+                    tweet_user = ment['user']["screen_name"]
+                    tweet_text = ment['text']
+                    if tweet_user in self.other_twitter_users.values():
+                        if "lunch" in tweet_text:
+                            reply = "OK, @%s, I called for lunch"%(tweet_user)
+                        else:
+                            reply = "OK, @%s, I sent your message around"%(tweet_user)
+                        self.ls.call("Remote call by %s: %s"%(tweet_user,tweet_text),client="lu256131")
+                    else:
+                        reply = "Sorry, @%s, you're not authorized to call"%(tweet_user)
+                self.twitter.statuses.update(status=reply[:140])
             
     def create_options_widget(self):
         import gtk
@@ -96,7 +108,7 @@ class twitter_status(iface_called_plugin):
             if len(self.remote_account)==0:
                 msg = "Nobody in your network has configured a remote account - remote calls not possible"
             else:
-                msg = "Mention %s in a tweet with the word 'lunch' in it to trigger a remote call from %s"%(self.remote_account,self.remote_user)
+                msg = "Mention %s in a tweet to trigger a remote call from %s"%(self.remote_account,self.remote_user)
         else:
             msg = "Fill in your twitter account to allow remote lunch calls from it"
         
