@@ -1,9 +1,9 @@
 [Core]
-Name = Twitter Status
+Name = Twitter Remote Calls
 Module = twitter_status
 
 [Documentation]
 Author = Hannes Rauhe
 Version = 0.1
 Website = http://www.lunchinator.de
-Description = Posts lunch to your timeline if you get a lunchcall
+Description = Allows twitter users to activate lunch-calls remotely
