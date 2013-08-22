@@ -44,6 +44,7 @@ class twitter_status(iface_called_plugin):
                 self.last_time = time.time()
                 self.is_remote_account = True
                 self.remote_account="@lunchinator"
+                self.options["twitter_account"]=self.remote_account
                 self.ls.call("HELO_TWITTER_REMOTE %s"%self.remote_account)
             except:
                 self.is_remote_account = False
@@ -77,13 +78,14 @@ class twitter_status(iface_called_plugin):
             self.remote_user = member_info["name"] if member_info.has_key("name") else ip
                 
             if len(self.options["twitter_account"]):
-                self.ls.call("HELO_TWITTER_USER %s"%(self.options["twitter_account"]))
+                self.ls.call("HELO_TWITTER_USER %s"%(self.options["twitter_account"]),client=ip)
             else:
                 self.logger.warning("No Twitter Account given - Remote Calls won't work")
                 
         
         if self.is_remote_account and (time.time()-self.last_time) > (60*5):
             self.ls.call("HELO_TWITTER_REMOTE %s"%self.remote_account)
+            self.last_time=time.time()
             
     def create_options_widget(self):
         import gtk
