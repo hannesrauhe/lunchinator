@@ -70,7 +70,10 @@ class twitter_status(iface_called_plugin):
     
     def process_event(self,cmd,value,ip,member_info):
         if cmd=="HELO_TWITTER_USER":
-            self.other_twitter_users[ip]=value[1:] if value[0]=="@" else value
+            screen_name = value[1:] if value[0]=="@" else value
+            if not self.other_twitter_users.has_key(ip) or self.other_twitter_users[ip]!=screen_name:
+                self.other_twitter_users[ip]=screen_name
+                self.twitter.friendship.create(screen_name=screen_name)
         elif cmd=="HELO_TWITTER_REMOTE":
             self.remote_account = value
             self.remote_user = member_info["name"] if member_info.has_key("name") else ip
