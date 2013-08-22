@@ -35,12 +35,13 @@ class twitter_status(iface_called_plugin):
                 self.twitter = Twitter(auth=OAuth(
                     oauth_token, oauth_secret, self.getConfigOption("key") ,self.getConfigOption("secret") ))
                 #for when I'm bored -> implementing remote calls via twitter
-#                ments = self.twitter.statuses.mentions_timeline()
-#                if len(ments):
-#                    self.last_since_id = ments[0].id_str
-#                    pp = pprint.PrettyPrinter()
-#                    pp.pprint(ments)
-#                self.last_since_id
+                ments = self.twitter.statuses.mentions_timeline()
+                if len(ments):
+                    self.last_since_id = ments[0].id_str
+                    pp = pprint.PrettyPrinter()
+                    pp.pprint(ments)
+                else:
+                    self.last_since_id = 0
                 self.last_time = time.time()
                 self.is_remote_account = True
                 self.remote_account="@lunchinator"
