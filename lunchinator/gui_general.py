@@ -82,18 +82,10 @@ class lunchinator(threading.Thread):
         p_cat = data[0] 
         if w.get_active():
             po = self.ls.plugin_manager.activatePluginByName(p_name,p_cat)
-            pi = self.ls.plugin_manager.getPluginByName(p_name,p_cat)
             if p_cat=="gui" and self.nb:
-                index = 0
-                if pi.plugin_object.sortOrder >= 0:
-                    index = pi.plugin_object.sortOrder
-                    if index > len(self.nb):
-                        index = len(self.nb)
-                widget = self.window_msgCheckCreatePluginWidget(po,p_name)
-                self.nb.insert_page(widget, gtk.Label(p_name),index)
-                self.nb.set_tab_reorderable(widget, True)
+                self.nb.insert_page(self.window_msgCheckCreatePluginWidget(po,p_name), gtk.Label(p_name),0)
                 self.nb.show()
-                self.nb.set_current_page(index)
+                self.nb.set_current_page(0)
         else:
             self.ls.plugin_manager.deactivatePluginByName(p_name,p_cat)  
         self.ls.write_config_to_hd()
@@ -274,7 +266,7 @@ class lunchinator(threading.Thread):
                         plugin_widgets.append((pluginInfo.name,gtk.Label("Error while including plugin")))
                         self.ls.lunch_logger.error("while including plugin %s in settings window: %s",pluginInfo.name, str(sys.exc_info()))
         except:
-            self.ls.lunch_logger.error("error while including plugins in settings window: %s", str(sys.exc_info()))
+            self.ls.lunch_logger.error("while including plugins in settings window: %s", str(sys.exc_info()))
         for name,widget in plugin_widgets:
             nb.append_page(widget,gtk.Label(name))
         nb.show_all()
