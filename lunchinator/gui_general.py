@@ -3,6 +3,7 @@ import gobject
 import gtk
 from lunchinator.lunch_server import *
 import time, socket,logging,threading,os
+import platform
 
 import urllib2
                  
@@ -31,12 +32,22 @@ class lunchinator(threading.Thread):
         #create the plugin submenu
         plugin_menu = gtk.Menu()
         
+        usePrepend = False
+        if platform.linux_distribution()[0] == "Ubuntu" and \
+                (int(platform.linux_distribution()[1].split(".")[0])<10 or \
+                 platform.linux_distribution()[1] == "10.04"):
+            usePrepend = True
+        
         allPlugins= self.getPlugins(['general','called','gui'])
         for pluginName in sorted(allPlugins.iterkeys()):
             p_item = gtk.CheckMenuItem(pluginName)            
             p_item.set_active(allPlugins[pluginName][1].is_activated)                
-            p_item.connect("activate", self.toggle_plugin,allPlugins[pluginName][0])                    
-            plugin_menu.prepend(p_item)
+            p_item.connect("activate", self.toggle_plugin,allPlugins[pluginName][0])
+            
+            if usePrepend:
+                plugin_menu.prepend(p_item)
+            else:
+                plugin_menu.append(p_item)
         plugin_menu.show_all()
         
         #main _menu
