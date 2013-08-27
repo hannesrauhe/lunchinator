@@ -9,7 +9,7 @@ class lunch_menu(iface_gui_plugin):
         super(lunch_menu, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
-        self.options = {"url":"http://155.56.69.85:1081/lunch_de.txt" }
+        self.options = {"url":"http://lunchinator.de/files/menu_dummy.txt" }
         
     def activate(self):
         iface_gui_plugin.activate(self)
