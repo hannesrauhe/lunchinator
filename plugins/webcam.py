@@ -10,7 +10,7 @@ class webcam(iface_gui_plugin):
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
         self.options = {"fallback_pic":sys.path[0]+"/images/webcam.jpg",
-                        "pic_url":"http://webcam.wdf.sap.corp:1080/images/canteen_bac.jpeg",
+#                        "pic_url":"http://lunchinator.de/files/webcam_dummy.jpg",
                         "timeout":5}
         
     def activate(self):
