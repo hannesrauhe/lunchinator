@@ -136,7 +136,7 @@ class lunchinator(threading.Thread):
     
         window.set_border_width(10)
         window.set_position(gtk.WIN_POS_CENTER)
-        window.set_title("Lunchinator (powered by SAP HANA)")
+        window.set_title("Lunchinator")
 
         # Contains box1 and plug-ins
         box0 = gtk.HBox(False, 0)
