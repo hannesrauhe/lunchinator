@@ -180,6 +180,11 @@ class lunch_server(lunch_default_config):
     
     def incoming_event(self,data,addr):   
         if addr[0].startswith("127."):
+            #stop command is only allowed from localhost :-)
+            if data.startswith("HELO_STOP"):
+                self.lunch_logger.info("Got Stop Command from localhost: %s"%data)
+                self.running = False
+            #and only stop command is allowed from localhost, returning here
             return     
                 
         try:        
