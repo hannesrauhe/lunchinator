@@ -83,14 +83,21 @@ class lunchinator(threading.Thread):
         if w.get_active():
             po = self.ls.plugin_manager.activatePluginByName(p_name,p_cat)
             if p_cat=="gui" and self.nb:
-                self.nb.insert_page(self.window_msgCheckCreatePluginWidget(po,p_name), gtk.Label(p_name),0)
-                self.nb.show()
-                self.nb.set_current_page(0)
+                #check if widget is already present
+                alreadyShowing = False
+                for i in range(len(self.nb)):
+                    widget = self.nb.get_nth_page(i)
+                    if self.nb.get_tab_label_text(widget) == p_name:
+                        alreadyShowing = True
+                if not alreadyShowing:            
+                    self.nb.insert_page(self.window_msgCheckCreatePluginWidget(po,p_name), gtk.Label(p_name),0)
+                    self.nb.show()
+                    self.nb.set_current_page(0)
         else:
             self.ls.plugin_manager.deactivatePluginByName(p_name,p_cat)  
         self.ls.write_config_to_hd()
         
-    def stop_server(self,w):        
+    def stop_server(self,_):        
         if self.isAlive():
             self.ls.running = False
             self.join()  
@@ -129,7 +136,7 @@ class lunchinator(threading.Thread):
             textbuffer.set_text("Error while including plugin "+str(sys.exc_info()))     
         return sw
         
-    def window_msg(self, w):    
+    def window_msg(self, _):    
         self.reset_new_msgs() 
         
         window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -187,24 +194,26 @@ class lunchinator(threading.Thread):
         try:
             for pluginInfo in self.ls.plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
-                    plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(pluginInfo.plugin_object,pluginInfo.name)))                    
+                    plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(pluginInfo.plugin_object,pluginInfo.name)))
+            if len(plugin_widgets) == 0:
+                #activate help plugin
+                self.ls.plugin_manager.activatePluginByName("About Plugins", "gui")
+                pluginInfo = self.ls.plugin_manager.getPluginByName("About Plugins", "gui")
+                plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(pluginInfo.plugin_object,pluginInfo.name)))
+                pass                    
         except:
             self.ls.lunch_logger.error("while including plugins %s"%str(sys.exc_info()))
             
         plugin_widgets.sort(key=lambda tup: tup[0].name)
         plugin_widgets.sort(key=lambda tup: tup[0].plugin_object.sortOrder)
             
-        if len(plugin_widgets)==1:
-            box0.size_allocate(gtk.gdk.Rectangle(0,0,100,100))
-            box0.pack_start(plugin_widgets[0][1], True, True, 0)
-        elif len(plugin_widgets)>1:
-            self.nb = gtk.Notebook()
-            self.nb.set_tab_pos(gtk.POS_TOP)
-            for info,widget in plugin_widgets:
-                self.nb.append_page(widget, gtk.Label(info.name))
-                self.nb.set_tab_reorderable(widget, True)
-            self.nb.show()
-            box0.pack_start(self.nb, True, True, 0)
+        self.nb = gtk.Notebook()
+        self.nb.set_tab_pos(gtk.POS_TOP)
+        for info,widget in plugin_widgets:
+            self.nb.append_page(widget, gtk.Label(info.name))
+            self.nb.set_tab_reorderable(widget, True)
+        self.nb.show()
+        box0.pack_start(self.nb, True, True, 0)
         box0.show()
         
         window.add(box0)
@@ -215,7 +224,7 @@ class lunchinator(threading.Thread):
         button2.connect_object("clicked", gtk.Widget.activate, entry2)
         window.connect("delete-event", self.window_msgClosed)      
             
-    def window_msgClosed(self, w, *data):
+    def window_msgClosed(self, _, *__):
         try:
             order = []
             for i in range(len(self.nb)):
