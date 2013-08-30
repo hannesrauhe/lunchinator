@@ -5,7 +5,7 @@ LUNCHINATOR_CONFIG_DIR=$HOME/.lunchinator
 cd $LUNCHINATOR_DIR
 mkdir -p $LUNCHINATOR_CONFIG_DIR
 
-while true; do
+while test $? -ne 3; do
 	git pull;
 	python ./noninteractive.py --autoUpdate;
 done

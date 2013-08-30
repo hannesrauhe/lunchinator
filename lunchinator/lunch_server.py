@@ -9,6 +9,7 @@ from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 
 EXIT_CODE_UPDATE = 2
+EXIT_CODE_STOP = 3
         
 class lunch_server(lunch_default_config):    
     running = False
@@ -184,6 +185,7 @@ class lunch_server(lunch_default_config):
             if data.startswith("HELO_STOP"):
                 self.lunch_logger.info("Got Stop Command from localhost: %s"%data)
                 self.running = False
+                self.exitCode = EXIT_CODE_STOP #run_forever script will stop
             elif data.startswith("HELO_UPDATE"):
                 self.update_request = True
                 if self.auto_update and not self.no_updates:
