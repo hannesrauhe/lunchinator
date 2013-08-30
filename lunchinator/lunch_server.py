@@ -184,7 +184,17 @@ class lunch_server(lunch_default_config):
             if data.startswith("HELO_STOP"):
                 self.lunch_logger.info("Got Stop Command from localhost: %s"%data)
                 self.running = False
-            #and only stop command is allowed from localhost, returning here
+            elif data.startswith("HELO_UPDATE"):
+                self.update_request = True
+                if self.auto_update and not self.no_updates:
+                    self.lunch_logger.info("local update")
+                    self.running = False
+                    
+                    #new update-script:
+                    self.exitCode = EXIT_CODE_UPDATE
+                else:
+                    self.lunch_logger.info("local update issued but updates are disabled")
+            #only stop and update command is allowed from localhost, returning here
             return     
                 
         try:        
@@ -196,10 +206,6 @@ class lunch_server(lunch_default_config):
                     self.lunch_logger.info("%s: [%s] update"%(t,addr[0]))
                     self.running = False
                     
-                    #for compatibility with old update-script (which will not be updated/restarted automatically :-("
-                    up_f = open(self.main_config_dir+"/update","w")
-                    up_f.write(t+": ["+addr[0]+"] update")
-                    up_f.close()
                     #new update-script:
                     self.exitCode = EXIT_CODE_UPDATE
                 else:
