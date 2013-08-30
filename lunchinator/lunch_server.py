@@ -224,6 +224,13 @@ class lunch_server(lunch_default_config):
                 self.my_master = addr[0]                                    
                 if not os.path.exists(self.members_file):
                     self.write_members_to_file()
+                                    
+            elif cmd.startswith("HELO_LEAVE"):
+                #the sender tells me, that he is going
+                if addr[0] in self.members:
+                    del self.members[addr[0]]                                       
+                    self.write_members_to_file()
+                self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                
             elif cmd.startswith("HELO_AVATAR"):
                 #someone want's to send me his pic via TCP
@@ -273,15 +280,6 @@ class lunch_server(lunch_default_config):
                     self.member_info[addr[0]]['name']=value
                 else:
                     self.member_info[addr[0]]={'name':value}
-                                    
-            elif cmd.startswith("HELO_MASTER"):
-                #deprecated
-                if addr[0] in self.members:
-                    self.members[addr[0]]=value
-                else:
-                    self.members[addr[0]]={'name':value}                                        
-                    self.write_members_to_file()
-                self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                     
             else:
                 self.lunch_logger.info("received unknown command from %s: %s with value %s"%(addr[0],cmd,value))        
@@ -424,9 +422,10 @@ class lunch_server(lunch_default_config):
             self.lunch_logger.critical("stopping - Critical error: %s"%str(sys.exc_info())) 
         finally: 
             try:
+                self.call("HELO_LEAVE bye")
                 s.close()  
             except:
-                pass
+                self.lunch_logger.warning("Wasn't able to send the leave call and close the socket...")
             self.lunch_logger.info("Lunchinator stopped")                  
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
 #            self.write_config_to_hd()
