@@ -221,6 +221,13 @@ class lunchinator(threading.Thread):
         for info,widget in plugin_widgets:
             self.nb.append_page(widget, gtk.Label(info.name))
             self.nb.set_tab_reorderable(widget, True)
+        
+        # select previously selected widget
+        index = 0
+        if self.ls.last_gui_plugin_index < len(self.nb):
+            index = self.ls.last_gui_plugin_index
+        self.nb.set_current_page(index)
+        
         self.nb.show()
         box0.pack_start(self.nb, True, True, 0)
         box0.show()
@@ -243,6 +250,9 @@ class lunchinator(threading.Thread):
                 if pluginInfo.name in order:
                     pluginInfo.plugin_object.sortOrder = order.index(pluginInfo.name)
                     pluginInfo.plugin_object.save_sort_order()
+                    
+            if self.nb != None:
+                self.ls.set_last_gui_plugin_index(self.nb.get_current_page())
         except:
             self.ls.lunch_logger.error("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
         self.nb = None

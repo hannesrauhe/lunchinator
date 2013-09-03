@@ -42,6 +42,7 @@ class lunch_default_config(object):
     peer_timeout = 604800 #one week so that we don't forget someone too soon
     mute_timeout = 30
     reset_icon_time = 5
+    last_gui_plugin_index = 0
     
     lunch_logger = logging.getLogger("LunchinatorLogger")
     
@@ -85,6 +86,8 @@ class lunch_default_config(object):
         self.peer_timeout = self.read_value_from_config_file(self.peer_timeout, "general", "peer_timeout")
         self.mute_timeout = self.read_value_from_config_file(self.mute_timeout, "general", "mute_timeout")
         self.reset_icon_time = self.read_value_from_config_file(self.reset_icon_time, "general", "reset_icon_time")
+        
+        self.last_gui_plugin_index = self.read_value_from_config_file(self.last_gui_plugin_index, 'general', 'last_gui_plugin_index')
         
         #not shown in settings-plugin - handled by avatar-plugin
         self.avatar_file =  self.read_value_from_config_file(self.avatar_file,"general","avatar_file")
@@ -197,5 +200,6 @@ class lunch_default_config(object):
         if force_write:
             self.write_config_to_hd()
         
-            
+    def set_last_gui_plugin_index(self, index):
+        self.config_file.set('general', 'last_gui_plugin_index', str(index))
     
