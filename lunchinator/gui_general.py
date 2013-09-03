@@ -89,12 +89,21 @@ class lunchinator(threading.Thread):
                     widget = self.nb.get_nth_page(i)
                     if self.nb.get_tab_label_text(widget) == p_name:
                         alreadyShowing = True
-                if not alreadyShowing:            
-                    self.nb.insert_page(self.window_msgCheckCreatePluginWidget(po,p_name), gtk.Label(p_name),0)
+                if not alreadyShowing:
+                    widget = self.window_msgCheckCreatePluginWidget(po,p_name)    
+                    self.nb.append_page(widget, gtk.Label(p_name))
+                    self.nb.set_tab_reorderable(widget, True)
                     self.nb.show()
-                    self.nb.set_current_page(0)
+                    self.nb.set_current_page(len(self.nb)-1)
         else:
             self.ls.plugin_manager.deactivatePluginByName(p_name,p_cat)  
+            if p_cat=="gui" and self.nb:
+                alreadyShowing = False
+                for i in range(len(self.nb)):
+                    widget = self.nb.get_nth_page(i)
+                    if self.nb.get_tab_label_text(widget) == p_name:
+                        self.nb.remove_page(i)
+                        break
         self.ls.write_config_to_hd()
         
     def stop_server(self,_):        
@@ -206,7 +215,7 @@ class lunchinator(threading.Thread):
             
         plugin_widgets.sort(key=lambda tup: tup[0].name)
         plugin_widgets.sort(key=lambda tup: tup[0].plugin_object.sortOrder)
-            
+        
         self.nb = gtk.Notebook()
         self.nb.set_tab_pos(gtk.POS_TOP)
         for info,widget in plugin_widgets:
