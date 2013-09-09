@@ -13,15 +13,22 @@ print "We are on",platform.system(),platform.release(),platform.version()
 
 lunchdir = sys.path[0]
 lunchbindir = lunchdir+"/bin/"
+main_config_dir = os.getenv("HOME")+"/.lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+"/.lunchinator"
 
 shouldRestart = True
 while shouldRestart: 
     returnCode = 0
     #subprocess.call(["git","--git-dir="+lunchdir+"/.git","stash"])
     if subprocess.call(["git","--git-dir="+lunchdir+"/.git","pull"])!=0:
-        print "git pull did not work. The Update mechanism therefore does not work."
+        print "git pull did not work (main repository). The Update mechanism therefore does not work."
         print "If you do not know, what to do now:"
-        print "it should be safe to call 'git stash' in the lunchinator directory %s and call 'python ./start_lunchinator.py' again."%lunchdir
+        print "it should be safe to call 'git stash' in the lunchinator directory %s start lunchinator again."%lunchdir
+    
+    #locate plugins repository
+    if subprocess.call(["git","--git-dir="+main_config_dir+"/plugins/.git","pull"])!=0:
+        print "git pull did not work (plugin repository). The Update mechanism therefore does not work."
+        print "If you do not know, what to do now:"
+        print "it should be safe to call 'git stash' in the plugins directory %s/plugins and start lunchinator again."%main_config_dir
     shouldRestart = False       
     try:
         import gtk
