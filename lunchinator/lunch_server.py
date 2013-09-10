@@ -169,7 +169,8 @@ class lunch_server(lunch_default_config):
                    "name": self.user_name,
                    "next_lunch_begin":self.default_lunch_begin,
                    "next_lunch_end":self.default_lunch_end,
-                   "version":self.version_short}
+                   "version":self.version_short,
+                   "version_commit_count":self.commit_count}
         if self.next_lunch_begin:
             info_d["next_lunch_begin"] = self.next_lunch_begin
         if self.next_lunch_end:

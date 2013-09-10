@@ -24,6 +24,7 @@ class lunch_default_config(object):
     avatar_dir = main_config_dir+"/avatars/"
     version = "unknown"
     version_short = "unknown"
+    commit_count = "0"
     plugin_dirs = [main_config_dir+"/plugins",sys.path[0]+"/plugins"]
     
     ''' not in files'''    
@@ -65,6 +66,9 @@ class lunch_default_config(object):
             p = subprocess.Popen(["git","log","-1"],stdout=subprocess.PIPE)
             self.version, err = p.communicate()
             self.version_short = self.version.splitlines()[2][5:].strip()
+            p = subprocess.Popen(["git","rev-list", "HEAD", "--count"],stdout=subprocess.PIPE)
+            cco, err = p.communicate()
+            self.commit_count = cco.strip()
         except:
             self.lunch_logger.warn("git log could not be executed correctly - version information not available")
             pass
