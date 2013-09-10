@@ -63,21 +63,38 @@ class lunch_http(iface_called_plugin):
                 
     def write_info_html(self):
         try:
+            if len(self.ls.member_info)==0:
+                indexhtml = open(self.options["html_dir"]+"/index.html","w")
+                indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' >no peers\n")
+                indexhtml.close()
+                return
+            
+            table_data = {"ip":[""]*len(self.ls.member_info)}
+            index = 0
+            for ip,infodict in self.ls.member_info.iteritems():
+                table_data["ip"][index] = ip
+                for k,v in infodict.iteritems():
+                    if not table_data.has_key(k):
+                        table_data[k]=[""]*len(self.ls.member_info)
+                    if k=="avatar" and os.path.exists(self.ls.avatar_dir+"/"+v):
+                        table_data[k][index]="<img width='200' src=\"avatars/%s\" />"%v
+                    else:
+                        table_data[k][index]=v
+                index+=1
+                        
             indexhtml = open(self.options["html_dir"]+"/index.html","w")
             indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' ><table>\n")
-            if len(self.ls.member_info)>0:
-                for ip,d in self.ls.member_info.iteritems():
-                    indexhtml.write("<tr><td>"+str(ip)+"</td>\n")
-                    if d.has_key("avatar") and d["avatar"] and os.path.exists(self.ls.avatar_dir+"/"+d["avatar"]):
-                        indexhtml.write("<td><img width='200' src=\"avatars/"+d["avatar"]+"\" /></td>\n")
-                    else:
-                        indexhtml.write("<td></td>\n")
-                    indexhtml.write("<td>")
-                    for k,v in d.iteritems():
-                        indexhtml.write(k+": "+v+"<br />\n")                
-                    indexhtml.write("</td></tr>\n")
+            indexhtml.write("<tr>") 
+            for th in table_data.iterkeys():
+                indexhtml.write("<th>%s</th>"%th) 
+            indexhtml.write("</tr>") 
+            for i in range(0,len(self.ls.member_info)):
+                indexhtml.write("<tr>") 
+                for k in table_data.iterkeys():
+                    indexhtml.write("<td>%s</td>"%table_data[k][i]) 
+                indexhtml.write("</tr>") 
             indexhtml.write("</table>\n")
             indexhtml.write(self.ls.version)
             indexhtml.close()
         except:
-            self.logger("problem while writing html file")
+            self.logger.error("HTTP plugin: problem while writing html file: %s"%sys.exc_info())
