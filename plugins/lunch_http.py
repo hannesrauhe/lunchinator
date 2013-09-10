@@ -76,7 +76,7 @@ class lunch_http(iface_called_plugin):
                 for k,v in infodict.iteritems():
                     if not table_data.has_key(k):
                         table_data[k]=[""]*len(self.ls.member_info)
-                    if k=="avatar" and os.path.exists(self.ls.avatar_dir+"/"+v):
+                    if k=="avatar" and os.path.isfile(self.ls.avatar_dir+"/"+v):
                         table_data[k][index]="<img width='200' src=\"avatars/%s\" />"%v
                     else:
                         table_data[k][index]=v
