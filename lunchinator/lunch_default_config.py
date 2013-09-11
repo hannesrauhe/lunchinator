@@ -27,6 +27,10 @@ class lunch_default_config(object):
     commit_count = "0"
     plugin_dirs = [main_config_dir+"/plugins",sys.path[0]+"/plugins"]
     
+    #insert plugin folders into path
+    for aDir in plugin_dirs:
+        sys.path.append(aDir)
+    
     ''' not in files'''    
     next_lunch_begin = None
     next_lunch_end = None
