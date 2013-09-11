@@ -4,6 +4,7 @@ from lunch_default_config import *
 from iface_plugins import *
 from time import strftime, localtime, time, mktime, gmtime
 import socket,subprocess,sys,os,ctypes,getpass,json
+import traceback
 
 from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
@@ -379,7 +380,11 @@ class lunch_server(lunch_default_config):
         if self.with_plugins:
             try:
                 self.plugin_manager.collectPlugins()
+            except Exception as e:
+                traceback.print_exc()
+                self.lunch_logger.error("problem when loading plugin: %s"%(e))
             except:
+                traceback.print_exc()
                 self.lunch_logger.error("problem when loading plugin: %s"%(str(sys.exc_info())))
             
             #always load these plugins

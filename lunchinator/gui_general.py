@@ -4,7 +4,7 @@ import gtk
 from lunchinator.lunch_server import *
 import time, socket,logging,threading,os
 import platform
-
+import traceback
 import urllib2
                  
         
@@ -132,6 +132,7 @@ class lunchinator(threading.Thread):
         try:
             sw = plugin_object.create_widget()
         except:
+            traceback.print_exc()
             self.ls.lunch_logger.error("while including plugin %s with options: %s  %s"%(p_name, str(plugin_object.options), str(sys.exc_info())))
             sw = gtk.ScrolledWindow()
             sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -211,6 +212,7 @@ class lunchinator(threading.Thread):
                 plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(pluginInfo.plugin_object,pluginInfo.name)))
                 pass                    
         except:
+            traceback.print_exc()
             self.ls.lunch_logger.error("while including plugins %s"%str(sys.exc_info()))
             
         plugin_widgets.sort(key=lambda tup: tup[0].name)
@@ -292,8 +294,10 @@ class lunchinator(threading.Thread):
                             plugin_widgets.append((pluginInfo.name,w))
                     except:
                         plugin_widgets.append((pluginInfo.name,gtk.Label("Error while including plugin")))
+                        traceback.print_exc()
                         self.ls.lunch_logger.error("while including plugin %s in settings window: %s",pluginInfo.name, str(sys.exc_info()))
         except:
+            traceback.print_exc()
             self.ls.lunch_logger.error("while including plugins in settings window: %s", str(sys.exc_info()))
         for name,widget in plugin_widgets:
             nb.append_page(widget,gtk.Label(name))
