@@ -36,14 +36,16 @@ class iface_plugin(IPlugin):
                     if type(v)==types.IntType:
                         self.options[o] = int(new_v)
                     elif type(v)==types.BooleanType:
-                        self.options[o] = bool(new_v)
+                        if new_v.strip().upper() in ["TRUE", "YES", "1"]:
+                            self.options[o] = True
+                        else:
+                            self.options[o] = False
                     elif type(v)==types.StringType:
                         self.options[o] = new_v
                     else:
                         print "type of value",o,v,"not supported, using default"
                 except:
                     print "could not convert value of",o,"from config to type",type(v),"(",new_v,") using default"
-                    
         
     def create_options_widget(self):
         import gtk
