@@ -68,11 +68,17 @@ class lunch_default_config(object):
         try:
             os.chdir(sys.path[0])
             p = subprocess.Popen(["git","log","-1"],stdout=subprocess.PIPE)
-            self.version, err = p.communicate()
+            self.version, _ = p.communicate()
             self.version_short = self.version.splitlines()[2][5:].strip()
             p = subprocess.Popen(["git","rev-list", "HEAD", "--count"],stdout=subprocess.PIPE)
-            cco, err = p.communicate()
+            cco, _ = p.communicate()
             self.commit_count = cco.strip()
+            for aPluginDir in self.plugin_dirs:
+                p = subprocess.Popen(["git","--git-dir=%s/.git" % aPluginDir, "rev-list", "HEAD", "--count"],stdout=subprocess.PIPE)
+                cco, _ = p.communicate()
+                if p.returncode == 0:
+                    self.commit_count_plugins = cco.strip()
+                    break
         except:
             self.lunch_logger.warn("git log could not be executed correctly - version information not available")
             pass
