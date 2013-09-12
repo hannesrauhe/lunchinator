@@ -299,10 +299,12 @@ class lunchinator(threading.Thread):
         except:
             traceback.print_exc()
             self.ls.lunch_logger.error("while including plugins in settings window: %s", str(sys.exc_info()))
+        plugin_widgets.sort(key=lambda aTuple: "" if aTuple[0] == "General Settings" else aTuple[0])
         for name,widget in plugin_widgets:
             nb.append_page(widget,gtk.Label(name))
         nb.show_all()
         d.get_content_area().pack_start(nb, True, True, 0)
+        nb.set_current_page(0)
         resp = d.run()
         
         #save on exit
