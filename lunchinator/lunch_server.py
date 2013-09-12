@@ -303,6 +303,7 @@ class lunch_server(lunch_default_config):
                     try:
                         pluginInfo.plugin_object.process_event(cmd,value,addr[0],member_info)
                     except:
+                        traceback.print_exc()
                         self.lunch_logger.error("plugin error in %s while processing event message %s"%(pluginInfo.name, str(sys.exc_info())))
         except:
             self.lunch_logger.critical("Unexpected error while handling HELO call: %s"%(str(sys.exc_info())))
@@ -333,6 +334,7 @@ class lunch_server(lunch_default_config):
                     try:
                         pluginInfo.plugin_object.process_message(msg,addr,member_info)
                     except:
+                        traceback.print_exc()
                         self.lunch_logger.error("plugin error in %s while processing message %s"%(pluginInfo.name, str(sys.exc_info())))
                         
             
@@ -345,6 +347,7 @@ class lunch_server(lunch_default_config):
                             try:
                                 pluginInfo.plugin_object.process_lunch_call(msg,addr,member_info)
                             except:
+                                traceback.print_exc()
                                 self.lunch_logger.error("plugin error in %s while processing lunch call %s"%(pluginInfo.name, str(sys.exc_info())))
                 else:
                     self.lunch_logger.debug("messages will not trigger alarm: %s: [%s] %s until %s"%(t,m,msg,strftime("%a, %d %b %Y %H:%M:%S", localtime(self.mute_time_until))))
