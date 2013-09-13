@@ -8,13 +8,22 @@ class gui_settings(iface_general_plugin):
         super(gui_settings, self).__init__()
         manager = PluginManagerSingleton.get()
         self.ls = manager.app
-        option_names = ['user_name','audio_file','auto_update',"default_lunch_begin","default_lunch_end","alarm_begin_time","alarm_end_time","mute_timeout","tcp_port","reset_icon_time"]
-        self.options = {}
+        option_names = [('user_name', 'User Name'),
+                        ('audio_file', 'Lunch Call Audio File'),
+                        ('auto_update', "Automatic Update"),
+                        ("default_lunch_begin", 'Free for Lunch from'),
+                        ("default_lunch_end", 'Free for Lunch until'),
+                        ("alarm_begin_time", "No Alarm before"),
+                        ("alarm_end_time", "No Alarm after"),
+                        ("mute_timeout", "Mute for x sec after Alarm"),
+                        ("Reset Lunchinator Icon after x min", ""),
+                        ("tcp_port", "TCP Port")]
+        self.options = []
         for o in option_names:
-            methodname = "get_"+o
+            methodname = "get_"+o[0]
             if hasattr(self.ls, methodname): 
                 _member = getattr(self.ls, methodname)
-                self.options[o] = _member()
+                self.options.append((o, _member()))
                 
     def save_options_widget_data(self):
         if not self.option_widgets:
