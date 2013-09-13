@@ -4,9 +4,9 @@ import gtk
 from lunchinator.lunch_server import *
 import time, socket,logging,threading,os
 import platform
-import traceback
 import urllib2
-                 
+import traceback    
+from StringIO import StringIO   
         
 class lunchinator(threading.Thread):
     _menu = None
@@ -132,8 +132,9 @@ class lunchinator(threading.Thread):
         try:
             sw = plugin_object.create_widget()
         except:
-            traceback.print_exc()
-            self.ls.lunch_logger.error("while including plugin %s with options: %s  %s"%(p_name, str(plugin_object.options), str(sys.exc_info())))
+            stringOut = StringIO()
+            traceback.print_exc(None, stringOut)
+            self.ls.lunch_logger.exception("while including plugin %s with options: %s  %s"%(p_name, str(plugin_object.options), str(sys.exc_info())))
             sw = gtk.ScrolledWindow()
             sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
             textview = gtk.TextView()
@@ -143,7 +144,9 @@ class lunchinator(threading.Thread):
             sw.add(textview)
             sw.show()
             textview.show()
-            textbuffer.set_text("Error while including plugin "+str(sys.exc_info()))     
+            
+            textbuffer.set_text(stringOut.getvalue())
+            stringOut.close() 
         return sw
         
     def window_msg(self, _):    
@@ -209,11 +212,11 @@ class lunchinator(threading.Thread):
                 #activate help plugin
                 self.ls.plugin_manager.activatePluginByName("About Plugins", "gui")
                 pluginInfo = self.ls.plugin_manager.getPluginByName("About Plugins", "gui")
-                plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(pluginInfo.plugin_object,pluginInfo.name)))
+                if pluginInfo != None:
+                    plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(pluginInfo.plugin_object,pluginInfo.name)))
                 pass                    
         except:
-            traceback.print_exc()
-            self.ls.lunch_logger.error("while including plugins %s"%str(sys.exc_info()))
+            self.ls.lunch_logger.exception("while including plugins %s"%str(sys.exc_info()))
             
         plugin_widgets.sort(key=lambda tup: tup[0].name)
         plugin_widgets.sort(key=lambda tup: tup[0].plugin_object.sortOrder)
@@ -294,11 +297,9 @@ class lunchinator(threading.Thread):
                             plugin_widgets.append((pluginInfo.name,w))
                     except:
                         plugin_widgets.append((pluginInfo.name,gtk.Label("Error while including plugin")))
-                        traceback.print_exc()
-                        self.ls.lunch_logger.error("while including plugin %s in settings window: %s",pluginInfo.name, str(sys.exc_info()))
+                        self.ls.lunch_logger.exception("while including plugin %s in settings window: %s",pluginInfo.name, str(sys.exc_info()))
         except:
-            traceback.print_exc()
-            self.ls.lunch_logger.error("while including plugins in settings window: %s", str(sys.exc_info()))
+            self.ls.lunch_logger.exception("while including plugins in settings window: %s", str(sys.exc_info()))
         plugin_widgets.sort(key=lambda aTuple: "" if aTuple[0] == "General Settings" else aTuple[0])
         for name,widget in plugin_widgets:
             nb.append_page(widget,gtk.Label(name))

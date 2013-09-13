@@ -4,7 +4,6 @@ from lunch_default_config import *
 from iface_plugins import *
 from time import strftime, localtime, time, mktime, gmtime
 import socket,subprocess,sys,os,ctypes,getpass,json
-import traceback
 
 from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
@@ -303,8 +302,7 @@ class lunch_server(lunch_default_config):
                     try:
                         pluginInfo.plugin_object.process_event(cmd,value,addr[0],member_info)
                     except:
-                        traceback.print_exc()
-                        self.lunch_logger.error("plugin error in %s while processing event message %s"%(pluginInfo.name, str(sys.exc_info())))
+                        self.lunch_logger.exception("plugin error in %s while processing event message %s"%(pluginInfo.name, str(sys.exc_info())))
         except:
             self.lunch_logger.critical("Unexpected error while handling HELO call: %s"%(str(sys.exc_info())))
             self.lunch_logger.critical("The data received was: %s"%data)
@@ -334,8 +332,7 @@ class lunch_server(lunch_default_config):
                     try:
                         pluginInfo.plugin_object.process_message(msg,addr,member_info)
                     except:
-                        traceback.print_exc()
-                        self.lunch_logger.error("plugin error in %s while processing message %s"%(pluginInfo.name, str(sys.exc_info())))
+                        self.lunch_logger.exception("plugin error in %s while processing message %s"%(pluginInfo.name, str(sys.exc_info())))
                         
             
             if "lunch" in msg.lower() and self.is_now_in_time_span(self.alarm_begin_time, self.alarm_end_time):
@@ -347,8 +344,7 @@ class lunch_server(lunch_default_config):
                             try:
                                 pluginInfo.plugin_object.process_lunch_call(msg,addr,member_info)
                             except:
-                                traceback.print_exc()
-                                self.lunch_logger.error("plugin error in %s while processing lunch call %s"%(pluginInfo.name, str(sys.exc_info())))
+                                self.lunch_logger.exception("plugin error in %s while processing lunch call %s"%(pluginInfo.name, str(sys.exc_info())))
                 else:
                     self.lunch_logger.debug("messages will not trigger alarm: %s: [%s] %s until %s"%(t,m,msg,strftime("%a, %d %b %Y %H:%M:%S", localtime(self.mute_time_until))))
       
@@ -383,12 +379,8 @@ class lunch_server(lunch_default_config):
         if self.with_plugins:
             try:
                 self.plugin_manager.collectPlugins()
-            except Exception as e:
-                traceback.print_exc()
-                self.lunch_logger.error("problem when loading plugin: %s"%(e))
             except:
-                traceback.print_exc()
-                self.lunch_logger.error("problem when loading plugin: %s"%(str(sys.exc_info())))
+                self.lunch_logger.exception("problem when loading plugin: %s"%(str(sys.exc_info())))
             
             #always load these plugins
             self.plugin_manager.activatePluginByName("General Settings", "general") 
