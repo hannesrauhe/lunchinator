@@ -5,6 +5,7 @@ import types
 class iface_plugin(IPlugin):    
     def __init__(self):
         self.options = None
+        self.option_names = None
         self.option_widgets = {}
         manager = PluginManagerSingleton.get()
         self.logger = manager.app.lunch_logger
@@ -16,9 +17,21 @@ class iface_plugin(IPlugin):
         Call the parent class's acivation method
         """
         IPlugin.activate(self)
+        
+        if type(self.options) == list and self.option_names == None:
+            # convert new settings format to dictionary and name array
+            dict_options = {}
+            self.option_names = []
+            for o,v in self.options:
+                if type(o) in (tuple, list):
+                    dict_options[o[0]] = v
+                    self.option_names.append(o)
+                else:
+                    dict_options[o] = v
+                    self.option_names.append((o,o))
+            self.options = dict_options
         self.read_options_from_file()
         return
-
 
     def deactivate(self):
         """
@@ -47,27 +60,43 @@ class iface_plugin(IPlugin):
                 except:
                     print "could not convert value of",o,"from config to type",type(v),"(",new_v,") using default"
         
+    def add_option_to_widget(self, t, i, o, v):
+        import gtk
+        e = ""
+        if type(v)==types.IntType:
+            adjustment = gtk.Adjustment(value=v, lower=0, upper=1000000, step_incr=1, page_incr=0, page_size=0)
+            e = gtk.SpinButton(adjustment)
+        elif type(v)==types.BooleanType:
+            e = gtk.CheckButton()
+            e.set_active(v)
+        else:
+            e = gtk.Entry()
+            e.set_text(v)
+        rAlign = gtk.Alignment(1, 0.5, 0, 0)
+        rAlign.add(gtk.Label(o[1]))
+        t.attach(rAlign,0,1,i,i+1)
+        t.attach(e,1,2,i,i+1)
+        self.option_widgets[o[0]]=e
+        
     def create_options_widget(self):
         import gtk
         if not self.options:
             return None
         t = gtk.Table(len(self.options),2,False)
+        t.set_col_spacing(0, 5)
         i=0
-        for o,v in self.options.iteritems():
-            e = ""
-            if type(v)==types.IntType:
-                adjustment = gtk.Adjustment(value=v, lower=0, upper=1000000, step_incr=1, page_incr=0, page_size=0)
-                e = gtk.SpinButton(adjustment)
-            elif type(v)==types.BooleanType:
-                e = gtk.CheckButton()
-                e.set_active(v)
-            else:
-                e = gtk.Entry()
-                e.set_text(v)
-            t.attach(gtk.Label(o),0,1,i,i+1)
-            t.attach(e,1,2,i,i+1)
-            i+=1
-            self.option_widgets[o]=e
+        
+        if self.option_names == None:
+            # add options sorted by dictionary order
+            for o,v in self.options.iteritems():
+                self.add_option_to_widget(t, i, (o,o), v)
+                i+=1
+        else:
+            # add options sorted by specified order
+            for o in self.option_names:
+                self.add_option_to_widget(t, i, o, self.options[o[0]])
+                i+=1
+                
         return t
     
     def save_options_widget_data(self):
