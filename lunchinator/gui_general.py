@@ -305,7 +305,8 @@ class lunchinator(threading.Thread):
             nb.append_page(widget,gtk.Label(name))
         nb.show_all()
         d.get_content_area().pack_start(nb, True, True, 0)
-        nb.set_current_page(0)
+        if len(nb) > 0:
+            nb.set_current_page(0)
         resp = d.run()
         
         #save on exit
