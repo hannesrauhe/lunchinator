@@ -245,12 +245,15 @@ class lunch_server(lunch_default_config):
             elif cmd.startswith("HELO_AVATAR"):
                 #someone want's to send me his pic via TCP
                 file_size=int(value.strip())
-                self.lunch_logger.info("Receiving file of size %d on port %d"%(file_size,self.tcp_port))
+                file_name=""
                 if self.member_info[addr[0]].has_key("avatar"):
-                    dr = DataReceiverThread(addr[0],file_size,self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"],self.tcp_port)
-                    dr.start()
+                    file_name=self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]
                 else:
                     self.lunch_logger.error("%s tried to send his avatar, but I don't know where to safe it"%(addr[0]))
+                    break
+                self.lunch_logger.info("Receiving file of size %d on port %d"%(file_size,self.tcp_port))
+                dr = DataReceiverThread(addr[0],file_size,file_name,self.tcp_port)
+                dr.start()
                 
             elif cmd.startswith("HELO_REQUEST_AVATAR"):
                 #someone wants my pic 
@@ -268,7 +271,36 @@ class lunch_server(lunch_default_config):
                     ds = DataSenderThread(addr[0],fileToSend, other_tcp_port)
                     ds.start()
                 else:
-                    self.lunch_logger.error("Want to send file %s, but cannot find it"%(fileToSend))     
+                    self.lunch_logger.error("Want to send file %s, but cannot find it"%(fileToSend))   
+               
+            elif cmd.startswith("HELO_LOGFILE"):
+                #someone want's to send me his LOG_FILE
+                file_size=int(value.strip())
+                if not os.path.exists(self.main_config_dir+"/logs"):
+                    os.makedirs(self.main_config_dir+"/logs")
+                file_name=self.main_config_dir+"/logs/"+str(addr[0])+".log"
+                self.lunch_logger.info("Receiving file of size %d on port %d"%(file_size,self.tcp_port))
+                dr = DataReceiverThread(addr[0],file_size,file_name,self.tcp_port)
+                dr.start()
+                
+            elif cmd.startswith("HELO_REQUEST_LOGFILE"):
+                #someone wants my pic 
+                other_tcp_port = 50001
+                try:                    
+                    other_tcp_port=int(value.strip())
+                except:
+                    self.lunch_logger.error("%s requested the logfile, I could not parse the port from value %s, using standard %d"%(str(addr[0]),str(value),other_tcp_port))
+                    
+                fileToSend = self.log_file
+                if os.path.exists(fileToSend):
+                    fileSize = os.path.getsize(fileToSend)
+                    self.lunch_logger.info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
+                    self.call("HELO_LOGFILE "+str(fileSize), addr[0])
+                    ds = DataSenderThread(addr[0],fileToSend, other_tcp_port)
+                    ds.start()
+                else:
+                    self.lunch_logger.error("Want to send file %s, but cannot find it"%(fileToSend))   
+                      
             elif cmd.startswith("HELO_INFO"):
                 #someone sends his info
                 self.member_info[addr[0]] = json.loads(value)      

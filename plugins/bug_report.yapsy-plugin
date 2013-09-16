@@ -1,0 +1,9 @@
+[Core]
+Name = Bug Report
+Module = bug_report
+
+[Documentation]
+Author = Hannes Rauhe
+Version = 0.1
+Website = http://launchpad.de
+Description = Shows/Sends bug-reports to other lunch_peers
