@@ -288,14 +288,15 @@ class lunch_server(lunch_default_config):
             elif cmd.startswith("HELO_REQUEST_LOGFILE"):
                 #someone wants my logfile 
                 other_tcp_port = self.tcp_port
-                log_num=""
+                log_num=0
                 try:                
-                    (oport, log_num) = value.split(" ",1)    
+                    (oport, onum) = value.split(" ",1)    
                     other_tcp_port=int(oport.strip())
+                    log_num = int(onum.strip())
                 except:
                     self.lunch_logger.error("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0"%(str(addr[0]),str(value),other_tcp_port))
                 
-                fileToSend = "%s.%s"%(self.log_file,log_num) if len(log_num.strip()) else self.log_file
+                fileToSend = "%s.%d"%(self.log_file,log_num) if log_num>0 else self.log_file
                 if os.path.exists(fileToSend):
                     fileSize = os.path.getsize(fileToSend)
                     self.lunch_logger.info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
