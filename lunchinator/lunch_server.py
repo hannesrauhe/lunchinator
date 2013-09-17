@@ -290,10 +290,10 @@ class lunch_server(lunch_default_config):
                 other_tcp_port = self.tcp_port
                 log_num=""
                 try:                
-                    (oport, log_num) = data.split(" ",1)    
+                    (oport, log_num) = value.split(" ",1)    
                     other_tcp_port=int(oport.strip())
                 except:
-                    self.lunch_logger.error("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 1"%(str(addr[0]),str(value),other_tcp_port))
+                    self.lunch_logger.error("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0"%(str(addr[0]),str(value),other_tcp_port))
                 
                 fileToSend = "%s.%s"%(self.log_file,log_num) if len(log_num) else self.log_file
                 if os.path.exists(fileToSend):
