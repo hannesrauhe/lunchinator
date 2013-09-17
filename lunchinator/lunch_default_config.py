@@ -25,6 +25,7 @@ class lunch_default_config(object):
     version = "unknown"
     version_short = "unknown"
     commit_count = "0"
+    commit_count_plugins = "0"
     plugin_dirs = [main_config_dir+"/plugins",sys.path[0]+"/plugins"]
     
     #insert plugin folders into path
