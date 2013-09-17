@@ -1,0 +1,9 @@
+[Core]
+Name = Maintainer
+Module = maintainer
+
+[Documentation]
+Author = Hannes Rauhe
+Version = 0.1
+Website = http://launchpad.de
+Description = Shows bug-reports of other lunch_peers
