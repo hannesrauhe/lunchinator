@@ -333,7 +333,7 @@ class lunch_server(lunch_default_config):
             member_info = {}
             if self.member_info.has_key(addr[0]):
                 member_info = self.member_info[addr[0]]
-            for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
+            for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
                     try:
                         pluginInfo.plugin_object.process_event(cmd,value,addr[0],member_info)
@@ -363,7 +363,7 @@ class lunch_server(lunch_default_config):
             if self.member_info.has_key(addr):
                 member_info = self.member_info[addr]         
                                 
-            for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
+            for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
                     try:
                         pluginInfo.plugin_object.process_message(msg,addr,member_info)
@@ -375,7 +375,7 @@ class lunch_server(lunch_default_config):
                 timenum = mktime(mtime)
                 if timenum>self.mute_time_until:
                     self.mute_time_until=timenum+self.mute_timeout
-                    for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
+                    for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
                         if pluginInfo.plugin_object.is_activated:
                             try:
                                 pluginInfo.plugin_object.process_lunch_call(msg,addr,member_info)
