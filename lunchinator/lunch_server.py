@@ -179,8 +179,8 @@ class lunch_server(lunch_default_config):
         return json.dumps(info_d)
     
     def send_info_around(self):
-        self.call("HELO_INFO "+self.build_info_string())            
-    
+        self.call("HELO_INFO "+self.build_info_string())          
+        
     def incoming_event(self,data,addr):   
         if addr[0].startswith("127."):
             #stop command is only allowed from localhost :-)
@@ -250,14 +250,16 @@ class lunch_server(lunch_default_config):
                     file_name=self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]
                 else:
                     self.lunch_logger.error("%s tried to send his avatar, but I don't know where to safe it"%(addr[0]))
-                    break
-                self.lunch_logger.info("Receiving file of size %d on port %d"%(file_size,self.tcp_port))
-                dr = DataReceiverThread(addr[0],file_size,file_name,self.tcp_port)
-                dr.start()
+                
+                if len(file_name):
+                    self.lunch_logger.info("Receiving file of size %d on port %d"%(file_size,self.tcp_port))
+                    dr = DataReceiverThread(addr[0],file_size,file_name,self.tcp_port)
+                    dr.start()
                 
             elif cmd.startswith("HELO_REQUEST_AVATAR"):
                 #someone wants my pic 
-                other_tcp_port = 50001
+                other_tcp_port = self.tcp_port
+                
                 try:                    
                     other_tcp_port=int(value.strip())
                 except:
@@ -274,7 +276,7 @@ class lunch_server(lunch_default_config):
                     self.lunch_logger.error("Want to send file %s, but cannot find it"%(fileToSend))   
                
             elif cmd.startswith("HELO_LOGFILE"):
-                #someone want's to send me his LOG_FILE
+                #someone will send me his logfile on tcp
                 file_size=int(value.strip())
                 if not os.path.exists(self.main_config_dir+"/logs"):
                     os.makedirs(self.main_config_dir+"/logs")
@@ -284,14 +286,16 @@ class lunch_server(lunch_default_config):
                 dr.start()
                 
             elif cmd.startswith("HELO_REQUEST_LOGFILE"):
-                #someone wants my pic 
-                other_tcp_port = 50001
-                try:                    
-                    other_tcp_port=int(value.strip())
+                #someone wants my logfile 
+                other_tcp_port = self.tcp_port
+                log_num=""
+                try:                
+                    (oport, log_num) = data.split(" ",1)    
+                    other_tcp_port=int(oport.strip())
                 except:
-                    self.lunch_logger.error("%s requested the logfile, I could not parse the port from value %s, using standard %d"%(str(addr[0]),str(value),other_tcp_port))
-                    
-                fileToSend = self.log_file
+                    self.lunch_logger.error("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 1"%(str(addr[0]),str(value),other_tcp_port))
+                
+                fileToSend = "%s.%s"%(self.log_file,log_num) if len(log_num) else self.log_file
                 if os.path.exists(fileToSend):
                     fileSize = os.path.getsize(fileToSend)
                     self.lunch_logger.info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
