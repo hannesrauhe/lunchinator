@@ -43,8 +43,6 @@ class maintainer_gui(object):
         self.entry = gtk.TextView()
         self.entry.set_size_request(400,200)
         self.entry.set_wrap_mode(gtk.WRAP_WORD)
-        if len(self.mt.reports):
-            self.entry.get_buffer().set_text(str(self.mt.reports))
         
         self.log_area = gtk.TextView()
         self.log_area.set_size_request(400,200)
