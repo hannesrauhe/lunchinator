@@ -7,10 +7,12 @@ class bug_report_gui(object):
         self.ls = ls
         
     def send_report(self,w):
-        if self.ls:
+        if self.ls and len(w.props.text):
             self.ls.call("HELO_BUGREPORT_DESCR %s"%w.props.text)
         else:
             print "HELO_BUGREPORT_DESCR %s"%w.props.text
+            
+        self.entry.get_buffer().set_text("")
             
     def create_widget(self):
         self.entry = gtk.TextView()

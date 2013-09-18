@@ -9,7 +9,7 @@ class maintainer_gui(object):
         self.shown_logfile = self.ls.log_file
         
     def display_report(self,w):
-        if self.dropdown_reports.get_active()>0:
+        if self.dropdown_reports.get_active()>=0:
             self.entry.get_buffer().set_text(self.mt.reports[self.dropdown_reports.get_active()][2])
         
     def request_log(self,w):
