@@ -229,11 +229,11 @@ class lunchinator(threading.Thread):
         
         # select previously selected widget
         index = 0
-        if self.ls.last_gui_plugin_index < len(self.nb):
+        if self.ls.last_gui_plugin_index < len(self.nb) and self.ls.last_gui_plugin_index >= 0:
             index = self.ls.last_gui_plugin_index
-        self.nb.set_current_page(index)
         
         self.nb.show()
+        self.nb.set_current_page(index)
         box0.pack_start(self.nb, True, True, 0)
         box0.show()
         

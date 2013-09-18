@@ -217,4 +217,5 @@ class lunch_default_config(object):
     def set_last_gui_plugin_index(self, index):
         self.last_gui_plugin_index = index
         self.config_file.set('general', 'last_gui_plugin_index', str(index))
+        self.write_config_to_hd()
     
