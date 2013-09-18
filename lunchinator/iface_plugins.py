@@ -171,6 +171,15 @@ class iface_gui_plugin(iface_plugin):
         return gtk.Label("The plugin should show its content here")
     
     def add_menu(self,menu):
+        pass    
+        
+    def process_message(self,msg,ip,member_info):
+        pass
+        
+    def process_lunch_call(self,msg,ip,member_info):
+        pass
+        
+    def process_event(self,cmd,value,ip,member_info):
         pass
 
 class iface_called_plugin(iface_plugin):    

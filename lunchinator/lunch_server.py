@@ -179,8 +179,8 @@ class lunch_server(lunch_default_config):
         return json.dumps(info_d)
     
     def send_info_around(self):
-        self.call("HELO_INFO "+self.build_info_string())            
-    
+        self.call("HELO_INFO "+self.build_info_string())          
+        
     def incoming_event(self,data,addr):   
         if addr[0].startswith("127."):
             #stop command is only allowed from localhost :-)
@@ -245,16 +245,21 @@ class lunch_server(lunch_default_config):
             elif cmd.startswith("HELO_AVATAR"):
                 #someone want's to send me his pic via TCP
                 file_size=int(value.strip())
-                self.lunch_logger.info("Receiving file of size %d on port %d"%(file_size,self.tcp_port))
+                file_name=""
                 if self.member_info[addr[0]].has_key("avatar"):
-                    dr = DataReceiverThread(addr[0],file_size,self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"],self.tcp_port)
-                    dr.start()
+                    file_name=self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]
                 else:
                     self.lunch_logger.error("%s tried to send his avatar, but I don't know where to safe it"%(addr[0]))
                 
+                if len(file_name):
+                    self.lunch_logger.info("Receiving file of size %d on port %d"%(file_size,self.tcp_port))
+                    dr = DataReceiverThread(addr[0],file_size,file_name,self.tcp_port)
+                    dr.start()
+                
             elif cmd.startswith("HELO_REQUEST_AVATAR"):
                 #someone wants my pic 
-                other_tcp_port = 50001
+                other_tcp_port = self.tcp_port
+                
                 try:                    
                     other_tcp_port=int(value.strip())
                 except:
@@ -268,7 +273,39 @@ class lunch_server(lunch_default_config):
                     ds = DataSenderThread(addr[0],fileToSend, other_tcp_port)
                     ds.start()
                 else:
-                    self.lunch_logger.error("Want to send file %s, but cannot find it"%(fileToSend))     
+                    self.lunch_logger.error("Want to send file %s, but cannot find it"%(fileToSend))   
+               
+            elif cmd.startswith("HELO_LOGFILE"):
+                #someone will send me his logfile on tcp
+                file_size=int(value.strip())
+                if not os.path.exists(self.main_config_dir+"/logs"):
+                    os.makedirs(self.main_config_dir+"/logs")
+                file_name=self.main_config_dir+"/logs/"+str(addr[0])+".log"
+                self.lunch_logger.info("Receiving file of size %d on port %d"%(file_size,self.tcp_port))
+                dr = DataReceiverThread(addr[0],file_size,file_name,self.tcp_port)
+                dr.start()
+                
+            elif cmd.startswith("HELO_REQUEST_LOGFILE"):
+                #someone wants my logfile 
+                other_tcp_port = self.tcp_port
+                log_num=0
+                try:                
+                    (oport, onum) = value.split(" ",1)    
+                    other_tcp_port=int(oport.strip())
+                    log_num = int(onum.strip())
+                except:
+                    self.lunch_logger.error("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0"%(str(addr[0]),str(value),other_tcp_port))
+                
+                fileToSend = "%s.%d"%(self.log_file,log_num) if log_num>0 else self.log_file
+                if os.path.exists(fileToSend):
+                    fileSize = os.path.getsize(fileToSend)
+                    self.lunch_logger.info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
+                    self.call("HELO_LOGFILE "+str(fileSize), addr[0])
+                    ds = DataSenderThread(addr[0],fileToSend, other_tcp_port)
+                    ds.start()
+                else:
+                    self.lunch_logger.error("Want to send file %s, but cannot find it"%(fileToSend))   
+                      
             elif cmd.startswith("HELO_INFO"):
                 #someone sends his info
                 self.member_info[addr[0]] = json.loads(value)      
@@ -297,7 +334,7 @@ class lunch_server(lunch_default_config):
             member_info = {}
             if self.member_info.has_key(addr[0]):
                 member_info = self.member_info[addr[0]]
-            for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
+            for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
                     try:
                         pluginInfo.plugin_object.process_event(cmd,value,addr[0],member_info)
@@ -327,7 +364,7 @@ class lunch_server(lunch_default_config):
             if self.member_info.has_key(addr):
                 member_info = self.member_info[addr]         
                                 
-            for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
+            for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
                     try:
                         pluginInfo.plugin_object.process_message(msg,addr,member_info)
@@ -339,7 +376,7 @@ class lunch_server(lunch_default_config):
                 timenum = mktime(mtime)
                 if timenum>self.mute_time_until:
                     self.mute_time_until=timenum+self.mute_timeout
-                    for pluginInfo in self.plugin_manager.getPluginsOfCategory("called"):
+                    for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
                         if pluginInfo.plugin_object.is_activated:
                             try:
                                 pluginInfo.plugin_object.process_lunch_call(msg,addr,member_info)
