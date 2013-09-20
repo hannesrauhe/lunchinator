@@ -1,6 +1,6 @@
 
 from lunchinator.iface_plugins import *
-from yapsy.PluginManager import PluginManagerSingleton
+from lunchinator import get_server
 
 '''use iface_called_plugin if you want to do something when a message arrives
 (see notify.py for example)'''
@@ -8,8 +8,6 @@ from yapsy.PluginManager import PluginManagerSingleton
 class example_called(iface_called_plugin):    
     def __init__(self):
         super(example_called, self).__init__()
-        manager = PluginManagerSingleton.get()
-        self.ls = manager.app
         '''specify parametes and there default values here - 
         they can be changed in the settings tab of your plugin and are saved to disk'''
         self.options={"int_option":3,"stirng_option":"yes"}
@@ -25,10 +23,10 @@ class example_called(iface_called_plugin):
         self.shared_dict={"exmaple_plugin_info":42}
         
         '''to send a message'''
-        self.ls.call_all_members("this is a message sent by the example plugin")
+        get_server().call_all_members("this is a message sent by the example plugin")
         
         '''to send an event'''
-        self.ls.call_all_members("HELO_EXAMPLE an event of typ HELO_EXAMPLE")
+        get_server().call_all_members("HELO_EXAMPLE an event of typ HELO_EXAMPLE")
         
     def deactivate(self):
         iface_called_plugin.deactivate(self)

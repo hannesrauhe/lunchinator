@@ -1,7 +1,7 @@
 import sys,types
 import gobject
 import gtk
-from lunchinator.lunch_server import *
+from lunchinator import get_server
 import time, socket,logging,threading,os
 import platform
 import urllib2
@@ -10,20 +10,19 @@ from StringIO import StringIO
         
 class lunchinator(threading.Thread):
     _menu = None
-    ls = None
     
     def __init__(self, noUpdates = False):           
-        threading.Thread.__init__(self)  
-        self.ls = lunch_server(noUpdates)
+        threading.Thread.__init__(self)
+        get_server().no_updates = noUpdates
         self.nb = None
     
     def run(self):
-        self.ls.start_server()   
+        get_server().start_server()   
         
     def getPlugins(self, cats):
         allPlugins = {}
         for p_cat in cats:
-            for info in self.ls.plugin_manager.getPluginsOfCategory(p_cat):
+            for info in get_server().plugin_manager.getPluginsOfCategory(p_cat):
                 allPlugins[info.name] = (p_cat, info.plugin_object)
         return allPlugins
            
@@ -81,7 +80,7 @@ class lunchinator(threading.Thread):
         p_name = w.get_label()
         p_cat = data[0] 
         if w.get_active():
-            po = self.ls.plugin_manager.activatePluginByName(p_name,p_cat)
+            po = get_server().plugin_manager.activatePluginByName(p_name,p_cat)
             if p_cat=="gui" and self.nb:
                 #check if widget is already present
                 alreadyShowing = False
@@ -96,7 +95,7 @@ class lunchinator(threading.Thread):
                     self.nb.show()
                     self.nb.set_current_page(len(self.nb)-1)
         else:
-            self.ls.plugin_manager.deactivatePluginByName(p_name,p_cat)  
+            get_server().plugin_manager.deactivatePluginByName(p_name,p_cat)  
             if p_cat=="gui" and self.nb:
                 alreadyShowing = False
                 for i in range(len(self.nb)):
@@ -104,24 +103,24 @@ class lunchinator(threading.Thread):
                     if self.nb.get_tab_label_text(widget) == p_name:
                         self.nb.remove_page(i)
                         break
-        self.ls.write_config_to_hd()
+        get_server().write_config_to_hd()
         
     def stop_server(self,_):        
         if self.isAlive():
-            self.ls.running = False
+            get_server().running = False
             self.join()  
             print "server stopped" 
         else:
             print "server not running"
     
     def check_new_msgs(self):
-        return self.ls.new_msg
+        return get_server().new_msg
     
     def reset_new_msgs(self):
-        self.ls.new_msg=False
+        get_server().new_msg=False
         
     def disable_auto_update(self):
-        self.ls.auto_update=False
+        get_server().auto_update=False
                   
     def quit(self,w): 
         self.stop_server(w)
@@ -134,7 +133,7 @@ class lunchinator(threading.Thread):
         except:
             stringOut = StringIO()
             traceback.print_exc(None, stringOut)
-            self.ls.lunch_logger.exception("while including plugin %s with options: %s  %s"%(p_name, str(plugin_object.options), str(sys.exc_info())))
+            get_server().lunch_logger.exception("while including plugin %s with options: %s  %s"%(p_name, str(plugin_object.options), str(sys.exc_info())))
             sw = gtk.ScrolledWindow()
             sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
             textview = gtk.TextView()
@@ -167,7 +166,7 @@ class lunchinator(threading.Thread):
         # Create message table
         msgtVBox = gtk.VBox()
         msgtHBox = gtk.HBox()
-        msgt = MessageTable(self.ls)
+        msgt = MessageTable()
         msgtVBox.pack_start(msgt.scrollTree, True, True, 0)
         
         entry = gtk.Entry()    
@@ -185,7 +184,7 @@ class lunchinator(threading.Thread):
         # Create members table
         memtVBox = gtk.VBox()
         memtHBox = gtk.HBox()
-        memt = MembersTable(self.ls)
+        memt = MembersTable()
         memtVBox.pack_start(memt.scrollTree, True, True, 0)
 
         entry2 = gtk.Entry()    
@@ -205,18 +204,18 @@ class lunchinator(threading.Thread):
         
         plugin_widgets = []
         try:
-            for pluginInfo in self.ls.plugin_manager.getPluginsOfCategory("gui"):
+            for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
                     plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(pluginInfo.plugin_object,pluginInfo.name)))
             if len(plugin_widgets) == 0:
                 #activate help plugin
-                self.ls.plugin_manager.activatePluginByName("About Plugins", "gui")
-                pluginInfo = self.ls.plugin_manager.getPluginByName("About Plugins", "gui")
+                get_server().plugin_manager.activatePluginByName("About Plugins", "gui")
+                pluginInfo = get_server().plugin_manager.getPluginByName("About Plugins", "gui")
                 if pluginInfo != None:
                     plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(pluginInfo.plugin_object,pluginInfo.name)))
                 pass                    
         except:
-            self.ls.lunch_logger.exception("while including plugins %s"%str(sys.exc_info()))
+            get_server().lunch_logger.exception("while including plugins %s"%str(sys.exc_info()))
             
         plugin_widgets.sort(key=lambda tup: tup[0].name)
         plugin_widgets.sort(key=lambda tup: tup[0].plugin_object.sortOrder)
@@ -229,8 +228,8 @@ class lunchinator(threading.Thread):
         
         # select previously selected widget
         index = 0
-        if self.ls.last_gui_plugin_index < len(self.nb) and self.ls.last_gui_plugin_index >= 0:
-            index = self.ls.last_gui_plugin_index
+        if get_server().last_gui_plugin_index < len(self.nb) and get_server().last_gui_plugin_index >= 0:
+            index = get_server().last_gui_plugin_index
         
         self.nb.show()
         self.nb.set_current_page(index)
@@ -251,28 +250,28 @@ class lunchinator(threading.Thread):
             for i in range(len(self.nb)):
                 widget = self.nb.get_nth_page(i)
                 order.append(self.nb.get_tab_label_text(widget))
-            for pluginInfo in self.ls.plugin_manager.getPluginsOfCategory("gui"):
+            for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.name in order:
                     pluginInfo.plugin_object.sortOrder = order.index(pluginInfo.name)
                     pluginInfo.plugin_object.save_sort_order()
                     
             if self.nb != None:
-                self.ls.set_last_gui_plugin_index(self.nb.get_current_page())
+                get_server().set_last_gui_plugin_index(self.nb.get_current_page())
         except:
-            self.ls.lunch_logger.error("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
+            get_server().lunch_logger.error("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
         self.nb = None
             
     def clicked_send_msg(self,w,*data):
         if len(data):
-            self.ls.call_all_members(data[0])
+            get_server().call_all_members(data[0])
         else:
-            self.ls.call_all_members(w.get_text())
+            get_server().call_all_members(w.get_text())
             w.set_text("")
         
     def clicked_add_host(self,w):
         hostn = w.get_text()
         try:
-            self.ls.members[socket.gethostbyname(hostn.strip())]=hostn.strip()
+            get_server().members[socket.gethostbyname(hostn.strip())]=hostn.strip()
             w.set_text("")
         except:
             d = gtk.MessageDialog(parent=None, flags=0, type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK, message_format=None)
@@ -289,7 +288,7 @@ class lunchinator(threading.Thread):
             
         plugin_widgets=[]        
         try:
-            for pluginInfo in self.ls.plugin_manager.getAllPlugins():
+            for pluginInfo in get_server().plugin_manager.getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:
                     try:
                         w = pluginInfo.plugin_object.create_options_widget()
@@ -297,9 +296,9 @@ class lunchinator(threading.Thread):
                             plugin_widgets.append((pluginInfo.name,w))
                     except:
                         plugin_widgets.append((pluginInfo.name,gtk.Label("Error while including plugin")))
-                        self.ls.lunch_logger.exception("while including plugin %s in settings window: %s",pluginInfo.name, str(sys.exc_info()))
+                        get_server().lunch_logger.exception("while including plugin %s in settings window: %s",pluginInfo.name, str(sys.exc_info()))
         except:
-            self.ls.lunch_logger.exception("while including plugins in settings window: %s", str(sys.exc_info()))
+            get_server().lunch_logger.exception("while including plugins in settings window: %s", str(sys.exc_info()))
         plugin_widgets.sort(key=lambda aTuple: "" if aTuple[0] == "General Settings" else aTuple[0])
         for name,widget in plugin_widgets:
             nb.append_page(widget,gtk.Label(name))
@@ -311,24 +310,23 @@ class lunchinator(threading.Thread):
         
         #save on exit
         
-        for pluginInfo in self.ls.plugin_manager.getAllPlugins():
+        for pluginInfo in get_server().plugin_manager.getAllPlugins():
             if pluginInfo.plugin_object.is_activated:
                 if resp==gtk.RESPONSE_APPLY:
                     try:
                         pluginInfo.plugin_object.save_options_widget_data()
                     except:
-                        self.ls.lunch_logger.error("was not able to save data for plugin %s: %s",pluginInfo.name, str(sys.exc_info()))
+                        get_server().lunch_logger.error("was not able to save data for plugin %s: %s",pluginInfo.name, str(sys.exc_info()))
                 else:
                     pluginInfo.plugin_object.discard_options_widget_data()
             
         d.destroy()
-        self.ls.send_info_around()
+        get_server().send_info_around()
 
         
 
 class UpdatingTable(object):
-    def __init__(self,ls):
-        self.ls = ls
+    def __init__(self):
         self.listStore = self.create_model()
         self.update_model()
         self.treeView = gtk.TreeView(self.listStore)
@@ -363,8 +361,8 @@ class UpdatingTable(object):
         pass
     
 class MembersTable(UpdatingTable):    
-    def __init__(self,ls):
-        UpdatingTable.__init__(self,ls)        
+    def __init__(self):
+        UpdatingTable.__init__(self)        
         
     def fill_treeview(self):        
         rendererText = gtk.CellRendererText()
@@ -393,15 +391,15 @@ class MembersTable(UpdatingTable):
         return ls
     
     def update_model(self):
-        me = self.ls.get_members()
-        ti = self.ls.get_member_timeout()
-        inf = self.ls.get_member_info()
+        me = get_server().get_members()
+        ti = get_server().get_member_timeout()
+        inf = get_server().get_member_info()
         self.listStore.clear()
         for ip in me.keys():
             member_entry=[ip,me[ip],"-",-1,"#FFFFFF"]
             if inf.has_key(ip) and inf[ip].has_key("next_lunch_begin") and inf[ip].has_key("next_lunch_end"):
                 member_entry[2]=inf[ip]["next_lunch_begin"]+"-"+inf[ip]["next_lunch_end"]  
-                if self.ls.is_now_in_time_span(inf[ip]["next_lunch_begin"],inf[ip]["next_lunch_end"]):
+                if get_server().is_now_in_time_span(inf[ip]["next_lunch_begin"],inf[ip]["next_lunch_end"]):
                     member_entry[4]="#00FF00"
                 else:
                     member_entry[4]="#FF0000"
@@ -410,8 +408,8 @@ class MembersTable(UpdatingTable):
             self.listStore.append(tuple(member_entry))
     
 class MessageTable(UpdatingTable):
-    def __init__(self,ls):
-        UpdatingTable.__init__(self,ls)     
+    def __init__(self):
+        UpdatingTable.__init__(self)     
         
     def fill_treeview(self):
         rendererText = gtk.CellRendererText()
@@ -436,11 +434,11 @@ class MessageTable(UpdatingTable):
         return ls
     
     def update_model(self):
-        m = self.ls.get_last_msgs()
+        m = get_server().get_last_msgs()
         self.listStore.clear()
         for i in m:
-            if i[1] in self.ls.get_members():
-                i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),self.ls.get_members()[i[1]],i[2])
+            if i[1] in get_server().get_members():
+                i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),get_server().get_members()[i[1]],i[2])
             else:
                 i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),i[1],i[2])
             self.listStore.append(i)

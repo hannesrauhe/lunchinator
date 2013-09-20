@@ -1,13 +1,11 @@
 from lunchinator.iface_plugins import *
 from time import localtime
 import subprocess,sys,ctypes
-from yapsy.PluginManager import PluginManagerSingleton
+from lunchinator import get_server
 
 class Notify(iface_called_plugin):    
     def __init__(self):
         super(Notify, self).__init__()
-        manager = PluginManagerSingleton.get()
-        self.ls = manager.app
         self.options = {"icon_file":sys.path[0]+"/images/mini_breakfast.png","audio_file":sys.path[0]+"/sounds/sonar.wav" }
         
     def activate(self):        
@@ -19,7 +17,7 @@ class Notify(iface_called_plugin):
                 icon = self.options["icon_file"]
                 name = " ["+addr+"]"
                 if member_info.has_key("avatar"):
-                    icon = self.ls.get_avatar_dir()+"/"+member_info["avatar"]
+                    icon = get_server().get_avatar_dir()+"/"+member_info["avatar"]
     #            print ["notify-send","--icon="+icon, msg + " [" + member_info["name"] + "]"]
                 if member_info.has_key("name"):
                     name = " [" + member_info["name"] + "]"

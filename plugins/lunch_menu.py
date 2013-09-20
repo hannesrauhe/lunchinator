@@ -1,14 +1,9 @@
 from lunchinator.iface_plugins import *
-from yapsy.PluginManager import PluginManagerSingleton
 import gtk,gobject,urllib2,sys
     
 class lunch_menu(iface_gui_plugin):
-    ls = None
-    
     def __init__(self):
         super(lunch_menu, self).__init__()
-        manager = PluginManagerSingleton.get()
-        self.ls = manager.app
         self.options = {"url":"http://lunchinator.de/files/menu_dummy.txt" }
         
     def activate(self):

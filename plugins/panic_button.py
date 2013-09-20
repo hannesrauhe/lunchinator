@@ -1,48 +1,41 @@
 from lunchinator.iface_plugins import *
-from yapsy.PluginManager import PluginManagerSingleton
 import gtk,gobject,urllib2,sys,threading
 import time,usb,subprocess
+from lunchinator import get_server
     
 class panic_button(iface_general_plugin):
-    ls = None
     panic_thread = None
     
     def __init__(self):
         super(panic_button, self).__init__()
-        manager = PluginManagerSingleton.get()
-        self.ls = manager.app
         self.options={"idVendor":"0x1d34",
                       "idProduct":"0x000d",
                       "panic_msg":"lunch panic" }
         
     def activate(self):
         iface_general_plugin.activate(self)
-        self.ls.lunch_logger.info("Starting panic button listener")
-        self.panic_thread = panic_button_listener(self.options["idVendor"],self.options["idProduct"],self.options["panic_msg"],self.ls)
+        get_server().lunch_logger.info("Starting panic button listener")
+        self.panic_thread = panic_button_listener(self.options["idVendor"],self.options["idProduct"],self.options["panic_msg"])
         self.panic_thread.start()
         
         
     def deactivate(self):
-        self.ls.lunch_logger.info("Stopping panic button listener")
+        get_server().lunch_logger.info("Stopping panic button listener")
         if self.panic_thread:
             self.panic_thread.stop_daemon()
             self.panic_thread.join()
         iface_general_plugin.deactivate(self)
     
-    
-
 class panic_button_listener(threading.Thread):
     idVendor = None
     idProduct = None
     running = True
-    ls = None
     msg = "lunch panic"
     
-    def __init__(self,idV,idP,msg,ls):
+    def __init__(self,idV,idP,msg):
         self.idVendor = idV
         self.idProduct = idP
         self.msg = msg      
-        self.ls = ls
         threading.Thread.__init__(self)  
 
     def findButton(self):
@@ -79,7 +72,7 @@ class panic_button_listener(threading.Thread):
                 if 22==result[0]:
                     if not unbuffer:
                         print "pressed the Panic Button"
-                        self.ls.call_all_members(self.msg)
+                        get_server().call_all_members(self.msg)
                     unbuffer = True
                 else:
                     unbuffer = False

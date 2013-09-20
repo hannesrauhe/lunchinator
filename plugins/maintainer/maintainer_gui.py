@@ -1,12 +1,12 @@
 import gtk,time,gobject
+from lunchinator import get_server
 
 class maintainer_gui(object):
     def __init__(self,mt):
         self.entry = None
         self.but = None
         self.mt = mt
-        self.ls = mt.ls
-        self.shown_logfile = self.ls.log_file
+        self.shown_logfile = get_server().log_file
         
     def display_report(self,w):
         if self.dropdown_reports.get_active()>=0:
@@ -16,14 +16,14 @@ class maintainer_gui(object):
         member = self.dropdown_members.get_active_text()
         #number_str = "" if self.numberchooser.get_value()==0 else ".%d"%self.numberchooser.get_value()
         if member:
-            self.ls.call("HELO_REQUEST_LOGFILE %d %s"%(self.ls.tcp_port,int(self.numberchooser.get_value())),member)
+            get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_server().tcp_port,int(self.numberchooser.get_value())),member)
             #no number_str here:
-            self.shown_logfile = "%s/logs/%s.log%s"%(self.ls.main_config_dir,member,"")
+            self.shown_logfile = "%s/logs/%s.log%s"%(get_server().main_config_dir,member,"")
             
     def request_update(self,w):
         member = self.dropdown_members.get_active_text()
         if member:
-            self.ls.call("HELO_UPDATE from GUI",member)
+            get_server().call("HELO_UPDATE from GUI",member)
         
     def show_logfile(self):
         fcontent = ""
@@ -54,7 +54,7 @@ class maintainer_gui(object):
         self.dropdown_reports.set_active(0)
                 
         self.dropdown_members = gtk.combo_box_new_text()
-        for m_ip,m_name in self.ls.get_members().items():
+        for m_ip,m_name in get_server().get_members().items():
             self.dropdown_members.append_text(m_ip)
         
         self.numberchooser = gtk.SpinButton(gtk.Adjustment(value=0, lower=0, upper=10, step_incr=1, page_incr=0, page_size=0))

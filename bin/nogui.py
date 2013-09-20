@@ -5,28 +5,28 @@
 #this script can be used to start the lunchinator as stripped down CLI-application without self-updating functionality
 
 import __preamble
-from lunchinator.lunch_server import *
+from lunchinator import get_server
+from lunchinator.lunch_default_config import lunch_options_parser
 import time,socket,threading,os,sys,types
         
 class lunchinator_nogui(threading.Thread):
     menu = None
-    ls = None
     
     def __init__(self, noUpdates = False):
         threading.Thread.__init__(self)
-        self.ls = lunch_server(noUpdates)
+        get_server().no_updates = noUpdates
         self.cmddict = {
                "help": [self.print_help,"prints out this text :-)"],
                 "members": [self.print_members,"prints the list of members"],
-               "call": [self.ls.call_all_members,"calls for lunch"],
+               "call": [get_server().call_all_members,"calls for lunch"],
                "q": [self.stop_server, "exit"]}
     
     def run(self):
-        self.ls.start_server()   
+        get_server().start_server()   
 
     def stop_server(self):        
         if self.isAlive():
-            self.ls.running = False
+            get_server().running = False
             self.join()  
             print "server stopped" 
         else:
@@ -52,7 +52,7 @@ class lunchinator_nogui(threading.Thread):
             
     def print_members(self):
         print "members:",
-        for m_ip,m_info in self.ls.get_member_info().iteritems():
+        for m_ip,m_info in get_server().get_member_info().iteritems():
             if "name" in m_info:
                 print m_info["name"],
             else:

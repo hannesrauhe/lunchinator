@@ -6,6 +6,8 @@
 
 import __preamble
 from lunchinator.gui_general import *
+from lunchinator.lunch_default_config import lunch_options_parser
+from lunchinator import get_server
     
 def highlight_icon(c):
     if c.check_new_msgs():
@@ -32,7 +34,7 @@ if __name__ == "__main__":
     global lanschi
     lanschi = lunchinator(options.noUpdates)
     lanschi.start()
-    lanschi.ls.init_done.wait()
+    get_server().init_done.wait()
 
     pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(sys.path[0]+"/images/glyphicons_053_alarm_black.png",25,25)
     global statusicon

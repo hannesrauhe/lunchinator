@@ -1,14 +1,12 @@
 from lunchinator.iface_plugins import *
 import subprocess, sys, ctypes
-from yapsy.PluginManager import PluginManagerSingleton
+from lunchinator import get_server
 
 import urllib2, tempfile, json, time
 
 class tdtnotify(iface_called_plugin):    
     def __init__(self):
         super(tdtnotify, self).__init__()
-        manager = PluginManagerSingleton.get()
-        self.ls = manager.app
         self.options = {"icon_file":sys.path[0]+"/images/mini_breakfast.png",
                         "blog_name":"tittendestages",
                         "trigger_word":"",
@@ -62,10 +60,10 @@ class tdtnotify(iface_called_plugin):
     def process_event(self,cmd,value,ip,member_info):
         if cmd=="HELO_TDTNOTIFY_NEW_PIC" or (time.time()-self.last_time) > (60*self.options["polling_time"]):
             if not cmd=="HELO_TDTNOTIFY_NEW_PIC":
-                self.ls.call("HELO_TDTNOTIFY_POLL "+str(self.options["polling_time"]))
+                get_server().call("HELO_TDTNOTIFY_POLL "+str(self.options["polling_time"]))
                 
             if self.download_pic(value=="force"):
-                self.ls.call("HELO_TDTNOTIFY_NEW_PIC "+self.pic_url)
+                get_server().call("HELO_TDTNOTIFY_NEW_PIC "+self.pic_url)
                 self.notify()       
             self.last_time = time.time() 
                 

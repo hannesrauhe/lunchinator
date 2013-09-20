@@ -1,14 +1,14 @@
 import gtk
+from lunchinator import get_server
 
 class bug_report_gui(object):
-    def __init__(self,ls):
+    def __init__(self):
         self.entry = None
         self.but = None
-        self.ls = ls
         
     def send_report(self,w):
-        if self.ls and len(w.props.text):
-            self.ls.call("HELO_BUGREPORT_DESCR %s"%w.props.text)
+        if get_server() and len(w.props.text):
+            get_server().call("HELO_BUGREPORT_DESCR %s"%w.props.text)
         else:
             print "HELO_BUGREPORT_DESCR %s"%w.props.text
             

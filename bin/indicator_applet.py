@@ -8,6 +8,8 @@ import __preamble
 import appindicator,platform,subprocess
 from lunchinator.lunch_server import EXIT_CODE_UPDATE
 from lunchinator.gui_general import *
+from lunchinator.lunch_default_config import lunch_options_parser
+from lunchinator import get_server
     
 def highlight_icon(c):
 #    if len(c.get_members())==0:
@@ -60,7 +62,7 @@ if __name__ == "__main__":
         
     lanschi = lunchinator(options.noUpdates)
     lanschi.start()
-    lanschi.ls.init_done.wait()
+    get_server().init_done.wait()
             
     ind.set_menu(lanschi.init_menu())
     

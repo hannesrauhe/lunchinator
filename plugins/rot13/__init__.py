@@ -1,15 +1,11 @@
-from yapsy.PluginManager import PluginManagerSingleton
 from lunchinator.iface_plugins import *
 from rot13 import *
+from lunchinator import get_server
 
 class rot13(iface_gui_plugin):
-    ls = None
-    
     def __init__(self):
         super(rot13, self).__init__()
         self.w = rot13box()
-        manager = PluginManagerSingleton.get()
-        self.ls = manager.app
         self.maxwidth=400
         self.maxheight=400
 #        self.options = {"fallback_pic":sys.path[0]+"/images/webcam.jpg",
@@ -23,8 +19,8 @@ class rot13(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self):
-        if (len(self.ls.last_messages)):
-            self.w.encodeText(self.ls.get_last_msgs()[0][2])
+        if (len(get_server().last_messages)):
+            self.w.encodeText(get_server().get_last_msgs()[0][2])
         gtkimage = None
         if self.shared_dict.has_key("tdtnotify_file"):
             try:

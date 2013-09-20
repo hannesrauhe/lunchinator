@@ -1,13 +1,9 @@
 from lunchinator.iface_plugins import *
-from yapsy.PluginManager import PluginManagerSingleton
+from lunchinator import get_server
     
 class gui_settings(iface_general_plugin):
-    ls = None
-    
     def __init__(self):
         super(gui_settings, self).__init__()
-        manager = PluginManagerSingleton.get()
-        self.ls = manager.app
         option_names = [('user_name', 'User Name'),
                         ('audio_file', 'Lunch Call Audio File'),
                         ('auto_update', "Automatic Update"),
@@ -21,8 +17,8 @@ class gui_settings(iface_general_plugin):
         self.options = []
         for o in option_names:
             methodname = "get_"+o[0]
-            if hasattr(self.ls, methodname): 
-                _member = getattr(self.ls, methodname)
+            if hasattr(get_server(), methodname): 
+                _member = getattr(get_server(), methodname)
                 self.options.append((o, _member()))
                 
     def save_options_widget_data(self):
@@ -40,7 +36,7 @@ class gui_settings(iface_general_plugin):
             if new_v!=v:
                 self.options[o]=new_v
                 #TODO(Hannes) hack
-                self.ls.config_file.set('general', o, str(new_v))
+                get_server().config_file.set('general', o, str(new_v))
         self.discard_options_widget_data()
-        self.ls.write_config_to_hd()
-        self.ls.read_config_from_hd()
+        get_server().write_config_to_hd()
+        get_server().read_config_from_hd()

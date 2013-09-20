@@ -1,4 +1,3 @@
-from yapsy.PluginManager import PluginManagerSingleton
 from lunchinator.iface_plugins import *
 
 from maintainer_gui import *
@@ -6,12 +5,8 @@ from maintainer_gui import *
 import time,subprocess
 
 class maintainer(iface_gui_plugin):
-    ls = None
-    
     def __init__(self):
         super(maintainer, self).__init__()
-        manager = PluginManagerSingleton.get()
-        self.ls = manager.app
         self.reports = []
         self.w = maintainer_gui(self)
         

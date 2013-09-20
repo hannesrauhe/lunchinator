@@ -1,15 +1,11 @@
 from lunchinator.iface_plugins import iface_general_plugin
-from yapsy.PluginManager import PluginManagerSingleton
 import gtk
 from l_avatar import l_avatar
+from lunchinator import get_server
 
 class avatar(iface_general_plugin):
-    ls = None
-    
     def __init__(self):
         super(avatar, self).__init__()
-        manager = PluginManagerSingleton.get()
-        self.ls = manager.app
         
     def activate(self):
         iface_general_plugin.activate(self)
@@ -39,13 +35,13 @@ class avatar(iface_general_plugin):
         response = dialog.run()
         if response == gtk.RESPONSE_OK:
             l = l_avatar()
-            gtkimg.set_from_file( l.use_as_avatar( self.ls, dialog.get_filename() ) )
+            gtkimg.set_from_file( l.use_as_avatar( get_server(), dialog.get_filename() ) )
         dialog.destroy()
     
     def create_options_widget(self):
         import gtk
         
-        img_path = self.ls.get_avatar_dir()+self.ls.get_avatar_file()
+        img_path = get_server().get_avatar_dir()+get_server().get_avatar_file()
         
         t = gtk.VBox()
         gtkimage = gtk.Image() 

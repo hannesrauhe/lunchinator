@@ -11,7 +11,9 @@ from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 EXIT_CODE_UPDATE = 2
 EXIT_CODE_STOP = 3
         
-class lunch_server(lunch_default_config):    
+class lunch_server(lunch_default_config):
+    _instance = None
+    
     running = False
     update_request = False
     new_msg = False
@@ -26,11 +28,15 @@ class lunch_server(lunch_default_config):
     no_updates = False
     with_plugins = True
     
+    @classmethod
+    def get_singleton_server(cls):
+        if cls._instance == None:
+            cls._instance = cls()
+        return cls._instance
+    
     #TODO: if started with plugins: make sure they are deactivated when destroying lunchinator (destructor anyone?)
-    def __init__(self, noUpdates = False, withPlugins = True):            
+    def __init__(self):
         lunch_default_config.__init__(self)
-        self.no_updates = noUpdates
-        self.with_plugins = withPlugins      
         self.exitCode = 0  
         self.read_config()
         

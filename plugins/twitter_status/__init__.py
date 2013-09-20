@@ -1,17 +1,13 @@
 from lunchinator.iface_plugins import *
-from yapsy.PluginManager import PluginManagerSingleton
 from twitter import *
+from lunchinator import get_server
 
 import os,sys,time,pprint
 
 class twitter_status(iface_called_plugin):
     twitter = None
-    ls = None
-    
     def __init__(self):
         super(twitter_status, self).__init__()
-        manager = PluginManagerSingleton.get()
-        self.ls = manager.app
         self.options = {"key":"","secret":"","twitter_account":"","polling_time":1}
         self.last_time=0
         self.last_since_id=0
@@ -44,7 +40,7 @@ class twitter_status(iface_called_plugin):
                 self.is_remote_account = True
                 self.remote_account="@lunchinator"
                 self.options["twitter_account"]=self.remote_account
-                self.ls.call("HELO_TWITTER_REMOTE %s"%self.remote_account)
+                get_server().call("HELO_TWITTER_REMOTE %s"%self.remote_account)
             except:
                 self.is_remote_account = False
                 self.logger.error("Authentication with twitter was unsuccessful. Check your key and secret. %s"%str(sys.exc_info()))
@@ -82,14 +78,14 @@ class twitter_status(iface_called_plugin):
             self.remote_user = member_info["name"] if member_info.has_key("name") else ip
                 
             if len(self.options["twitter_account"]):
-                self.ls.call("HELO_TWITTER_USER %s"%(self.options["twitter_account"]),client=ip)
+                get_server().call("HELO_TWITTER_USER %s"%(self.options["twitter_account"]),client=ip)
             else:
                 self.logger.warning("No Twitter Account given - Remote Calls won't work")
                 
         
         if self.is_remote_account and (time.time()-self.last_time) > (60*self.options["polling_time"]):
             self.last_time=time.time()
-            self.ls.call("HELO_TWITTER_REMOTE %s"%self.remote_account)
+            get_server().call("HELO_TWITTER_REMOTE %s"%self.remote_account)
             ments = self.twitter.statuses.mentions_timeline(since_id=self.last_since_id)
             if len(ments):
                 self.last_since_id = ments[0]['id']
@@ -102,7 +98,7 @@ class twitter_status(iface_called_plugin):
                             reply = "OK, @%s, I called for lunch"%(tweet_user)
                         else:
                             reply = "OK, @%s, I sent your message around"%(tweet_user)
-                        self.ls.call("Remote call by %s: %s"%(tweet_user,tweet_text))
+                        get_server().call("Remote call by %s: %s"%(tweet_user,tweet_text))
                     else:
                         reply = "Sorry, @%s, you're not authorized to call"%(tweet_user)
                     self.twitter.statuses.update(status=reply[:140])

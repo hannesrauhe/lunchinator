@@ -6,7 +6,7 @@
 
 import sys
 import __preamble
-from lunchinator import lunch_server
+from lunchinator import get_server
 
 if __name__ == "__main__":
     msg = "lunch"
@@ -18,7 +18,7 @@ if __name__ == "__main__":
         print cli,":",
     print msg
     
-    c = lunch_server.lunch_server(False,False)
-    recv_nr=c.call(msg,client=cli)
+    get_server().with_plugins = False
+    recv_nr=get_server().call(msg,client=cli)
     print "sent to",recv_nr,"clients"
     
