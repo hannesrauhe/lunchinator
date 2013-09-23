@@ -1,10 +1,12 @@
 import gtk,time,gobject
 from lunchinator import get_server
+import os
 
 class maintainer_gui(object):
     def __init__(self,mt):
         self.entry = None
         self.but = None
+        self.info_table = None
         self.mt = mt
         self.shown_logfile = get_server().log_file
         
@@ -62,6 +64,10 @@ class maintainer_gui(object):
         self.dropdown_reports.connect_object("changed", self.display_report,self.dropdown_reports)
         
         return memtVBox
+    
+    def create_into_table_widget(self):
+        self.info_table = InfoTable()
+        return self.info_table.scrollTree
                 
     def create_logs_widget(self):
         self.log_area = gtk.TextView()
@@ -98,15 +104,73 @@ class maintainer_gui(object):
     def create_widget(self):
         reports_widget = self.create_reports_widget()
         logs_widget = self.create_logs_widget()
+        info_table_widget = self.create_into_table_widget()
         
         nb = gtk.Notebook()
         nb.set_tab_pos(gtk.POS_LEFT)
         nb.append_page(reports_widget, gtk.Label("Bug Reports"))
         nb.append_page(logs_widget, gtk.Label("Logs"))
+        nb.append_page(info_table_widget, gtk.Label("Info"))
         nb.show_all()
         nb.set_current_page(0)
         
         return nb
+    
+    def updateInfoTable(self):
+        if self.info_table != None:
+            self.info_table.update_model()
+
+class InfoTable(object):
+    def __init__(self):
+        self.listStore = None
+        self.listStoreNumColumns = 0
+        self.treeView = gtk.TreeView()
+        self.scrollTree = gtk.ScrolledWindow()
+        self.scrollTree.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.scrollTree.set_border_width(5)
+        self.scrollTree.add_with_viewport(self.treeView)  
+        self.scrollTree.set_size_request(400, 350)   
+        self.treeView.show()
+        self.scrollTree.show()   
+        self.update_model()
+    
+    def update_model(self):
+        if len(get_server().member_info) == 0:
+            return
+        
+        table_data = {"ip":[""]*len(get_server().member_info)}
+        index = 0
+        for ip,infodict in get_server().member_info.iteritems():
+            table_data["ip"][index] = ip
+            for k,v in infodict.iteritems():
+                if not table_data.has_key(k):
+                    table_data[k]=[""]*len(get_server().member_info)
+                if False:#k=="avatar" and os.path.isfile(get_server().avatar_dir+"/"+v):
+                    # TODO add avatar image
+                    table_data[k][index]="avatars/%s"%v
+                else:
+                    table_data[k][index]=v
+            index+=1
+        
+        if self.listStore == None or self.listStoreNumColumns != len(table_data):
+            # columns added/removed
+            self.listStore = gtk.ListStore(*[str]*len(table_data))
+            self.treeView.set_model(self.listStore)
+            self.listStoreNumColumns = len(table_data)
+        else:
+            self.listStore.clear()
+        
+        rendererText = gtk.CellRendererText()
+        for num, th in enumerate(table_data.iterkeys()):
+            column = gtk.TreeViewColumn(th, rendererText, text=num)
+            column.set_sort_column_id(num)
+            self.treeView.append_column(column)
+            
+        for i in range(0,len(get_server().member_info)):
+            row = []
+            for k in table_data.iterkeys():
+                row.append(table_data[k][i])
+            self.listStore.append(row)
     
 def main():
     # enter the main loop
