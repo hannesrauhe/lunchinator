@@ -39,38 +39,55 @@ class maintainer_gui(object):
             return False
         return True
             
-    def create_widget(self):
+    def create_reports_widget(self):
         self.entry = gtk.TextView()
         self.entry.set_size_request(400,200)
         self.entry.set_wrap_mode(gtk.WRAP_WORD)
-        
-        self.log_area = gtk.TextView()
-        self.log_area.set_size_request(400,200)
-        self.log_area.set_wrap_mode(gtk.WRAP_WORD)
+        self.entry.set_editable(False)
+        frame = gtk.Frame()
+        frame.add(self.entry)
         
         self.dropdown_reports = gtk.combo_box_new_text()
         for r in self.mt.reports:
             self.dropdown_reports.append_text("%s - %s"%(time.strftime("%a, %d %b %Y %H:%M:%S",time.localtime(r[0])),r[1]))
         self.dropdown_reports.set_active(0)
+        
+        memtVBox = gtk.VBox()        
+        memtVBox.pack_start(self.dropdown_reports, False, False,5)
+        descAlign = gtk.Alignment(0, 0, 0, 0)
+        descAlign.add(gtk.Label("Description:"))
+        memtVBox.pack_start(descAlign, False, True,0)
+        memtVBox.pack_start(frame, True, True, 0)
+        
+        self.dropdown_reports.connect_object("changed", self.display_report,self.dropdown_reports)
+        
+        return memtVBox
                 
+    def create_logs_widget(self):
+        self.log_area = gtk.TextView()
+        self.log_area.set_size_request(400,200)
+        self.log_area.set_wrap_mode(gtk.WRAP_WORD)
+        self.log_area.set_editable(False)
+        frame = gtk.Frame()
+        frame.add(self.log_area)
+        
         self.dropdown_members = gtk.combo_box_new_text()
         for m_ip,m_name in get_server().get_members().items():
             self.dropdown_members.append_text(m_ip)
-        
+            
         self.numberchooser = gtk.SpinButton(gtk.Adjustment(value=0, lower=0, upper=10, step_incr=1, page_incr=0, page_size=0))
         self.update_button = gtk.Button("Send Update Command")
+        
         memHBox = gtk.HBox()
         memHBox.pack_start(self.dropdown_members, False, False, 5)
         memHBox.pack_start(self.numberchooser, False, False, 5)
         memHBox.pack_start(self.update_button, False, False, 5)
-        memtVBox = gtk.VBox()        
-        memtVBox.pack_start(self.dropdown_reports, False, False,5)
-        memtVBox.pack_start(gtk.Label("Description:"), False, False,5)
-        memtVBox.pack_start(self.entry, False, True, 10)
+        
+        memtVBox = gtk.VBox()    
         memtVBox.pack_start(memHBox, False, False, 5)
-        memtVBox.pack_start(self.log_area, False, True, 10)
+        memtVBox.pack_start(frame, True, True, 10)
         memtVBox.show_all()
-        self.dropdown_reports.connect_object("changed", self.display_report,self.dropdown_reports)
+        
         self.dropdown_members.connect_object("changed", self.request_log,self.dropdown_members)
         self.numberchooser.connect_object("changed", self.request_log,self.dropdown_members)
         self.update_button.connect_object("clicked", self.request_update,self.update_button)
@@ -78,21 +95,37 @@ class maintainer_gui(object):
         gobject.timeout_add(2000, self.show_logfile) 
         return memtVBox
     
+    def create_widget(self):
+        reports_widget = self.create_reports_widget()
+        logs_widget = self.create_logs_widget()
+        
+        nb = gtk.Notebook()
+        nb.set_tab_pos(gtk.POS_LEFT)
+        nb.append_page(reports_widget, gtk.Label("Bug Reports"))
+        nb.append_page(logs_widget, gtk.Label("Logs"))
+        nb.show_all()
+        nb.set_current_page(0)
+        
+        return nb
     
 def main():
     # enter the main loop
     gtk.main()
     return 0
 
-def WindowDeleteEvent(widget, event):
+def WindowDeleteEvent(_, __):
     # return false so that window will be destroyed
     return False
 
-def WindowDestroy(widget, *data):
+def WindowDestroy(_, *__):
     # exit main loop
     gtk.main_quit()
     
+class maintainer_wrapper:
+    reports = []
+    
 if __name__ == "__main__":
+    
     # create the top level window
     window = gtk.Window(gtk.WINDOW_TOPLEVEL)
     window.set_title("Layout Example")
@@ -100,7 +133,7 @@ if __name__ == "__main__":
     window.connect("delete-event", WindowDeleteEvent)
     window.connect("destroy", WindowDestroy)
     
-    window.add(maintainer_gui(None).create_widget())
+    window.add(maintainer_gui(maintainer_wrapper()).create_widget())
     
     # show all the widgets
     window.show_all()

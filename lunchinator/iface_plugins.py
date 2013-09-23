@@ -168,6 +168,7 @@ class iface_gui_plugin(iface_plugin):
         self.setConfigOption("sort_order",str(self.sortOrder))
         
     def create_widget(self):
+        import gtk
         return gtk.Label("The plugin should show its content here")
     
     def add_menu(self,menu):
