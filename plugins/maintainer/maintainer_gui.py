@@ -9,6 +9,9 @@ class maintainer_gui(object):
         self.info_table = None
         self.mt = mt
         self.shown_logfile = get_server().log_file
+        self.dropdown_members = None
+        self.dropdown_members_dict = None
+        self.dropdown_members_model = None
         
     def display_report(self,w):
         if self.dropdown_reports.get_active()>=0:
@@ -16,11 +19,16 @@ class maintainer_gui(object):
         
     def request_log(self,w):
         member = self.dropdown_members.get_active_text()
-        #number_str = "" if self.numberchooser.get_value()==0 else ".%d"%self.numberchooser.get_value()
-        if member:
-            get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_server().tcp_port,int(self.numberchooser.get_value())),member)
-            #no number_str here:
-            self.shown_logfile = "%s/logs/%s.log%s"%(get_server().main_config_dir,member,"")
+        if member == None:
+            return
+        
+        if "(" in member:
+            # member contains name, extract IP
+            member = member[member.rfind("(")+1:member.rfind(")")]
+
+        get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_server().tcp_port,int(self.numberchooser.get_value())),member)
+        #no number_str here:
+        self.shown_logfile = "%s/logs/%s.log%s"%(get_server().main_config_dir,member,"")
             
     def request_update(self,w):
         member = self.dropdown_members.get_active_text()
@@ -68,7 +76,31 @@ class maintainer_gui(object):
     def create_into_table_widget(self):
         self.info_table = InfoTable()
         return self.info_table.scrollTree
-                
+    
+    def get_dropdown_member_text(self, m_ip, m_name):
+        if m_ip == m_name:
+            return m_ip
+        else:
+            return "%s (%s)" % (m_name, m_ip)
+    
+    def update_dropdown_members(self):
+        if self.dropdown_members_model == None:
+            return
+        for m_ip,m_name in get_server().get_members().items():
+            if not m_ip in self.dropdown_members_dict:
+                # is new ip, append to the end
+                self.dropdown_members_dict[m_ip] = (len(self.dropdown_members_model), m_name)
+                row = [self.get_dropdown_member_text(m_ip, m_name),]
+                self.dropdown_members_model.append(row)
+            else:
+                #is already present, check if new information is available
+                info = self.dropdown_members_dict[m_ip]
+                if m_name != info[1]:
+                    #name has changed
+                    anIter = self.dropdown_members_model.iter_nth_child(None, info[0])
+                    self.dropdown_members_model.set_value(anIter, 0, self.get_dropdown_member_text(m_ip, m_name))
+                    self.dropdown_members_dict[m_ip] = (info[0], m_name)
+                    
     def create_logs_widget(self):
         self.log_area = gtk.TextView()
         self.log_area.set_size_request(400,200)
@@ -77,9 +109,13 @@ class maintainer_gui(object):
         frame = gtk.Frame()
         frame.add(self.log_area)
         
-        self.dropdown_members = gtk.combo_box_new_text()
-        for m_ip,m_name in get_server().get_members().items():
-            self.dropdown_members.append_text(m_ip)
+        self.dropdown_members_dict = {}
+        self.dropdown_members_model = gtk.ListStore(str)
+        self.dropdown_members = gtk.ComboBox(self.dropdown_members_model)
+        cell = gtk.CellRendererText()
+        self.dropdown_members.pack_start(cell, True)
+        self.dropdown_members.add_attribute(cell, 'text', 0)
+        self.update_dropdown_members()
             
         self.numberchooser = gtk.SpinButton(gtk.Adjustment(value=0, lower=0, upper=10, step_incr=1, page_incr=0, page_size=0))
         self.update_button = gtk.Button("Send Update Command")

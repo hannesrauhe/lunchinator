@@ -23,8 +23,9 @@ class maintainer(iface_gui_plugin):
         pass
     
     def process_event(self,cmd,value,ip,member_info):
-        if "HELO_INFO" in cmd:
+        if "HELO_INFO" in cmd or "HELO_DICT" in cmd:
             self.w.updateInfoTable()
+            self.w.update_dropdown_members()
         if cmd=="HELO_BUGREPORT_DESCR":
             self.reports.append((time.time(),ip,value))
             name = " [" + ip + "]"
