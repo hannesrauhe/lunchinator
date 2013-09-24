@@ -17,7 +17,12 @@ class maintainer(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self):
+        iface_gui_plugin.create_widget(self)
         return self.w.create_widget()
+    
+    def destroy_widget(self):
+        self.w.destroy_widget()
+        iface_gui_plugin.destroy_widget(self)
             
     def add_menu(self,menu):
         pass

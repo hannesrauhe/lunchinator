@@ -251,9 +251,12 @@ class lunchinator(threading.Thread):
                 widget = self.nb.get_nth_page(i)
                 order.append(self.nb.get_tab_label_text(widget))
             for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
+                # store sort order
                 if pluginInfo.name in order:
                     pluginInfo.plugin_object.sortOrder = order.index(pluginInfo.name)
                     pluginInfo.plugin_object.save_sort_order()
+                if pluginInfo.plugin_object.is_activated:
+                    pluginInfo.plugin_object.destroy_widget()
                     
             if self.nb != None:
                 get_settings().set_last_gui_plugin_index(self.nb.get_current_page())

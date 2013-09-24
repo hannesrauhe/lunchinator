@@ -12,6 +12,7 @@ class maintainer_gui(object):
         self.dropdown_members = None
         self.dropdown_members_dict = None
         self.dropdown_members_model = None
+        self.visible = False
         
     def display_report(self,w):
         if self.dropdown_reports.get_active()>=0:
@@ -34,7 +35,6 @@ class maintainer_gui(object):
             get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_settings().tcp_port,int(self.numberchooser.get_value())),member)
             #no number_str here:
             self.shown_logfile = "%s/logs/%s.log%s"%(get_settings().main_config_dir,member,"")
-            gobject.timeout_add(2000, self.show_logfile) 
             
     def request_update(self,w):
         member = self.get_selected_log_member()
@@ -42,6 +42,11 @@ class maintainer_gui(object):
             get_server().call("HELO_UPDATE from GUI",member)
         
     def show_logfile(self):
+        if not self.visible:
+            return False
+        
+        print "read"
+        
         fcontent = ""
         try:
             fhandler = open(self.shown_logfile,"r")
@@ -51,9 +56,7 @@ class maintainer_gui(object):
             fcontent = "File not ready: %s"%str(e)
         self.log_area.get_buffer().set_text(fcontent)
         
-        if not (self.log_area.flags() & gtk.MAPPED):
-            return False
-        return True
+        return self.visible
             
     def create_reports_widget(self):
         self.entry = gtk.TextView()
@@ -155,8 +158,12 @@ class maintainer_gui(object):
         nb.append_page(info_table_widget, gtk.Label("Info"))
         nb.show_all()
         nb.set_current_page(0)
+        self.visible = True
         
         return nb
+    
+    def destroy_widget(self):
+        self.visible = False
     
     def updateInfoTable(self):
         if self.info_table != None:

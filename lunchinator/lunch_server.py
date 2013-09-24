@@ -129,7 +129,7 @@ class lunch_server(object):
     def write_members_to_file(self):
         try:
             if len(self.members)>1:
-                f = open(self.members_file,'w')
+                f = open(get_settings().members_file,'w')
                 f.truncate()
                 for m in self.members.keys():
                     f.write(m+"\n")

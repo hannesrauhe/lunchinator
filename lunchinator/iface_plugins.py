@@ -138,6 +138,7 @@ class iface_gui_plugin(iface_plugin):
     def __init__(self):
         super(iface_gui_plugin, self).__init__()
         self.sortOrder = -1
+        self.visible = False
     
     def activate(self):
         """
@@ -168,8 +169,12 @@ class iface_gui_plugin(iface_plugin):
         self.setConfigOption("sort_order",str(self.sortOrder))
         
     def create_widget(self):
-        import gtk
-        return gtk.Label("The plugin should show its content here")
+        self.visible = True
+        return None
+    
+    """Called when the widget is hidden / closed. Ensure that create_widget restores the state."""
+    def destroy_widget(self):
+        self.visible = False
     
     def add_menu(self,menu):
         pass    
