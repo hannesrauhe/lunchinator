@@ -324,9 +324,7 @@ class lunchinator(threading.Thread):
                     pluginInfo.plugin_object.discard_options_widget_data()
             
         d.destroy()
-        get_server().send_info_around()
-
-        
+        get_server().call("HELO_INFO "+get_server().build_info_string())        
 
 class UpdatingTable(object):
     def __init__(self):

@@ -177,10 +177,7 @@ class lunch_server(object):
             info_d["next_lunch_begin"] = get_settings().next_lunch_begin
         if get_settings().next_lunch_end:
             info_d["next_lunch_end"] = get_settings().next_lunch_end
-        return json.dumps(info_d)
-    
-    def send_info_around(self):
-        self.call("HELO_INFO "+self.build_info_string())          
+        return json.dumps(info_d)        
         
     def incoming_event(self,data,addr):   
         if addr[0].startswith("127."):
@@ -230,11 +227,24 @@ class lunch_server(object):
                 self.members.update(ext_members)
                 self.members = dict((k, v) for k, v in self.members.items() if not k.startswith("127"))
                 if self.my_master==-1:
-                    self.send_info_around()
+                    self.call("HELO_REQUEST_INFO "+self.build_info_string())
                     
                 self.my_master = addr[0]                                    
                 if not os.path.exists(get_settings().members_file):
                     self.write_members_to_file()
+                 
+            elif cmd.startswith("HELO_REQUEST_INFO"):
+                self.member_info[addr[0]] = json.loads(value)  
+                self.call("HELO_INFO "+self.build_info_string(),client=addr[0])
+                         
+            elif cmd.startswith("HELO_INFO"):
+                #someone sends his info
+                self.member_info[addr[0]] = json.loads(value)        
+                #Request avatar if not there yet
+                if self.member_info[addr[0]].has_key("avatar"):
+                    if not os.path.exists(get_settings().avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
+                        self.call("HELO_REQUEST_AVATAR "+str(get_settings().tcp_port),client=addr[0])          
+                
                                     
             elif cmd.startswith("HELO_LEAVE"):
                 #the sender tells me, that he is going
@@ -306,15 +316,6 @@ class lunch_server(object):
                     ds.start()
                 else:
                     log_error("Want to send file %s, but cannot find it"%(fileToSend))   
-                      
-            elif cmd.startswith("HELO_INFO"):
-                #someone sends his info
-                self.member_info[addr[0]] = json.loads(value)      
-                #Request avatar if not there yet
-                if self.member_info[addr[0]].has_key("avatar"):
-                    if not os.path.exists(get_settings().avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
-                        self.call("HELO_REQUEST_AVATAR "+str(get_settings().tcp_port),client=addr[0])          
-                
             elif "HELO"==cmd:
                 #someone tells me his name
                 if addr[0] not in self.members:   
