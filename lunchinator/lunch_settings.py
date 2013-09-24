@@ -37,7 +37,8 @@ class lunch_settings(object):
         self.version_short = "unknown"
         self.commit_count = "0"
         self.commit_count_plugins = "0"
-        self.plugin_dirs = [self.main_config_dir+"/plugins",sys.path[0]+"/plugins"]
+        self.lunchdir = sys.path[0]
+        self.plugin_dirs = [self.main_config_dir+"/plugins",self.lunchdir+"/plugins"]
         
         #insert plugin folders into path
         for aDir in self.plugin_dirs:
@@ -156,6 +157,33 @@ class lunch_settings(object):
     def write_config_to_hd(self): 
         self.config_file.write(open(self.main_config_dir+'/settings.cfg','w'))
         
+    def getCanUpdate(self, repo):
+        call = ["git","--git-dir="+repo+"/.git","--work-tree="+repo,"diff","--name-only","--exit-code","--quiet"]
+        if subprocess.call(call)!=0:
+            return (False, "There are unstaged changes")
+        
+        call = ["git","--git-dir="+repo+"/.git","--work-tree="+repo,"diff","--cached","--exit-code","--quiet"]
+        if subprocess.call(call)!=0:
+            return (False, "There are staged, uncommitted changes")
+        
+        call = ["git","--git-dir="+repo+"/.git","--work-tree="+repo,"symbolic-ref","HEAD"]
+        p = subprocess.Popen(call,stdout=subprocess.PIPE)
+        branch = p.communicate()[0]
+        if "master" not in branch:
+            return (False, "The selected branch is not the master branch")
+        
+        call = ["git","--git-dir="+repo+"/.git","--work-tree="+repo,"log","origin/master..HEAD","--exit-code","--quiet"]
+        if subprocess.call(call)!=0:
+            return (False, "There are unpushed commits on the master branch")
+        
+        return (True, None)
+    
+    def getCanUpdateMain(self):
+        return self.getCanUpdate(self.lunchdir)
+        
+    def getCanUpdatePlugins(self):
+        return self.getCanUpdate(self.main_config_dir + "/plugins/")
+    
     #special handling for debug 
     def set_debug(self,activate):
         if activate:
@@ -165,7 +193,7 @@ class lunch_settings(object):
         else:
             os.remove(self.main_config_dir+"/debug.cfg")
         self.debug = activate
-            
+        
     def get_debug(self):
         return self.debug
     
