@@ -81,8 +81,7 @@ class DataReceiverThread(threading.Thread):
             if addr[0]==self.sender:
                 self._receiveFile()
             else:
-                log_error("Sender is not allowed to send file:",addr[0],", expected:",self.sender)
-                raise
+                raise Exception("Sender is not allowed to send file:",addr[0],", expected:",self.sender)
         except:
             log_exception("I caught something unexpected when trying to receive file",self.file_path, sys.exc_info()[0])
         

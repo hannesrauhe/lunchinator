@@ -31,9 +31,11 @@ class maintainer_gui(object):
     def request_log(self,w):
         member = self.get_selected_log_member()
         if member != None:
+            print "update from %s" % member
             get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_server().tcp_port,int(self.numberchooser.get_value())),member)
             #no number_str here:
             self.shown_logfile = "%s/logs/%s.log%s"%(get_server().main_config_dir,member,"")
+            gobject.timeout_add(2000, self.show_logfile) 
             
     def request_update(self,w):
         member = self.get_selected_log_member()

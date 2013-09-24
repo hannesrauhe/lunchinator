@@ -1,8 +1,9 @@
-import sys,os,getpass,ConfigParser,types,subprocess,logging,logging.handlers
+import sys,os,getpass,ConfigParser,types,subprocess,logging
 from optparse import OptionParser
 
 '''integrate the cli-parser into the default_config sooner or later'''
-from lunchinator import get_logger, log_exception, log_warning, log_error
+from lunchinator import get_logger, log_exception, log_warning, log_error,\
+    log_info
 class lunch_options_parser(object):
     def parse_args(self):
         usage = "usage: %prog [options]"
@@ -56,23 +57,9 @@ class lunch_default_config(object):
             os.makedirs(self.main_config_dir)
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
-#        logging.basicConfig(filename=self.log_file+".plugins",level=logging.WARNING)
-
-        loghandler = logging.handlers.RotatingFileHandler(self.log_file,'a',0,9)
-        loghandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
         
-        lunch_logger = get_logger()
-        lunch_logger.setLevel(logging.INFO)
-        lunch_logger.addHandler(loghandler)
-        
-        yapsi_logger = logging.getLogger('yapsy')
-        yapsi_logger.setLevel(logging.WARNING)
-        yapsi_logger.addHandler(loghandler)
-        
-        loghandler.doRollover()
-        
-        lunch_logger.info("Starting Lunchinator")
-        lunch_logger.setLevel(logging.WARNING)
+        log_info("Starting Lunchinator")
+        get_logger().setLevel(logging.WARNING)
         
         try:
             os.chdir(sys.path[0])
