@@ -70,7 +70,9 @@ class lunch_default_config(object):
             os.chdir(sys.path[0])
             p = subprocess.Popen(["git","log","-1"],stdout=subprocess.PIPE)
             self.version, _ = p.communicate()
-            self.version_short = self.version.splitlines()[2][5:].strip()
+            for line in self.version.splitlines():
+                if line.startswith("Date:"):
+                    self.version_short = line[5:].strip()
             p = subprocess.Popen(["git","rev-list", "HEAD", "--count"],stdout=subprocess.PIPE)
             cco, _ = p.communicate()
             self.commit_count = cco.strip()
