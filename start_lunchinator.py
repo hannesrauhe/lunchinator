@@ -24,7 +24,8 @@ while shouldRestart:
         log_warning("Cannot update main repository: %s" % reason)
     else:
         log_info("Updating main repository")
-        if subprocess.call(["git","--git-dir="+get_settings().lunchdir+"/.git","pull"])!=0:
+        call = ["git","--git-dir="+get_settings().lunchdir+"/.git","--work-tree="+get_settings().lunchdir+"/.git","pull"]
+        if subprocess.call(call)!=0:
             log_error("git pull did not work (main repository). The Update mechanism therefore does not work.\n\
 If you do not know, what to do now:\n\
 it should be safe to call 'git stash' in the lunchinator directory %s start lunchinator again."%get_settings().lunchdir)
@@ -35,7 +36,8 @@ it should be safe to call 'git stash' in the lunchinator directory %s start lunc
     else:
         log_info("Updating plugin repository")
         #locate plugins repository
-        if subprocess.call(["git","--git-dir="+get_settings().main_config_dir+"/plugins/.git","pull"])!=0:
+        call = ["git","--git-dir="+get_settings().main_config_dir+"/plugins/.git","--work-tree="+get_settings().main_config_dir+"/plugins/.git","pull"]
+        if subprocess.call(call)!=0:
             log_error("git pull did not work (plugin repository). The Update mechanism therefore does not work.\n\
 If you do not know, what to do now:\n\
 it should be safe to call 'git stash' in the plugins directory %s/plugins and start lunchinator again."%get_settings().main_config_dir)
