@@ -68,10 +68,8 @@ class lunch_server(lunch_default_config):
     def call(self,msg,client='',hosts={}):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         i=0
-        #print "sending",msg,"to",
         if client:
             log_debug("Sending message %s to %s"%(msg,client))
-            #print client
             try:
                 s.sendto(msg, (client.strip(), 50000)) 
                 i+=1
@@ -95,7 +93,6 @@ class lunch_server(lunch_default_config):
         else:
             log_debug("Sending message %s to %s",msg,str(hosts))
             for ip,name in hosts.items():
-                #print ip.strip()
                 try:
                     s.sendto(msg, (ip.strip(), 50000))
                     i+=1
@@ -360,7 +357,7 @@ class lunch_server(lunch_default_config):
         if addr in self.members:
             m = self.members[addr]
             
-        print "%s: [%s] %s" % (t,m,msg)
+        log_info("%s: [%s] %s" % (t,m,msg))
         
         self.last_messages.insert(0,[mtime,addr,msg])
         self.new_msg = True
@@ -415,7 +412,7 @@ class lunch_server(lunch_default_config):
             
     '''listening method - should be started in its own thread'''    
     def start_server(self):
-        print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service"
+        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service")
         self.running = True
         self.my_master=-1 #the peer i use as master
         announce_name=0 #how often did I announce my name        
@@ -481,7 +478,7 @@ class lunch_server(lunch_default_config):
             except:
                 log_warning("Wasn't able to send the leave call and close the socket...")
             log_info("Lunchinator stopped")                  
-            print strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service"
+            log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service")
 #            self.write_config_to_hd()
             for pluginInfo in self.plugin_manager.getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:

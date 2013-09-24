@@ -9,7 +9,7 @@ import appindicator,platform,subprocess
 from lunchinator.lunch_server import EXIT_CODE_UPDATE
 from lunchinator.gui_general import *
 from lunchinator.lunch_default_config import lunch_options_parser
-from lunchinator import get_server
+from lunchinator import log_info
     
 def highlight_icon(c):
 #    if len(c.get_members())==0:
@@ -36,10 +36,10 @@ if __name__ == "__main__":
         message.destroy()
         if gtkresponse==gtk.RESPONSE_YES:
             if subprocess.call(['gksudo', sys.path[0]+'/bin/install-lunch-icons.sh lunch'])==0:
-                print "restarting after icons were installed"
+                log_info("restarting after icons were installed")
                 os._exit(EXIT_CODE_UPDATE)
             else:
-                print "icons were not installed because of an error"
+                log_info("icons were not installed because of an error")
         
         if not os.path.exists('/usr/share/icons/ubuntu-mono-light/status/24/lunchinator.svg') or \
            not os.path.exists('/usr/share/icons/ubuntu-mono-dark/status/24/lunchinator.svg'):

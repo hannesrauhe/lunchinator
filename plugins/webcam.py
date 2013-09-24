@@ -36,7 +36,7 @@ class UpdatingImage():
             self.gtkimage.show()
             gobject.timeout_add(self.timeout, self.update)        
         except:
-            print "Something went wrong when trying to display the fallback image",self.fallback_pis,sys.exc_info()[0]
+            log_exception("Something went wrong when trying to display the fallback image",self.fallback_pis,sys.exc_info()[0])
             
     def update(self): 
         try:
@@ -53,5 +53,5 @@ class UpdatingImage():
             self.gtkimage.set_from_pixbuf(loader.get_pixbuf())  
             return True             
         except:
-            print "Something went wrong when trying to display the webcam image"
+            log_exception("Something went wrong when trying to display the webcam image")
             return False

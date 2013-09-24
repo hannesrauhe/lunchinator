@@ -1,4 +1,5 @@
 import threading,socket,sys,time
+from lunchinator import log_exception, log_error
 
 class DataSenderThread(threading.Thread):
     receiver = ""
@@ -16,7 +17,7 @@ class DataSenderThread(threading.Thread):
         try:
             self.con.connect((self.receiver, self.tcp_port))            
         except socket.error as e:
-            print "Could not initiate connection to",self.receiver,"on Port",self.tcp_port,e.strerror
+            log_exception("Could not initiate connection to",self.receiver,"on Port",self.tcp_port,e.strerror)
             raise
         
         sendfile = open(self.file_path, 'rb')           
@@ -25,7 +26,7 @@ class DataSenderThread(threading.Thread):
         try:
             self.con.sendall(data)                      
         except socket.error as e:
-            print "Could not send data",e.strerror
+            log_exception("Could not send data",e.strerror)
             raise
         
  
@@ -35,7 +36,7 @@ class DataSenderThread(threading.Thread):
         try:
             self._sendFile()       
         except:
-            print "An error occured while trying to send file",self.file_path, sys.exc_info()[0]   
+            log_exception("An error occured while trying to send file",self.file_path, sys.exc_info()[0])   
              
         if self.con:
             self.con.close()     
@@ -66,7 +67,7 @@ class DataReceiverThread(threading.Thread):
                 writefile.write(rec)
                 length -= len(rec)
         except socket.error as e:
-            print "Error while receiving the data, Bytes to receive left:",length,"Error:",e.strerror
+            log_exception("Error while receiving the data, Bytes to receive left:",length,"Error:",e.strerror)
             raise
  
     def run(self):
@@ -80,10 +81,10 @@ class DataReceiverThread(threading.Thread):
             if addr[0]==self.sender:
                 self._receiveFile()
             else:
-                print "Sender is not allowed to send file:",addr[0],", expected:",self.sender
+                log_error("Sender is not allowed to send file:",addr[0],", expected:",self.sender)
                 raise
         except:
-            print "I caught something unexpected when trying to receive file",self.file_path, sys.exc_info()[0]
+            log_exception("I caught something unexpected when trying to receive file",self.file_path, sys.exc_info()[0])
         
         if self.con:    
             self.con.close()

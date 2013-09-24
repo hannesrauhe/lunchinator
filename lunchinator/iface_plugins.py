@@ -1,6 +1,6 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_warning
+from lunchinator import log_warning, log_error, log_exception
 import types
 
 class iface_plugin(IPlugin):    
@@ -56,9 +56,9 @@ class iface_plugin(IPlugin):
                     elif type(v)==types.StringType:
                         self.options[o] = new_v
                     else:
-                        print "type of value",o,v,"not supported, using default"
+                        log_error("type of value",o,v,"not supported, using default")
                 except:
-                    print "could not convert value of",o,"from config to type",type(v),"(",new_v,") using default"
+                    log_error("could not convert value of",o,"from config to type",type(v),"(",new_v,") using default")
         
     def add_option_to_widget(self, t, i, o, v):
         import gtk

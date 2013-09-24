@@ -71,7 +71,7 @@ class panic_button_listener(threading.Thread):
                 result = handle.interruptRead(endpoint.address, endpoint.maxPacketSize)
                 if 22==result[0]:
                     if not unbuffer:
-                        print "pressed the Panic Button"
+                        log_info("pressed the Panic Button")
                         get_server().call_all_members(self.msg)
                     unbuffer = True
                 else:

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import subprocess,platform,os,sys
 from lunchinator.lunch_server import EXIT_CODE_UPDATE
+from lunchinator import log_critical, log_error
 
 pythonex_wo_console = "/usr/bin/python"
 pythonex_w_console = "/usr/bin/python"
@@ -14,6 +15,8 @@ print "We are on",platform.system(),platform.release(),platform.version()
 lunchdir = sys.path[0]
 lunchbindir = lunchdir+"/bin/"
 main_config_dir = os.getenv("HOME")+"/.lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+"/.lunchinator"
+
+log_error("test", "the", 0, "critical", True, 0.45, "logger")
 
 shouldRestart = True
 while shouldRestart: 

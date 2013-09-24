@@ -2,6 +2,7 @@
 import hashlib, shutil
 import os
 import Image
+from lunchinator import log_exception, log_error
 
 class l_avatar(object):
     size = 128, 128
@@ -23,12 +24,12 @@ class l_avatar(object):
                 im.thumbnail(self.size, Image.ANTIALIAS)
                 im.save(outfile, "JPEG")
             except IOError:
-                print "cannot create thumbnail for '%s'" % infile
+                log_exception("cannot create thumbnail for '%s'" % infile)
                 raise
     
     def use_as_avatar(self,config_ob,file_path):    
         if not os.path.exists(file_path):
-            print "no image found at",file_path,", exiting"
+            log_error("no image found at",file_path,", exiting")
             raise
         self.scale_image(file_path,config_ob.get_avatar_dir()+"/tmp.jpg")
         avatar_name = self.md5_for_file(file_path)+".jpg"

@@ -1,7 +1,7 @@
 import sys,types
 import gobject
 import gtk
-from lunchinator import get_server, log_exception
+from lunchinator import get_server, log_exception, log_info
 import time, socket,logging,threading,os
 import platform
 import urllib2
@@ -109,9 +109,9 @@ class lunchinator(threading.Thread):
         if self.isAlive():
             get_server().running = False
             self.join()  
-            print "server stopped" 
+            log_info("server stopped") 
         else:
-            print "server not running"
+            log_info("server not running")
     
     def check_new_msgs(self):
         return get_server().new_msg
