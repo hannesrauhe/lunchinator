@@ -7,6 +7,6 @@ mkdir -p $LUNCHINATOR_CONFIG_DIR
 
 while test $? -ne 3; do
 	git pull;
-	git --git-dir=~/.lunchinator/plugins/.git pull
+	git --git-dir=$HOME/.lunchinator/plugins/.git pull
 	python ./noninteractive.py --autoUpdate;
 done

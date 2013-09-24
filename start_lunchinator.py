@@ -15,6 +15,9 @@ print "We are on",platform.system(),platform.release(),platform.version()
 lunchdir = sys.path[0]
 lunchbindir = lunchdir+"/bin/"
 main_config_dir = os.getenv("HOME")+"/.lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+"/.lunchinator"
+main_confid_dir = os.path.abspath(main_config_dir)
+print main_config_dir
+
 
 log_error("test", "the", 0, "critical", True, 0.45, "logger")
 
