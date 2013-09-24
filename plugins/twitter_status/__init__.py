@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import *
 from twitter import *
-from lunchinator import get_server
+from lunchinator import get_server, log_exception, log_info, log_error
 
 import os,sys,time,pprint
 
@@ -43,7 +43,7 @@ class twitter_status(iface_called_plugin):
                 get_server().call("HELO_TWITTER_REMOTE %s"%self.remote_account)
             except:
                 self.is_remote_account = False
-                self.logger.error("Authentication with twitter was unsuccessful. Check your key and secret. %s"%str(sys.exc_info()))
+                log_exception("Authentication with twitter was unsuccessful. Check your key and secret. %s"%str(sys.exc_info()))
         else:
             self.is_remote_account = False
         
@@ -59,10 +59,10 @@ class twitter_status(iface_called_plugin):
             statustxt = "Lunchtime!"
             if member_info and member_info.has_key("name"):
                 statustxt += " "+member_info["name"]
-            self.logger.info("pushing to twitter: %s"%statustxt)
+            log_info("pushing to twitter: %s"%statustxt)
             self.twitter.statuses.update(status=statustxt[:140])
         else:
-            self.logger.error("sending status to twitter did not work: %s"%str(sys.exc_info()))
+            log_error("sending status to twitter did not work: %s"%str(sys.exc_info()))
     
     def process_event(self,cmd,value,ip,member_info):
         if cmd=="HELO_TWITTER_USER":
@@ -72,7 +72,7 @@ class twitter_status(iface_called_plugin):
                 try:
                     self.twitter.friendship.create(screen_name=screen_name)
                 except:
-                    self.logger.error("Unable to follow %s: %s"%(screen_name,str(sys.exc_info())))
+                    log_exception("Unable to follow %s: %s"%(screen_name,str(sys.exc_info())))
         elif cmd=="HELO_TWITTER_REMOTE":
             self.remote_account = value
             self.remote_user = member_info["name"] if member_info.has_key("name") else ip
@@ -80,7 +80,7 @@ class twitter_status(iface_called_plugin):
             if len(self.options["twitter_account"]):
                 get_server().call("HELO_TWITTER_USER %s"%(self.options["twitter_account"]),client=ip)
             else:
-                self.logger.warning("No Twitter Account given - Remote Calls won't work")
+                log_warning("No Twitter Account given - Remote Calls won't work")
                 
         
         if self.is_remote_account and (time.time()-self.last_time) > (60*self.options["polling_time"]):

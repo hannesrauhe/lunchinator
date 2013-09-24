@@ -2,7 +2,7 @@ from lunchinator.iface_plugins import *
 from time import localtime
 import subprocess,sys,ctypes
 import threading, SimpleHTTPServer, SocketServer, os
-from lunchinator import get_server
+from lunchinator import get_server, log_info, log_exception
 
 class http_server_thread(threading.Thread):    
     def __init__(self, port,html_dir):
@@ -35,14 +35,14 @@ class lunch_http(iface_called_plugin):
         
     def activate(self):
         iface_called_plugin.activate(self)
-        self.logger.info("Starting the HTTP Server on Port %d"%self.options["http_port"])
+        log_info("Starting the HTTP Server on Port %d"%self.options["http_port"])
         self.s_thread = http_server_thread(self.options["http_port"],self.options["html_dir"])
         self.s_thread.start()
         if not os.path.exists(self.options["html_dir"]+"/index.html"):
             self.write_info_html()
         
     def deactivate(self):
-        self.logger.info("Stopping HTTP Server")
+        log_info("Stopping HTTP Server")
         if self.s_thread:
             self.s_thread.stop_server()
             self.s_thread.join()
@@ -94,4 +94,4 @@ class lunch_http(iface_called_plugin):
             indexhtml.write(get_server().version)
             indexhtml.close()
         except:
-            self.logger.error("HTTP plugin: problem while writing html file: %s"%sys.exc_info())
+            log_exception("HTTP plugin: problem while writing html file: %s"%sys.exc_info())

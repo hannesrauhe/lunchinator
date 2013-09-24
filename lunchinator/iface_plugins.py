@@ -1,5 +1,6 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
+from lunchinator import log_warning
 import types
 
 class iface_plugin(IPlugin):    
@@ -8,7 +9,6 @@ class iface_plugin(IPlugin):
         self.option_names = None
         self.option_widgets = {}
         manager = PluginManagerSingleton.get()
-        self.logger = manager.app.lunch_logger
         self.shared_dict = manager.app.shared_dict
         super(iface_plugin, self).__init__()
     
@@ -162,7 +162,7 @@ class iface_gui_plugin(iface_plugin):
             try:
                 self.sortOrder = int(new_v)
             except:
-                self.logger.warning("could not read sort order configuration")
+                log_warning("could not read sort order configuration")
         
     def save_sort_order(self):
         self.setConfigOption("sort_order",str(self.sortOrder))

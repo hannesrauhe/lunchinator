@@ -1,7 +1,7 @@
 from lunchinator.iface_plugins import *
 import gtk,gobject,urllib2,sys,threading
 import time,usb,subprocess
-from lunchinator import get_server
+from lunchinator import get_server, log_info
     
 class panic_button(iface_general_plugin):
     panic_thread = None
@@ -14,13 +14,13 @@ class panic_button(iface_general_plugin):
         
     def activate(self):
         iface_general_plugin.activate(self)
-        get_server().lunch_logger.info("Starting panic button listener")
+        log_info("Starting panic button listener")
         self.panic_thread = panic_button_listener(self.options["idVendor"],self.options["idProduct"],self.options["panic_msg"])
         self.panic_thread.start()
         
         
     def deactivate(self):
-        get_server().lunch_logger.info("Stopping panic button listener")
+        log_info("Stopping panic button listener")
         if self.panic_thread:
             self.panic_thread.stop_daemon()
             self.panic_thread.join()

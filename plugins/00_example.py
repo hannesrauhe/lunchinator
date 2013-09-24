@@ -1,6 +1,6 @@
 
 from lunchinator.iface_plugins import *
-from lunchinator import get_server
+from lunchinator import get_server, log_info, log_error
 
 '''use iface_called_plugin if you want to do something when a message arrives
 (see notify.py for example)'''
@@ -41,9 +41,9 @@ class example_called(iface_called_plugin):
         '''if a text-message that is recognized as lunch call comes in, this method will be called'''
         
         '''you can use the logger to write information to the log-files'''
-        self.logger.info("my plugin processes the lunch call")
+        log_info("my plugin processes the lunch call")
         if 0==1:
-            self.logger.error("something went wrong")
+            log_error("something went wrong")
             
         '''if exceptions are thrown they will be caught and logged outside'''
     
@@ -56,6 +56,7 @@ class example_called(iface_called_plugin):
 (see lunch_menu.py for example)'''
 class example_gui(iface_gui_plugin):
     def create_widget(self):
+        import gtk
         return gtk.Label("Somehting that will show up in the lunchinator")
     pass
 

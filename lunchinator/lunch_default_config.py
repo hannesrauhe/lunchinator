@@ -2,6 +2,7 @@ import sys,os,getpass,ConfigParser,types,subprocess,logging,logging.handlers
 from optparse import OptionParser
 
 '''integrate the cli-parser into the default_config sooner or later'''
+from lunchinator import get_logger, log_exception, log_warning, log_error
 class lunch_options_parser(object):
     def parse_args(self):
         usage = "usage: %prog [options]"
@@ -50,21 +51,20 @@ class lunch_default_config(object):
     reset_icon_time = 5
     last_gui_plugin_index = 0
     
-    lunch_logger = logging.getLogger("LunchinatorLogger")
-    
     def __init__(self):
         if not os.path.exists(self.main_config_dir):
             os.makedirs(self.main_config_dir)
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
 #        logging.basicConfig(filename=self.log_file+".plugins",level=logging.WARNING)
-        self.lunch_logger.setLevel(logging.INFO)
+        lunch_logger = get_logger()
+        lunch_logger.setLevel(logging.INFO)
         loghandler = logging.handlers.RotatingFileHandler(self.log_file,'a',0,9)
         loghandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-        self.lunch_logger.addHandler(loghandler)
+        lunch_logger.addHandler(loghandler)
         loghandler.doRollover()
-        self.lunch_logger.info("Starting Lunchinator")
-        self.lunch_logger.setLevel(logging.WARNING)
+        lunch_logger.info("Starting Lunchinator")
+        lunch_logger.setLevel(logging.WARNING)
         
         try:
             os.chdir(sys.path[0])
@@ -81,7 +81,7 @@ class lunch_default_config(object):
                     self.commit_count_plugins = cco.strip()
                     break
         except:
-            self.lunch_logger.warn("git log could not be executed correctly - version information not available")
+            log_exception("git log could not be executed correctly - version information not available")
             pass
         self.config_file = ConfigParser.SafeConfigParser()
         self.read_config_from_hd()
@@ -128,16 +128,16 @@ class lunch_default_config(object):
                 elif os.path.exists(sys.path[0]+"/sounds/"+audio_file):
                     self.audio_file = sys.path[0]+"/sounds/"+audio_file
                 else:
-                    self.lunch_logger.warn("configured audio file %s does not exist in sounds folder, using old one: %s",audio_file,self.audio_file)  
+                    log_warning("configured audio file %s does not exist in sounds folder, using old one: %s",audio_file,self.audio_file)  
         
         if self.user_name=="":
             self.user_name = getpass.getuser()  
         
         if self.debug:
-            self.lunch_logger.setLevel(logging.DEBUG)
+            get_logger().setLevel(logging.DEBUG)
             logging.basicConfig(level=logging.DEBUG)
         else:
-            self.lunch_logger.setLevel(logging.WARNING)
+            get_logger().setLevel(logging.WARNING)
             logging.basicConfig(level=logging.WARNING)
             
     def read_value_from_config_file(self,value,section,name):
@@ -153,7 +153,7 @@ class lunch_default_config(object):
         except ConfigParser.NoOptionError:
             pass
         except:
-            self.lunch_logger.error("error while reading %s from config file",name)
+            log_exception("error while reading %s from config file",name)
         return value
         
     def write_config_to_hd(self): 
@@ -208,7 +208,7 @@ class lunch_default_config(object):
         
     def set_avatar_file(self,file_name,force_write=False):  
         if not os.path.exists(self.avatar_dir+"/"+file_name):
-            self.lunch_logger.error("avatar does not exist: %s",file_name)
+            log_error("avatar does not exist: %s",file_name)
             return
         self.avatar_file = file_name
         self.config_file.set('general', 'avatar_file', str(file_name))

@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import *
 import subprocess, sys, ctypes
-from lunchinator import get_server
+from lunchinator import get_server, log_exception
 
 import urllib2, tempfile, json, time
 
@@ -52,7 +52,7 @@ class tdtnotify(iface_called_plugin):
             else:
                 return False
         except:
-            self.logger.error("TDT notify error while downloading: "+str(sys.exc_info()[0]))
+            log_exception("TDT notify error while downloading: "+str(sys.exc_info()[0]))
             
     def process_lunch_call(self,msg,ip,member_info):
         pass
@@ -75,5 +75,5 @@ class tdtnotify(iface_called_plugin):
                 subprocess.call(["notify-send","--icon="+icon, "TDT", "new pic"])
                 #self.rotate_counter+=1
             except:
-                self.logger.error("TDT notify error "+str(sys.exc_info()[0]))
+                log_exception("TDT notify error "+str(sys.exc_info()[0]))
                 

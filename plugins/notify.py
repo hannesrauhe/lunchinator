@@ -1,7 +1,7 @@
 from lunchinator.iface_plugins import *
 from time import localtime
 import subprocess,sys,ctypes
-from lunchinator import get_server
+from lunchinator import get_server, log_exception
 
 class Notify(iface_called_plugin):    
     def __init__(self):
@@ -23,7 +23,7 @@ class Notify(iface_called_plugin):
                     name = " [" + member_info["name"] + "]"
                 subprocess.call(["notify-send","--icon="+icon, name, msg])
             except:
-                self.logger.error("notify error: %s"%str(sys.exc_info()))
+                log_exception("notify error: %s"%str(sys.exc_info()))
         else:
             self.incoming_call_win(msg,addr,member_info)
             
@@ -37,27 +37,27 @@ class Notify(iface_called_plugin):
         try:
             subprocess.call(["eject", "-T", "/dev/cdrom"])
         except:
-            self.logger.error("notify error: eject error (open)")
+            log_exception("notify error: eject error (open)")
         
         try:
             subprocess.call(["play", "-q", self.options["audio_file"]])    
         except:
-            self.logger.error("notify error: sound error")
+            log_exception("notify error: sound error")
     
         try:
             subprocess.call(["eject", "-T", "/dev/cdrom"])
         except:
-            self.logger.error("notify error: eject error (close)")
+            log_exception("notify error: eject error (close)")
         
     def incoming_call_win(self,msg,addr,member_info):    
         try:
             ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
         except:
-            self.logger.error("notify error: eject error (open)")
+            log_exception("notify error: eject error (open)")
         try:
             ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
         except:
-            self.logger.error("notify error: eject error (close)")
+            log_exception("notify error: eject error (close)")
 
     def process_event(self,cmd,value,ip,member_info):
         pass

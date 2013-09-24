@@ -1,7 +1,7 @@
 import sys,types
 import gobject
 import gtk
-from lunchinator import get_server
+from lunchinator import get_server, log_exception
 import time, socket,logging,threading,os
 import platform
 import urllib2
@@ -133,7 +133,7 @@ class lunchinator(threading.Thread):
         except:
             stringOut = StringIO()
             traceback.print_exc(None, stringOut)
-            get_server().lunch_logger.exception("while including plugin %s with options: %s  %s"%(p_name, str(plugin_object.options), str(sys.exc_info())))
+            log_exception("while including plugin %s with options: %s  %s"%(p_name, str(plugin_object.options), str(sys.exc_info())))
             sw = gtk.ScrolledWindow()
             sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
             textview = gtk.TextView()
@@ -215,7 +215,7 @@ class lunchinator(threading.Thread):
                     plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(pluginInfo.plugin_object,pluginInfo.name)))
                 pass                    
         except:
-            get_server().lunch_logger.exception("while including plugins %s"%str(sys.exc_info()))
+            log_exception("while including plugins %s"%str(sys.exc_info()))
             
         plugin_widgets.sort(key=lambda tup: tup[0].name)
         plugin_widgets.sort(key=lambda tup: tup[0].plugin_object.sortOrder)
@@ -258,7 +258,7 @@ class lunchinator(threading.Thread):
             if self.nb != None:
                 get_server().set_last_gui_plugin_index(self.nb.get_current_page())
         except:
-            get_server().lunch_logger.error("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
+            log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
         self.nb = None
             
     def clicked_send_msg(self,w,*data):
@@ -296,9 +296,9 @@ class lunchinator(threading.Thread):
                             plugin_widgets.append((pluginInfo.name,w))
                     except:
                         plugin_widgets.append((pluginInfo.name,gtk.Label("Error while including plugin")))
-                        get_server().lunch_logger.exception("while including plugin %s in settings window: %s",pluginInfo.name, str(sys.exc_info()))
+                        log_exception("while including plugin %s in settings window: %s",pluginInfo.name, str(sys.exc_info()))
         except:
-            get_server().lunch_logger.exception("while including plugins in settings window: %s", str(sys.exc_info()))
+            log_exception("while including plugins in settings window: %s", str(sys.exc_info()))
         plugin_widgets.sort(key=lambda aTuple: "" if aTuple[0] == "General Settings" else aTuple[0])
         for name,widget in plugin_widgets:
             nb.append_page(widget,gtk.Label(name))
@@ -316,7 +316,7 @@ class lunchinator(threading.Thread):
                     try:
                         pluginInfo.plugin_object.save_options_widget_data()
                     except:
-                        get_server().lunch_logger.error("was not able to save data for plugin %s: %s",pluginInfo.name, str(sys.exc_info()))
+                        log_exception("was not able to save data for plugin %s: %s",pluginInfo.name, str(sys.exc_info()))
                 else:
                     pluginInfo.plugin_object.discard_options_widget_data()
             
