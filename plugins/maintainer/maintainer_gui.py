@@ -198,14 +198,19 @@ class InfoTable(object):
             self.listStore = gtk.ListStore(*[str]*len(table_data))
             self.treeView.set_model(self.listStore)
             self.listStoreNumColumns = len(table_data)
+            
+            rendererText = gtk.CellRendererText()
+            
+            for aColumn in self.treeView.get_columns():
+                self.treeView.remove_column(aColumn)
+            
+            for num, th in enumerate(table_data.iterkeys()):
+                column = gtk.TreeViewColumn(th, rendererText, text=num)
+                column.set_sort_column_id(num)
+                self.treeView.append_column(column)
         else:
             self.listStore.clear()
         
-        rendererText = gtk.CellRendererText()
-        for num, th in enumerate(table_data.iterkeys()):
-            column = gtk.TreeViewColumn(th, rendererText, text=num)
-            column.set_sort_column_id(num)
-            self.treeView.append_column(column)
             
         for i in range(0,len(get_server().member_info)):
             row = []
