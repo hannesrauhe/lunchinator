@@ -32,6 +32,12 @@ class maintainer_gui(object):
             
     def request_update(self,w):
         member = self.dropdown_members.get_active_text()
+        if member == None:
+            return
+        
+        if "(" in member:
+            # member contains name, extract IP
+            member = member[member.rfind("(")+1:member.rfind(")")]
         if member:
             get_server().call("HELO_UPDATE from GUI",member)
         
