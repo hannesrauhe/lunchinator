@@ -25,7 +25,7 @@ def _generate_string(*s):
     return " ".join(str(x) for x in s)
 
 def log_exception(*s):
-    get_logger().exception(s)
+    get_logger().exception(_generate_string(*s))
     
 def log_critical(*s):
     get_logger().critical(_generate_string(*s))
