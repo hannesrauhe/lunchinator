@@ -17,22 +17,27 @@ class maintainer_gui(object):
         if self.dropdown_reports.get_active()>=0:
             self.entry.get_buffer().set_text(self.mt.reports[self.dropdown_reports.get_active()][2])
         
-    def request_log(self,w):
+    def get_selected_log_member(self):
         member = self.dropdown_members.get_active_text()
         if member == None:
-            return
+            return None
         
         if "(" in member:
             # member contains name, extract IP
             member = member[member.rfind("(")+1:member.rfind(")")]
-
-        get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_server().tcp_port,int(self.numberchooser.get_value())),member)
-        #no number_str here:
-        self.shown_logfile = "%s/logs/%s.log%s"%(get_server().main_config_dir,member,"")
+            
+        return member
+    
+    def request_log(self,w):
+        member = self.get_selected_log_member()
+        if member != None:
+            get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_server().tcp_port,int(self.numberchooser.get_value())),member)
+            #no number_str here:
+            self.shown_logfile = "%s/logs/%s.log%s"%(get_server().main_config_dir,member,"")
             
     def request_update(self,w):
-        member = self.dropdown_members.get_active_text()
-        if member:
+        member = self.get_selected_log_member()
+        if member != None:
             get_server().call("HELO_UPDATE from GUI",member)
         
     def show_logfile(self):
