@@ -12,7 +12,26 @@ class maintainer_gui(object):
         self.dropdown_members = None
         self.dropdown_members_dict = None
         self.dropdown_members_model = None
-        self.visible = False
+        self.visible = False      
+           
+        
+    def cb_log_transfer_success(self):
+        if not self.visible:
+            return False
+        
+        fcontent = ""
+        try:
+            fhandler = open(self.shown_logfile,"r")
+            fcontent = fhandler.read()
+            fhandler.close()
+        except Exception as e:
+            fcontent = "File not ready: %s"%str(e)
+        self.log_area.get_buffer().set_text(fcontent)
+    
+    def cb_log_transfer_error(self):
+        if not self.visible:
+            return False
+        self.log_area.get_buffer().set_text("Error while getting log")
         
     def display_report(self,w):
         if self.dropdown_reports.get_active()>=0:
@@ -32,31 +51,17 @@ class maintainer_gui(object):
     def request_log(self,w):
         member = self.get_selected_log_member()
         if member != None:
+            self.log_area.get_buffer().set_text("Requesting log from "+member)
             get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_settings().tcp_port,int(self.numberchooser.get_value())),member)
             #no number_str here:
             self.shown_logfile = "%s/logs/%s.log%s"%(get_settings().main_config_dir,member,"")
+        else:
+            self.log_area.get_buffer().set_text("No Member selected!")
             
     def request_update(self,w):
         member = self.get_selected_log_member()
         if member != None:
             get_server().call("HELO_UPDATE from GUI",member)
-        
-    def show_logfile(self):
-        if not self.visible:
-            return False
-        
-        print "read"
-        
-        fcontent = ""
-        try:
-            fhandler = open(self.shown_logfile,"r")
-            fcontent = fhandler.read()
-            fhandler.close()
-        except Exception as e:
-            fcontent = "File not ready: %s"%str(e)
-        self.log_area.get_buffer().set_text(fcontent)
-        
-        return self.visible
             
     def create_reports_widget(self):
         self.entry = gtk.TextView()
@@ -143,7 +148,7 @@ class maintainer_gui(object):
         self.numberchooser.connect_object("changed", self.request_log,self.dropdown_members)
         self.update_button.connect_object("clicked", self.request_update,self.update_button)
         
-        gobject.timeout_add(2000, self.show_logfile) 
+        #gobject.timeout_add(2000, self.show_logfile) 
         return memtVBox
     
     def create_widget(self):

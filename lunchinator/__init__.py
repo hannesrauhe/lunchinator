@@ -1,4 +1,4 @@
-__all__ = ["gui_general", "lunch_settings", "lunch_server", "iface_plugins"]
+__all__ = ["gui_general", "lunch_settings", "lunch_server", "iface_plugins", "lunch_datathread"]
 
 import logging, logging.handlers, os
 
@@ -8,8 +8,8 @@ class _lunchinator_logger:
     @classmethod
     def get_singleton_logger(cls):
         if cls.lunch_logger == None:
-            main_config_dir = os.getenv("HOME")+"/.lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+"/.lunchinator"
-            log_file = main_config_dir+"/lunchinator.log"
+            main_config_dir = os.getenv("HOME")+os.sep+".lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+os.sep+".lunchinator"
+            log_file = main_config_dir+os.sep+"lunchinator.log"
             loghandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
             loghandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
             

@@ -177,7 +177,7 @@ class lunch_server(object):
             info_d["next_lunch_begin"] = get_settings().next_lunch_begin
         if get_settings().next_lunch_end:
             info_d["next_lunch_end"] = get_settings().next_lunch_end
-        return json.dumps(info_d)        
+        return json.dumps(info_d)      
         
     def incoming_event(self,data,addr):   
         if addr[0].startswith("127."):
@@ -259,7 +259,7 @@ class lunch_server(object):
                 file_size=int(value.strip())
                 file_name=""
                 if self.member_info[addr[0]].has_key("avatar"):
-                    file_name=get_settings().avatar_dir+"/"+self.member_info[addr[0]]["avatar"]
+                    file_name=get_settings().avatar_dir+os.sep+self.member_info[addr[0]]["avatar"]
                 else:
                     log_error("%s tried to send his avatar, but I don't know where to safe it"%(addr[0]))
                 
@@ -286,16 +286,6 @@ class lunch_server(object):
                     ds.start()
                 else:
                     log_error("Want to send file %s, but cannot find it"%(fileToSend))   
-               
-            elif cmd.startswith("HELO_LOGFILE"):
-                #someone will send me his logfile on tcp
-                file_size=int(value.strip())
-                if not os.path.exists(get_settings().main_config_dir+"/logs"):
-                    os.makedirs(get_settings().main_config_dir+"/logs")
-                file_name=get_settings().main_config_dir+"/logs/"+str(addr[0])+".log"
-                log_info("Receiving file of size %d on port %d"%(file_size,get_settings().tcp_port))
-                dr = DataReceiverThread(addr[0],file_size,file_name,get_settings().tcp_port)
-                dr.start()
                 
             elif cmd.startswith("HELO_REQUEST_LOGFILE"):
                 #someone wants my logfile 
@@ -442,6 +432,8 @@ class lunch_server(object):
                     
                     if not addr[0].startswith("127."):
                         self.member_timeout[addr[0]]=time()
+                        if not self.members.has_key(addr[0]):
+                            self.members[addr[0]]=addr[0]
                         
                     if daten.startswith("HELO"):
                         #simple infrastructure protocol messages starting with HELO''' 

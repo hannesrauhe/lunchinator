@@ -2,16 +2,15 @@ import threading,socket,sys,time
 from lunchinator import log_exception, log_error
 
 class DataSenderThread(threading.Thread):
-    receiver = ""
-    file_path = ''
-    con = None
-    tcp_port = 50001
     
-    def __init__(self, receiver, file_path, tcp_port = 50001): 
+    def __init__(self, receiver, file_path, tcp_port, callback_success=None, callback_error=None): 
         threading.Thread.__init__(self) 
+        self.con = None
         self.receiver = receiver
         self.file_path = file_path
         self.tcp_port = tcp_port
+        self.callback_error = callback_error
+        self.callback_success = callback_success
         
     def _sendFile(self):
         try:
@@ -44,19 +43,16 @@ class DataSenderThread(threading.Thread):
     def stop_server(self):
         pass
     
-class DataReceiverThread(threading.Thread):
-    sender = ""
-    size = ""
-    file_path = ''
-    con = None
-    tcp_port = 50001
-    
-    def __init__(self, sender, size, file_path,tcp_port = 50001): 
+class DataReceiverThread(threading.Thread):    
+    def __init__(self, sender, size, file_path,tcp_port,callback_success=None,callback_error=None): 
         threading.Thread.__init__(self) 
+        self.con = None
         self.sender = sender
         self.size = size
         self.file_path = file_path
         self.tcp_port = tcp_port
+        self.callback_success = callback_success
+        self.callback_error = callback_error
         
     def _receiveFile(self):
         writefile = open(self.file_path, 'wb')
@@ -82,8 +78,12 @@ class DataReceiverThread(threading.Thread):
                 self._receiveFile()
             else:
                 raise Exception("Sender is not allowed to send file:",addr[0],", expected:",self.sender)
+            if self.callback_success!=None:
+                self.callback_success()
         except:
             log_exception("I caught something unexpected when trying to receive file",self.file_path, sys.exc_info()[0])
+            if self.callback_error!=None:
+                self.callback_error()
         
         if self.con:    
             self.con.close()
