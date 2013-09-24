@@ -57,12 +57,20 @@ class lunch_default_config(object):
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
 #        logging.basicConfig(filename=self.log_file+".plugins",level=logging.WARNING)
-        lunch_logger = get_logger()
-        lunch_logger.setLevel(logging.INFO)
+
         loghandler = logging.handlers.RotatingFileHandler(self.log_file,'a',0,9)
         loghandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        
+        lunch_logger = get_logger()
+        lunch_logger.setLevel(logging.INFO)
         lunch_logger.addHandler(loghandler)
+        
+        yapsi_logger = logging.getLogger('yapsy')
+        yapsi_logger.setLevel(logging.WARNING)
+        yapsi_logger.addHandler(loghandler)
+        
         loghandler.doRollover()
+        
         lunch_logger.info("Starting Lunchinator")
         lunch_logger.setLevel(logging.WARNING)
         
