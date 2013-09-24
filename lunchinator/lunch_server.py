@@ -243,8 +243,9 @@ class lunch_server(object):
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(get_settings().avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
-                        self.call("HELO_REQUEST_AVATAR "+str(get_settings().tcp_port),client=addr[0])          
-                
+                        self.call("HELO_REQUEST_AVATAR "+str(get_settings().tcp_port),client=addr[0])  
+                if self.member_info[addr[0]].has_key("name"):         
+                    self.members[addr[0]] = self.member_info[addr[0]]["name"]
                                     
             elif cmd.startswith("HELO_LEAVE"):
                 #the sender tells me, that he is going
