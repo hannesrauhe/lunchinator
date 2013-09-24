@@ -1,4 +1,4 @@
-__all__ = ["gui_general", "lunch_default_config", "lunch_server", "iface_plugins"]
+__all__ = ["gui_general", "lunch_settings", "lunch_server", "iface_plugins"]
 
 import logging, logging.handlers, os
 
@@ -14,12 +14,12 @@ class _lunchinator_logger:
             loghandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
             
             cls.lunch_logger = logging.getLogger("LunchinatorLogger")
-            cls.lunch_logger.setLevel(logging.INFO)
             cls.lunch_logger.addHandler(loghandler)
             
             yapsi_logger = logging.getLogger('yapsy')
             yapsi_logger.setLevel(logging.WARNING)
             yapsi_logger.addHandler(loghandler)
+            
             
             loghandler.doRollover()
         return cls.lunch_logger
@@ -27,37 +27,51 @@ class _lunchinator_logger:
 #initialize loggers
 _lunchinator_logger.get_singleton_logger()
 
-def get_logger():
+def _get_logger():
     return _lunchinator_logger.get_singleton_logger()
 
 def _generate_string(*s):
     return " ".join(str(x) for x in s)
 
 def log_exception(*s):
-    get_logger().exception(_generate_string(*s))
+    _get_logger().exception(_generate_string(*s))
     
 def log_critical(*s):
-    get_logger().critical(_generate_string(*s))
+    _get_logger().critical(_generate_string(*s))
     
 def log_error(*s):
-    get_logger().error(_generate_string(*s))
+    _get_logger().error(_generate_string(*s))
     
 def log_warning(*s):
-    get_logger().warn(_generate_string(*s))
+    _get_logger().warn(_generate_string(*s))
     
 def log_info(*s):
-    get_logger().info(_generate_string(*s))
+    _get_logger().info(_generate_string(*s))
     
 def log_debug(*s):
-    get_logger().debug(_generate_string(*s))
+    _get_logger().debug(_generate_string(*s))
+
+import lunch_settings
+
+def get_settings():
+    return lunch_settings.lunch_settings.get_singleton_instance()
     
+def get_lunchinator_dir():
+    return get_settings().main_config_dir
+
+def get_plugin_dirs():
+    return get_settings().plugin_dirs
+
+#initialize settings
+if get_settings().debug:
+    _get_logger().setLevel(logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
+else:
+    _get_logger().setLevel(logging.INFO)
+    logging.basicConfig(level=logging.INFO)
+
 import lunch_server
 
 def get_server():
     return lunch_server.lunch_server.get_singleton_server()
 
-def get_lunchinator_dir():
-    return get_server().main_config_dir
-
-def get_plugin_dirs():
-    return get_server().plugin_dirs

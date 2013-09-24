@@ -6,7 +6,7 @@
 
 import __preamble
 from lunchinator import get_server
-from lunchinator.lunch_default_config import lunch_options_parser
+from lunchinator.lunch_settings import lunch_options_parser
 import time,socket,threading,os,sys,types
         
 class lunchinator_nogui(threading.Thread):

@@ -1,5 +1,5 @@
 import gtk,time,gobject
-from lunchinator import get_server
+from lunchinator import get_server, get_settings
 import os
 
 class maintainer_gui(object):
@@ -8,7 +8,7 @@ class maintainer_gui(object):
         self.but = None
         self.info_table = None
         self.mt = mt
-        self.shown_logfile = get_server().log_file
+        self.shown_logfile = get_settings().log_file
         self.dropdown_members = None
         self.dropdown_members_dict = None
         self.dropdown_members_model = None
@@ -31,10 +31,9 @@ class maintainer_gui(object):
     def request_log(self,w):
         member = self.get_selected_log_member()
         if member != None:
-            print "update from %s" % member
-            get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_server().tcp_port,int(self.numberchooser.get_value())),member)
+            get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_settings().tcp_port,int(self.numberchooser.get_value())),member)
             #no number_str here:
-            self.shown_logfile = "%s/logs/%s.log%s"%(get_server().main_config_dir,member,"")
+            self.shown_logfile = "%s/logs/%s.log%s"%(get_settings().main_config_dir,member,"")
             gobject.timeout_add(2000, self.show_logfile) 
             
     def request_update(self,w):
@@ -188,7 +187,7 @@ class InfoTable(object):
             for k,v in infodict.iteritems():
                 if not table_data.has_key(k):
                     table_data[k]=[""]*len(get_server().member_info)
-                if False:#k=="avatar" and os.path.isfile(get_server().avatar_dir+"/"+v):
+                if False:#k=="avatar" and os.path.isfile(get_settings().avatar_dir+"/"+v):
                     # TODO add avatar image
                     table_data[k][index]="avatars/%s"%v
                 else:

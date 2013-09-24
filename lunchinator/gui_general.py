@@ -1,7 +1,7 @@
 import sys,types
 import gobject
 import gtk
-from lunchinator import get_server, log_exception, log_info
+from lunchinator import get_server, log_exception, log_info, get_settings
 import time, socket,logging,threading,os
 import platform
 import urllib2
@@ -103,7 +103,7 @@ class lunchinator(threading.Thread):
                     if self.nb.get_tab_label_text(widget) == p_name:
                         self.nb.remove_page(i)
                         break
-        get_server().write_config_to_hd()
+        get_settings().write_config_to_hd()
         
     def stop_server(self,_):        
         if self.isAlive():
@@ -120,7 +120,7 @@ class lunchinator(threading.Thread):
         get_server().new_msg=False
         
     def disable_auto_update(self):
-        get_server().auto_update=False
+        get_settings().auto_update=False
                   
     def quit(self,w): 
         self.stop_server(w)
@@ -228,8 +228,8 @@ class lunchinator(threading.Thread):
         
         # select previously selected widget
         index = 0
-        if get_server().last_gui_plugin_index < len(self.nb) and get_server().last_gui_plugin_index >= 0:
-            index = get_server().last_gui_plugin_index
+        if get_settings().last_gui_plugin_index < len(self.nb) and get_settings().last_gui_plugin_index >= 0:
+            index = get_settings().last_gui_plugin_index
         
         self.nb.show()
         self.nb.set_current_page(index)
@@ -256,7 +256,7 @@ class lunchinator(threading.Thread):
                     pluginInfo.plugin_object.save_sort_order()
                     
             if self.nb != None:
-                get_server().set_last_gui_plugin_index(self.nb.get_current_page())
+                get_settings().set_last_gui_plugin_index(self.nb.get_current_page())
         except:
             log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
         self.nb = None

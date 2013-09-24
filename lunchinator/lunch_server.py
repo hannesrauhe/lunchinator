@@ -1,33 +1,18 @@
 #!/usr/bin/python
 from lunch_datathread import *
-from lunch_default_config import *
 from iface_plugins import *
 from time import strftime, localtime, time, mktime, gmtime
 import socket,subprocess,sys,os,ctypes,getpass,json
 
 from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
-from lunchinator import log_debug, log_info, log_critical
+from lunchinator import log_debug, log_info, log_critical, get_settings
 
 EXIT_CODE_UPDATE = 2
 EXIT_CODE_STOP = 3
         
-class lunch_server(lunch_default_config):
+class lunch_server(object):
     _instance = None
-    
-    running = False
-    update_request = False
-    new_msg = False
-    my_master = -1    
-    peer_nr=0 #the number of the peer i contacted to be my master
-    mute_time_until=0
-    last_messages = []
-    members = {}
-    member_timeout = {}
-    member_info = {}
-    plugin_manager = None
-    no_updates = False
-    with_plugins = True
     
     @classmethod
     def get_singleton_server(cls):
@@ -37,7 +22,20 @@ class lunch_server(lunch_default_config):
     
     #TODO: if started with plugins: make sure they are deactivated when destroying lunchinator (destructor anyone?)
     def __init__(self):
-        lunch_default_config.__init__(self)
+        self.running = False
+        self.update_request = False
+        self.new_msg = False
+        self.my_master = -1    
+        self.peer_nr=0 #the number of the peer i contacted to be my master
+        self.mute_time_until=0
+        self.last_messages = []
+        self.members = {}
+        self.member_timeout = {}
+        self.member_info = {}
+        self.plugin_manager = None
+        self.no_updates = False
+        self.with_plugins = True
+        
         self.exitCode = 0  
         self.read_config()
         
@@ -46,8 +44,8 @@ class lunch_server(lunch_default_config):
         ])
         self.plugin_manager = PluginManagerSingleton.get()
         self.plugin_manager.app = self
-        self.plugin_manager.setConfigParser(self.config_file,self.write_config_to_hd)
-        self.plugin_manager.setPluginPlaces(self.plugin_dirs)
+        self.plugin_manager.setConfigParser(get_settings().config_file,get_settings().write_config_to_hd)
+        self.plugin_manager.setPluginPlaces(get_settings().plugin_dirs)
         self.plugin_manager.setCategoriesFilter({
            "general" : iface_general_plugin,
            "called" : iface_called_plugin,
@@ -109,8 +107,7 @@ class lunch_server(lunch_default_config):
         
         
     '''will be called every ten seconds'''
-    def read_config(self):                    
-        self.read_config_from_hd()
+    def read_config(self):              
         if len(self.members)==0:
             self.members=self.init_members_from_file()
         if len(self.last_messages)==0:
@@ -119,13 +116,13 @@ class lunch_server(lunch_default_config):
             
     def init_members_from_file(self):
         members = {}
-        if os.path.exists(self.members_file):
-            f = open(self.members_file,'r')    
+        if os.path.exists(get_settings().members_file):
+            f = open(get_settings().members_file,'r')    
             for hostn in f.readlines():
                 try:
                     members[socket.gethostbyname(hostn.strip())]=hostn.strip()
                 except:
-                    log_warning("cannot find host specified in members_file by %s with name %s"%(self.members_file,hostn))
+                    log_warning("cannot find host specified in members_file by %s with name %s"%(get_settings().members_file,hostn))
             f.close()
         return members
     
@@ -138,25 +135,25 @@ class lunch_server(lunch_default_config):
                     f.write(m+"\n")
                 f.close();
         except:
-            log_exception("Could not write members to %s"%(self.members_file))
+            log_exception("Could not write members to %s"%(get_settings().members_file))
             
     def init_messages_from_file(self):
         messages = []
-        if os.path.exists(self.messages_file):
+        if os.path.exists(get_settings().messages_file):
             try:
-                f = open(self.messages_file,'r')    
+                f = open(get_settings().messages_file,'r')    
                 tmp_msg = json.load(f)
                 for m in tmp_msg:
                     messages.append([localtime(m[0]),m[1],m[2]])
                 f.close()
             except:
-                log_exception("Could not read messages file %s,but it seems to exist"%(self.messages_file))
+                log_exception("Could not read messages file %s,but it seems to exist"%(get_settings().messages_file))
         return messages
     
     def write_messages_to_file(self):
         try:
             if len(self.last_messages)>0:
-                f = open(self.messages_file,'w')
+                f = open(get_settings().messages_file,'w')
                 f.truncate()
                 try:
                     msg = []
@@ -166,20 +163,20 @@ class lunch_server(lunch_default_config):
                 finally:
                     f.close();
         except:
-            log_exception("Could not write messages to %s: %s"%(self.messages_file, sys.exc_info()[0]))    
+            log_exception("Could not write messages to %s: %s"%(get_settings().messages_file, sys.exc_info()[0]))    
     
     def build_info_string(self):
-        info_d = {"avatar": self.avatar_file,
-                   "name": self.user_name,
-                   "next_lunch_begin":self.default_lunch_begin,
-                   "next_lunch_end":self.default_lunch_end,
-                   "version":self.version_short,
-                   "version_commit_count":self.commit_count,
-                   "version_commit_count_plugins":self.commit_count_plugins}
-        if self.next_lunch_begin:
-            info_d["next_lunch_begin"] = self.next_lunch_begin
-        if self.next_lunch_end:
-            info_d["next_lunch_end"] = self.next_lunch_end
+        info_d = {"avatar": get_settings().avatar_file,
+                   "name": get_settings().user_name,
+                   "next_lunch_begin":get_settings().default_lunch_begin,
+                   "next_lunch_end":get_settings().default_lunch_end,
+                   "version":get_settings().version_short,
+                   "version_commit_count":get_settings().commit_count,
+                   "version_commit_count_plugins":get_settings().commit_count_plugins}
+        if get_settings().next_lunch_begin:
+            info_d["next_lunch_begin"] = get_settings().next_lunch_begin
+        if get_settings().next_lunch_end:
+            info_d["next_lunch_end"] = get_settings().next_lunch_end
         return json.dumps(info_d)
     
     def send_info_around(self):
@@ -194,7 +191,7 @@ class lunch_server(lunch_default_config):
                 self.exitCode = EXIT_CODE_STOP #run_forever script will stop
             elif data.startswith("HELO_UPDATE"):
                 self.update_request = True
-                if self.auto_update and not self.no_updates:
+                if get_settings().auto_update and not self.no_updates:
                     log_info("local update")
                     self.running = False
                     
@@ -210,7 +207,7 @@ class lunch_server(lunch_default_config):
             if cmd.startswith("HELO_UPDATE"):
                 t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
                 self.update_request = True
-                if self.auto_update and not self.no_updates:
+                if get_settings().auto_update and not self.no_updates:
                     log_info("%s: [%s] update"%(t,addr[0]))
                     self.running = False
                     
@@ -224,8 +221,8 @@ class lunch_server(lunch_default_config):
                 self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
-                    if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
-                        self.call("HELO_REQUEST_AVATAR "+str(self.tcp_port),client=addr[0])                        
+                    if not os.path.exists(get_settings().avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
+                        self.call("HELO_REQUEST_AVATAR "+str(get_settings().tcp_port),client=addr[0])                        
                 
             elif cmd.startswith("HELO_DICT"):
                 #the master send me the list of members - yeah
@@ -236,7 +233,7 @@ class lunch_server(lunch_default_config):
                     self.send_info_around()
                     
                 self.my_master = addr[0]                                    
-                if not os.path.exists(self.members_file):
+                if not os.path.exists(get_settings().members_file):
                     self.write_members_to_file()
                                     
             elif cmd.startswith("HELO_LEAVE"):
@@ -251,25 +248,25 @@ class lunch_server(lunch_default_config):
                 file_size=int(value.strip())
                 file_name=""
                 if self.member_info[addr[0]].has_key("avatar"):
-                    file_name=self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]
+                    file_name=get_settings().avatar_dir+"/"+self.member_info[addr[0]]["avatar"]
                 else:
                     log_error("%s tried to send his avatar, but I don't know where to safe it"%(addr[0]))
                 
                 if len(file_name):
-                    log_info("Receiving file of size %d on port %d"%(file_size,self.tcp_port))
-                    dr = DataReceiverThread(addr[0],file_size,file_name,self.tcp_port)
+                    log_info("Receiving file of size %d on port %d"%(file_size,get_settings().tcp_port))
+                    dr = DataReceiverThread(addr[0],file_size,file_name,get_settings().tcp_port)
                     dr.start()
                 
             elif cmd.startswith("HELO_REQUEST_AVATAR"):
                 #someone wants my pic 
-                other_tcp_port = self.tcp_port
+                other_tcp_port = get_settings().tcp_port
                 
                 try:                    
                     other_tcp_port=int(value.strip())
                 except:
                     log_exception("%s requested avatar, I could not parse the port from value %s, using standard %d"%(str(addr[0]),str(value),other_tcp_port))
                     
-                fileToSend = self.avatar_dir+"/"+self.avatar_file
+                fileToSend = get_settings().avatar_dir+"/"+get_settings().avatar_file
                 if os.path.exists(fileToSend):
                     fileSize = os.path.getsize(fileToSend)
                     log_info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
@@ -282,16 +279,16 @@ class lunch_server(lunch_default_config):
             elif cmd.startswith("HELO_LOGFILE"):
                 #someone will send me his logfile on tcp
                 file_size=int(value.strip())
-                if not os.path.exists(self.main_config_dir+"/logs"):
-                    os.makedirs(self.main_config_dir+"/logs")
-                file_name=self.main_config_dir+"/logs/"+str(addr[0])+".log"
-                log_info("Receiving file of size %d on port %d"%(file_size,self.tcp_port))
-                dr = DataReceiverThread(addr[0],file_size,file_name,self.tcp_port)
+                if not os.path.exists(get_settings().main_config_dir+"/logs"):
+                    os.makedirs(get_settings().main_config_dir+"/logs")
+                file_name=get_settings().main_config_dir+"/logs/"+str(addr[0])+".log"
+                log_info("Receiving file of size %d on port %d"%(file_size,get_settings().tcp_port))
+                dr = DataReceiverThread(addr[0],file_size,file_name,get_settings().tcp_port)
                 dr.start()
                 
             elif cmd.startswith("HELO_REQUEST_LOGFILE"):
                 #someone wants my logfile 
-                other_tcp_port = self.tcp_port
+                other_tcp_port = get_settings().tcp_port
                 log_num=0
                 try:                
                     (oport, onum) = value.split(" ",1)    
@@ -300,7 +297,7 @@ class lunch_server(lunch_default_config):
                 except:
                     log_exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0"%(str(addr[0]),str(value),other_tcp_port))
                 
-                fileToSend = "%s.%d"%(self.log_file,log_num) if log_num>0 else self.log_file
+                fileToSend = "%s.%d"%(get_settings().log_file,log_num) if log_num>0 else get_settings().log_file
                 if os.path.exists(fileToSend):
                     fileSize = os.path.getsize(fileToSend)
                     log_info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
@@ -315,8 +312,8 @@ class lunch_server(lunch_default_config):
                 self.member_info[addr[0]] = json.loads(value)      
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
-                    if not os.path.exists(self.avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
-                        self.call("HELO_REQUEST_AVATAR "+str(self.tcp_port),client=addr[0])          
+                    if not os.path.exists(get_settings().avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
+                        self.call("HELO_REQUEST_AVATAR "+str(get_settings().tcp_port),client=addr[0])          
                 
             elif "HELO"==cmd:
                 #someone tells me his name
@@ -376,10 +373,10 @@ class lunch_server(lunch_default_config):
                         log_exception("plugin error in %s while processing message %s"%(pluginInfo.name, str(sys.exc_info())))
                         
             
-            if "lunch" in msg.lower() and self.is_now_in_time_span(self.alarm_begin_time, self.alarm_end_time):
+            if "lunch" in msg.lower() and self.is_now_in_time_span(get_settings().alarm_begin_time, get_settings().alarm_end_time):
                 timenum = mktime(mtime)
                 if timenum>self.mute_time_until:
-                    self.mute_time_until=timenum+self.mute_timeout
+                    self.mute_time_until=timenum+get_settings().mute_timeout
                     for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
                         if pluginInfo.plugin_object.is_activated:
                             try:
@@ -394,7 +391,7 @@ class lunch_server(lunch_default_config):
         try:
             for ip in self.members.keys():
                 if ip in self.member_timeout:
-                    if time()-self.member_timeout[ip]>self.peer_timeout:
+                    if time()-self.member_timeout[ip]>get_settings().peer_timeout:
                         del self.members[ip]
                 else:
                     del self.members[ip]
@@ -436,7 +433,7 @@ class lunch_server(lunch_default_config):
             s.settimeout(5.0)
             self.init_done.set()
             while self.running:
-                if self.new_msg and (time()-mktime(self.last_messages[0][0]))>(self.reset_icon_time*60):
+                if self.new_msg and (time()-mktime(self.last_messages[0][0]))>(get_settings().reset_icon_time*60):
                     self.new_msg=False
                 try:
                     daten, addr = s.recvfrom(1024) 
@@ -457,7 +454,7 @@ class lunch_server(lunch_default_config):
                     else:
                         if announce_name==10:
                             #it's time to announce my name again and switch the master
-                            self.call("HELO "+self.get_user_name(),hosts=self.members)
+                            self.call("HELO "+get_settings().get_user_name(),hosts=self.members)
                             announce_name=0
                             self.remove_inactive_members()
                             self.call_for_dict()

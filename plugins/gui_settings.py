@@ -1,5 +1,5 @@
 from lunchinator.iface_plugins import *
-from lunchinator import get_server
+from lunchinator import get_server, get_settings
     
 class gui_settings(iface_general_plugin):
     def __init__(self):
@@ -12,14 +12,16 @@ class gui_settings(iface_general_plugin):
                         ("alarm_begin_time", "No Alarm before"),
                         ("alarm_end_time", "No Alarm after"),
                         ("mute_timeout", "Mute for x sec after Alarm"),
-                        ("Reset Lunchinator Icon after x min", ""),
+                        ("reset_icon_time", "Reset Lunchinator Icon after x min"),
                         ("tcp_port", "TCP Port")]
         self.options = []
         for o in option_names:
             methodname = "get_"+o[0]
-            if hasattr(get_server(), methodname): 
-                _member = getattr(get_server(), methodname)
+            if hasattr(get_settings(), methodname): 
+                _member = getattr(get_settings(), methodname)
                 self.options.append((o, _member()))
+            else:
+                log_warning("settings has no attribute called '%s'" % o)
                 
     def save_options_widget_data(self):
         if not self.option_widgets:
@@ -36,7 +38,7 @@ class gui_settings(iface_general_plugin):
             if new_v!=v:
                 self.options[o]=new_v
                 #TODO(Hannes) hack
-                get_server().config_file.set('general', o, str(new_v))
+                get_settings().config_file.set('general', o, str(new_v))
         self.discard_options_widget_data()
-        get_server().write_config_to_hd()
-        get_server().read_config_from_hd()
+        get_settings().write_config_to_hd()
+        get_settings().read_config_from_hd()

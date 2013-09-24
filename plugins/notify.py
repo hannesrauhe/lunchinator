@@ -1,7 +1,7 @@
 from lunchinator.iface_plugins import *
 from time import localtime
 import subprocess,sys,ctypes
-from lunchinator import get_server, log_exception
+from lunchinator import get_server, log_exception, get_settings
 
 class Notify(iface_called_plugin):    
     def __init__(self):
@@ -17,7 +17,7 @@ class Notify(iface_called_plugin):
                 icon = self.options["icon_file"]
                 name = " ["+addr+"]"
                 if member_info.has_key("avatar"):
-                    icon = get_server().get_avatar_dir()+"/"+member_info["avatar"]
+                    icon = get_settings().get_avatar_dir()+"/"+member_info["avatar"]
     #            print ["notify-send","--icon="+icon, msg + " [" + member_info["name"] + "]"]
                 if member_info.has_key("name"):
                     name = " [" + member_info["name"] + "]"

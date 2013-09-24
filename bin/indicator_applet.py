@@ -8,7 +8,7 @@ import __preamble
 import appindicator,platform,subprocess
 from lunchinator.lunch_server import EXIT_CODE_UPDATE
 from lunchinator.gui_general import *
-from lunchinator.lunch_default_config import lunch_options_parser
+from lunchinator.lunch_settings import lunch_options_parser
 from lunchinator import log_info
     
 def highlight_icon(c):

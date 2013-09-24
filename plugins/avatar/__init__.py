@@ -1,7 +1,7 @@
 from lunchinator.iface_plugins import iface_general_plugin
 import gtk
 from l_avatar import l_avatar
-from lunchinator import get_server
+from lunchinator import get_server, get_settings
 
 class avatar(iface_general_plugin):
     def __init__(self):
@@ -41,7 +41,7 @@ class avatar(iface_general_plugin):
     def create_options_widget(self):
         import gtk
         
-        img_path = get_server().get_avatar_dir()+get_server().get_avatar_file()
+        img_path = get_settings().get_avatar_dir()+get_settings().get_avatar_file()
         
         t = gtk.VBox()
         gtkimage = gtk.Image() 

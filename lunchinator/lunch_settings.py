@@ -2,7 +2,7 @@ import sys,os,getpass,ConfigParser,types,subprocess,logging
 from optparse import OptionParser
 
 '''integrate the cli-parser into the default_config sooner or later'''
-from lunchinator import get_logger, log_exception, log_warning, log_error,\
+from lunchinator import log_exception, log_warning, log_error,\
     log_info
 class lunch_options_parser(object):
     def parse_args(self):
@@ -17,49 +17,56 @@ class lunch_options_parser(object):
         return optionParser.parse_args()
 
     
-class lunch_default_config(object):
-    '''unchangeable for now'''
-    main_config_dir = os.getenv("HOME")+"/.lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+"/.lunchinator"
-    members_file = main_config_dir+"/lunch_members.cfg"
-    messages_file = main_config_dir+"/messages"
-    log_file = main_config_dir+"/lunchinator.log"
-    avatar_dir = main_config_dir+"/avatars/"
-    version = "unknown"
-    version_short = "unknown"
-    commit_count = "0"
-    commit_count_plugins = "0"
-    plugin_dirs = [main_config_dir+"/plugins",sys.path[0]+"/plugins"]
+class lunch_settings(object):
+    _instance = None
     
-    #insert plugin folders into path
-    for aDir in plugin_dirs:
-        sys.path.append(aDir)
-    
-    ''' not in files'''    
-    next_lunch_begin = None
-    next_lunch_end = None
-    audio_file = sys.path[0]+"/sounds/sonar.wav"
-    user_name = ""
-    avatar_file = ""    
-    debug = False 
-    tcp_port = 50001
-    auto_update = True   
-    default_lunch_begin = "12:15"
-    default_lunch_end = "12:45"
-    alarm_begin_time = "11:30"
-    alarm_end_time = "13:00"
-    peer_timeout = 604800 #one week so that we don't forget someone too soon
-    mute_timeout = 30
-    reset_icon_time = 5
-    last_gui_plugin_index = 0
+    @classmethod
+    def get_singleton_instance(cls):
+        if cls._instance == None:
+            cls._instance = cls()
+        return cls._instance
     
     def __init__(self):
+        '''unchangeable for now'''
+        self.main_config_dir = os.getenv("HOME")+"/.lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+"/.lunchinator"
+        self.members_file = self.main_config_dir+"/lunch_members.cfg"
+        self.messages_file = self.main_config_dir+"/messages"
+        self.log_file = self.main_config_dir+"/lunchinator.log"
+        self.avatar_dir = self.main_config_dir+"/avatars/"
+        self.version = "unknown"
+        self.version_short = "unknown"
+        self.commit_count = "0"
+        self.commit_count_plugins = "0"
+        self.plugin_dirs = [self.main_config_dir+"/plugins",sys.path[0]+"/plugins"]
+        
+        #insert plugin folders into path
+        for aDir in self.plugin_dirs:
+            sys.path.append(aDir)
+        
+        ''' not in files'''    
+        self.next_lunch_begin = None
+        self.next_lunch_end = None
+        self.audio_file = sys.path[0]+"/sounds/sonar.wav"
+        self.user_name = ""
+        self.avatar_file = ""    
+        self.debug = False 
+        self.tcp_port = 50001
+        self.auto_update = True   
+        self.default_lunch_begin = "12:15"
+        self.default_lunch_end = "12:45"
+        self.alarm_begin_time = "11:30"
+        self.alarm_end_time = "13:00"
+        self.peer_timeout = 604800 #one week so that we don't forget someone too soon
+        self.mute_timeout = 30
+        self.reset_icon_time = 5
+        self.last_gui_plugin_index = 0
+        
         if not os.path.exists(self.main_config_dir):
             os.makedirs(self.main_config_dir)
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
         
         log_info("Starting Lunchinator")
-        get_logger().setLevel(logging.WARNING)
         
         try:
             os.chdir(sys.path[0])
@@ -129,13 +136,6 @@ class lunch_default_config(object):
         
         if self.user_name=="":
             self.user_name = getpass.getuser()  
-        
-        if self.debug:
-            get_logger().setLevel(logging.DEBUG)
-            logging.basicConfig(level=logging.DEBUG)
-        else:
-            get_logger().setLevel(logging.WARNING)
-            logging.basicConfig(level=logging.WARNING)
             
     def read_value_from_config_file(self,value,section,name):
         try:

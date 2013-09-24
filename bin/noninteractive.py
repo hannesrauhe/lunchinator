@@ -5,7 +5,7 @@
 #this script can be used to start the lunchinator as stripped down CLI-application without self-updating functionality
 
 import __preamble
-from lunchinator import get_server, lunch_default_config
+from lunchinator import get_server, lunch_settings
 import time,socket,threading,os,sys,types
         
 
@@ -16,7 +16,7 @@ def trace(frame, event, arg):
 
 
 if __name__ == "__main__":
-    (options, args) = lunch_default_config.lunch_options_parser().parse_args()
+    (options, args) = lunch_settings.lunch_options_parser().parse_args()
 #    sys.settrace(trace)
     get_server().no_updates = options.noUpdates
     get_server().start_server()

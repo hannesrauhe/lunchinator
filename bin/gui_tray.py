@@ -6,7 +6,7 @@
 
 import __preamble
 from lunchinator.gui_general import *
-from lunchinator.lunch_default_config import lunch_options_parser
+from lunchinator.lunch_settings import lunch_options_parser
 from lunchinator import get_server
     
 def highlight_icon(c):
