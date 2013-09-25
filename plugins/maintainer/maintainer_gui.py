@@ -33,10 +33,26 @@ class maintainer_gui(object):
             return False
         self.log_area.get_buffer().set_text("Error while getting log")
         
+    def update_reports(self,w=None):
+        mode="open"
+        self.bug_reports = self.mt.getBugsFromDB(mode)
+        
     def display_report(self,w):
         if self.dropdown_reports.get_active()>=0:
-            self.entry.get_buffer().set_text(self.mt.reports[self.dropdown_reports.get_active()][2])
-        
+            self.entry.get_buffer().set_text(str(self.bug_reports[self.dropdown_reports.get_active()][2]))
+            
+    def close_report(self,w):
+        rep_nr = self.dropdown_reports.get_active()
+        if rep_nr>=0:
+            get_server().call("HELO_BUGREPORT_CLOSE %s %s"%(self.bug_reports[rep_nr][0],self.bug_reports[rep_nr][1]))        
+            del self.bug_reports[rep_nr]
+            self.dropdown_reports.remove_text(rep_nr)
+#            self.dropdown_reports = gtk.combo_box_new_text()
+#            for r in self.bug_reports:
+#                self.dropdown_reports.append_text("%s - %s"%(time.strftime("%a, %d %b %Y %H:%M:%S",time.localtime(r[0])),r[1]))
+            self.dropdown_reports.set_active(0)
+            self.display_report(self.dropdown_reports)
+
     def get_selected_log_member(self):
         member = self.dropdown_members.get_active_text()
         if member == None:
@@ -71,19 +87,26 @@ class maintainer_gui(object):
         frame = gtk.Frame()
         frame.add(self.entry)
         
+        self.update_reports()
         self.dropdown_reports = gtk.combo_box_new_text()
-        for r in self.mt.reports:
+        for r in self.bug_reports:
             self.dropdown_reports.append_text("%s - %s"%(time.strftime("%a, %d %b %Y %H:%M:%S",time.localtime(r[0])),r[1]))
         self.dropdown_reports.set_active(0)
+        self.display_report(self.dropdown_reports)
+        self.close_report_btn = gtk.Button("Close Bug")
         
         memtVBox = gtk.VBox()        
-        memtVBox.pack_start(self.dropdown_reports, False, False,5)
+        memtHBox = gtk.HBox()
+        memtHBox.pack_start(self.dropdown_reports, False, False,5)
+        memtHBox.pack_start(self.close_report_btn, False, False,5)
+        memtVBox.pack_start(memtHBox, False, False,5)
         descAlign = gtk.Alignment(0, 0, 0, 0)
         descAlign.add(gtk.Label("Description:"))
         memtVBox.pack_start(descAlign, False, True,0)
         memtVBox.pack_start(frame, True, True, 0)
         
         self.dropdown_reports.connect_object("changed", self.display_report,self.dropdown_reports)
+        self.close_report_btn.connect_object("clicked", self.close_report,self.dropdown_reports)
         
         return memtVBox
     
