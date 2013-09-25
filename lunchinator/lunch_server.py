@@ -229,7 +229,7 @@ class lunch_server(object):
                 if self.my_master==-1:
                     self.call("HELO_REQUEST_INFO "+self.build_info_string())
                     
-                self.my_master = addr[0]                                    
+                self.my_master = addr[0]   
                 if not os.path.exists(get_settings().members_file):
                     self.write_members_to_file()
                  
@@ -435,6 +435,7 @@ class lunch_server(object):
                         if not self.members.has_key(addr[0]):
                             self.members[addr[0]]=addr[0]
                         
+                    print daten
                     if daten.startswith("HELO"):
                         #simple infrastructure protocol messages starting with HELO''' 
                         self.incoming_event(daten, addr)                            

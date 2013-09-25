@@ -4,8 +4,8 @@ from lunchinator.lunch_server import EXIT_CODE_UPDATE
 from lunchinator import log_critical, log_error, log_info, get_settings,\
     log_warning
 
-pythonex_wo_console = "/usr/bin/python"
-pythonex_w_console = "/usr/bin/python"
+pythonex_wo_console = "/opt/local/bin/python"
+pythonex_w_console  = "/opt/local/bin/python"
 
 if platform.system()=="Windows":
     pythonex_w_console = "python"
@@ -50,9 +50,11 @@ it should be safe to call 'git stash' in the plugins directory %s/plugins and st
             returnCode = subprocess.call([pythonex_wo_console,lunchbindir+"indicator_applet.py","--autoUpdate"])
         except ImportError, e:
             #start the tray icon on windows and other linxu flavors
+            print "Trying tray icon"
             returnCode = subprocess.call([pythonex_wo_console,lunchbindir+"gui_tray.py","--autoUpdate"])        
     except ImportError, e:
         #start the CLI-Version if gtk is not available
+        print "trying cli verison"
         returnCode = subprocess.call([pythonex_w_console,lunchbindir+"nogui.py"])
         
     if returnCode == EXIT_CODE_UPDATE:

@@ -12,10 +12,10 @@ class Notify(iface_called_plugin):
         iface_called_plugin.activate(self)
             
     def process_message(self,msg,addr,member_info):
-        if sys.platform.startswith('linux'):    
+        name = " ["+addr+"]"    
+        if sys.platform.startswith('linux'):
             try:
                 icon = self.options["icon_file"]
-                name = " ["+addr+"]"
                 if member_info.has_key("avatar"):
                     icon = get_settings().get_avatar_dir()+"/"+member_info["avatar"]
     #            print ["notify-send","--icon="+icon, msg + " [" + member_info["name"] + "]"]
@@ -24,6 +24,11 @@ class Notify(iface_called_plugin):
                 subprocess.call(["notify-send","--icon="+icon, name, msg])
             except:
                 log_exception("notify error: %s"%str(sys.exc_info()))
+        elif "darwin" in sys.platform:
+            try:
+                subprocess.call(["terminal-notifier", "-title", "Lunchinator: %s" % name, "-message", msg])
+            except:
+                log_exception("error sending notification")
         else:
             self.incoming_call_win(msg,addr,member_info)
             
@@ -48,7 +53,23 @@ class Notify(iface_called_plugin):
             subprocess.call(["eject", "-T", "/dev/cdrom"])
         except:
             log_exception("notify error: eject error (close)")
-        
+            
+    def incoming_call_mac(self,msg,addr,member_info):      
+        try:
+            subprocess.call(["drutil", "tray", "eject"])
+        except:
+            log_exception("notify error: eject error (open)")
+             
+        try:
+            subprocess.call(["afplay", self.options["audio_file"]])    
+        except:
+            log_exception("notify error: sound error")
+             
+        try:
+            subprocess.call(["drutil", "tray", "close"])
+        except:
+            log_exception("notify error: eject error (close)")
+    
     def incoming_call_win(self,msg,addr,member_info):    
         try:
             ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
