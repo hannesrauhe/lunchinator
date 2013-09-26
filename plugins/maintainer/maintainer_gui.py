@@ -84,8 +84,10 @@ class maintainer_gui(object):
         self.entry.set_size_request(400,200)
         self.entry.set_wrap_mode(gtk.WRAP_WORD)
         self.entry.set_editable(False)
-        frame = gtk.Frame()
-        frame.add(self.entry)
+        scrollWindow = gtk.ScrolledWindow()
+        scrollWindow.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        scrollWindow.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+        scrollWindow.add(self.entry)
         
         self.update_reports()
         self.dropdown_reports = gtk.combo_box_new_text()
@@ -103,14 +105,14 @@ class maintainer_gui(object):
         descAlign = gtk.Alignment(0, 0, 0, 0)
         descAlign.add(gtk.Label("Description:"))
         memtVBox.pack_start(descAlign, False, True,0)
-        memtVBox.pack_start(frame, True, True, 0)
+        memtVBox.pack_start(scrollWindow, True, True, 0)
         
         self.dropdown_reports.connect_object("changed", self.display_report,self.dropdown_reports)
         self.close_report_btn.connect_object("clicked", self.close_report,self.dropdown_reports)
         
         return memtVBox
     
-    def create_into_table_widget(self):
+    def create_info_table_widget(self):
         self.info_table = InfoTable()
         return self.info_table.scrollTree
     
@@ -143,8 +145,10 @@ class maintainer_gui(object):
         self.log_area.set_size_request(400,200)
         self.log_area.set_wrap_mode(gtk.WRAP_WORD)
         self.log_area.set_editable(False)
-        frame = gtk.Frame()
-        frame.add(self.log_area)
+        scrollWindow = gtk.ScrolledWindow()
+        scrollWindow.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        scrollWindow.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+        scrollWindow.add(self.log_area)
         
         self.dropdown_members_dict = {}
         self.dropdown_members_model = gtk.ListStore(str)
@@ -164,7 +168,7 @@ class maintainer_gui(object):
         
         memtVBox = gtk.VBox()    
         memtVBox.pack_start(memHBox, False, False, 5)
-        memtVBox.pack_start(frame, True, True, 10)
+        memtVBox.pack_start(scrollWindow, True, True, 10)
         memtVBox.show_all()
         
         self.dropdown_members.connect_object("changed", self.request_log,self.dropdown_members)
@@ -177,7 +181,7 @@ class maintainer_gui(object):
     def create_widget(self):
         reports_widget = self.create_reports_widget()
         logs_widget = self.create_logs_widget()
-        info_table_widget = self.create_into_table_widget()
+        info_table_widget = self.create_info_table_widget()
         
         nb = gtk.Notebook()
         nb.set_tab_pos(gtk.POS_LEFT)
