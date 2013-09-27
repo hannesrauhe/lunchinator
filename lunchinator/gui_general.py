@@ -322,6 +322,7 @@ class lunchinator(threading.Thread):
                         log_exception("was not able to save data for plugin %s: %s",pluginInfo.name, str(sys.exc_info()))
                 else:
                     pluginInfo.plugin_object.discard_options_widget_data()
+        get_settings().write_config_to_hd()
             
         d.destroy()
         get_server().call("HELO_INFO "+get_server().build_info_string())        

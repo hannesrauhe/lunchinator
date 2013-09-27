@@ -1,5 +1,6 @@
 from lunchinator.iface_plugins import *
-from lunchinator import get_server, get_settings
+from lunchinator import get_server, get_settings, setLoggingLevel
+import logging
     
 class gui_settings(iface_general_plugin):
     def __init__(self):
@@ -13,7 +14,8 @@ class gui_settings(iface_general_plugin):
                         ("alarm_end_time", "No Alarm after"),
                         ("mute_timeout", "Mute for x sec after Alarm"),
                         ("reset_icon_time", "Reset Lunchinator Icon after x min"),
-                        ("tcp_port", "TCP Port")]
+                        ("tcp_port", "TCP Port"),
+                        ("logging_level", "Logging Level", ("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"))]
         self.options = []
         for o in option_names:
             methodname = "get_"+o[0]
@@ -23,22 +25,22 @@ class gui_settings(iface_general_plugin):
             else:
                 log_warning("settings has no attribute called '%s'" % o)
                 
-    def save_options_widget_data(self):
-        if not self.option_widgets:
-            return
-        for o,e in self.option_widgets.iteritems():
-            v = self.options[o]
-            new_v = v
-            if type(v)==types.IntType:
-                new_v = e.get_value_as_int()
-            elif type(v)==types.BooleanType:
-                new_v = e.get_active()
+    def set_settings(self):
+        for o in self.option_names:
+            methodname = "set_"+o[0]
+            if hasattr(get_settings(), methodname): 
+                _member = getattr(get_settings(), methodname)
+                _member(self.options[o[0]])
             else:
-                new_v = e.get_text()
-            if new_v!=v:
-                self.options[o]=new_v
-                #TODO(Hannes) hack
-                get_settings().config_file.set('general', o, str(new_v))
-        self.discard_options_widget_data()
-        get_settings().write_config_to_hd()
-        get_settings().read_config_from_hd()
+                log_warning("settings has no setter for '%s'" % o)
+    
+    def save_options_widget_data(self):
+        # override category as "general"
+        self.save_data(lambda o, new_v: get_settings().config_file.set('general', o, str(new_v)))
+        self.set_settings()
+        
+    def read_options_from_file(self):
+        super(gui_settings, self).read_options_from_file()
+        self.set_settings()
+        
+        

@@ -30,6 +30,10 @@ _lunchinator_logger.get_singleton_logger()
 def _get_logger():
     return _lunchinator_logger.get_singleton_logger()
 
+def setLoggingLevel(newLevel):
+    _get_logger().setLevel(newLevel)
+    logging.basicConfig(level=newLevel)
+    
 def _generate_string(*s):
     return " ".join(str(x) for x in s)
 
@@ -63,12 +67,7 @@ def get_plugin_dirs():
     return get_settings().plugin_dirs
 
 #initialize settings
-if get_settings().debug:
-    _get_logger().setLevel(logging.DEBUG)
-    logging.basicConfig(level=logging.DEBUG)
-else:
-    _get_logger().setLevel(logging.INFO)
-    logging.basicConfig(level=logging.INFO)
+setLoggingLevel(get_settings().get_logging_level())
 
 import lunch_server
 

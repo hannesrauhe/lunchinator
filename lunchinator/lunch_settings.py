@@ -3,7 +3,7 @@ from optparse import OptionParser
 
 '''integrate the cli-parser into the default_config sooner or later'''
 from lunchinator import log_exception, log_warning, log_error,\
-    log_info
+    log_info, setLoggingLevel
 class lunch_options_parser(object):
     def parse_args(self):
         usage = "usage: %prog [options]"
@@ -61,6 +61,7 @@ class lunch_settings(object):
         self.mute_timeout = 30
         self.reset_icon_time = 5
         self.last_gui_plugin_index = 0
+        self.logging_level = "ERROR"
         
         if not os.path.exists(self.main_config_dir):
             os.makedirs(self.main_config_dir)
@@ -108,6 +109,7 @@ class lunch_settings(object):
         self.reset_icon_time = self.read_value_from_config_file(self.reset_icon_time, "general", "reset_icon_time")
         
         self.last_gui_plugin_index = self.read_value_from_config_file(self.last_gui_plugin_index, 'general', 'last_gui_plugin_index')
+        self.logging_level = self.read_value_from_config_file(self.logging_level, 'general', 'logging_level')
         
         #not shown in settings-plugin - handled by avatar-plugin
         self.avatar_file =  self.read_value_from_config_file(self.avatar_file,"general","avatar_file")
@@ -200,37 +202,27 @@ class lunch_settings(object):
     #the rest is read from/written to the config file          
     def get_user_name(self):
         return self.user_name    
-    def get_auto_update(self):
-        return self.auto_update    
-    def get_audio_file(self):
-        return self.audio_file    
-    def get_avatar_dir(self):
-        return self.avatar_dir        
-    def get_avatar_file(self):
-        return self.get_avatar()
-    def get_avatar(self):
-        return self.avatar_file
-    def get_default_lunch_begin(self):
-        return self.default_lunch_begin
-    def get_default_lunch_end(self):
-        return self.default_lunch_end
-    def get_alarm_begin_time(self):
-        return self.alarm_begin_time
-    def get_alarm_end_time(self):
-        return self.alarm_end_time
-    def get_mute_timeout(self):
-        return self.mute_timeout
-    def get_tcp_port(self):
-        return self.tcp_port
-    def get_reset_icon_time(self):
-        return self.reset_icon_time
-    
     def set_user_name(self,name,force_write=False):
         self.user_name = name
         self.config_file.set('general', 'user_name', str(name))
         if force_write:
             self.write_config_to_hd()
-        
+    
+    def get_auto_update(self):
+        return self.auto_update
+    def set_auto_update(self, new_value):
+        self.auto_update = new_value
+    
+    def get_audio_file(self):
+        return self.audio_file 
+    def set_audio_file(self, new_value):
+        self.audio_file = new_value
+      
+    def get_avatar_dir(self):
+        return self.avatar_dir
+                 
+    def get_avatar_file(self):
+        return self.get_avatar()
     def set_avatar_file(self,file_name,force_write=False):  
         if not os.path.exists(self.avatar_dir+"/"+file_name):
             log_error("avatar does not exist: %s",file_name)
@@ -239,6 +231,59 @@ class lunch_settings(object):
         self.config_file.set('general', 'avatar_file', str(file_name))
         if force_write:
             self.write_config_to_hd()
+    
+    def get_avatar(self):
+        return self.avatar_file
+    
+    def get_default_lunch_begin(self):
+        return self.default_lunch_begin
+    def set_default_lunch_begin(self, new_value):
+        self.default_lunch_begin = new_value
+    
+    def get_default_lunch_end(self):
+        return self.default_lunch_end
+    def set_default_lunch_end(self, new_value):
+        self.default_lunch_end = new_value
+    
+    def get_alarm_begin_time(self):
+        return self.alarm_begin_time
+    def set_alarm_begin_time(self, new_value):
+        self.alarm_begin_time = new_value
+    
+    def get_alarm_end_time(self):
+        return self.alarm_end_time
+    def set_alarm_end_time(self, new_value):
+        self.alarm_end_time = new_value
+    
+    def get_mute_timeout(self):
+        return self.mute_timeout
+    def set_mute_timeout(self, new_value):
+        self.mute_timeout = new_value
+    
+    def get_tcp_port(self):
+        return self.tcp_port
+    def set_tcp_port(self, new_value):
+        self.tcp_port = new_value
+    
+    def get_reset_icon_time(self):
+        return self.reset_icon_time
+    def set_reset_icon_time(self, new_value):
+        self.reset_icon_time = new_value
+    
+    def get_logging_level(self):
+        return self.logging_level
+    def set_logging_level(self, newValue):
+        self.logging_level = newValue
+        if newValue == "CRITICAL":
+            setLoggingLevel(logging.CRITICAL)
+        elif newValue == "ERROR":
+            setLoggingLevel(logging.ERROR)
+        elif newValue == "WARNING":
+            setLoggingLevel(logging.WARNING)
+        elif newValue == "INFO":
+            setLoggingLevel(logging.INFO)
+        elif newValue == "DEBUG":
+            setLoggingLevel(logging.DEBUG)
         
     def set_last_gui_plugin_index(self, index):
         self.last_gui_plugin_index = index

@@ -7,7 +7,9 @@ class iface_plugin(IPlugin):
     def __init__(self):
         self.options = None
         self.option_names = None
+        self.option_callbacks = {}
         self.option_widgets = {}
+        self.option_choice = {}
         manager = PluginManagerSingleton.get()
         self.shared_dict = manager.app.shared_dict
         super(iface_plugin, self).__init__()
@@ -24,8 +26,22 @@ class iface_plugin(IPlugin):
             self.option_names = []
             for o,v in self.options:
                 if type(o) in (tuple, list):
+                    if len(o) < 2:
+                        log_error("Setting '%s' specified as tuple must contain at least 2 elements." % o[0])
+                        continue
                     dict_options[o[0]] = v
                     self.option_names.append(o)
+                    
+                    # check for further configurations
+                    iterconf = iter(o)
+                    next(iterconf)
+                    next(iterconf)
+                    for aConf in iterconf:
+                        # can be callback or choice
+                        if callable(aConf):
+                            self.option_callbacks[o[0]] = aConf
+                        elif type(aConf) in (tuple, list):
+                            self.option_choice[o[0]] = aConf
                 else:
                     dict_options[o] = v
                     self.option_names.append((o,o))
@@ -63,7 +79,15 @@ class iface_plugin(IPlugin):
     def add_option_to_widget(self, t, i, o, v):
         import gtk
         e = ""
-        if type(v)==types.IntType:
+        if o[0] in self.option_choice:
+            e = gtk.combo_box_new_text()
+            for aString in self.option_choice[o[0]]:
+                e.append_text(aString)
+            activeIndex = 0
+            if v in self.option_choice[o[0]]:
+                activeIndex = self.option_choice[o[0]].index(v)
+            e.set_active(activeIndex)
+        elif type(v)==types.IntType:
             adjustment = gtk.Adjustment(value=v, lower=0, upper=1000000, step_incr=1, page_incr=0, page_size=0)
             e = gtk.SpinButton(adjustment)
         elif type(v)==types.BooleanType:
@@ -99,13 +123,15 @@ class iface_plugin(IPlugin):
                 
         return t
     
-    def save_options_widget_data(self):
+    def save_data(self, set_value):
         if not self.option_widgets:
             return
         for o,e in self.option_widgets.iteritems():
             v = self.options[o]
             new_v = v
-            if type(v)==types.IntType:
+            if o in self.option_choice:
+                new_v = self.option_choice[o][e.get_active()]
+            elif type(v)==types.IntType:
                 new_v = e.get_value_as_int()
             elif type(v)==types.BooleanType:
                 new_v = e.get_active()
@@ -113,7 +139,13 @@ class iface_plugin(IPlugin):
                 new_v = e.get_text()
             if new_v!=v:
                 self.options[o]=new_v
-                self.setConfigOption(o,str(new_v))
+                set_value(o, new_v)
+                if o in self.option_callbacks:
+                    self.option_callbacks[o](o, new_v)
+        self.discard_options_widget_data()
+        
+    def save_options_widget_data(self):
+        self.save_data(lambda o, new_v: self.setConfigOption(o,str(new_v)))
         self.discard_options_widget_data()
     
     def discard_options_widget_data(self):
