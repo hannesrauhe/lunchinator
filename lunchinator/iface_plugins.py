@@ -62,7 +62,14 @@ class iface_plugin(IPlugin):
             if self.hasConfigOption(o):
                 new_v = self.getConfigOption(o)
                 try:
-                    if type(v)==types.IntType:
+                    if o in self.option_choice:
+                        self.options[o] = new_v
+                        if not new_v in self.option_choice[0]:
+                            #illegal value - use first
+                            self.options[o] = self.option_choice[0][0]
+                        else:
+                            self.options[o] = new_v
+                    elif type(v)==types.IntType:
                         self.options[o] = int(new_v)
                     elif type(v)==types.BooleanType:
                         if new_v.strip().upper() in ["TRUE", "YES", "1"]:
