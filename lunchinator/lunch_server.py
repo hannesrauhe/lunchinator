@@ -2,7 +2,7 @@
 from lunch_datathread import *
 from iface_plugins import *
 from time import strftime, localtime, time, mktime, gmtime
-import socket,subprocess,sys,os,ctypes,getpass,json
+import socket,subprocess,sys,os,ctypes,getpass,json,logging
 
 from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
@@ -35,6 +35,7 @@ class lunch_server(object):
         self.plugin_manager = None
         self.no_updates = False
         self.with_plugins = True
+        self.own_ip = "0.0.0.0"
         
         self.exitCode = 0  
         self.read_config()
@@ -43,16 +44,33 @@ class lunch_server(object):
             ConfigurablePluginManager,
         ])
         self.plugin_manager = PluginManagerSingleton.get()
+        #logging.getLogger('yapsy').setLevel(logging.DEBUG)
         self.plugin_manager.app = self
         self.plugin_manager.setConfigParser(get_settings().config_file,get_settings().write_config_to_hd)
         self.plugin_manager.setPluginPlaces(get_settings().plugin_dirs)
         self.plugin_manager.setCategoriesFilter({
            "general" : iface_general_plugin,
            "called" : iface_called_plugin,
-           "gui" : iface_gui_plugin
+           "gui" : iface_gui_plugin,
+           "db" : iface_database_plugin
            }) 
         self.init_done = threading.Event()
         self.shared_dict = {} #for plugins
+        
+    def getDBConnection(self,conn_name):
+        conn=None
+        for pluginInfo in self.plugin_manager.getPluginsOfCategory("db"):
+            try:
+                if conn_name in pluginInfo.plugin_object.get_available_connections():
+                    conn=pluginInfo.plugin_object
+                    conn.switch_connection(conn_name)                    
+                    break
+            except:
+                log_exception("plugin error in %s while choosing DB Connection %s: %s"%(pluginInfo.name, conn_name, str(sys.exc_info())))
+        return conn
+    
+    def getOwnIP(self):
+        return self.own_ip
         
     def is_now_in_time_span(self,begin,end):
         try:
@@ -420,6 +438,14 @@ class lunch_server(object):
             
             
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        #getting your IP address is hard...:
+        socket.gethostbyname(socket.gethostname()) #may return something like 127.* or 0.*
+        if self.own_ip.startswith("127.") or self.own_ip.startswith("0."):
+            self.own_ip = socket.gethostbyname(socket.getfqdn())        
+        if self.own_ip.startswith("127.") or self.own_ip.startswith("0."):
+            log_error("IP address could not be determined, so I'm using your hostname, some things might not work correctly (e.g., statistics)")
+            self.own_ip = socket.gethostname()[:15]
+            
         try: 
             s.bind(("", 50000)) 
             s.settimeout(5.0)
@@ -429,7 +455,6 @@ class lunch_server(object):
                     self.new_msg=False
                 try:
                     daten, addr = s.recvfrom(1024) 
-                    
                     if not addr[0].startswith("127."):
                         self.member_timeout[addr[0]]=time()
                         if not self.members.has_key(addr[0]):

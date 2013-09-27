@@ -14,7 +14,7 @@ class iface_plugin(IPlugin):
     
     def activate(self):
         """
-        Call the parent class's acivation method
+        Call the parent class's activation method
         """
         IPlugin.activate(self)
         
@@ -122,7 +122,7 @@ class iface_plugin(IPlugin):
 class iface_general_plugin(iface_plugin):    
     def activate(self):
         """
-        Call the parent class's acivation method
+        Call the parent class's activation method
         """
         iface_plugin.activate(self)
         return
@@ -142,7 +142,7 @@ class iface_gui_plugin(iface_plugin):
     
     def activate(self):
         """
-        Call the parent class's acivation method
+        Call the parent class's activation method
         """
         iface_plugin.activate(self)
         return
@@ -191,7 +191,7 @@ class iface_gui_plugin(iface_plugin):
 class iface_called_plugin(iface_plugin):    
     def activate(self):
         """
-        Call the parent class's acivation method
+        Call the parent class's activation method
         """
         iface_plugin.activate(self)
         return
@@ -211,3 +211,80 @@ class iface_called_plugin(iface_plugin):
         
     def process_event(self,cmd,value,ip,member_info):
         pass
+    
+
+class iface_database_plugin(iface_plugin):
+    #connection_names = {}
+    
+    def __init__(self):
+        super(iface_database_plugin, self).__init__()
+        self.db_type="Unknown"
+        self.conn_of_type=[]
+            
+    def _execute(self, query, wildcards, returnResults=True, commit=False):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    def activate(self):
+        """
+        Call the parent class's activation method
+        """
+        iface_plugin.activate(self)
+        return
+
+
+    def deactivate(self):
+        """
+        Just call the parent class's method
+        """
+        iface_plugin.deactivate(self)
+        
+    def get_available_connections(self):
+        return self.conn_of_type            
+            
+    def switch_connection(self,conn_name):
+        self.active_connection="default"
+        
+    '''convenience calls'''    
+    def execute(self, query, *wildcards):
+        return self._execute(query, wildcards, returnResults=False, commit=True)
+        
+    def executeNoCommit(self, query, *wildcards):
+        return self._execute(query, wildcards, returnResults=False, commit=False)
+        
+    def query(self, query, *wildcards):
+        return self._execute(query, wildcards, returnResults=True, commit=False)
+    
+    '''abstract methods'''            
+    def commit(self):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    def existsTable(self, tableName):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    def insert_values(self, table, *values):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+            
+            
+    '''message statistics plugin methods''' 
+    def insert_call(self,mtype,msg,sender):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    def get_calls(self):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    def insert_members(self,ip,name,avatar,lunch_begin,lunch_end):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+        
+    def get_newest_members_data(self):    
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    '''lunch statistics plugin methods'''    
+    def lastUpdateForLunchDay(self, date, tableName):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+        
+    def insertLunchPart(self, date, textAndAdditivesList, update, table):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    '''maintenance plugin methods'''    
+    def getBugsFromDB(self,mode="open"):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)

@@ -37,7 +37,7 @@ class lunchinator(threading.Thread):
                  platform.linux_distribution()[1] == "10.04"):
             usePrepend = True
         
-        allPlugins= self.getPlugins(['general','called','gui'])
+        allPlugins= self.getPlugins(['general','called','gui','db'])
         for pluginName in sorted(allPlugins.iterkeys()):
             p_item = gtk.CheckMenuItem(pluginName)            
             p_item.set_active(allPlugins[pluginName][1].is_activated)                
