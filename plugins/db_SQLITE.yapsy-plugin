@@ -1,0 +1,9 @@
+[Core]
+Name = SQLite Connection
+Module = db_SQLITE
+
+[Documentation]
+Author = Hannes Rauhe
+Version = 0.1
+Website = http://www.lunchinator.de
+Description = Provides the required database connection to SQLitefor plugins like statistics.
