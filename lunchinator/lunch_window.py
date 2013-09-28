@@ -9,7 +9,6 @@ import traceback
 import gobject
 import time
 from functools import partial
-from Pyrex.Compiler.Parsing import p_name
 
 class LunchinatorWindow(QMainWindow):
     def __init__(self, guiHandler):
