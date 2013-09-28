@@ -1,3 +1,4 @@
 - Problem when launching start_lunchinator and there is no .lunchinator directory
 - Problem when the members cfg is empty (division by zero)
 - Implement ComboTabWidget
+- Better table update

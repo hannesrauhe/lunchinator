@@ -1,5 +1,5 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import log_exception
+from lunchinator import log_exception, get_settings
 import urllib2,sys
 from PyQt4.QtGui import QImage, QPixmap, QLabel
 from PyQt4.QtCore import QTimer
@@ -7,7 +7,7 @@ from PyQt4.QtCore import QTimer
 class webcam(iface_gui_plugin):
     def __init__(self):
         super(webcam, self).__init__()
-        self.options = {"fallback_pic":sys.path[0]+"/images/webcam.jpg",
+        self.options = {"fallback_pic":get_settings().lunchdir+"/images/webcam.jpg",
                         "pic_url":"http://lunchinator.de/files/webcam_dummy.jpg",
                         "timeout":5,
                         "no_proxy":False}

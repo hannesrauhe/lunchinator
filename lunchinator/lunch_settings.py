@@ -26,6 +26,25 @@ class lunch_settings(object):
             cls._instance = cls()
         return cls._instance
     
+    def runGitCommand(self, args, path = None, quiet = True):
+        if path == None:
+            path = self.lunchdir
+        
+        call = ["git","--git-dir="+path+"/.git","--work-tree="+path+"/.git"]
+        call = call + args
+        
+        fh = subprocess.PIPE    
+        if quiet:
+            fh = open(os.path.devnull,"w")
+        p = subprocess.Popen(call,stdout=fh, stderr=fh)
+        pOut, pErr = p.communicate()
+        retCode = p.returncode
+        return retCode, pOut, pErr
+    
+    def getGitCommandResult(self, args, path = None, quiet = True):
+        retCode, _, __ = self.runGitCommand(args, path, quiet)
+        return retCode
+    
     def __init__(self):
         '''unchangeable for now'''
         self.main_config_dir = os.getenv("HOME")+"/.lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+"/.lunchinator"
@@ -36,9 +55,11 @@ class lunch_settings(object):
         self.version = "unknown"
         self.version_short = "unknown"
         self.commit_count = "0"
-        self.commit_count_plugins = "0"
+        self.commit_count_plugins = "-1"
         self.lunchdir = sys.path[0]
-        self.plugin_dirs = [self.main_config_dir+"/plugins",self.lunchdir+"/plugins"]
+        self.internal_plugin_dir = self.lunchdir+"/plugins"
+        self.external_plugin_dir = self.main_config_dir+"/plugins"
+        self.plugin_dirs = [self.internal_plugin_dir, self.external_plugin_dir]
         
         #insert plugin folders into path
         for aDir in self.plugin_dirs:
@@ -47,7 +68,7 @@ class lunch_settings(object):
         ''' not in files'''    
         self.next_lunch_begin = None
         self.next_lunch_end = None
-        self.audio_file = sys.path[0]+"/sounds/sonar.wav"
+        self.audio_file = self.lunchdir+"/sounds/sonar.wav"
         self.user_name = ""
         self.avatar_file = ""    
         self.debug = False 
@@ -68,24 +89,20 @@ class lunch_settings(object):
         if not os.path.exists(self.avatar_dir):
             os.makedirs(self.avatar_dir)
         
-        log_info("Starting Lunchinator")
-        
         try:
-            os.chdir(sys.path[0])
-            p = subprocess.Popen(["git","log","-1"],stdout=subprocess.PIPE)
-            self.version, _ = p.communicate()
+            _, self.version, __ = self.runGitCommand(["log", "-1"], self.lunchdir)
             for line in self.version.splitlines():
                 if line.startswith("Date:"):
                     self.version_short = line[5:].strip()
-            p = subprocess.Popen(["git","rev-list", "HEAD", "--count"],stdout=subprocess.PIPE)
-            cco, _ = p.communicate()
+            
+            revListArgs = ["rev-list", "HEAD", "--count"]
+            _, cco, __ = self.runGitCommand(revListArgs, self.lunchdir)
             self.commit_count = cco.strip()
-            for aPluginDir in self.plugin_dirs:
-                p = subprocess.Popen(["git","--git-dir=%s/.git" % aPluginDir, "rev-list", "HEAD", "--count"],stdout=subprocess.PIPE)
-                cco, _ = p.communicate()
-                if p.returncode == 0:
+            
+            if os.path.exists(self.external_plugin_dir):
+                retCode, cco, __ = self.runGitCommand(revListArgs, self.external_plugin_dir)
+                if retCode == 0:
                     self.commit_count_plugins = cco.strip()
-                    break
         except:
             log_exception("git log could not be executed correctly - version information not available")
             pass
@@ -132,8 +149,8 @@ class lunch_settings(object):
                 audio_file = f.readline().strip()
                 if os.path.exists(self.main_config_dir+"/sounds/"+audio_file):
                     self.audio_file = self.main_config_dir+"/sounds/"+audio_file
-                elif os.path.exists(sys.path[0]+"/sounds/"+audio_file):
-                    self.audio_file = sys.path[0]+"/sounds/"+audio_file
+                elif os.path.exists(self.lunchdir+"/sounds/"+audio_file):
+                    self.audio_file = self.lunchdir+"/sounds/"+audio_file
                 else:
                     log_warning("configured audio file %s does not exist in sounds folder, using old one: %s",audio_file,self.audio_file)  
         
@@ -160,27 +177,26 @@ class lunch_settings(object):
         self.config_file.write(open(self.main_config_dir+'/settings.cfg','w'))
         
     def getCanUpdate(self, repo):
-        call = ["git","--git-dir="+repo+"/.git","--work-tree="+repo,"diff","--name-only","--exit-code","--quiet"]
-        if subprocess.call(call)!=0:
+        if self.getGitCommandResult(["rev-parse"], repo) != 0:
+            return (False, "'%s' is no git repository" % repo)
+        
+        if self.getGitCommandResult(["diff","--name-only","--exit-code","--quiet"], repo) != 0:
             return (False, "There are unstaged changes")
         
-        call = ["git","--git-dir="+repo+"/.git","--work-tree="+repo,"diff","--cached","--exit-code","--quiet"]
-        if subprocess.call(call)!=0:
+        if self.getGitCommandResult(["diff","--cached","--exit-code","--quiet"], repo) != 0:
             return (False, "There are staged, uncommitted changes")
         
-        call = ["git","--git-dir="+repo+"/.git","--work-tree="+repo,"symbolic-ref","HEAD"]
-        p = subprocess.Popen(call,stdout=subprocess.PIPE)
-        branch = p.communicate()[0]
+        _, branch, __ = self.runGitCommand(["symbolic-ref","HEAD"], repo)
         if "master" not in branch:
             return (False, "The selected branch is not the master branch")
         
-        call = ["git","--git-dir="+repo+"/.git","--work-tree="+repo,"log","origin/master..HEAD","--exit-code","--quiet"]
-        if subprocess.call(call)!=0:
+        if self.getGitCommandResult("log","origin/master..HEAD","--exit-code","--quiet") != 0:
             return (False, "There are unpushed commits on the master branch")
         
         return (True, None)
     
     def getCanUpdateMain(self):
+        print self.lunchdir
         return self.getCanUpdate(self.lunchdir)
         
     def getCanUpdatePlugins(self):
