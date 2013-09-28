@@ -1,6 +1,9 @@
-from lunchinator.iface_plugins import *
+from lunchinator.iface_plugins import iface_called_plugin
 from twitter import *
-from lunchinator import get_server, log_exception, log_info, log_error
+from lunchinator import get_server, log_info
+from lunchinator import log_warning, log_error, log_exception
+from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox
+from PyQt4.QtCore import Qt
 
 import os,sys,time,pprint
 
@@ -54,7 +57,7 @@ class twitter_status(iface_called_plugin):
         pass
 
             
-    def process_lunch_call(self,msg,ip,member_info):
+    def process_lunch_call(self,_,__,member_info):
         if self.twitter:
             statustxt = "Lunchtime!"
             if member_info and member_info.has_key("name"):
@@ -103,10 +106,10 @@ class twitter_status(iface_called_plugin):
                         reply = "Sorry, @%s, you're not authorized to call"%(tweet_user)
                     self.twitter.statuses.update(status=reply[:140])
             
-    def create_options_widget(self):
-        import gtk
-        w = super(twitter_status, self).create_options_widget()
-        box = gtk.VBox()
+    def create_options_widget(self, parent):
+        widget = QWidget(parent)
+        w = super(twitter_status, self).create_options_widget(widget)
+        layout = QVBoxLayout(widget)
         if len(self.options["twitter_account"]):
             if len(self.remote_account)==0:
                 msg = "Nobody in your network has configured a remote account - remote calls not possible"
@@ -115,9 +118,9 @@ class twitter_status(iface_called_plugin):
         else:
             msg = "Fill in your twitter account to allow remote lunch calls from it"
         
-        box.pack_start(gtk.Label(msg), False, True, 10)
+        layout.addWidget(QLabel(msg, widget))
         if self.is_remote_account:
-            box.pack_start(gtk.Label("Following users can trigger remote calls: %s"%(", ".join(self.other_twitter_users.values()))), False, True, 10)            
-        box.pack_start(w, False, True, 10)
-        return box
+            layout.addWidget(QLabel("Following users can trigger remote calls: %s"%(", ".join(self.other_twitter_users.values())), widget))
+        layout.addWidget(w)
+        return widget
             

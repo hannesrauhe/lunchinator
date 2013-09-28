@@ -1,5 +1,6 @@
-from lunchinator.iface_plugins import *
-import gtk,gobject,urllib2,sys
+from lunchinator.iface_plugins import iface_gui_plugin
+import urllib2
+from PyQt4.QtGui import QTextEdit
     
 class lunch_menu(iface_gui_plugin):
     def __init__(self):
@@ -12,20 +13,15 @@ class lunch_menu(iface_gui_plugin):
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
     
-    def create_widget(self):
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        textview = gtk.TextView()
-        textview.set_size_request(400,200)
-        textview.set_wrap_mode(gtk.WRAP_WORD)
-        textbuffer = textview.get_buffer()
-        sw.add(textview)
-        sw.show()
-        textview.show()
+    def create_widget(self, parent):
+        textview = QTextEdit(parent)
+        textview.setLineWrapMode(QTextEdit.WidgetWidth)
+        textview.setReadOnly(True)
+        
         resp = urllib2.urlopen(self.options["url"])
         txt = resp.read()
-        textbuffer.set_text(txt.decode('cp1252'))
-        return sw
+        textview.setPlainText(txt)
+        return textview
     
     def add_menu(self,menu):
         pass

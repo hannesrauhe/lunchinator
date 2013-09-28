@@ -435,7 +435,6 @@ class lunch_server(object):
                         if not self.members.has_key(addr[0]):
                             self.members[addr[0]]=addr[0]
                         
-                    print daten
                     if daten.startswith("HELO"):
                         #simple infrastructure protocol messages starting with HELO''' 
                         self.incoming_event(daten, addr)                            

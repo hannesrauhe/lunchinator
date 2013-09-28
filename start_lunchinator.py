@@ -43,7 +43,7 @@ If you do not know, what to do now:\n\
 it should be safe to call 'git stash' in the plugins directory %s/plugins and start lunchinator again."%get_settings().main_config_dir)
     shouldRestart = False       
     try:
-        import gtk
+        import PyQt4
         try:
             #on ubuntu start the indicator
             import appindicator
@@ -53,7 +53,7 @@ it should be safe to call 'git stash' in the plugins directory %s/plugins and st
             print "Trying tray icon"
             returnCode = subprocess.call([pythonex_wo_console,lunchbindir+"gui_tray.py","--autoUpdate"])        
     except ImportError, e:
-        #start the CLI-Version if gtk is not available
+        #start the CLI-Version if qt is not available
         print "trying cli verison"
         returnCode = subprocess.call([pythonex_w_console,lunchbindir+"nogui.py"])
         

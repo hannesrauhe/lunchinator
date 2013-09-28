@@ -13,8 +13,8 @@ class bug_report(iface_gui_plugin):
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
     
-    def create_widget(self):
-        return self.w.create_widget()
+    def create_widget(self, parent):
+        return self.w.create_widget(parent)
             
     def add_menu(self,menu):
         pass

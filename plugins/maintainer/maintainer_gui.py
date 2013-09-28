@@ -1,6 +1,7 @@
-import gtk,time,gobject
+import time
 from lunchinator import get_server, get_settings
-import os
+from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeWidget, QStandardItemModel, QStandardItem, QSpinBox, QTabWidget
+from PyQt4 import QtCore
 
 class maintainer_gui(object):
     def __init__(self,mt):
@@ -33,25 +34,22 @@ class maintainer_gui(object):
             return False
         self.log_area.get_buffer().set_text("Error while getting log")
         
-    def update_reports(self,w=None):
+    def update_reports(self):
         mode="open"
         self.bug_reports = self.mt.getBugsFromDB(mode)
         
-    def display_report(self,w):
-        if self.dropdown_reports.get_active()>=0:
-            self.entry.get_buffer().set_text(str(self.bug_reports[self.dropdown_reports.get_active()][2]))
+    def display_report(self):
+        if self.dropdown_reports.currentIndex()>=0:
+            self.entry.get_buffer().set_text(str(self.bug_reports[self.dropdown_reports.currentIndex()][2]))
             
-    def close_report(self,w):
-        rep_nr = self.dropdown_reports.get_active()
+    def close_report(self):
+        rep_nr = self.dropdown_reports.currentIndex()
         if rep_nr>=0:
             get_server().call("HELO_BUGREPORT_CLOSE %s %s"%(self.bug_reports[rep_nr][0],self.bug_reports[rep_nr][1]))        
             del self.bug_reports[rep_nr]
-            self.dropdown_reports.remove_text(rep_nr)
-#            self.dropdown_reports = gtk.combo_box_new_text()
-#            for r in self.bug_reports:
-#                self.dropdown_reports.append_text("%s - %s"%(time.strftime("%a, %d %b %Y %H:%M:%S",time.localtime(r[0])),r[1]))
-            self.dropdown_reports.set_active(0)
-            self.display_report(self.dropdown_reports)
+            self.dropdown_reports.removeItem(rep_nr)
+            self.dropdown_reports.setCurrentIndex(0)
+            self.display_report()
 
     def get_selected_log_member(self):
         member = self.dropdown_members.get_active_text()
@@ -64,7 +62,7 @@ class maintainer_gui(object):
             
         return member
     
-    def request_log(self,w):
+    def request_log(self):
         member = self.get_selected_log_member()
         if member != None:
             self.log_area.get_buffer().set_text("Requesting log from "+member)
@@ -74,47 +72,44 @@ class maintainer_gui(object):
         else:
             self.log_area.get_buffer().set_text("No Member selected!")
             
-    def request_update(self,w):
+    def request_update(self):
         member = self.get_selected_log_member()
         if member != None:
             get_server().call("HELO_UPDATE from GUI",member)
             
-    def create_reports_widget(self):
-        self.entry = gtk.TextView()
-        self.entry.set_size_request(400,200)
-        self.entry.set_wrap_mode(gtk.WRAP_WORD)
-        self.entry.set_editable(False)
-        scrollWindow = gtk.ScrolledWindow()
-        scrollWindow.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        scrollWindow.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
-        scrollWindow.add(self.entry)
+    def create_reports_widget(self, parent):
+        widget = QWidget(parent)
+        layout = QVBoxLayout(widget)
         
         self.update_reports()
-        self.dropdown_reports = gtk.combo_box_new_text()
+        self.dropdown_reports = QComboBox(widget)
         for r in self.bug_reports:
-            self.dropdown_reports.append_text("%s - %s"%(time.strftime("%a, %d %b %Y %H:%M:%S",time.localtime(r[0])),r[1]))
-        self.dropdown_reports.set_active(0)
-        self.display_report(self.dropdown_reports)
-        self.close_report_btn = gtk.Button("Close Bug")
+            self.dropdown_reports.addItem("%s - %s"%(time.strftime("%a, %d %b %Y %H:%M:%S",time.localtime(r[0])),r[1]))
+        self.dropdown_reports.setCurrentIndex(0)
+        self.display_report()
+        self.close_report_btn = QPushButton("Close Bug", widget)
         
-        memtVBox = gtk.VBox()        
-        memtHBox = gtk.HBox()
-        memtHBox.pack_start(self.dropdown_reports, False, False,5)
-        memtHBox.pack_start(self.close_report_btn, False, False,5)
-        memtVBox.pack_start(memtHBox, False, False,5)
-        descAlign = gtk.Alignment(0, 0, 0, 0)
-        descAlign.add(gtk.Label("Description:"))
-        memtVBox.pack_start(descAlign, False, True,0)
-        memtVBox.pack_start(scrollWindow, True, True, 0)
+        topLayout = QHBoxLayout()
+        topLayout.addWidget(self.dropdown_reports)
+        topLayout.addWidget(self.close_report_btn)
+        topLayout.addWidget(QWidget(widget), 1)
+        layout.addLayout(topLayout)
+
+        layout.addWidget(QLabel("Description:", widget))
         
-        self.dropdown_reports.connect_object("changed", self.display_report,self.dropdown_reports)
-        self.close_report_btn.connect_object("clicked", self.close_report,self.dropdown_reports)
+        self.entry = QTextEdit(widget)
+        self.entry.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.entry.setReadOnly(True)
+        layout.addWidget(self.entry)
+                
+        self.dropdown_reports.currentIndexChanged.connect(self.display_report)
+        self.close_report_btn.clicked.connect(self.close_report)
         
-        return memtVBox
+        return widget
     
-    def create_info_table_widget(self):
-        self.info_table = InfoTable()
-        return self.info_table.scrollTree
+    def create_info_table_widget(self, parent):
+        self.info_table = InfoTable(parent)
+        return self.info_table
     
     def get_dropdown_member_text(self, m_ip, m_name):
         if m_ip == m_name:
@@ -128,68 +123,65 @@ class maintainer_gui(object):
         for m_ip,m_name in get_server().get_members().items():
             if not m_ip in self.dropdown_members_dict:
                 # is new ip, append to the end
-                self.dropdown_members_dict[m_ip] = (len(self.dropdown_members_model), m_name)
-                row = [self.get_dropdown_member_text(m_ip, m_name),]
-                self.dropdown_members_model.append(row)
+                self.dropdown_members_dict[m_ip] = (self.dropdown_members_model.rowCount(), m_name)
+                self.dropdown_members_model.appendRow(QStandardItem(self.get_dropdown_member_text(m_ip, m_name)))
             else:
                 #is already present, check if new information is available
                 info = self.dropdown_members_dict[m_ip]
                 if m_name != info[1]:
                     #name has changed
-                    anIter = self.dropdown_members_model.iter_nth_child(None, info[0])
-                    self.dropdown_members_model.set_value(anIter, 0, self.get_dropdown_member_text(m_ip, m_name))
+                    self.dropdown_members_model.setItem(info[0], 0, QStandardItem(self.get_dropdown_member_text(m_ip, m_name)))
                     self.dropdown_members_dict[m_ip] = (info[0], m_name)
                     
-    def create_logs_widget(self):
-        self.log_area = gtk.TextView()
-        self.log_area.set_size_request(400,200)
-        self.log_area.set_wrap_mode(gtk.WRAP_WORD)
-        self.log_area.set_editable(False)
-        scrollWindow = gtk.ScrolledWindow()
-        scrollWindow.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        scrollWindow.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
-        scrollWindow.add(self.log_area)
+    def create_logs_widget(self, parent):
+        widget = QWidget(parent)
+        layout = QVBoxLayout(widget)
         
         self.dropdown_members_dict = {}
-        self.dropdown_members_model = gtk.ListStore(str)
-        self.dropdown_members = gtk.ComboBox(self.dropdown_members_model)
-        cell = gtk.CellRendererText()
-        self.dropdown_members.pack_start(cell, True)
-        self.dropdown_members.add_attribute(cell, 'text', 0)
+        self.dropdown_members_model = QStandardItemModel()
+        self.dropdown_members = QComboBox(widget)
+        self.dropdown_members.setModel(self.dropdown_members_model)
         self.update_dropdown_members()
-            
-        self.numberchooser = gtk.SpinButton(gtk.Adjustment(value=0, lower=0, upper=10, step_incr=1, page_incr=0, page_size=0))
-        self.update_button = gtk.Button("Send Update Command")
         
-        memHBox = gtk.HBox()
-        memHBox.pack_start(self.dropdown_members, False, False, 5)
-        memHBox.pack_start(self.numberchooser, False, False, 5)
-        memHBox.pack_start(self.update_button, False, False, 5)
+        self.numberchooser = QSpinBox(widget)
+        self.numberchooser.setValue(0)
+        self.numberchooser.setMinimum(0)
+        self.numberchooser.setMaximum(10)
+        self.numberchooser.setSingleStep(1)
         
-        memtVBox = gtk.VBox()    
-        memtVBox.pack_start(memHBox, False, False, 5)
-        memtVBox.pack_start(scrollWindow, True, True, 10)
-        memtVBox.show_all()
+        self.update_button = QPushButton("Send Update Command", widget)
         
-        self.dropdown_members.connect_object("changed", self.request_log,self.dropdown_members)
-        self.numberchooser.connect_object("changed", self.request_log,self.dropdown_members)
-        self.update_button.connect_object("clicked", self.request_update,self.update_button)
+        topLayout = QHBoxLayout()
+        topLayout.addWidget(self.dropdown_members)
+        topLayout.addWidget(self.numberchooser)
+        topLayout.addWidget(self.update_button)
+        topLayout.addWidget(QWidget(widget), 1)
+        layout.addLayout(topLayout)
         
-        #gobject.timeout_add(2000, self.show_logfile) 
-        return memtVBox
+        self.log_area = QTextEdit(widget)
+        self.log_area.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.log_area.setReadOnly(True)
+        layout.addWidget(self.log_area)
+        
+        self.dropdown_members.currentIndexChanged.connect(self.request_log)
+        self.numberchooser.valueChanged.connect(self.request_log)
+        self.update_button.clicked.connect(self.request_update)
+        
+        return widget
     
-    def create_widget(self):
-        reports_widget = self.create_reports_widget()
-        logs_widget = self.create_logs_widget()
-        info_table_widget = self.create_info_table_widget()
+    def create_widget(self, parent):
+        nb = QTabWidget(parent)
+        nb.setTabPosition(QTabWidget.West)
         
-        nb = gtk.Notebook()
-        nb.set_tab_pos(gtk.POS_LEFT)
-        nb.append_page(reports_widget, gtk.Label("Bug Reports"))
-        nb.append_page(logs_widget, gtk.Label("Logs"))
-        nb.append_page(info_table_widget, gtk.Label("Info"))
-        nb.show_all()
-        nb.set_current_page(0)
+        reports_widget = self.create_reports_widget(nb)
+        logs_widget = self.create_logs_widget(nb)
+        info_table_widget = self.create_info_table_widget(nb)
+        
+        nb.addTab(reports_widget, "Bug Reports")        
+        nb.addTab(logs_widget, "Logs")        
+        nb.addTab(info_table_widget, "Info")
+        
+        nb.setCurrentIndex(0)
         self.visible = True
         
         return nb
@@ -200,22 +192,17 @@ class maintainer_gui(object):
     def updateInfoTable(self):
         if self.info_table != None:
             self.info_table.update_model()
-
-class InfoTable(object):
-    def __init__(self):
-        self.listStore = None
-        self.listStoreNumColumns = 0
-        self.treeView = gtk.TreeView()
-        self.scrollTree = gtk.ScrolledWindow()
-        self.scrollTree.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        self.scrollTree.set_border_width(5)
-        self.scrollTree.add_with_viewport(self.treeView)  
-        self.scrollTree.set_size_request(400, 350)   
-        self.treeView.show()
-        self.scrollTree.show()   
+  
+class InfoTable(QTreeWidget):
+    def __init__(self, parent):
+        super(InfoTable, self).__init__(parent)
+        
+        self.listModel = None
         self.update_model()
     
     def update_model(self):
+        return None
+    
         if len(get_server().member_info) == 0:
             return
         
@@ -233,59 +220,32 @@ class InfoTable(object):
                     table_data[k][index]=v
             index+=1
         
-        if self.listStore == None or self.listStoreNumColumns != len(table_data):
+        if self.listModel == None or self.listModel.columnCount() != len(table_data):
             # columns added/removed
-            self.listStore = gtk.ListStore(*[str]*len(table_data))
-            self.treeView.set_model(self.listStore)
-            self.listStoreNumColumns = len(table_data)
+            self.listModel = QStandardItemModel(len(get_server().member_info), len(table_data))
+            headerLabels = QtCore.QStringList()
+            for desc in table_data.iterkeys():
+                headerLabels.append(desc)
+            self.listModel.setHorizontalHeaderLabels(headerLabels)
+            self.setModel(self.listModel)
             
-            rendererText = gtk.CellRendererText()
-            
-            for aColumn in self.treeView.get_columns():
-                self.treeView.remove_column(aColumn)
-            
-            for num, th in enumerate(table_data.iterkeys()):
-                column = gtk.TreeViewColumn(th, rendererText, text=num)
-                column.set_sort_column_id(num)
-                self.treeView.append_column(column)
+            # todo need to add/ remove view columns?
         else:
-            self.listStore.clear()
-        
-            
+            self.listModel.clear()
+
         for i in range(0,len(get_server().member_info)):
             row = []
             for k in table_data.iterkeys():
-                row.append(table_data[k][i])
-            self.listStore.append(row)
+                row.append(QStandardItem(table_data[k][i]))
+            self.listModel.appendRow(row)    
     
-def main():
-    # enter the main loop
-    gtk.main()
-    return 0
-
-def WindowDeleteEvent(_, __):
-    # return false so that window will be destroyed
-    return False
-
-def WindowDestroy(_, *__):
-    # exit main loop
-    gtk.main_quit()
     
 class maintainer_wrapper:
     reports = []
+    def getBugsFromDB(self, _):
+        return []
     
 if __name__ == "__main__":
+    from lunchinator.iface_plugins import iface_gui_plugin
+    iface_gui_plugin.run_standalone(maintainer_gui(maintainer_wrapper()))
     
-    # create the top level window
-    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-    window.set_title("Layout Example")
-    window.set_default_size(300, 300)
-    window.connect("delete-event", WindowDeleteEvent)
-    window.connect("destroy", WindowDestroy)
-    
-    window.add(maintainer_gui(maintainer_wrapper()).create_widget())
-    
-    # show all the widgets
-    window.show_all()
-    
-    main()

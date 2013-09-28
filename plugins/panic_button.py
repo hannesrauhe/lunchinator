@@ -1,7 +1,7 @@
-from lunchinator.iface_plugins import *
-import gtk,gobject,urllib2,sys,threading
-import time,usb,subprocess
-from lunchinator import get_server, log_info
+from lunchinator.iface_plugins import iface_general_plugin
+import threading
+import time,usb
+from lunchinator import get_server, log_info, log_error
     
 class panic_button(iface_general_plugin):
     panic_thread = None
@@ -44,16 +44,20 @@ class panic_button_listener(threading.Thread):
                 #TODO (Hannes): read from options
                 if dev.idVendor == 0x1d34 and dev.idProduct == 0x000d:
                     return dev
+        return None
                 
     def run(self):    
         dev = self.findButton()
+        if dev == None:
+            log_error("Cannot find panic button device")
+            return
         handle = dev.open()
         interface = dev.configurations[0].interfaces[0][0]
         endpoint = interface.endpoints[0]
         
         try:
             handle.detachKernelDriver(interface)
-        except Exception, e:
+        except Exception, _:
             # It may already be unloaded.
             pass
         
@@ -77,7 +81,7 @@ class panic_button_listener(threading.Thread):
                 else:
                     unbuffer = False
                 #print [hex(x) for x in result]
-            except Exception, e:
+            except Exception, _:
                 # Sometimes this fails. Unsure why.
                 pass
         

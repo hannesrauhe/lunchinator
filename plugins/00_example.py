@@ -55,9 +55,9 @@ class example_called(iface_called_plugin):
 '''this will display some GTK widget in a tab of the lunchinator
 (see lunch_menu.py for example)'''
 class example_gui(iface_gui_plugin):
-    def create_widget(self):
-        import gtk
-        return gtk.Label("Somehting that will show up in the lunchinator")
+    def create_widget(self, parent):
+        import PyQt4
+        return PyQt4.QtGui.QLabel("Somehting that will show up in the lunchinator", parent)
     pass
 
 

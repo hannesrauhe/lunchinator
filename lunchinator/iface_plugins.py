@@ -1,6 +1,8 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
 from lunchinator import log_warning, log_error, log_exception
+from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox
+from PyQt4.QtCore import Qt
 import types
 
 class iface_plugin(IPlugin):    
@@ -83,52 +85,51 @@ class iface_plugin(IPlugin):
                 except:
                     log_error("could not convert value of",o,"from config to type",type(v),"(",new_v,") using default")
         
-    def add_option_to_widget(self, t, i, o, v):
-        import gtk
+    def add_option_to_layout(self, parent, grid, i, o, v):
         e = ""
         if o[0] in self.option_choice:
-            e = gtk.combo_box_new_text()
+            e = QComboBox(parent)
             for aString in self.option_choice[o[0]]:
-                e.append_text(aString)
-            activeIndex = 0
+                e.addItem(aString)
+            currentIndex = 0
             if v in self.option_choice[o[0]]:
-                activeIndex = self.option_choice[o[0]].index(v)
-            e.set_active(activeIndex)
+                currentIndex = self.option_choice[o[0]].index(v)
+            e.setCurrentIndex(currentIndex)
         elif type(v)==types.IntType:
-            adjustment = gtk.Adjustment(value=v, lower=0, upper=1000000, step_incr=1, page_incr=0, page_size=0)
-            e = gtk.SpinButton(adjustment)
+            e = QSpinBox(parent)
+            e.setValue(v)
+            e.setMinimum(0)
+            e.setMaximum(1000000)
+            e.setSingleStep(1)
         elif type(v)==types.BooleanType:
-            e = gtk.CheckButton()
-            e.set_active(v)
+            e = QCheckBox(parent)
+            e.setCheckState(Qt.Checked)
         else:
-            e = gtk.Entry()
-            e.set_text(v)
-        rAlign = gtk.Alignment(1, 0.5, 0, 0)
-        rAlign.add(gtk.Label(o[1]))
-        t.attach(rAlign,0,1,i,i+1)
-        t.attach(e,1,2,i,i+1)
+            e = QLineEdit(v, parent)
+            
+        grid.addWidget(QLabel(o[1]), i, 0, Qt.AlignRight)
+        grid.addWidget(e, i, 1, Qt.AlignLeft)
         self.option_widgets[o[0]]=e
         
-    def create_options_widget(self):
-        import gtk
+    def create_options_widget(self, parent):
         if not self.options:
             return None
-        t = gtk.Table(len(self.options),2,False)
-        t.set_col_spacing(0, 5)
+        optionsWidget = QWidget(parent)
+        t = QGridLayout(optionsWidget)
         i=0
         
         if self.option_names == None:
             # add options sorted by dictionary order
             for o,v in self.options.iteritems():
-                self.add_option_to_widget(t, i, (o,o), v)
+                self.add_option_to_layout(parent, t, i, (o,o), v)
                 i+=1
         else:
             # add options sorted by specified order
             for o in self.option_names:
-                self.add_option_to_widget(t, i, o, self.options[o[0]])
+                self.add_option_to_layout(parent, t, i, o, self.options[o[0]])
                 i+=1
                 
-        return t
+        return optionsWidget
     
     def save_data(self, set_value):
         if not self.option_widgets:
@@ -137,13 +138,13 @@ class iface_plugin(IPlugin):
             v = self.options[o]
             new_v = v
             if o in self.option_choice:
-                new_v = self.option_choice[o][e.get_active()]
+                new_v = self.option_choice[o][e.currentIndex()]
             elif type(v)==types.IntType:
-                new_v = e.get_value_as_int()
+                new_v = e.value()
             elif type(v)==types.BooleanType:
-                new_v = e.get_active()
+                new_v = e.checkState() == Qt.Checked
             else:
-                new_v = e.get_text()
+                new_v = e.text()
             if new_v!=v:
                 self.options[o]=new_v
                 set_value(o, new_v)
@@ -207,7 +208,7 @@ class iface_gui_plugin(iface_plugin):
     def save_sort_order(self):
         self.setConfigOption("sort_order",str(self.sortOrder))
         
-    def create_widget(self):
+    def create_widget(self, _parent):
         self.visible = True
         return None
     
@@ -226,6 +227,20 @@ class iface_gui_plugin(iface_plugin):
         
     def process_event(self,cmd,value,ip,member_info):
         pass
+    
+    @classmethod
+    def run_standalone(cls, factory):
+        from PyQt4.QtGui import QApplication, QMainWindow
+        import sys
+        
+        app = QApplication(sys.argv)
+        window = QMainWindow()
+        window.setWindowTitle("Layout Example")
+        window.resize(300, 300)
+        window.setCentralWidget(factory.create_widget(window))
+        window.show()
+    
+        sys.exit(app.exec_())
 
 class iface_called_plugin(iface_plugin):    
     def activate(self):

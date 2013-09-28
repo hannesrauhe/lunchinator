@@ -1,4 +1,4 @@
-import gtk
+from PyQt4.QtGui import QLabel, QWidget, QVBoxLayout, QPushButton, QTextEdit
 from lunchinator import get_server
 
 class bug_report_gui(object):
@@ -6,56 +6,29 @@ class bug_report_gui(object):
         self.entry = None
         self.but = None
         
-    def send_report(self,w):
-        if get_server() and len(w.props.text):
-            get_server().call("HELO_BUGREPORT_DESCR %s"%w.props.text)
+    def send_report(self):
+        plainText = self.entry.toPlainText()
+        if get_server() and len(plainText):
+            get_server().call("HELO_BUGREPORT_DESCR %s"%plainText)
         else:
-            print "HELO_BUGREPORT_DESCR %s"%w.props.text
+            print "HELO_BUGREPORT_DESCR %s"%plainText
             
-        self.entry.get_buffer().set_text("")
+        self.entry.setPlainText("")
             
-    def create_widget(self):
-        self.entry = gtk.TextView()
-        self.entry.set_size_request(400,200)
-        self.entry.set_wrap_mode(gtk.WRAP_WORD)
-        self.but = gtk.Button("Send Report")
+    def create_widget(self, parent):
+        self.entry = QTextEdit(parent)
+        self.entry.setLineWrapMode(QTextEdit.WidgetWidth)
         
-        memtVBox = gtk.VBox()        
-        memtVBox.pack_start(gtk.Label("Describe your problem:"), False, False,5)
-        memtVBox.pack_start(self.entry, False, True, 10)
-        memtVBox.pack_start(self.but, False, False, 5)
-        self.entry.show()
-        self.but.show()
-        memtVBox.show()
-        self.but.connect_object("clicked", self.send_report, self.entry.get_buffer())
-        return memtVBox
-    
-#standalone
+        self.but = QPushButton("Send Report", parent)
+        self.but.clicked.connect(self.send_report)
+        
+        widget = QWidget(parent)
+        layout = QVBoxLayout(widget)
+        layout.addWidget(QLabel("Describe your problem:", parent))
+        layout.addWidget(self.entry)
+        layout.addWidget(self.but)
+        return widget
 
-def main():
-    # enter the main loop
-    gtk.main()
-    return 0
-
-def WindowDeleteEvent(widget, event):
-    # return false so that window will be destroyed
-    return False
-
-def WindowDestroy(widget, *data):
-    # exit main loop
-    gtk.main_quit()
-    
-if __name__ == "__main__":
-    # create the top level window
-    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-    window.set_title("Layout Example")
-    window.set_default_size(300, 300)
-    window.connect("delete-event", WindowDeleteEvent)
-    window.connect("destroy", WindowDestroy)
-    
-    window.add(bug_report_gui(None).create_widget())
-    
-    # show all the widgets
-    window.show_all()
-    
-    main()
+if __name__ == '__main__':
+    from lunchinator.iface_plugins import iface_gui_plugin
+    iface_gui_plugin.run_standalone(bug_report_gui())
