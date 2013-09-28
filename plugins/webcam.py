@@ -1,7 +1,8 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import log_exception
-import gobject,urllib2,sys
+import urllib2,sys
 from PyQt4.QtGui import QImage, QPixmap, QLabel
+from PyQt4.QtCore import QTimer
     
 class webcam(iface_gui_plugin):
     def __init__(self):
@@ -35,7 +36,10 @@ class UpdatingImage(QLabel):
         try:     
             qtimage = QImage(self.fallback_pic) 
             self.setPixmap(QPixmap.fromImage(qtimage))
-            gobject.timeout_add(self.timeout, self.update)        
+            updateImageTimer = QTimer(self)
+            updateImageTimer.setInterval(self.timeout)
+            updateImageTimer.timeout.connect(self.update)
+            updateImageTimer.start(self.timeout)
         except:
             log_exception("Something went wrong when trying to display the fallback image",self.fallback_pis,sys.exc_info()[0])
             
@@ -50,7 +54,8 @@ class UpdatingImage(QLabel):
                 response = urllib2.urlopen(self.pic_url)
             
             qtimage = QImage()
-            qtimage.loadFromData(response)
+            qtimage.loadFromData(response.read())
+            
             self.setPixmap(QPixmap.fromImage(qtimage))
             return True
         except:

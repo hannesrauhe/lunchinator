@@ -1,12 +1,11 @@
 from PyQt4.QtGui import QTabWidget, QMainWindow, QGridLayout, QLabel, QTextEdit, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QSplitter, QApplication, QPushButton, QTreeWidget, QTreeWidgetItem
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QTimer
 from PyQt4 import QtCore
 from lunchinator import get_settings, get_server, log_exception
 import sys
 import socket
 from StringIO import StringIO
 import traceback
-import gobject
 import time
 from functools import partial
 
@@ -168,11 +167,15 @@ class UpdatingTable(QTreeWidget):
             self.sortItems(sortedColumn, Qt.AscendingOrder if ascending else Qt.DescendingOrder)
         
         self.update_model()
-        gobject.timeout_add(1000, self.timeout)        
+        
+        timer = QTimer(self)
+        timer.setInterval(1000)
+        timer.timeout.connect(self.timeout)
+        timer.start(1000)        
     
-    def listToQStringList(self, list):
+    def listToQStringList(self, strList):
         qList = QtCore.QStringList()
-        for aStr in list:
+        for aStr in strList:
             qList.append(aStr if type(aStr) in (str, unicode) else str(aStr))
         return qList
         

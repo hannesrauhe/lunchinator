@@ -18,8 +18,6 @@ class TrayIcon(LunchinatorWindow):
     def __init__(self,lunchinator):
         super(TrayIcon, self).__init__(lunchinator)
     
-        gobject.threads_init()
-    
         icon = QIcon(sys.path[0]+"/images/qt.png")
         self.statusicon = QSystemTrayIcon(icon, self)
         self.statusicon.setContextMenu(lunchinator.init_menu())

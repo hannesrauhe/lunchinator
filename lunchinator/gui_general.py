@@ -1,5 +1,4 @@
 import sys,types
-import gobject
 from lunchinator import get_server, log_exception, log_info, get_settings,\
     log_error
 import time, socket,logging,threading,os
