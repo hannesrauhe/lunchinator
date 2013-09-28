@@ -20,7 +20,7 @@ class TrayIcon(LunchinatorWindow):
     
         gobject.threads_init()
     
-        icon = QIcon("/Users/Corny/Documents/Python/Lunchinator/images/glyphicons_053_alarm_black.png")
+        icon = QIcon(sys.path[0]+"/images/qt.png")
         self.statusicon = QSystemTrayIcon(icon, self)
         self.statusicon.setContextMenu(lunchinator.init_menu())
         self.statusicon.show()
