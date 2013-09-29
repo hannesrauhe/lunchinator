@@ -1,10 +1,10 @@
 from lunchinator.iface_plugins import *
 from maintainer_gui import *
-from lunchinator import log_debug, log_info, log_critical, log_error, get_settings
+from lunchinator import log_debug, log_info, log_critical
 from lunchinator.lunch_datathread import DataReceiverThread
-from database_connection.stat_db import hdb_stat_db
+import os
 
-import time,subprocess    
+import subprocess    
 
 class maintainer(iface_gui_plugin):
     def __init__(self):
@@ -16,13 +16,20 @@ class maintainer(iface_gui_plugin):
                         (("hana_pass", "Password for HANA User"),"")]
         self.stats = None
         self.recorded_reports = []
+        self.dbPluginErrorPrinted = False
         self.w = maintainer_gui(self)
         
     def getDB(self):
         if self.options["use_different_db"]:
             if self.stats == None:
-                self.stats = hdb_stat_db()
-                self.stats.connect(self.options["hana_server"],self.options["hana_port"],self.options["hana_user"],self.options["hana_pass"])
+                try:
+                    from database_connection.stat_db import hdb_stat_db
+                    self.stats = hdb_stat_db()
+                    self.stats.connect(self.options["hana_server"],self.options["hana_port"],self.options["hana_user"],self.options["hana_pass"])
+                except ImportError:
+                    if not self.dbPluginErrorPrinted:
+                        log_warning("database plugin not available")
+                        self.dbPluginErrorPrinted = True
             return self.stats
         else:
             dbplugin = PluginManagerSingleton.get().getPluginByName("Database Connection", "general")
@@ -47,9 +54,9 @@ class maintainer(iface_gui_plugin):
             self.stats= None
         iface_gui_plugin.deactivate(self)
     
-    def create_widget(self):
-        iface_gui_plugin.create_widget(self)
-        return self.w.create_widget()
+    def create_widget(self, parent):
+        iface_gui_plugin.create_widget(self, parent)
+        return self.w.create_widget(parent)
     
     def destroy_widget(self):
         self.w.destroy_widget()

@@ -14,7 +14,6 @@ class maintainer_gui(object):
         self.dropdown_members_dict = None
         self.dropdown_members_model = None
         self.visible = False      
-           
         
     def cb_log_transfer_success(self):
         if not self.visible:
@@ -27,12 +26,12 @@ class maintainer_gui(object):
             fhandler.close()
         except Exception as e:
             fcontent = "File not ready: %s"%str(e)
-        self.log_area.get_buffer().set_text(fcontent)
+        self.log_area.setText(fcontent)
     
     def cb_log_transfer_error(self):
         if not self.visible:
             return False
-        self.log_area.get_buffer().set_text("Error while getting log")
+        self.log_area.setText("Error while getting log")
         
     def update_reports(self):
         mode="open"
@@ -40,7 +39,7 @@ class maintainer_gui(object):
         
     def display_report(self):
         if self.dropdown_reports.currentIndex()>=0:
-            self.entry.get_buffer().set_text(str(self.bug_reports[self.dropdown_reports.currentIndex()][2]))
+            self.entry.setText(str(self.bug_reports[self.dropdown_reports.currentIndex()][2]))
             
     def close_report(self):
         rep_nr = self.dropdown_reports.currentIndex()
@@ -52,7 +51,7 @@ class maintainer_gui(object):
             self.display_report()
 
     def get_selected_log_member(self):
-        member = self.dropdown_members.get_active_text()
+        member = str(self.dropdown_members.currentText())
         if member == None:
             return None
         
@@ -65,12 +64,12 @@ class maintainer_gui(object):
     def request_log(self):
         member = self.get_selected_log_member()
         if member != None:
-            self.log_area.get_buffer().set_text("Requesting log from "+member)
-            get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_settings().tcp_port,int(self.numberchooser.get_value())),member)
+            self.log_area.setText("Requesting log from "+member)
+            get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_settings().tcp_port,int(self.numberchooser.value())),member)
             #no number_str here:
             self.shown_logfile = "%s/logs/%s.log%s"%(get_settings().main_config_dir,member,"")
         else:
-            self.log_area.get_buffer().set_text("No Member selected!")
+            self.log_area.setText("No Member selected!")
             
     def request_update(self):
         member = self.get_selected_log_member()
@@ -115,7 +114,7 @@ class maintainer_gui(object):
         if m_ip == m_name:
             return m_ip
         else:
-            return "%s (%s)" % (m_name, m_ip)
+            return "%s (%s)" % (m_name.strip(), m_ip.strip())
     
     def update_dropdown_members(self):
         if self.dropdown_members_model == None:
