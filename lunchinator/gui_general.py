@@ -1,28 +1,39 @@
 import sys,types
 from lunchinator import get_server, log_exception, log_info, get_settings,\
     log_error
-import time, socket,logging,threading,os
+import time, socket,logging,os
 import platform
 import urllib2
 import traceback    
 from StringIO import StringIO   
 from PyQt4.QtGui import QTabWidget, QMainWindow, QGridLayout, QLabel, QTextEdit, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QSplitter, QApplication, QPushButton, QMessageBox
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QThread
 from PyQt4 import QtCore
 from functools import partial
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
+from lunchinator.table_models import MembersTableModel, MessagesTableModel
         
-class lunchinator(threading.Thread):
+class lunchinator(QThread):
     _menu = None
     
-    def __init__(self, noUpdates = False):           
-        threading.Thread.__init__(self)
+    def __init__(self, parent, noUpdates = False): 
+        super(lunchinator, self).__init__(parent)
         get_server().no_updates = noUpdates
         self.mainWindow = None
     
+    def serverInitialized(self):
+        messagesModel = MessagesTableModel(get_server())
+        membersModel = MembersTableModel(get_server())
+        self.mainWindow.messagesTable.setModel(messagesModel)
+        self.mainWindow.membersTable.setModel(membersModel)
+        get_server().messagePrepended.connect(messagesModel.externalRowPrepended)
+        get_server().memberAppended.connect(membersModel.externalRowAppended)
+        get_server().memberUpdated.connect(membersModel.externalRowUpdated)
+        get_server().memberRemoved.connect(membersModel.externalRowRemoved)
+    
     def run(self):
-        get_server().start_server()   
+        get_server().start_server()
         
     def getPlugins(self, cats):
         allPlugins = {}
@@ -91,9 +102,9 @@ class lunchinator(threading.Thread):
         get_settings().write_config_to_hd()
         
     def stop_server(self,_):        
-        if self.isAlive():
+        if self.isRunning():
             get_server().running = False
-            self.join()  
+            self.wait()  
             log_info("server stopped") 
         else:
             log_info("server not running")

@@ -1,16 +1,23 @@
-import threading,socket,sys,time
-from lunchinator import log_exception, log_error
+import socket,sys
+from lunchinator import log_exception
+from PyQt4.QtCore import QThread, pyqtSignal
 
-class DataSenderThread(threading.Thread):
-    
-    def __init__(self, receiver, file_path, tcp_port, callback_success=None, callback_error=None): 
-        threading.Thread.__init__(self) 
-        self.con = None
-        self.receiver = receiver
+class DataThreadBase(QThread):
+    successfullyTransferred = pyqtSignal(str)
+    errorOnTransfer = pyqtSignal()
+        
+    def __init__(self, parent, file_path, tcp_port):
+        super(DataThreadBase, self).__init__(parent)
+        
         self.file_path = file_path
         self.tcp_port = tcp_port
-        self.callback_error = callback_error
-        self.callback_success = callback_success
+        self.con = None
+
+class DataSenderThread(DataThreadBase):
+    def __init__(self, parent, receiver, file_path, tcp_port):
+        super(DataSenderThread, self).__init__(parent, file_path, tcp_port)
+     
+        self.receiver = receiver
         
     def _sendFile(self):
         try:
@@ -30,7 +37,7 @@ class DataSenderThread(threading.Thread):
         
  
     def run(self):
-        time.sleep(5)
+        QThread.sleep(5)
         self.con = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self._sendFile()       
@@ -43,16 +50,12 @@ class DataSenderThread(threading.Thread):
     def stop_server(self):
         pass
     
-class DataReceiverThread(threading.Thread):    
-    def __init__(self, sender, size, file_path,tcp_port,callback_success=None,callback_error=None): 
-        threading.Thread.__init__(self) 
-        self.con = None
+class DataReceiverThread(DataThreadBase):    
+    def __init__(self, parent, sender, size, file_path,tcp_port): 
+        super(DataReceiverThread, self).__init__(parent, file_path, tcp_port)
+        
         self.sender = sender
         self.size = size
-        self.file_path = file_path
-        self.tcp_port = tcp_port
-        self.callback_success = callback_success
-        self.callback_error = callback_error
         
     def _receiveFile(self):
         writefile = open(self.file_path, 'wb')
@@ -78,17 +81,14 @@ class DataReceiverThread(threading.Thread):
                 self._receiveFile()
             else:
                 raise Exception("Sender is not allowed to send file:",addr[0],", expected:",self.sender)
-            if self.callback_success!=None:
-                self.callback_success()
+            self.successfullyTransferred.emit(self.file_path)
         except:
             log_exception("I caught something unexpected when trying to receive file",self.file_path, sys.exc_info()[0])
-            if self.callback_error!=None:
-                self.callback_error()
+            self.errorOnTransfer.emit()
         
         if self.con:    
             self.con.close()
         s.close()
-                
         
     def stop_server(self):
         pass

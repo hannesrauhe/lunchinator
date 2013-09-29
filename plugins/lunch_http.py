@@ -1,13 +1,14 @@
 from lunchinator.iface_plugins import iface_called_plugin
-import threading, SimpleHTTPServer, SocketServer, os
+import SimpleHTTPServer, SocketServer, os
 from lunchinator import get_server, get_settings, log_info, log_exception
+from PyQt4.QtCore import QThread
 
-class http_server_thread(threading.Thread):    
-    def __init__(self, port,html_dir):
+class http_server_thread(QThread):    
+    def __init__(self, parent,port,html_dir):
+        super(http_server_thread, self).__init__(parent)
         self.port = int(port)
         self.html_dir = html_dir
         self.server = None
-        threading.Thread.__init__(self)
         
     def run(self):
         os.chdir(self.html_dir)
@@ -16,7 +17,6 @@ class http_server_thread(threading.Thread):
         self.server = SocketServer.TCPServer(("", self.port), Handler)
 
         self.server.serve_forever()
-        
         
     def stop_server(self):
         if self.server:            
@@ -30,11 +30,10 @@ class lunch_http(iface_called_plugin):
         super(lunch_http, self).__init__()
         self.options = {"http_port":50002,"html_dir":get_settings().main_config_dir}
         
-        
     def activate(self):
         iface_called_plugin.activate(self)
         log_info("Starting the HTTP Server on Port %d"%self.options["http_port"])
-        self.s_thread = http_server_thread(self.options["http_port"],self.options["html_dir"])
+        self.s_thread = http_server_thread(get_server(),self.options["http_port"],self.options["html_dir"])
         self.s_thread.start()
         if not os.path.exists(self.options["html_dir"]+"/index.html"):
             self.write_info_html()

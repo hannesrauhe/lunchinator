@@ -83,6 +83,8 @@ class maintainer(iface_gui_plugin):
                 os.makedirs(get_settings().main_config_dir+"/logs")
             file_name=get_settings().main_config_dir+"/logs/"+str(ip)+".log"
             log_info("Receiving file of size %d on port %d"%(file_size,get_settings().tcp_port))
-            dr = DataReceiverThread(ip,file_size,file_name,get_settings().tcp_port, self.w.cb_log_transfer_success, self.w.cb_log_transfer_error)
+            dr = DataReceiverThread(self.w, ip,file_size,file_name,get_settings().tcp_port)
+            dr.successfullyTransferred.connect(self.w.cb_log_transfer_success)
+            dr.errorOnTransfer.connect(self.w.cb_log_transfer_error)
             dr.start()
             

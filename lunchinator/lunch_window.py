@@ -7,10 +7,10 @@ import traceback
 from functools import partial
 
 class LunchinatorWindow(QMainWindow):
-    def __init__(self, guiHandler):
+    def __init__(self):
         super(LunchinatorWindow, self).__init__(None)
         
-        self.guiHandler = guiHandler
+        self.guiHandler = None
         
         #window.set_border_width(10)
         self.centerOnScreen() # TODO do this here?
@@ -21,9 +21,9 @@ class LunchinatorWindow(QMainWindow):
         centralLayout = QHBoxLayout(centralWidget)
 
         tablesPane = QSplitter(Qt.Horizontal)
-        widget, self.messagesTable = self.createTableWidget(tablesPane, MessageTable, "Send Message", guiHandler.clicked_send_msg)
+        widget, self.messagesTable = self.createTableWidget(tablesPane, MessageTable, "Send Message", self.clicked_send_msg)
         tablesPane.addWidget(widget)
-        widget, self.membersTable = self.createTableWidget(tablesPane, MembersTable, "Add Host", guiHandler.clicked_add_host)
+        widget, self.membersTable = self.createTableWidget(tablesPane, MembersTable, "Add Host", self.clicked_add_host)
         tablesPane.addWidget(widget)
 
         centralLayout.addWidget(tablesPane)
@@ -64,7 +64,15 @@ class LunchinatorWindow(QMainWindow):
         #centralLayout.pack_start(self.nb, True, True, 0)
         
         self.setCentralWidget(centralWidget)
-
+        
+    def clicked_send_msg(self):
+        if self.guiHandler != None:
+            self.guiHandler.clicked_send_msg()
+            
+    def clicked_add_host(self):
+        if self.guiHandler != None:
+            self.guiHandler.clicked_add_host()
+        
     def closeEvent(self, *args, **kwargs):
         try:
             order = []
@@ -139,12 +147,6 @@ class LunchinatorWindow(QMainWindow):
         
         return (tableWidget, table)
    
-    def setMembersModel(self, model):
-        self.membersTable.setModel(model)
-        
-    def setMessagesModel(self, model):
-        self.messagesTable.setModel(model)
-   
     def window_msgCheckCreatePluginWidget(self,parent,plugin_object,p_name):
         sw = None
         try:
@@ -167,10 +169,9 @@ class MembersTableItemDelegate(QStyledItemDelegate):
         super(MembersTableItemDelegate, self).paint(painter, option, index)
 
 class UpdatingTable(QTreeView):
-    def __init__(self, parent, model, sortedColumn = None, ascending = True):
+    def __init__(self, parent, sortedColumn = None, ascending = True):
         super(UpdatingTable, self).__init__(parent)
         
-        self.setModel(model)
         self.setSortingEnabled(True)
         self.setHeaderHidden(False)
         self.setAlternatingRowColors(True)
@@ -179,14 +180,17 @@ class UpdatingTable(QTreeView):
     
 class MembersTable(UpdatingTable):    
     def __init__(self, parent):
-        UpdatingTable.__init__(self, parent, get_server().members_model, 2)
+        UpdatingTable.__init__(self, parent, 2)
+        
+    def setModel(self, model):
+        super(MembersTable, self).setModel(model)
         timeoutTimer = QTimer(self)
         timeoutTimer.setInterval(1000)
         timeoutTimer.timeout.connect(self.model().updateTimeouts)
-        timeoutTimer.start(1000)       
+        timeoutTimer.start(1000)  
         
 class MessageTable(UpdatingTable):
     def __init__(self, parent):
-        UpdatingTable.__init__(self, parent, get_server().messages_model)      
+        UpdatingTable.__init__(self, parent)      
     
     

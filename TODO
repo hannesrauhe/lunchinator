@@ -3,3 +3,5 @@
 - 0.0.0.0 (empty string) aus members entfernen
 - member info updated -> update messages first column
 - maintainet: log dropdown: leeren Eintrag einfŸgen
+- maintainer: are threads destroyed?
+- thread safety in lunch_server durch signals

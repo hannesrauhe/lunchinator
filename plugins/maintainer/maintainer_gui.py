@@ -15,13 +15,13 @@ class maintainer_gui(object):
         self.dropdown_members_model = None
         self.visible = False      
         
-    def cb_log_transfer_success(self):
+    def cb_log_transfer_success(self, path):
         if not self.visible:
             return False
         
         fcontent = ""
         try:
-            fhandler = open(self.shown_logfile,"r")
+            fhandler = open(path,"r")
             fcontent = fhandler.read()
             fhandler.close()
         except Exception as e:

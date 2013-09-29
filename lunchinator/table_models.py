@@ -25,7 +25,8 @@ class TableModelBase(QStandardItemModel):
     
     def updateItem(self, key, row, column):
         item = self.item(row, column)
-        self.columns[column][1](key, item)
+        if item != None:
+            self.columns[column][1](key, item)
 
     def createRow(self, key):
         row = []

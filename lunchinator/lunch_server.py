@@ -1,18 +1,17 @@
 #!/usr/bin/python
-from lunch_datathread import *
-from iface_plugins import *
-from time import strftime, localtime, time, mktime, gmtime
-import socket,subprocess,sys,os,ctypes,getpass,json
+from lunch_datathread import DataSenderThread, DataReceiverThread
+from iface_plugins import PluginManagerSingleton, iface_called_plugin, iface_general_plugin, iface_gui_plugin
+from time import strftime, localtime, time, mktime
+import socket,sys,os,json
+from PyQt4.QtCore import pyqtSignal, QObject
 
-from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
-from lunchinator import log_debug, log_info, log_critical, get_settings
-from lunchinator.table_models import MembersTableModel, MessagesTableModel
+from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning
 
 EXIT_CODE_UPDATE = 2
 EXIT_CODE_STOP = 3
         
-class lunch_server(object):
+class lunch_server(QObject):
     _instance = None
     
     @classmethod
@@ -20,9 +19,20 @@ class lunch_server(object):
         if cls._instance == None:
             cls._instance = cls()
         return cls._instance
-    
+        
+    # ---- SIGNALS ----------------
+    init_done = pyqtSignal()
+    memberAppended = pyqtSignal()
+    memberUpdated = pyqtSignal(int)
+    memberRemoved = pyqtSignal(int)
+    messagePrepended = pyqtSignal()
+    sendFile = pyqtSignal(str, str, int)
+    receiveFile = pyqtSignal(str, str, str)
+    # -----------------------------
+        
     #TODO: if started with plugins: make sure they are deactivated when destroying lunchinator (destructor anyone?)
     def __init__(self):
+        super(lunch_server, self).__init__()
         self.running = False
         self.update_request = False
         self.new_msg = False
@@ -39,8 +49,6 @@ class lunch_server(object):
         
         self.exitCode = 0  
         self.read_config()
-        self.members_model = MembersTableModel(self)
-        self.messages_model = MessagesTableModel(self)
         
         PluginManagerSingleton.setBehaviour([
             ConfigurablePluginManager,
@@ -54,8 +62,24 @@ class lunch_server(object):
            "called" : iface_called_plugin,
            "gui" : iface_gui_plugin
            }) 
-        self.init_done = threading.Event()
         self.shared_dict = {} #for plugins
+        
+        self.sendFile.connect(self.send_file_callback)
+        self.receiveFile.connect(self.receive_file_callback)
+        
+    def _memberAppended(self):
+        self.memberAppended.emit()
+    
+    def _memberUpdated(self, index):
+        if type(index) in (str, unicode):
+            if not index in self.members:
+                log_error("Requested to update info for member %s but there is no member entry" % index)
+                return
+            index = self.members.index(index)
+        self.memberUpdated.emit(index)
+    
+    def _memberRemoved(self, index):
+        self.memberRemoved.emit(index)
         
     def is_now_in_time_span(self,begin,end):
         try:
@@ -116,20 +140,6 @@ class lunch_server(object):
             self.init_members_from_file()
         if len(self.last_messages)==0:
             self.last_messages=self.init_messages_from_file()
-           
-    def memberAppended(self):
-        self.messages_model.externalRowAppended()
-    
-    def memberUpdated(self, index):
-        if type(index) in (str, unicode):
-            if not index in self.members:
-                log_error("Requested to update info for member %s but there is no member entry" % index)
-                return
-            index = self.members.index(index)
-        self.messages_model.externalRowUpdated(index)
-    
-    def memberRemoved(self, index):
-        self.messages_model.externalRowRemoved(index)
     
     def updateMembersDict(self, otherDict, noLocal = True):
         for ip, hostn in otherDict.items():
@@ -148,9 +158,9 @@ class lunch_server(object):
         if not ip in self.members:
             self.members.append(ip)
             if inform:
-                self.memberAppended()
+                self._memberAppended()
         elif inform:
-            self.memberUpdated(self.members.index(ip))
+            self._memberUpdated(self.members.index(ip))
             
     def init_members_from_file(self):
         members = []
@@ -263,7 +273,7 @@ class lunch_server(object):
                 
             elif cmd.startswith("HELO_REQUEST_DICT"):
                 self.member_info[addr[0]] = json.loads(value)
-                self.memberUpdated(addr[0])
+                self._memberUpdated(addr[0])
                 self.call("HELO_DICT "+json.dumps(self.createMembersDict()),client=addr[0])
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
@@ -283,13 +293,13 @@ class lunch_server(object):
                  
             elif cmd.startswith("HELO_REQUEST_INFO"):
                 self.member_info[addr[0]] = json.loads(value)
-                self.memberUpdated(addr[0]) 
+                self._memberUpdated(addr[0]) 
                 self.call("HELO_INFO "+self.build_info_string(),client=addr[0])
                          
             elif cmd.startswith("HELO_INFO"):
                 #someone sends his info
                 self.member_info[addr[0]] = json.loads(value)
-                self.memberUpdated(addr[0])
+                self._memberUpdated(addr[0])
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(get_settings().avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
@@ -300,7 +310,7 @@ class lunch_server(object):
                 if addr[0] in self.members:
                     leftMemberIndex = self.members.index(addr[0])
                     self.members.remove(addr[0])
-                    self.memberRemoved(leftMemberIndex)
+                    self._memberRemoved(leftMemberIndex)
                     
                     del self.members[addr[0]]                                       
                     self.write_members_to_file()
@@ -317,8 +327,7 @@ class lunch_server(object):
                 
                 if len(file_name):
                     log_info("Receiving file of size %d on port %d"%(file_size,get_settings().tcp_port))
-                    dr = DataReceiverThread(addr[0],file_size,file_name,get_settings().tcp_port)
-                    dr.start()
+                    self.receiveFile.emit(addr[0],file_size,file_name)
                 
             elif cmd.startswith("HELO_REQUEST_AVATAR"):
                 #someone wants my pic 
@@ -334,8 +343,7 @@ class lunch_server(object):
                     fileSize = os.path.getsize(fileToSend)
                     log_info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
                     self.call("HELO_AVATAR "+str(fileSize), addr[0])
-                    ds = DataSenderThread(addr[0],fileToSend, other_tcp_port)
-                    ds.start()
+                    self.sendFile.emit(addr[0],fileToSend, other_tcp_port)
                 else:
                     log_error("Want to send file %s, but cannot find it"%(fileToSend))   
                 
@@ -355,8 +363,7 @@ class lunch_server(object):
                     fileSize = os.path.getsize(fileToSend)
                     log_info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
                     self.call("HELO_LOGFILE "+str(fileSize), addr[0])
-                    ds = DataSenderThread(addr[0],fileToSend, other_tcp_port)
-                    ds.start()
+                    self.sendFile.emit(addr[0],fileToSend, other_tcp_port)
                 else:
                     log_error("Want to send file %s, but cannot find it"%(fileToSend))   
             elif "HELO"==cmd:
@@ -387,6 +394,14 @@ class lunch_server(object):
             return self.member_info[addr]['name']
         return addr
     
+    def send_file_callback(self, addr, fileToSend, other_tcp_port):
+        ds = DataSenderThread(self,addr,fileToSend, other_tcp_port)
+        ds.start()
+    
+    def receive_file_callback(self, addr, file_size, file_name):
+        dr = DataReceiverThread(self,addr,file_size,file_name,get_settings().tcp_port)
+        dr.start()
+    
     def incoming_call(self,msg,addr):
         mtime = localtime()
         
@@ -396,7 +411,7 @@ class lunch_server(object):
         log_info("%s: [%s] %s" % (t,m,msg))
         
         self.last_messages.insert(0,[mtime,addr,msg])
-        self.messages_model.externalRowPrepended()
+        self.messagePrepended.emit()
         self.new_msg = True
         self.write_messages_to_file()        
         
@@ -438,7 +453,7 @@ class lunch_server(object):
                     indicesToRemove.append(memberIndex)
             for memberIndex in reversed(indicesToRemove):
                 del self.members[memberIndex]
-                self.memberRemoved(memberIndex)
+                self._memberRemoved(memberIndex)
         except:
             log_exception("Something went wrong while trying to clean up the members-table")
             
@@ -475,7 +490,7 @@ class lunch_server(object):
         try: 
             s.bind(("", 50000)) 
             s.settimeout(5.0)
-            self.init_done.set()
+            self.init_done.emit()
             while self.running:
                 if self.new_msg and (time()-mktime(self.last_messages[0][0]))>(get_settings().reset_icon_time*60):
                     self.new_msg=False
