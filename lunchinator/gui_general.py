@@ -42,7 +42,8 @@ class lunchinator(threading.Thread):
     def clicked_add_host(self,w):
         hostn = w.text()
         try:
-            get_server().members[socket.gethostbyname(hostn.strip())]=hostn.strip()
+            ip = socket.gethostbyname(hostn.strip())
+            get_server().append_member(ip, hostn)
             w.setText("")
         except:
             d = QMessageBox(QMessageBox.Critical, "Error adding host", "Cannot add host: Hostname unknown", QMessageBox.Ok, w)

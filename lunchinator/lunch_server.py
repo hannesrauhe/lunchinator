@@ -7,6 +7,8 @@ import socket,subprocess,sys,os,ctypes,getpass,json
 from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import log_debug, log_info, log_critical, get_settings
+from lunchinator.table_models import MembersTableModel, MessagesTableModel
+from Carbon.Aliases import true
 
 EXIT_CODE_UPDATE = 2
 EXIT_CODE_STOP = 3
@@ -29,7 +31,7 @@ class lunch_server(object):
         self.peer_nr=0 #the number of the peer i contacted to be my master
         self.mute_time_until=0
         self.last_messages = []
-        self.members = {}
+        self.members = []
         self.member_timeout = {}
         self.member_info = {}
         self.plugin_manager = None
@@ -38,6 +40,8 @@ class lunch_server(object):
         
         self.exitCode = 0  
         self.read_config()
+        self.members_model = MembersTableModel(self)
+        self.messages_model = MessagesTableModel(self)
         
         PluginManagerSingleton.setBehaviour([
             ConfigurablePluginManager,
@@ -63,7 +67,7 @@ class lunch_server(object):
             log_exception("don't know how to handle time span %s"%(str(sys.exc_info())))
             return False;
         
-    def call(self,msg,client='',hosts={}):
+    def call(self,msg,client='',hosts=[]):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         i=0
         if client:
@@ -75,13 +79,14 @@ class lunch_server(object):
                 log_exception("Exception while sending msg %s to %s: %s"%(msg,client, str(sys.exc_info()[0])))
         elif 0==len(hosts):
             members = self.members
-            if 0==len(members):
-                members = self.init_members_from_file()            
+            # TODO why are we doing this?
+            #if 0==len(members):
+                #members = self.init_members_from_file(self.member_info)            
             if 0==len(members):
                 log_error("Cannot send message, no peers connected, no peer found in members file")
                 return 0
             log_debug("Sending message %s to %s"%(msg,str(members)))
-            for ip,name in members.items():
+            for ip in members:
                 try:
                     s.sendto(msg, (ip.strip(), 50000))
                     i+=1
@@ -90,7 +95,7 @@ class lunch_server(object):
                     continue        
         else:
             log_debug("Sending message %s to %s",msg,str(hosts))
-            for ip,name in hosts.items():
+            for ip in hosts:
                 try:
                     s.sendto(msg, (ip.strip(), 50000))
                     i+=1
@@ -109,18 +114,53 @@ class lunch_server(object):
     '''will be called every ten seconds'''
     def read_config(self):              
         if len(self.members)==0:
-            self.members=self.init_members_from_file()
+            self.init_members_from_file()
         if len(self.last_messages)==0:
             self.last_messages=self.init_messages_from_file()
+           
+    def memberAppended(self):
+        self.messages_model.externalRowAppended()
+    
+    def memberUpdated(self, index):
+        if type(index) in (str, unicode):
+            if not index in self.members:
+                log_error("Requested to update info for member %s but there is no member entry" % index)
+                return
+            index = self.members.index(index)
+        self.messages_model.externalRowUpdated(index)
+    
+    def memberRemoved(self, index):
+        self.messages_model.externalRowRemoved(index)
+    
+    def updateMembersDict(self, otherDict, noLocal = True):
+        for ip, hostn in otherDict.items():
+            if noLocal and ip.startswith('127'):
+                continue
+            self.append_member(ip, hostn)
             
+    def append_member(self, ip, hostn, inform = True):
+        # insert name into info dict
+        memberInfo = {}
+        if ip in self.member_info:
+            memberInfo = self.member_info[ip]
+        memberInfo['name'] = hostn
+        self.member_info[ip] = memberInfo
+        
+        if not ip in self.members:
+            self.members.append(ip)
+            if inform:
+                self.memberAppended()
+        elif inform:
+            self.memberUpdated(self.members.index(ip))
             
     def init_members_from_file(self):
-        members = {}
+        members = []
         if os.path.exists(get_settings().members_file):
             f = open(get_settings().members_file,'r')    
             for hostn in f.readlines():
                 try:
-                    members[socket.gethostbyname(hostn.strip())]=hostn.strip()
+                    ip = socket.gethostbyname(hostn.strip())
+                    self.append_member(ip, hostn, False)
                 except:
                     log_warning("cannot find host specified in members_file by %s with name %s"%(get_settings().members_file,hostn))
             f.close()
@@ -131,7 +171,7 @@ class lunch_server(object):
             if len(self.members)>1:
                 f = open(get_settings().members_file,'w')
                 f.truncate()
-                for m in self.members.keys():
+                for m in self.members:
                     f.write(m+"\n")
                 f.close();
         except:
@@ -179,6 +219,15 @@ class lunch_server(object):
             info_d["next_lunch_end"] = get_settings().next_lunch_end
         return json.dumps(info_d)      
         
+    def createMembersDict(self):
+        membersDict = {}
+        for ip in self.members:
+            if ip in self.member_info and 'name' in self.member_info[ip]:
+                membersDict[ip] = self.member_info[ip]['name']
+            else:
+                membersDict[ip] = ip
+        return membersDict
+        
     def incoming_event(self,data,addr):   
         if addr[0].startswith("127."):
             #stop command is only allowed from localhost :-)
@@ -215,7 +264,8 @@ class lunch_server(object):
                 
             elif cmd.startswith("HELO_REQUEST_DICT"):
                 self.member_info[addr[0]] = json.loads(value)
-                self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
+                self.memberUpdated(addr[0])
+                self.call("HELO_DICT "+json.dumps(self.createMembersDict()),client=addr[0])
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(get_settings().avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
@@ -224,8 +274,7 @@ class lunch_server(object):
             elif cmd.startswith("HELO_DICT"):
                 #the master send me the list of members - yeah
                 ext_members = json.loads(data.split(" ",1)[1].strip())
-                self.members.update(ext_members)
-                self.members = dict((k, v) for k, v in self.members.items() if not k.startswith("127"))
+                self.updateMembersDict(ext_members)
                 if self.my_master==-1:
                     self.call("HELO_REQUEST_INFO "+self.build_info_string())
                     
@@ -234,28 +283,32 @@ class lunch_server(object):
                     self.write_members_to_file()
                  
             elif cmd.startswith("HELO_REQUEST_INFO"):
-                self.member_info[addr[0]] = json.loads(value)  
+                self.member_info[addr[0]] = json.loads(value)
+                self.memberUpdated(addr[0]) 
                 self.call("HELO_INFO "+self.build_info_string(),client=addr[0])
                          
             elif cmd.startswith("HELO_INFO"):
                 #someone sends his info
-                self.member_info[addr[0]] = json.loads(value)        
+                self.member_info[addr[0]] = json.loads(value)
+                self.memberUpdated(addr[0])
                 #Request avatar if not there yet
                 if self.member_info[addr[0]].has_key("avatar"):
                     if not os.path.exists(get_settings().avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
                         self.call("HELO_REQUEST_AVATAR "+str(get_settings().tcp_port),client=addr[0])  
-                if self.member_info[addr[0]].has_key("name"):         
-                    self.members[addr[0]] = self.member_info[addr[0]]["name"]
                                     
             elif cmd.startswith("HELO_LEAVE"):
                 #the sender tells me, that he is going
                 if addr[0] in self.members:
+                    leftMemberIndex = self.members.index(addr[0])
+                    self.members.remove(addr[0])
+                    self.memberRemoved(leftMemberIndex)
+                    
                     del self.members[addr[0]]                                       
                     self.write_members_to_file()
-                self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
+                self.call("HELO_DICT "+json.dumps(self.createMembersDict()),client=addr[0])
                
             elif cmd.startswith("HELO_AVATAR"):
-                #someone want's to send me his pic via TCP
+                #someone wants to send me his pic via TCP
                 file_size=int(value.strip())
                 file_name=""
                 if self.member_info[addr[0]].has_key("avatar"):
@@ -309,18 +362,11 @@ class lunch_server(object):
                     log_error("Want to send file %s, but cannot find it"%(fileToSend))   
             elif "HELO"==cmd:
                 #someone tells me his name
-                if addr[0] not in self.members:   
-                    self.members[addr[0]]=value           
+                didKnowMember = addr[0] in self.members
+                self.append_member(addr[0], value) 
+                if not didKnowMember:
                     self.write_members_to_file()
                     self.call("HELO_INFO "+self.build_info_string(),client=addr[0])
-                else:                    
-                    self.members[addr[0]]=value
-                
-                if addr[0] in self.member_info:                    
-                    self.member_info[addr[0]]['name']=value
-                else:
-                    self.member_info[addr[0]]={'name':value}
-                    
             else:
                 log_info("received unknown command from %s: %s with value %s"%(addr[0],cmd,value))        
                 
@@ -337,18 +383,21 @@ class lunch_server(object):
             log_exception("Unexpected error while handling HELO call: %s"%(str(sys.exc_info())))
             log_critical("The data received was: %s"%data)
         
+    def memberName(self, addr):
+        if addr in self.member_info and 'name' in self.member_info[addr]:
+            return self.member_info[addr]['name']
+        return addr
     
     def incoming_call(self,msg,addr):
         mtime = localtime()
         
         t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
-        m = addr
-        if addr in self.members:
-            m = self.members[addr]
+        m = self.memberName(addr)
             
         log_info("%s: [%s] %s" % (t,m,msg))
         
         self.last_messages.insert(0,[mtime,addr,msg])
+        self.messages_model.externalRowPrepended()
         self.new_msg = True
         self.write_messages_to_file()        
         
@@ -381,20 +430,24 @@ class lunch_server(object):
                     
     def remove_inactive_members(self):
         try:
-            for ip in self.members.keys():
+            indicesToRemove = []
+            for memberIndex, ip in enumerate(self.members):
                 if ip in self.member_timeout:
                     if time()-self.member_timeout[ip]>get_settings().peer_timeout:
-                        del self.members[ip]
+                        indicesToRemove.append(memberIndex)
                 else:
-                    del self.members[ip]
+                    indicesToRemove.append(memberIndex)
+            for memberIndex in reversed(indicesToRemove):
+                del self.members[memberIndex]
+                self.memberRemoved(memberIndex)
         except:
             log_exception("Something went wrong while trying to clean up the members-table")
             
     '''ask for the dictionary and send over own information'''
     def call_for_dict(self):
         try:
-            if len(self.members.keys())>self.peer_nr:
-                self.call("HELO_REQUEST_DICT "+self.build_info_string(),client=self.members.keys()[self.peer_nr])
+            if len(self.members)>self.peer_nr:
+                self.call("HELO_REQUEST_DICT "+self.build_info_string(),client=self.members[self.peer_nr])
             self.peer_nr=(self.peer_nr+1) % len(self.members)
         except:
             log_exception("Something went wrong while trying to send a call to the new master")
@@ -432,8 +485,8 @@ class lunch_server(object):
                     
                     if not addr[0].startswith("127."):
                         self.member_timeout[addr[0]]=time()
-                        if not self.members.has_key(addr[0]):
-                            self.members[addr[0]]=addr[0]
+                        if not addr[0] in self.members:
+                            self.append_member(addr[0], addr[0])
                         
                     if daten.startswith("HELO"):
                         #simple infrastructure protocol messages starting with HELO''' 
@@ -442,7 +495,8 @@ class lunch_server(object):
                         #simple message                          
                         self.incoming_call(daten,addr[0])
                 except socket.timeout:
-                    self.read_config()
+                    # TODO is this necessary?
+                    #self.read_config()
                     if self.my_master==-1:
                         self.call_for_dict()
                     else:
@@ -457,7 +511,7 @@ class lunch_server(object):
                             announce_name+=1
                     if self.my_master==-1:
                         log_info("no master found yet")
-                    log_debug(str(self.members.keys()))
+                    log_debug(str(self.members))
         except socket.error as e:
             log_exception("stopping lunchinator because: %s"%(str(e)))
         except:

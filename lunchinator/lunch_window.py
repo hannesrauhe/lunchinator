@@ -1,12 +1,9 @@
-from PyQt4.QtGui import QTabWidget, QMainWindow, QGridLayout, QLabel, QTextEdit, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QSplitter, QApplication, QPushButton, QTreeWidget, QTreeWidgetItem
+from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QLineEdit, QWidget, QHBoxLayout, QVBoxLayout, QSplitter, QApplication, QPushButton, QTreeView, QStyledItemDelegate, QItemSelectionModel
 from PyQt4.QtCore import Qt, QTimer
-from PyQt4 import QtCore
 from lunchinator import get_settings, get_server, log_exception
 import sys
-import socket
 from StringIO import StringIO
 import traceback
-import time
 from functools import partial
 
 class LunchinatorWindow(QMainWindow):
@@ -24,8 +21,10 @@ class LunchinatorWindow(QMainWindow):
         centralLayout = QHBoxLayout(centralWidget)
 
         tablesPane = QSplitter(Qt.Horizontal)
-        tablesPane.addWidget(self.createTableWidget(tablesPane, MessageTable, "Send Message", guiHandler.clicked_send_msg))
-        tablesPane.addWidget(self.createTableWidget(tablesPane, MembersTable, "Add Host", guiHandler.clicked_add_host))
+        widget, self.messagesTable = self.createTableWidget(tablesPane, MessageTable, "Send Message", guiHandler.clicked_send_msg)
+        tablesPane.addWidget(widget)
+        widget, self.membersTable = self.createTableWidget(tablesPane, MembersTable, "Add Host", guiHandler.clicked_add_host)
+        tablesPane.addWidget(widget)
 
         centralLayout.addWidget(tablesPane)
         #box0.pack_start(tablesPane, True, True, 0)
@@ -138,7 +137,13 @@ class LunchinatorWindow(QMainWindow):
         entry.returnPressed.connect(partial(triggeredEvent, entry))
         button.clicked.connect(partial(triggeredEvent, entry))
         
-        return tableWidget
+        return (tableWidget, table)
+   
+    def setMembersModel(self, model):
+        self.membersTable.setModel(model)
+        
+    def setMessagesModel(self, model):
+        self.messagesTable.setModel(model)
    
     def window_msgCheckCreatePluginWidget(self,parent,plugin_object,p_name):
         sw = None
@@ -156,82 +161,31 @@ class LunchinatorWindow(QMainWindow):
             stringOut.close() 
         return sw
         
-        
-class UpdatingTable(QTreeWidget):
-    def __init__(self, parent, nCol, headerLabels, sortedColumn = None, ascending = True):
+class MembersTableItemDelegate(QStyledItemDelegate):
+    # void paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index)
+    def paint(self, painter, option, index):
+        super(MembersTableItemDelegate, self).paint(painter, option, index)
+
+class UpdatingTable(QTreeView):
+    def __init__(self, parent, model, sortedColumn = None, ascending = True):
         super(UpdatingTable, self).__init__(parent)
         
-        self.setColumnCount(nCol)
-        self.setHeaderLabels(headerLabels)
+        self.setModel(model)
+        self.setSortingEnabled(True)
+        self.setHeaderHidden(False)
         if sortedColumn != None:
-            self.sortItems(sortedColumn, Qt.AscendingOrder if ascending else Qt.DescendingOrder)
-        
-        self.update_model()
-        
-        timer = QTimer(self)
-        timer.setInterval(1000)
-        timer.timeout.connect(self.timeout)
-        timer.start(1000)        
-    
-    def listToQStringList(self, strList):
-        qList = QtCore.QStringList()
-        for aStr in strList:
-            qList.append(aStr if type(aStr) in (str, unicode) else str(aStr))
-        return qList
-        
-    def timeout(self):
-        try:
-            #sortCol,sortOrder = self.treeView.get_model().get_sort_column_id()
-            self.update_model()
-            #if sortCol!=None:
-            #    st.set_sort_column_id(sortCol,sortOrder)
-            #self.treeView.set_model(self.listStore)
-            return True
-        except:
-            return False
-    
-    def create_model(self):
-        return None
-    
-    def update_model(self):
-        pass
+            self.sortByColumn(sortedColumn, Qt.AscendingOrder if ascending else Qt.DescendingOrder)
     
 class MembersTable(UpdatingTable):    
     def __init__(self, parent):
-        # TODO fifth column?
-        UpdatingTable.__init__(self, parent, 5, ["IP", "Name", "LunchTime", "LastSeen", "Stuff"], 2)        
-    
-    
-    def update_model(self):
-        self.clear()
-        me = get_server().get_members()
-        ti = get_server().get_member_timeout()
-        inf = get_server().get_member_info()
-        for ip in me.keys():
-            member_entry=[ip,me[ip],"-",-1,"#FFFFFF"]
-            if inf.has_key(ip) and inf[ip].has_key("next_lunch_begin") and inf[ip].has_key("next_lunch_end"):
-                member_entry[2]=inf[ip]["next_lunch_begin"]+"-"+inf[ip]["next_lunch_end"]  
-                if get_server().is_now_in_time_span(inf[ip]["next_lunch_begin"],inf[ip]["next_lunch_end"]):
-                    member_entry[4]="#00FF00"
-                else:
-                    member_entry[4]="#FF0000"
-            if ti.has_key(ip):
-                member_entry[3]=int(time.time()-ti[ip])
-            self.addTopLevelItem(QTreeWidgetItem(self.listToQStringList(member_entry)))     
-    
+        UpdatingTable.__init__(self, parent, get_server().members_model, 2)
+        timeoutTimer = QTimer(self)
+        timeoutTimer.setInterval(1000)
+        timeoutTimer.timeout.connect(self.model().updateTimeouts)
+        timeoutTimer.start(1000)       
+        
 class MessageTable(UpdatingTable):
     def __init__(self, parent):
-        UpdatingTable.__init__(self, parent, 3, ["Time", "Sender", "Message"])     
-    
-    def update_model(self):
-        m = get_server().get_last_msgs()
-        self.clear()
-        for i in m:
-            if i[1] in get_server().get_members():
-                i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),get_server().get_members()[i[1]],i[2])
-            else:
-                i=(time.strftime("%d.%m.%Y %H:%M:%S", i[0]),i[1],i[2])
-            self.addTopLevelItem(QTreeWidgetItem(self.listToQStringList(i)))
-    
+        UpdatingTable.__init__(self, parent, get_server().messages_model)      
     
     

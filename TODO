@@ -1,4 +1,4 @@
 - Problem when launching start_lunchinator and there is no .lunchinator directory
 - Problem when the members cfg is empty (division by zero)
-- Implement ComboTabWidget
-- Better table update
+- 0.0.0.0 (empty string) aus members entfernen
+- member info updated -> update messages first column

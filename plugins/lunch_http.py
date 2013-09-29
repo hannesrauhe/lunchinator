@@ -60,19 +60,19 @@ class lunch_http(iface_called_plugin):
                 
     def write_info_html(self):
         try:
-            if len(get_server().member_info)==0:
+            if len(get_server().get_member_info())==0:
                 indexhtml = open(self.options["html_dir"]+"/index.html","w")
                 indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' >no peers\n")
                 indexhtml.close()
                 return
             
-            table_data = {"ip":[""]*len(get_server().member_info)}
+            table_data = {"ip":[""]*len(get_server().get_member_info())}
             index = 0
-            for ip,infodict in get_server().member_info.iteritems():
+            for ip,infodict in get_server().get_member_info().iteritems():
                 table_data["ip"][index] = ip
                 for k,v in infodict.iteritems():
                     if not table_data.has_key(k):
-                        table_data[k]=[""]*len(get_server().member_info)
+                        table_data[k]=[""]*len(get_server().get_member_info())
                     if k=="avatar" and os.path.isfile(get_settings().avatar_dir+"/"+v):
                         table_data[k][index]="<img width='200' src=\"avatars/%s\" />"%v
                     else:
@@ -85,7 +85,7 @@ class lunch_http(iface_called_plugin):
             for th in table_data.iterkeys():
                 indexhtml.write("<th>%s</th>"%th) 
             indexhtml.write("</tr>") 
-            for i in range(0,len(get_server().member_info)):
+            for i in range(0,len(get_server().get_member_info())):
                 indexhtml.write("<tr>") 
                 for k in table_data.iterkeys():
                     indexhtml.write("<td>%s</td>"%table_data[k][i]) 

@@ -120,7 +120,8 @@ class maintainer_gui(object):
     def update_dropdown_members(self):
         if self.dropdown_members_model == None:
             return
-        for m_ip,m_name in get_server().get_members().items():
+        for m_ip in get_server().get_members():
+            m_name = get_server().memberName(m_ip)
             if not m_ip in self.dropdown_members_dict:
                 # is new ip, append to the end
                 self.dropdown_members_dict[m_ip] = (self.dropdown_members_model.rowCount(), m_name)
@@ -203,16 +204,16 @@ class InfoTable(QTreeWidget):
     def update_model(self):
         return None
     
-        if len(get_server().member_info) == 0:
+        if len(get_server().get_member_info()) == 0:
             return
         
-        table_data = {"ip":[""]*len(get_server().member_info)}
+        table_data = {"ip":[""]*len(get_server().get_member_info())}
         index = 0
-        for ip,infodict in get_server().member_info.iteritems():
+        for ip,infodict in get_server().get_member_info().iteritems():
             table_data["ip"][index] = ip
             for k,v in infodict.iteritems():
                 if not table_data.has_key(k):
-                    table_data[k]=[""]*len(get_server().member_info)
+                    table_data[k]=[""]*len(get_server().get_member_info())
                 if False:#k=="avatar" and os.path.isfile(get_settings().avatar_dir+"/"+v):
                     # TODO add avatar image
                     table_data[k][index]="avatars/%s"%v
@@ -222,7 +223,7 @@ class InfoTable(QTreeWidget):
         
         if self.listModel == None or self.listModel.columnCount() != len(table_data):
             # columns added/removed
-            self.listModel = QStandardItemModel(len(get_server().member_info), len(table_data))
+            self.listModel = QStandardItemModel(len(get_server().get_member_info()), len(table_data))
             headerLabels = QtCore.QStringList()
             for desc in table_data.iterkeys():
                 headerLabels.append(desc)
@@ -233,7 +234,7 @@ class InfoTable(QTreeWidget):
         else:
             self.listModel.clear()
 
-        for i in range(0,len(get_server().member_info)):
+        for i in range(0,len(get_server().get_member_info())):
             row = []
             for k in table_data.iterkeys():
                 row.append(QStandardItem(table_data[k][i]))
