@@ -1,6 +1,4 @@
-from lunchinator.iface_plugins import *
-from time import localtime
-import subprocess,sys,ctypes
+from lunchinator.iface_plugins import iface_called_plugin
 import threading, SimpleHTTPServer, SocketServer, os
 from lunchinator import get_server, get_settings, log_info, log_exception
 
@@ -54,7 +52,7 @@ class lunch_http(iface_called_plugin):
     def process_lunch_call(self,msg,ip,member_info):
         pass
     
-    def process_event(self,cmd,value,ip,member_info):
+    def process_event(self,cmd,_value,_ip,_member_info):
         if cmd in ["HELO_INFO","HELO_DICT","HELO_REQUEST_DICT"]:
             self.write_info_html()
                 
@@ -94,4 +92,4 @@ class lunch_http(iface_called_plugin):
             indexhtml.write(get_settings().version)
             indexhtml.close()
         except:
-            log_exception("HTTP plugin: problem while writing html file: %s"%sys.exc_info())
+            log_exception("HTTP plugin: problem while writing html file")
