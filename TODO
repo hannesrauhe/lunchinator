@@ -5,3 +5,4 @@
 - maintainet: log dropdown: leeren Eintrag einfŸgen
 - maintainer: are threads destroyed?
 - thread safety in lunch_server durch signals
+- Tabellen nicht editierbar

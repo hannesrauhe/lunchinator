@@ -96,7 +96,7 @@ class lunch_server(QObject):
         if client:
             log_debug("Sending message %s to %s"%(msg,client))
             try:
-                s.sendto(msg, (client.strip(), 50000)) 
+                s.sendto(msg.encode('utf-8'), (client.strip(), 50000)) 
                 i+=1
             except:
                 log_exception("Exception while sending msg %s to %s: %s"%(msg,client, str(sys.exc_info()[0])))
@@ -111,16 +111,16 @@ class lunch_server(QObject):
             log_debug("Sending message %s to %s"%(msg,str(members)))
             for ip in members:
                 try:
-                    s.sendto(msg, (ip.strip(), 50000))
+                    s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
                     i+=1
                 except:
                     log_exception("Exception while sending msg %s to %s: %s"%(msg,client, str(sys.exc_info()[0])))
                     continue        
         else:
-            log_debug("Sending message %s to %s",msg,str(hosts))
+            log_debug(u"Sending message %s to %s",msg,str(hosts))
             for ip in hosts:
                 try:
-                    s.sendto(msg, (ip.strip(), 50000))
+                    s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
                     i+=1
                 except:
                     log_exception("Exception while sending msg %s to %s: %s"%(msg,client, str(sys.exc_info()[0])))
@@ -132,7 +132,6 @@ class lunch_server(QObject):
     '''short for the call function above for backward compatibility'''
     def call_all_members(self,msg):        
         self.call(msg,hosts=self.members)   
-        
         
     '''will be called every ten seconds'''
     def read_config(self):              
@@ -493,7 +492,8 @@ class lunch_server(QObject):
                 if self.new_msg and (time()-mktime(self.last_messages[0][0]))>(get_settings().reset_icon_time*60):
                     self.new_msg=False
                 try:
-                    daten, addr = s.recvfrom(1024) 
+                    daten, addr = s.recvfrom(1024)
+                    daten = daten.decode('utf-8')
                     
                     if not addr[0].startswith("127."):
                         self.member_timeout[addr[0]]=time()

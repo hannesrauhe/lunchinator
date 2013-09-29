@@ -1,7 +1,7 @@
-from lunchinator.iface_plugins import *
-from time import localtime
+from lunchinator.iface_plugins import iface_called_plugin
 import subprocess,sys,ctypes
-from lunchinator import get_server, log_exception, get_settings
+from lunchinator import log_exception, get_settings
+import os
 
 class Notify(iface_called_plugin):    
     def __init__(self):
@@ -26,9 +26,10 @@ class Notify(iface_called_plugin):
                 log_exception("notify error: %s"%str(sys.exc_info()))
         elif "darwin" in sys.platform:
             try:
-                subprocess.call(["terminal-notifier", "-title", "Lunchinator: %s" % name, "-message", msg])
+                fh = open(os.path.devnull,"w")
+                subprocess.call(["terminal-notifier", "-title", "Lunchinator: %s" % name, "-message", msg], stdout=fh, stderr=fh)
             except:
-                log_exception("error sending notification")
+                log_exception("error posting notification")
         else:
             self.incoming_call_win(msg,addr,member_info)
             

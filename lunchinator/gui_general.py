@@ -27,6 +27,7 @@ class lunchinator(QThread):
         membersModel = MembersTableModel(get_server())
         self.mainWindow.messagesTable.setModel(messagesModel)
         self.mainWindow.membersTable.setModel(membersModel)
+        self.mainWindow.serverInitialized()
         get_server().messagePrepended.connect(messagesModel.externalRowPrepended)
         get_server().memberAppended.connect(membersModel.externalRowAppended)
         get_server().memberUpdated.connect(membersModel.externalRowUpdated)
@@ -47,11 +48,11 @@ class lunchinator(QThread):
         if len(data):
             get_server().call_all_members(data[0])
         else:
-            get_server().call_all_members(w.text())
+            get_server().call_all_members(unicode(w.text().toUtf8(), 'utf-8'))
             w.setText("")
         
     def clicked_add_host(self,w):
-        hostn = w.text()
+        hostn = str(w.text().toUtf8())
         try:
             ip = socket.gethostbyname(hostn.strip())
             get_server().append_member(ip, hostn)
@@ -90,7 +91,7 @@ class lunchinator(QThread):
         return menu
             
     def toggle_plugin(self,w,p_cat,new_state):
-        p_name = str(w.text())
+        p_name = str(w.text().toUtf8())
         if new_state:
             po = get_server().plugin_manager.activatePluginByName(p_name,p_cat)
             if p_cat=="gui" and self.mainWindow != None:

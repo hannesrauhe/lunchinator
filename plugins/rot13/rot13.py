@@ -17,11 +17,11 @@ class rot13box(object):
         
     def enc(self):        
         rot13 = string.maketrans( 
-            "ABCDEFGHIJKLMabcdefghijklmNOPQRSTUVWXYZnopqrstuvwxyz", 
-            "NOPQRSTUVWXYZnopqrstuvwxyzABCDEFGHIJKLMabcdefghijklm")
+            u"ABCDEFGHIJKLMabcdefghijklmNOPQRSTUVWXYZnopqrstuvwxyz", 
+            u"NOPQRSTUVWXYZnopqrstuvwxyzABCDEFGHIJKLMabcdefghijklm")
         plain = self.entry.text()
         if plain:
-            self.entry.setText(string.translate(str(plain), rot13))
+            self.entry.setText(string.translate(str(plain.toUtf8()), rot13))
         if self.add_widget:
             self.add_widget.show()
         

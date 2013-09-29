@@ -151,7 +151,7 @@ class iface_plugin(IPlugin):
             elif type(v)==types.BooleanType:
                 new_v = e.checkState() == Qt.Checked
             else:
-                new_v = e.text()
+                new_v = str(e.text().toUtf8())
             if new_v!=v:
                 self.options[o]=new_v
                 set_value(o, new_v)

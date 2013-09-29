@@ -33,6 +33,11 @@ class LunchinatorWindow(QMainWindow):
         self.nb.setMovable(True)
         self.nb.setTabPosition(QTabWidget.North)
         
+        centralLayout.addWidget(self.nb)
+        
+        self.setCentralWidget(centralWidget)
+        
+    def serverInitialized(self):
         plugin_widgets = []
         try:
             for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
@@ -60,10 +65,6 @@ class LunchinatorWindow(QMainWindow):
             index = get_settings().last_gui_plugin_index
         
         self.nb.setCurrentIndex(index)
-        centralLayout.addWidget(self.nb)
-        #centralLayout.pack_start(self.nb, True, True, 0)
-        
-        self.setCentralWidget(centralWidget)
         
     def clicked_send_msg(self, w):
         if self.guiHandler != None:

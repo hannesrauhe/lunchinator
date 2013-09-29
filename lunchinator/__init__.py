@@ -35,7 +35,7 @@ def setLoggingLevel(newLevel):
     logging.basicConfig(level=newLevel)
     
 def _generate_string(*s):
-    return " ".join(str(x) for x in s)
+    return u" ".join(x if type(x) in (str, unicode) else str(x) for x in s)
 
 def log_exception(*s):
     _get_logger().exception(_generate_string(*s))

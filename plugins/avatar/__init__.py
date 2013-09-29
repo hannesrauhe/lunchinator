@@ -20,7 +20,7 @@ class FileFilterProxyModel(QSortFilterProxyModel):
     def filterAcceptsRow(self, sourceRow, sourceParent):
         fileModel = self.sourceModel()
         index0 = fileModel.index(sourceRow, 0, sourceParent)
-        path = unicode(fileModel.filePath(index0))
+        path = str(fileModel.filePath(index0).toUtf8())
         return self.filterAcceptsFile(path)
 
 class avatar(iface_general_plugin):
@@ -54,7 +54,7 @@ class avatar(iface_general_plugin):
         dialog.setAcceptMode(QFileDialog.AcceptOpen)
         if dialog.exec_():
             selectedFiles = dialog.selectedFiles()
-            selectedFile = unicode(selectedFiles.first())
+            selectedFile = str(selectedFiles.first().toUtf8())
             if not os.path.isdir(selectedFile) and fileFilter.filterAcceptsFile(selectedFile):
                 l = l_avatar()
                 selectedFile = l.use_as_avatar( get_settings(), selectedFile)
