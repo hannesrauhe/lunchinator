@@ -4,8 +4,12 @@ from lunchinator.lunch_server import EXIT_CODE_UPDATE
 from lunchinator import log_critical, log_error, log_info, get_settings,\
     log_warning
 
-pythonex_wo_console = "/opt/local/bin/python"
-pythonex_w_console  = "/opt/local/bin/python"
+if os.path.exists("/opt/local/bin/python"):
+    pythonex_wo_console = "/opt/local/bin/python"
+else:
+    pythonex_wo_console = "/usr/bin/python"
+
+pythonex_w_console  = pythonex_wo_console
 
 if platform.system()=="Windows":
     pythonex_w_console = "python"
