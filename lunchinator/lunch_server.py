@@ -27,7 +27,7 @@ class lunch_server(QObject):
     memberRemoved = pyqtSignal(int)
     messagePrepended = pyqtSignal()
     sendFile = pyqtSignal(str, str, int)
-    receiveFile = pyqtSignal(str, str, str)
+    receiveFile = pyqtSignal(str, int, str)
     # -----------------------------
         
     #TODO: if started with plugins: make sure they are deactivated when destroying lunchinator (destructor anyone?)
