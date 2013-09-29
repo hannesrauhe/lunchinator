@@ -8,7 +8,6 @@ from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import log_debug, log_info, log_critical, get_settings
 from lunchinator.table_models import MembersTableModel, MessagesTableModel
-from Carbon.Aliases import true
 
 EXIT_CODE_UPDATE = 2
 EXIT_CODE_STOP = 3
