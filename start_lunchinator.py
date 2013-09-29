@@ -37,7 +37,7 @@ it should be safe to call 'git stash' in the lunchinator directory %s start lunc
             else:
                 log_info("Updating plugin repository")
                 #locate plugins repository
-                if get_settings().runGitCommand(["pull"], get_settings().external_plugin_dir+"/.git") != 0:
+                if get_settings().runGitCommand(["pull"], get_settings().external_plugin_dir) != 0:
                     log_error("git pull did not work (plugin repository). The Update mechanism therefore does not work.\n\
 If you do not know, what to do now:\n\
 it should be safe to call 'git stash' in the plugins directory %s/plugins and start lunchinator again."%get_settings().main_config_dir)
