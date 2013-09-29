@@ -26,7 +26,7 @@ class LunchinatorWindow(QMainWindow):
         widget, self.membersTable = self.createTableWidget(tablesPane, MembersTable, "Add Host", self.clicked_add_host)
         tablesPane.addWidget(widget)
 
-        centralLayout.addWidget(tablesPane)
+        centralLayout.addWidget(tablesPane, 1)
         #box0.pack_start(tablesPane, True, True, 0)
         
         self.nb = QTabWidget(centralWidget)
