@@ -6,3 +6,4 @@
 - maintainer: are threads destroyed?
 - thread safety in lunch_server durch signals
 - Tabellen nicht editierbar
+- unicode support
