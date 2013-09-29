@@ -1,4 +1,4 @@
-from PyQt4.QtCore import Qt, QVariant, QStringList
+from PyQt4.QtCore import Qt, QVariant, QStringList, QSize
 from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
 import time
 
@@ -20,6 +20,7 @@ class TableModelBase(QStandardItemModel):
     def createItem(self, key, column):
         item = QStandardItem()
         self.columns[column][1](key, item)
+        item.setData(QSize(0, 20), Qt.SizeHintRole)
         return item
     
     def updateItem(self, key, row, column):

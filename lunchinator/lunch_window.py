@@ -173,6 +173,7 @@ class UpdatingTable(QTreeView):
         self.setModel(model)
         self.setSortingEnabled(True)
         self.setHeaderHidden(False)
+        self.setAlternatingRowColors(True)
         if sortedColumn != None:
             self.sortByColumn(sortedColumn, Qt.AscendingOrder if ascending else Qt.DescendingOrder)
     
