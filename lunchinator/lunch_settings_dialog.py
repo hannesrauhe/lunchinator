@@ -1,11 +1,7 @@
-from PyQt4.QtGui import QTabWidget, QDialog, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton
+from PyQt4.QtGui import QTabWidget, QDialog, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QComboBox, QGroupBox
 from PyQt4.QtCore import Qt
 from lunchinator import get_server, log_exception
-
-class ComboTabWidget(QWidget):
-    def __init__(self, parent):
-        super(ComboTabWidget, self).__init__(parent)
-    # TODO implement
+from lunchinator.ComboTabWidget import ComboTabWidget
 
 class LunchinatorSettingsDialog(QDialog):
     RESULT_SAVE = 0
@@ -20,7 +16,7 @@ class LunchinatorSettingsDialog(QDialog):
         
         contentLayout = QVBoxLayout(self)
         
-        nb = QTabWidget(self)
+        nb = ComboTabWidget(self)
         nb.setTabPosition(QTabWidget.North)
             
         plugin_widgets=[]        
@@ -42,7 +38,7 @@ class LunchinatorSettingsDialog(QDialog):
         
         contentLayout.addWidget(nb)
         #d.get_content_area().pack_start(nb, True, True, 0)
-        if len(nb) > 0:
+        if nb.count() > 0:
             nb.setCurrentIndex(0)
             
         bottomLayout = QHBoxLayout()
