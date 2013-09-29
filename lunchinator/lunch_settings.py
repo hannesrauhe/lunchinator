@@ -196,7 +196,6 @@ class lunch_settings(object):
         return (True, None)
     
     def getCanUpdateMain(self):
-        print self.lunchdir
         return self.getCanUpdate(self.lunchdir)
         
     def getCanUpdatePlugins(self):
