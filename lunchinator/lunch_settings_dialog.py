@@ -51,7 +51,14 @@ class LunchinatorSettingsDialog(QDialog):
         cancelButton.clicked.connect(self.cancelPressed)
         bottomLayout.addWidget(cancelButton)
         
-        contentLayout.addLayout(bottomLayout)#
+        contentLayout.addLayout(bottomLayout)
+        
+    def setVisible(self, visible):
+        QDialog.setVisible(self, visible)
+        if visible:
+            size = self.size()
+            self.setMinimumSize(size.width(), size.height())
+            self.setMaximumSize(2000, size.height())
         
     def savePressed(self):
         self.setResult(self.RESULT_SAVE)

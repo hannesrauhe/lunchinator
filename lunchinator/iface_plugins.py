@@ -1,7 +1,7 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_warning, log_error, log_exception
-from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox
+from lunchinator import log_warning, log_error
+from PyQt4.QtGui import QLabel, QWidget, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox
 from PyQt4.QtCore import Qt
 import types
 
@@ -87,6 +87,7 @@ class iface_plugin(IPlugin):
         
     def add_option_to_layout(self, parent, grid, i, o, v):
         e = ""
+        fillHorizontal = False
         if o[0] in self.option_choice:
             e = QComboBox(parent)
             for aString in self.option_choice[o[0]]:
@@ -104,11 +105,13 @@ class iface_plugin(IPlugin):
         elif type(v)==types.BooleanType:
             e = QCheckBox(parent)
             e.setCheckState(Qt.Checked)
+            fillHorizontal = True
         else:
             e = QLineEdit(v, parent)
+            fillHorizontal = True
             
         grid.addWidget(QLabel(o[1]), i, 0, Qt.AlignRight)
-        grid.addWidget(e, i, 1, Qt.AlignLeft)
+        grid.addWidget(e, i, 1, Qt.AlignLeft if fillHorizontal is False else Qt.Alignment(0))
         self.option_widgets[o[0]]=e
         
     def create_options_widget(self, parent):
@@ -121,14 +124,18 @@ class iface_plugin(IPlugin):
         if self.option_names == None:
             # add options sorted by dictionary order
             for o,v in self.options.iteritems():
-                self.add_option_to_layout(parent, t, i, (o,o), v)
+                self.add_option_to_layout(optionsWidget, t, i, (o,o), v)
                 i+=1
         else:
             # add options sorted by specified order
             for o in self.option_names:
-                self.add_option_to_layout(parent, t, i, o, self.options[o[0]])
+                self.add_option_to_layout(optionsWidget, t, i, o, self.options[o[0]])
                 i+=1
                 
+        t.setColumnStretch(1, 1)
+        row = t.rowCount()
+        t.addWidget(QWidget(optionsWidget), row, 0)
+        t.setRowStretch(row, 1)
         return optionsWidget
     
     def save_data(self, set_value):
