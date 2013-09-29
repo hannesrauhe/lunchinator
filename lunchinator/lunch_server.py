@@ -311,8 +311,6 @@ class lunch_server(QObject):
                     leftMemberIndex = self.members.index(addr[0])
                     self.members.remove(addr[0])
                     self._memberRemoved(leftMemberIndex)
-                    
-                    del self.members[addr[0]]                                       
                     self.write_members_to_file()
                 self.call("HELO_DICT "+json.dumps(self.createMembersDict()),client=addr[0])
                
