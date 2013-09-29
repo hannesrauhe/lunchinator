@@ -98,10 +98,10 @@ class iface_plugin(IPlugin):
             e.setCurrentIndex(currentIndex)
         elif type(v)==types.IntType:
             e = QSpinBox(parent)
-            e.setValue(v)
             e.setMinimum(0)
             e.setMaximum(1000000)
             e.setSingleStep(1)
+            e.setValue(v)
         elif type(v)==types.BooleanType:
             e = QCheckBox(parent)
             e.setCheckState(Qt.Checked)
