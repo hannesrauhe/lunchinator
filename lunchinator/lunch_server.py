@@ -57,10 +57,13 @@ class lunch_server(object):
         self.init_done = threading.Event()
         self.shared_dict = {} #for plugins
         
-    def getDBConnection(self,conn_name):
+    def getDBConnection(self,conn_name=None):
         conn=None
         for pluginInfo in self.plugin_manager.getPluginsOfCategory("db"):
             try:
+                if None==conn_name:
+                    conn=pluginInfo.plugin_object
+                    break
                 if conn_name in pluginInfo.plugin_object.get_available_connections():
                     conn=pluginInfo.plugin_object
                     conn.switch_connection(conn_name)                    
@@ -493,7 +496,6 @@ class lunch_server(object):
                 s.close()  
             except:
                 log_warning("Wasn't able to send the leave call and close the socket...")
-            log_info("Lunchinator stopped")                  
             log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service")
 #            self.write_config_to_hd()
             for pluginInfo in self.plugin_manager.getAllPlugins():

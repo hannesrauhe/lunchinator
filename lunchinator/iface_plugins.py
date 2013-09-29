@@ -218,19 +218,23 @@ class iface_database_plugin(iface_plugin):
     
     def __init__(self):
         super(iface_database_plugin, self).__init__()
+        self._connections = {}
+        self.connection_options = {}
         self.db_type="Unknown"
-        self.conn_of_type=[]
-            
-    def _execute(self, query, wildcards, returnResults=True, commit=False):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+        self.default_connection_name = "Unkown_default"
+        self.active_connection=""
     
     def activate(self):
         """
         Call the parent class's activation method
         """
         iface_plugin.activate(self)
-        return
-
+        self.default_connection_name = self.db_type+"_default"
+        
+        #TODO: initialize connection_options from config_file        
+        #TODO: do this for every connection saved in config
+        av_conn = self.default_connection_name
+        self.create_connection(av_conn)
 
     def deactivate(self):
         """
@@ -238,23 +242,45 @@ class iface_database_plugin(iface_plugin):
         """
         iface_plugin.deactivate(self)
         
-    def get_available_connections(self):
-        return self.conn_of_type            
+    def get_connections(self):
+        return self._connections.keys()           
+        
+    def create_connection(self,conn_name):
+        if self._connections.has_key(conn_name):
+            raise Exception("Cannot create connection with name %s - it already exists in plugin %s"%(conn_name,self.db_type))    
+    
+        #TODO: initialize options from config or use default
+        try:
+            self._connections[conn_name] = self._open()
+        except:
+            log_error("Problem while opening DB connection %s in plugin %s"%(conn_name,self.db_type))
+            raise
             
     def switch_connection(self,conn_name):
-        self.active_connection="default"
+        if not self._connections.has_key(conn_name):
+            raise Exception("Cannot switch to connection with name %s - it does not exists in plugin %s"%(conn_name,self.db_type))
         
-    '''convenience calls'''    
-    def execute(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=False, commit=True)
+        #TODO: switch options
+        self.active_connection = conn_name
         
-    def executeNoCommit(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=False, commit=False)
-        
-    def query(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=True, commit=False)
+    def _conn(self,con_name=None):
+        if con_name == None:
+            con_name = self.active_connection
+        if self._connections.has_key(con_name):
+            return self._connections[con_name]
+        else:
+            raise Exception("No connection with name %s available in %s plugin"%(con_name,self.db_type))
     
-    '''abstract methods'''            
+    '''abstract methods - basic functionality'''
+    def _open(self):
+        raise  NotImplementedError("%s does not implement the open method"%self.db_type)
+    
+    def _close(self):
+        raise  NotImplementedError("%s does not implement the close method"%self.db_type)
+            
+    def _execute(self, query, wildcards, returnResults=True, commit=False):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+        
     def commit(self):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
@@ -288,3 +314,14 @@ class iface_database_plugin(iface_plugin):
     '''maintenance plugin methods'''    
     def getBugsFromDB(self,mode="open"):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
+        
+    '''convenience calls'''    
+    def execute(self, query, *wildcards):
+        return self._execute(query, wildcards, returnResults=False, commit=True)
+        
+    def executeNoCommit(self, query, *wildcards):
+        return self._execute(query, wildcards, returnResults=False, commit=False)
+        
+    def query(self, query, *wildcards):
+        return self._execute(query, wildcards, returnResults=True, commit=False)
+    

@@ -8,14 +8,10 @@ class db_SQLITE(iface_database_plugin):
         self.options = [(("sqlite_db_file", "SQLite DB file"),get_settings().main_config_dir+"/statistics.sq3")]
         self.members={}
         self.conn = {}
+        self.db_type="sqlite"
         
     def activate(self):
         iface_database_plugin.activate(self)
-        self.db_type="sqlite"
-        if len(self.options["sqlite_db_file"])<=0:
-            log_error("no sqlite db given - check your settings")
-        else:
-            self._open("default")
         
     def deactivate(self):
         conns_to_close = self.conn.keys()
@@ -25,20 +21,10 @@ class db_SQLITE(iface_database_plugin):
         iface_database_plugin.deactivate(self)
         
     def _open(self,name):
-        self.conn[name] = sqlite3.connect(self.options["sqlite_db_file"])
-        self.conn_of_type.append(name)
+        return sqlite3.connect(self.options["sqlite_db_file"])
         
     def _close(self,name):
-        self._conn(name).close()
-        self.conn_of_type.remove(name)     
-        
-    def _conn(self,con_name=None):
-        if con_name == None:
-            con_name = self.active_connection
-        if self.conn.has_key(con_name):
-            return self.conn[con_name]
-        else:
-            raise Exception("No connection with name %s available in %s plugin"%(con_name,self.db_type))
+        self._conn().close()   
         
     def _execute(self, query, wildcards, returnResults=True, commit=False):
         if not self._conn():
