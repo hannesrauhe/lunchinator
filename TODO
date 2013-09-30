@@ -3,3 +3,4 @@
 - thread safety in lunch_server through signals
 - unicode support
 - lunch menu structured: tooltips
+- search for TODOs

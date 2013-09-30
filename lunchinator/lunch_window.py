@@ -1,4 +1,4 @@
-from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QLineEdit, QWidget, QHBoxLayout, QVBoxLayout, QSplitter, QApplication, QPushButton, QTreeView, QStyledItemDelegate, QItemSelectionModel
+from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QLineEdit, QWidget, QHBoxLayout, QVBoxLayout, QSplitter, QApplication, QPushButton, QTreeView, QStyledItemDelegate
 from PyQt4.QtCore import Qt
 from lunchinator import get_settings, get_server, log_exception
 import sys
@@ -17,8 +17,8 @@ class LunchinatorWindow(QMainWindow):
         self.setWindowTitle("Lunchinator")
 
         # Contains box1 and plug-ins
-        centralWidget = QWidget(self)
-        centralLayout = QHBoxLayout(centralWidget)
+        #centralWidget = QWidget(self)
+        #centralLayout = QHBoxLayout(centralWidget)
 
         tablesPane = QSplitter(Qt.Horizontal)
         widget, self.messagesTable = self.createTableWidget(tablesPane, MessageTable, "Send Message", self.clicked_send_msg)
@@ -26,16 +26,16 @@ class LunchinatorWindow(QMainWindow):
         widget, self.membersTable = self.createTableWidget(tablesPane, MembersTable, "Add Host", self.clicked_add_host)
         tablesPane.addWidget(widget)
 
-        centralLayout.addWidget(tablesPane, 1)
+        #centralLayout.addWidget(tablesPane, 1)
         #box0.pack_start(tablesPane, True, True, 0)
         
-        self.nb = QTabWidget(centralWidget)
+        self.nb = QTabWidget(tablesPane)
         self.nb.setMovable(True)
         self.nb.setTabPosition(QTabWidget.North)
         
-        centralLayout.addWidget(self.nb)
+        tablesPane.addWidget(self.nb)
         
-        self.setCentralWidget(centralWidget)
+        self.setCentralWidget(tablesPane)
         
     def serverInitialized(self):
         plugin_widgets = []

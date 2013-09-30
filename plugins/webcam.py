@@ -1,8 +1,8 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import log_exception, get_settings
 import urllib2,sys
-from PyQt4.QtGui import QImage, QPixmap, QLabel
-from PyQt4.QtCore import QTimer
+from PyQt4.QtGui import QImage, QPixmap, QLabel, QSizePolicy
+from PyQt4.QtCore import QTimer, Qt
     
 class webcam(iface_gui_plugin):
     def __init__(self):
@@ -29,13 +29,17 @@ class UpdatingImage(QLabel):
     def __init__(self,parent,fallback_pic,pic_url,timeout,no_proxy):
         super(UpdatingImage, self).__init__(parent)
         
+        self.rawPixmap = None
         self.fallback_pic = fallback_pic
         self.pic_url = pic_url
         self.timeout = int(timeout)*1000
         self.no_proxy = no_proxy
+        #self.setScaledContents(True)
+        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         try:     
-            qtimage = QImage(self.fallback_pic) 
-            self.setPixmap(QPixmap.fromImage(qtimage))
+            qtimage = QImage(self.fallback_pic)
+            self.rawPixmap = QPixmap.fromImage(qtimage) 
+            self.setScaledPixmap()
             updateImageTimer = QTimer(self)
             updateImageTimer.setInterval(self.timeout)
             updateImageTimer.timeout.connect(self.update)
@@ -43,6 +47,16 @@ class UpdatingImage(QLabel):
         except:
             log_exception("Something went wrong when trying to display the fallback image",self.fallback_pis,sys.exc_info()[0])
             
+    def setScaledPixmap(self):
+        # set a scaled pixmap to a w x h window keeping its aspect ratio 
+        if self.rawPixmap != None:
+            # TODO better scaling? Setting?
+            self.setPixmap(self.rawPixmap.scaled(self.width(),self.height(),Qt.KeepAspectRatio))
+    
+    def resizeEvent(self, event):
+        super(UpdatingImage, self).resizeEvent(event)
+        self.setScaledPixmap()
+    
     def update(self): 
         try:
             response = None
@@ -56,7 +70,8 @@ class UpdatingImage(QLabel):
             qtimage = QImage()
             qtimage.loadFromData(response.read())
             
-            self.setPixmap(QPixmap.fromImage(qtimage))
+            self.rawPixmap = QPixmap.fromImage(qtimage)
+            self.setScaledPixmap()
             return True
         except:
             log_exception("Something went wrong when trying to display the webcam image")
