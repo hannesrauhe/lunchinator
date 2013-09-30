@@ -6,8 +6,8 @@ import platform
 import urllib2
 import traceback    
 from StringIO import StringIO   
-from PyQt4.QtGui import QTabWidget, QMainWindow, QGridLayout, QLabel, QTextEdit, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QSplitter, QApplication, QPushButton, QMessageBox
-from PyQt4.QtCore import Qt, QThread
+from PyQt4.QtGui import QTabWidget, QMainWindow, QGridLayout, QLabel, QTextEdit, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QSplitter, QApplication, QPushButton, QMessageBox, QSortFilterProxyModel
+from PyQt4.QtCore import Qt, QThread, QTimer
 from PyQt4 import QtCore
 from functools import partial
 from lunchinator.lunch_window import LunchinatorWindow
@@ -24,9 +24,19 @@ class lunchinator(QThread):
     
     def serverInitialized(self):
         messagesModel = MessagesTableModel(get_server())
+        messagesProxyModel = QSortFilterProxyModel(get_server())
+        messagesProxyModel.setSourceModel(messagesModel)
+        self.mainWindow.messagesTable.setModel(messagesProxyModel)
+        
         membersModel = MembersTableModel(get_server())
-        self.mainWindow.messagesTable.setModel(messagesModel)
-        self.mainWindow.membersTable.setModel(membersModel)
+        membersProxyModel = QSortFilterProxyModel(get_server())
+        membersProxyModel.setSourceModel(membersModel)
+        self.mainWindow.membersTable.setModel(membersProxyModel)
+        timeoutTimer = QTimer(membersModel)
+        timeoutTimer.setInterval(1000)
+        timeoutTimer.timeout.connect(membersModel.updateTimeouts)
+        timeoutTimer.start(1000)  
+        
         self.mainWindow.serverInitialized()
         get_server().messagePrepended.connect(messagesModel.externalRowPrepended)
         get_server().memberAppended.connect(membersModel.externalRowAppended)

@@ -1,5 +1,5 @@
 from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QLineEdit, QWidget, QHBoxLayout, QVBoxLayout, QSplitter, QApplication, QPushButton, QTreeView, QStyledItemDelegate, QItemSelectionModel
-from PyQt4.QtCore import Qt, QTimer
+from PyQt4.QtCore import Qt
 from lunchinator import get_settings, get_server, log_exception
 import sys
 from StringIO import StringIO
@@ -182,13 +182,6 @@ class UpdatingTable(QTreeView):
 class MembersTable(UpdatingTable):    
     def __init__(self, parent):
         UpdatingTable.__init__(self, parent, 2)
-        
-    def setModel(self, model):
-        super(MembersTable, self).setModel(model)
-        timeoutTimer = QTimer(self)
-        timeoutTimer.setInterval(1000)
-        timeoutTimer.timeout.connect(self.model().updateTimeouts)
-        timeoutTimer.start(1000)  
         
 class MessageTable(UpdatingTable):
     def __init__(self, parent):

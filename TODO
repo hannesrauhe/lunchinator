@@ -6,6 +6,6 @@
 - maintainer: are threads destroyed?
 - thread safety in lunch_server durch signals
 - Tabellen nicht editierbar
-- Sortierung sollte Inhalte nicht zerstören
+- Sortierung aktualisieren
 - unicode support
 - CTRL-C
