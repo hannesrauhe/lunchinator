@@ -3,7 +3,7 @@ from lunch_datathread import DataSenderThread, DataReceiverThread
 from iface_plugins import PluginManagerSingleton, iface_called_plugin, iface_general_plugin, iface_gui_plugin
 from time import strftime, localtime, time, mktime
 import socket,sys,os,json
-from PyQt4.QtCore import pyqtSignal, QObject
+from PyQt4.QtCore import pyqtSignal, QObject, QString
 
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning
@@ -28,6 +28,7 @@ class lunch_server(QObject):
     messagePrepended = pyqtSignal()
     sendFile = pyqtSignal(str, str, int)
     receiveFile = pyqtSignal(str, int, str)
+    processEvent = pyqtSignal(str, str, str)
     # -----------------------------
         
     #TODO: if started with plugins: make sure they are deactivated when destroying lunchinator (destructor anyone?)
@@ -66,6 +67,7 @@ class lunch_server(QObject):
         
         self.sendFile.connect(self.send_file_callback)
         self.receiveFile.connect(self.receive_file_callback)
+        self.processEvent.connect(self.process_event_callback)
         
     def _memberAppended(self):
         self.memberAppended.emit()
@@ -372,16 +374,8 @@ class lunch_server(QObject):
                     self.call("HELO_INFO "+self.build_info_string(),client=addr[0])
             else:
                 log_info("received unknown command from %s: %s with value %s"%(addr[0],cmd,value))        
-                
-            member_info = {}
-            if self.member_info.has_key(addr[0]):
-                member_info = self.member_info[addr[0]]
-            for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
-                if pluginInfo.plugin_object.is_activated:
-                    try:
-                        pluginInfo.plugin_object.process_event(cmd,value,addr[0],member_info)
-                    except:
-                        log_exception("plugin error in %s while processing event message %s"%(pluginInfo.name, str(sys.exc_info())))
+            
+            self.processEvent.emit(cmd,value,addr[0])
         except:
             log_exception("Unexpected error while handling HELO call: %s"%(str(sys.exc_info())))
             log_critical("The data received was: %s"%data)
@@ -398,6 +392,21 @@ class lunch_server(QObject):
     def receive_file_callback(self, addr, file_size, file_name):
         dr = DataReceiverThread(self,addr,file_size,file_name,get_settings().tcp_port)
         dr.start()
+        
+    def process_event_callback(self, cmd,value,addr):
+        cmd = unicode(cmd.toUtf8(), 'utf-8')
+        value = unicode(value.toUtf8(), 'utf-8')
+        addr = unicode(addr.toUtf8(), 'utf-8')
+        
+        member_info = {}
+        if self.member_info.has_key(addr):
+            member_info = self.member_info[addr]
+        for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
+            if pluginInfo.plugin_object.is_activated:
+                try:
+                    pluginInfo.plugin_object.process_event(cmd,value,addr,member_info)
+                except:
+                    log_exception("plugin error in %s while processing event message %s"%(pluginInfo.name, str(sys.exc_info())))
     
     def incoming_call(self,msg,addr):
         mtime = localtime()

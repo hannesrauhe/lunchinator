@@ -1,10 +1,12 @@
 import time
 from lunchinator import get_server, get_settings
 from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeWidget, QStandardItemModel, QStandardItem, QSpinBox, QTabWidget
+from PyQt4.QtCore import QObject
 from PyQt4 import QtCore
 
-class maintainer_gui(object):
-    def __init__(self,mt):
+class maintainer_gui(QObject):
+    def __init__(self,parent,mt):
+        super(maintainer_gui, self).__init__(parent)
         self.entry = None
         self.but = None
         self.info_table = None
@@ -248,5 +250,5 @@ class maintainer_wrapper:
     
 if __name__ == "__main__":
     from lunchinator.iface_plugins import iface_gui_plugin
-    iface_gui_plugin.run_standalone(maintainer_gui(maintainer_wrapper()))
+    iface_gui_plugin.run_standalone(maintainer_gui(None, maintainer_wrapper()))
     

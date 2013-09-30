@@ -17,7 +17,7 @@ class maintainer(iface_gui_plugin):
         self.stats = None
         self.recorded_reports = []
         self.dbPluginErrorPrinted = False
-        self.w = maintainer_gui(self)
+        self.w = None
         
     def getDB(self):
         if self.options["use_different_db"]:
@@ -56,10 +56,12 @@ class maintainer(iface_gui_plugin):
     
     def create_widget(self, parent):
         iface_gui_plugin.create_widget(self, parent)
+        self.w = maintainer_gui(parent, self)
         return self.w.create_widget(parent)
     
     def destroy_widget(self):
-        self.w.destroy_widget()
+        if self.w != None:
+            self.w.destroy_widget()
         iface_gui_plugin.destroy_widget(self)
             
     def add_menu(self,menu):
@@ -67,6 +69,8 @@ class maintainer(iface_gui_plugin):
     
     def process_event(self,cmd,value,ip,member_info):
         if "HELO_INFO" in cmd or "HELO_DICT" in cmd:
+            if self.w == None:
+                return
             self.w.updateInfoTable()
             self.w.update_dropdown_members()
         if cmd=="HELO_BUGREPORT_DESCR":
@@ -77,6 +81,8 @@ class maintainer(iface_gui_plugin):
             subprocess.call(["notify-send", name, "new bug report"])            
                
         elif cmd.startswith("HELO_LOGFILE"):
+            if self.w == None:
+                return
             #someone will send me his logfile on tcp
             file_size=int(value.strip())
             if not os.path.exists(get_settings().main_config_dir+"/logs"):
