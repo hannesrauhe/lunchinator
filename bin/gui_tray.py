@@ -5,15 +5,15 @@
 #this script can be used to start the lunchinator as GTK tray icon without self-updating functionality
 
 import __preamble
-from lunchinator.gui_general import *
-from lunchinator.lunch_settings import lunch_options_parser
-from lunchinator import get_server
-from PyQt4.QtGui import QMenu, QSystemTrayIcon, QApplication, QIcon, QMainWindow
-from PyQt4.QtCore import QPoint
-from PyQt4 import QtCore
-from functools import partial
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.gui_general import lunchinator
+from lunchinator import get_settings, get_server
+from lunchinator.lunch_settings import lunch_options_parser
+from PyQt4.QtGui import QSystemTrayIcon, QIcon, QApplication
+import sys
+
+import signal
+signal.signal(signal.SIGINT, signal.SIG_DFL)
     
 if __name__ == "__main__":
     (options, args) = lunch_options_parser().parse_args()
@@ -38,11 +38,4 @@ if __name__ == "__main__":
     
     lanschi.start()
     get_server().init_done.connect(serverInitialized)
-    
-    retCode = 0
-    try:
-        retCode = app.exec_()
-    finally:
-        lanschi.stop_server(None)
-        sys.exit(retCode)
-    
+    sys.exit(app.exec_())

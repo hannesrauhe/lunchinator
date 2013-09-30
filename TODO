@@ -4,4 +4,3 @@
 - maintainer: are threads destroyed?
 - thread safety in lunch_server durch signals
 - unicode support
-- CTRL-C
