@@ -61,7 +61,7 @@ class LunchinatorWindow(QMainWindow):
         
         # select previously selected widget
         index = 0
-        if get_settings().last_gui_plugin_index < len(self.nb) and get_settings().last_gui_plugin_index >= 0:
+        if get_settings().last_gui_plugin_index < self.nb.count() and get_settings().last_gui_plugin_index >= 0:
             index = get_settings().last_gui_plugin_index
         
         self.nb.setCurrentIndex(index)
@@ -77,7 +77,7 @@ class LunchinatorWindow(QMainWindow):
     def closeEvent(self, *args, **kwargs):
         try:
             order = []
-            for i in range(len(self.nb)):
+            for i in range(self.nb.count()):
                 order.append(self.nb.tabText(i))
             for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
                 # store sort order

@@ -61,9 +61,9 @@ class lunchinator(QThread):
             d = QMessageBox(QMessageBox.Critical, "Error adding host", "Cannot add host: Hostname unknown", QMessageBox.Ok, w)
             d.exec_()
             
-    def init_menu(self):        
+    def init_menu(self, parent):        
         #create the plugin submenu
-        menu = QMenu()
+        menu = QMenu(parent)
         plugin_menu = QMenu("PlugIns", menu)
         
         allPlugins= self.getPlugins(['general','called','gui'])

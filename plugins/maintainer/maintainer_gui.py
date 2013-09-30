@@ -80,6 +80,8 @@ class maintainer_gui(object):
         widget = QWidget(parent)
         layout = QVBoxLayout(widget)
         
+        self.entry = QTextEdit(widget)
+        
         self.update_reports()
         self.dropdown_reports = QComboBox(widget)
         for r in self.bug_reports:
@@ -96,7 +98,6 @@ class maintainer_gui(object):
 
         layout.addWidget(QLabel("Description:", widget))
         
-        self.entry = QTextEdit(widget)
         self.entry.setLineWrapMode(QTextEdit.WidgetWidth)
         self.entry.setReadOnly(True)
         layout.addWidget(self.entry)
