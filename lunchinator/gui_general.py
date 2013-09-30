@@ -136,7 +136,9 @@ class lunchinator(QThread):
     def disable_auto_update(self):
         get_settings().auto_update=False
                   
-    def quit(self,w): 
+    def quit(self,w):
+        if self.mainWindow != None and self.mainWindow.isVisible():
+            self.mainWindow.close()
         self.stop_server(w)
         os._exit(0)     
       
