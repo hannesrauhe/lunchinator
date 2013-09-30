@@ -168,8 +168,11 @@ class lunch_server(QObject):
         if os.path.exists(get_settings().members_file):
             f = open(get_settings().members_file,'r')    
             for hostn in f.readlines():
+                hostn = hostn.strip()
+                if len(hostn) == 0:
+                    continue
                 try:
-                    ip = socket.gethostbyname(hostn.strip())
+                    ip = socket.gethostbyname(hostn)
                     self.append_member(ip, hostn, False)
                 except:
                     log_warning("cannot find host specified in members_file by %s with name %s"%(get_settings().members_file,hostn))
