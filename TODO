@@ -1,6 +1,5 @@
 - Problem when launching start_lunchinator and there is no .lunchinator directory
 - Problem when the members cfg is empty (division by zero)
 - maintainer: log dropdown: leeren Eintrag einf�gen, Auswahl beibehalten
-- maintainer: are threads destroyed?
-- thread safety in lunch_server durch signals
+- thread safety in lunch_server through signals
 - unicode support

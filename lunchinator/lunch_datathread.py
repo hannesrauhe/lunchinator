@@ -3,8 +3,8 @@ from lunchinator import log_exception
 from PyQt4.QtCore import QThread, pyqtSignal
 
 class DataThreadBase(QThread):
-    successfullyTransferred = pyqtSignal(str)
-    errorOnTransfer = pyqtSignal()
+    successfullyTransferred = pyqtSignal(QThread, str)
+    errorOnTransfer = pyqtSignal(QThread)
         
     def __init__(self, parent, file_path, tcp_port):
         super(DataThreadBase, self).__init__(parent)
@@ -81,10 +81,10 @@ class DataReceiverThread(DataThreadBase):
                 self._receiveFile()
             else:
                 raise Exception("Sender is not allowed to send file:",addr[0],", expected:",self.sender)
-            self.successfullyTransferred.emit(self.file_path)
+            self.successfullyTransferred.emit(self, self.file_path)
         except:
             log_exception("I caught something unexpected when trying to receive file",self.file_path, sys.exc_info()[0])
-            self.errorOnTransfer.emit()
+            self.errorOnTransfer.emit(self)
         
         if self.con:    
             self.con.close()

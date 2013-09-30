@@ -17,7 +17,7 @@ class maintainer_gui(QObject):
         self.dropdown_members_model = None
         self.visible = False      
         
-    def cb_log_transfer_success(self, path):
+    def cb_log_transfer_success(self, thread, path):
         if not self.visible:
             return False
         
@@ -29,11 +29,13 @@ class maintainer_gui(QObject):
         except Exception as e:
             fcontent = "File not ready: %s"%str(e)
         self.log_area.setText(fcontent)
+        thread.deleteLater()
     
-    def cb_log_transfer_error(self):
+    def cb_log_transfer_error(self, thread):
         if not self.visible:
             return False
         self.log_area.setText("Error while getting log")
+        thread.deleteLater()
         
     def update_reports(self):
         mode="open"

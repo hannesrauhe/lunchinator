@@ -390,10 +390,17 @@ class lunch_server(QObject):
     
     def send_file_callback(self, addr, fileToSend, other_tcp_port):
         ds = DataSenderThread(self,addr,fileToSend, other_tcp_port)
+        ds.successfullyTransferred.connect(self.threadFinished)
+        ds.errorOnTransfer.connect(self.threadFinished)
         ds.start()
+    
+    def threadFinished(self, thread, _):
+        thread.deleteLater()
     
     def receive_file_callback(self, addr, file_size, file_name):
         dr = DataReceiverThread(self,addr,file_size,file_name,get_settings().tcp_port)
+        dr.successfullyTransferred.connect(self.threadFinished)
+        dr.errorOnTransfer.connect(self.threadFinished)
         dr.start()
         
     def process_event_callback(self, cmd,value,addr):
