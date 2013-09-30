@@ -25,11 +25,13 @@ class lunchinator(QThread):
     def serverInitialized(self):
         messagesModel = MessagesTableModel(get_server())
         messagesProxyModel = QSortFilterProxyModel(get_server())
+        messagesProxyModel.setDynamicSortFilter(True)
         messagesProxyModel.setSourceModel(messagesModel)
         self.mainWindow.messagesTable.setModel(messagesProxyModel)
         
         membersModel = MembersTableModel(get_server())
         membersProxyModel = QSortFilterProxyModel(get_server())
+        membersProxyModel.setDynamicSortFilter(True)
         membersProxyModel.setSourceModel(membersModel)
         self.mainWindow.membersTable.setModel(membersProxyModel)
         timeoutTimer = QTimer(membersModel)
