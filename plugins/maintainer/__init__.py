@@ -8,7 +8,7 @@ import time,subprocess
 class maintainer(iface_gui_plugin):
     def __init__(self):
         super(maintainer, self).__init__()
-        self.options = [(("db_connect", "Which db connection to use (if any)"),"default")]
+        self.options = [(("db_connect", "Which db connection to use (leave empty for default)"),"")]
         self.recorded_reports = []
         self.w = maintainer_gui(self)
         

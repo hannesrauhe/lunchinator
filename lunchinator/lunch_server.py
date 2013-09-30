@@ -64,7 +64,7 @@ class lunch_server(object):
                 if None==conn_name:
                     conn=pluginInfo.plugin_object
                     break
-                if conn_name in pluginInfo.plugin_object.get_available_connections():
+                if conn_name in pluginInfo.plugin_object.get_connections():
                     conn=pluginInfo.plugin_object
                     conn.switch_connection(conn_name)                    
                     break

@@ -225,9 +225,6 @@ class iface_database_plugin(iface_plugin):
         self.active_connection=""
     
     def activate(self):
-        """
-        Call the parent class's activation method
-        """
         iface_plugin.activate(self)
         self.default_connection_name = self.db_type+"_default"
         
@@ -235,11 +232,13 @@ class iface_database_plugin(iface_plugin):
         #TODO: do this for every connection saved in config
         av_conn = self.default_connection_name
         self.create_connection(av_conn)
+        
+        self.active_connection=self.default_connection_name
 
     def deactivate(self):
-        """
-        Just call the parent class's method
-        """
+        for c in self.get_connections():
+            self.switch_connection(c)
+            self._close()
         iface_plugin.deactivate(self)
         
     def get_connections(self):
