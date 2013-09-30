@@ -63,7 +63,7 @@ class lunch_settings(object):
         
         #insert plugin folders into path
         for aDir in self.plugin_dirs:
-            sys.path.append(aDir)
+            sys.path.insert(0, aDir)
         
         ''' not in files'''    
         self.next_lunch_begin = None

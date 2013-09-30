@@ -23,7 +23,7 @@ if __name__ == "__main__":
     
     def serverInitialized():
         lanschi.serverInitialized()
-        icon = QIcon(get_settings().lunchdir+"/images/qt.png")
+        icon = QIcon(get_settings().lunchdir+"/images/lunch.svg")
         statusicon = QSystemTrayIcon(icon, mainWindow)
         contextMenu = lanschi.init_menu(mainWindow)
         statusicon.setContextMenu(contextMenu)
