@@ -1,8 +1,8 @@
 #!/usr/bin/python
 from lunch_datathread import DataSenderThread, DataReceiverThread
-from iface_plugins import PluginManagerSingleton, iface_called_plugin, iface_general_plugin, iface_gui_plugin
-from time import strftime, localtime, time, mktime
-import socket,sys,os,json
+from iface_plugins import *
+from time import strftime, localtime, time, mktime, gmtime
+import socket,subprocess,sys,os,ctypes,getpass,json,logging
 from PyQt4.QtCore import pyqtSignal, QObject, QString
 
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
@@ -47,6 +47,7 @@ class lunch_server(QObject):
         self.plugin_manager = None
         self.no_updates = False
         self.with_plugins = True
+        self.own_ip = "0.0.0.0"
         
         self.exitCode = 0  
         self.read_config()
@@ -55,13 +56,15 @@ class lunch_server(QObject):
             ConfigurablePluginManager,
         ])
         self.plugin_manager = PluginManagerSingleton.get()
+        #logging.getLogger('yapsy').setLevel(logging.DEBUG)
         self.plugin_manager.app = self
         self.plugin_manager.setConfigParser(get_settings().config_file,get_settings().write_config_to_hd)
         self.plugin_manager.setPluginPlaces(get_settings().plugin_dirs)
         self.plugin_manager.setCategoriesFilter({
            "general" : iface_general_plugin,
            "called" : iface_called_plugin,
-           "gui" : iface_gui_plugin
+           "gui" : iface_gui_plugin,
+           "db" : iface_database_plugin
            }) 
         self.shared_dict = {} #for plugins
         
@@ -82,6 +85,22 @@ class lunch_server(QObject):
     
     def _memberRemoved(self, index):
         self.memberRemoved.emit(index)
+
+    def getDBConnection(self,db_name=None):
+        if None!=db_name:
+            pluginInfo = self.plugin_manager.getPluginByName(db_name, "db")
+            if pluginInfo and pluginInfo.plugin_object.is_activated:
+                return pluginInfo.plugin_object
+            log_error("No DB connection for %s available, falling back to default"%db_name)
+        
+        for pluginInfo in self.plugin_manager.getPluginsOfCategory("db"):
+            if pluginInfo.plugin_object.is_activated:
+                return pluginInfo.plugin_object
+        log_error("No DB Connection available - activate a db plugin and check settings")
+        return None
+    
+    def getOwnIP(self):
+        return self.own_ip
         
     def is_now_in_time_span(self,begin,end):
         try:
@@ -503,6 +522,14 @@ class lunch_server(QObject):
             
             
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        #getting your IP address is hard...:
+        socket.gethostbyname(socket.gethostname()) #may return something like 127.* or 0.*
+        if self.own_ip.startswith("127.") or self.own_ip.startswith("0."):
+            self.own_ip = socket.gethostbyname(socket.getfqdn())        
+        if self.own_ip.startswith("127.") or self.own_ip.startswith("0."):
+            log_error("IP address could not be determined, so I'm using your hostname, some things might not work correctly (e.g., statistics)")
+            self.own_ip = socket.gethostname()[:15]
+            
         try: 
             s.bind(("", 50000)) 
             s.settimeout(5.0)
@@ -513,7 +540,6 @@ class lunch_server(QObject):
                 try:
                     daten, addr = s.recvfrom(1024)
                     daten = daten.decode('utf-8')
-                    
                     if not addr[0].startswith("127."):
                         self.member_timeout[addr[0]]=time()
                         if not addr[0] in self.members:
@@ -553,7 +579,6 @@ class lunch_server(QObject):
                 s.close()  
             except:
                 log_warning("Wasn't able to send the leave call and close the socket...")
-            log_info("Lunchinator stopped")                  
             log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service")
 #            self.write_config_to_hd()
             for pluginInfo in self.plugin_manager.getAllPlugins():

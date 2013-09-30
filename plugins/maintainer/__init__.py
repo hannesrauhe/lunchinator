@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import *
 from maintainer_gui import *
-from lunchinator import log_debug, log_info, log_critical
+from lunchinator import log_debug, log_info, log_critical, log_error, get_settings, get_server
 from lunchinator.lunch_datathread import DataReceiverThread
 import os
 
@@ -9,36 +9,13 @@ import subprocess
 class maintainer(iface_gui_plugin):
     def __init__(self):
         super(maintainer, self).__init__()
-        self.options = [(("use_different_db", "Use specific HANA instance"),False),
-                        (("hana_server", "HANA Server"),""),
-                        (("hana_port", "Port for HANA DB") ,30015),
-                        (("hana_user", "HANA User Name"),""),
-                        (("hana_pass", "Password for HANA User"),"")]
-        self.stats = None
+        self.options = [(("db_connect", "Which db connection to use (leave empty for default)"),"")]
         self.recorded_reports = []
         self.dbPluginErrorPrinted = False
         self.w = None
         
-    def getDB(self):
-        if self.options["use_different_db"]:
-            if self.stats == None:
-                try:
-                    from database_connection.stat_db import hdb_stat_db
-                    self.stats = hdb_stat_db()
-                    self.stats.connect(self.options["hana_server"],self.options["hana_port"],self.options["hana_user"],self.options["hana_pass"])
-                except ImportError:
-                    if not self.dbPluginErrorPrinted:
-                        log_warning("database plugin not available")
-                        self.dbPluginErrorPrinted = True
-            return self.stats
-        else:
-            dbplugin = PluginManagerSingleton.get().getPluginByName("Database Connection", "general")
-            if dbplugin == None:
-                return None
-            return dbplugin.plugin_object.stats
-        
     def getBugsFromDB(self,mode="open"):
-        stats = self.getDB()
+        stats = get_server().getDBConnection(self.options["db_connect"])
         if stats == None:
             log_error("Maintainer Plugin: Cannot read old bug reports, no DB Connection.")
             return []
@@ -49,9 +26,6 @@ class maintainer(iface_gui_plugin):
         iface_gui_plugin.activate(self)  
         
     def deactivate(self):
-        if self.stats != None:
-            self.stats.close()
-            self.stats= None
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):

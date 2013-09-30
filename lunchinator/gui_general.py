@@ -83,7 +83,7 @@ class lunchinator(QThread):
         menu = QMenu(parent)
         plugin_menu = QMenu("PlugIns", menu)
         
-        allPlugins= self.getPlugins(['general','called','gui'])
+        allPlugins= self.getPlugins(['general','called','gui','db'])
         for pluginName in sorted(allPlugins.iterkeys()):
             anAction = plugin_menu.addAction(pluginName)
             anAction.setCheckable(True)
