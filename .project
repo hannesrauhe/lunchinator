@@ -3,6 +3,7 @@
 	<name>lunch_notifier</name>
 	<comment></comment>
 	<projects>
+		<project>lunchinator_plugins</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

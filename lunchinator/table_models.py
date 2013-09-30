@@ -19,6 +19,7 @@ class TableModelBase(QStandardItemModel):
         
     def createItem(self, key, column):
         item = QStandardItem()
+        item.setEditable(False)
         self.columns[column][1](key, item)
         item.setData(QSize(0, 20), Qt.SizeHintRole)
         return item

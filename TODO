@@ -2,10 +2,8 @@
 - Problem when the members cfg is empty (division by zero)
 - 0.0.0.0 (empty string) aus members entfernen
 - member info updated -> update messages first column
-- maintainet: log dropdown: leeren Eintrag einf�gen
+- maintainer: log dropdown: leeren Eintrag einf�gen, Auswahl beibehalten
 - maintainer: are threads destroyed?
 - thread safety in lunch_server durch signals
-- Tabellen nicht editierbar
-- Sortierung aktualisieren
 - unicode support
 - CTRL-C

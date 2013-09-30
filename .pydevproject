@@ -4,7 +4,18 @@
 <pydev_project>
 <pydev_pathproperty name="org.python.pydev.PROJECT_SOURCE_PATH">
 <path>/lunch_notifier</path>
+<path>/lunch_notifier/bin</path>
+<path>/lunch_notifier/plugins/avatar</path>
+<path>/lunch_notifier/plugins/bug_report</path>
+<path>/lunch_notifier/plugins/maintainer</path>
+<path>/lunch_notifier/plugins/rot13</path>
+<path>/lunch_notifier/plugins/tdtnotify</path>
+<path>/lunch_notifier/plugins/twitter_status</path>
+<path>/lunch_notifier/plugins</path>
 </pydev_pathproperty>
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_VERSION">python 2.7</pydev_property>
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_INTERPRETER">Default</pydev_property>
+<pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
+<path>/home/corny/.lunchinator/plugins</path>
+</pydev_pathproperty>
 </pydev_project>
