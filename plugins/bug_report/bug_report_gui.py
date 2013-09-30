@@ -1,8 +1,10 @@
 from PyQt4.QtGui import QLabel, QWidget, QVBoxLayout, QPushButton, QTextEdit
+from PyQt4.QtCore import QObject
 from lunchinator import get_server
 
-class bug_report_gui(object):
-    def __init__(self):
+class bug_report_gui(QObject):
+    def __init__(self, parent):
+        super(bug_report_gui, self).__init__(parent)
         self.entry = None
         self.but = None
         
@@ -31,4 +33,4 @@ class bug_report_gui(object):
 
 if __name__ == '__main__':
     from lunchinator.iface_plugins import iface_gui_plugin
-    iface_gui_plugin.run_standalone(bug_report_gui())
+    iface_gui_plugin.run_standalone(bug_report_gui(None))

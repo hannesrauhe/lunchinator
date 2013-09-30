@@ -1,8 +1,10 @@
 import string #fixed typo was using
 from PyQt4.QtGui import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QLineEdit
+from PyQt4.QtCore import QObject
 
-class rot13box(object):
-    def __init__(self):
+class rot13box(QObject):
+    def __init__(self, parent):
+        super(rot13box, self).__init__(parent)
         self.entry = None
         self.but = None
         self.add_widget = None
@@ -53,5 +55,5 @@ class rot13box(object):
     
 if __name__ == "__main__":
     from lunchinator.iface_plugins import iface_gui_plugin
-    iface_gui_plugin.run_standalone(rot13box())
+    iface_gui_plugin.run_standalone(rot13box(None))
     
