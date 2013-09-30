@@ -47,18 +47,18 @@ class lunch_settings(object):
     
     def __init__(self):
         '''unchangeable for now'''
-        self.main_config_dir = os.getenv("HOME")+"/.lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+"/.lunchinator"
-        self.members_file = self.main_config_dir+"/lunch_members.cfg"
-        self.messages_file = self.main_config_dir+"/messages"
-        self.log_file = self.main_config_dir+"/lunchinator.log"
-        self.avatar_dir = self.main_config_dir+"/avatars/"
+        self.main_config_dir = os.getenv("HOME")+os.path.sep+".lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+os.path.sep+".lunchinator"
+        self.members_file = self.main_config_dir+os.path.sep+"lunch_members.cfg"
+        self.messages_file = self.main_config_dir+os.path.sep+"messages"
+        self.log_file = self.main_config_dir+os.path.sep+"lunchinator.log"
+        self.avatar_dir = self.main_config_dir+os.path.sep+"avatars"+os.path.sep
         self.version = "unknown"
         self.version_short = "unknown"
         self.commit_count = "0"
         self.commit_count_plugins = "-1"
         self.lunchdir = sys.path[0]
-        self.internal_plugin_dir = self.lunchdir+"/plugins"
-        self.external_plugin_dir = self.main_config_dir+"/plugins"
+        self.internal_plugin_dir = self.lunchdir+os.path.sep+"plugins"+os.path.sep
+        self.external_plugin_dir = self.main_config_dir+os.path.sep+"plugins"
         self.plugin_dirs = [self.internal_plugin_dir, self.external_plugin_dir]
         
         #insert plugin folders into path
@@ -68,7 +68,7 @@ class lunch_settings(object):
         ''' not in files'''    
         self.next_lunch_begin = None
         self.next_lunch_end = None
-        self.audio_file = self.lunchdir+"/sounds/sonar.wav"
+        self.audio_file = self.lunchdir+os.path.sep+"sounds"+os.path.sep+"sonar.wav"
         self.user_name = ""
         self.avatar_file = ""    
         self.debug = False 

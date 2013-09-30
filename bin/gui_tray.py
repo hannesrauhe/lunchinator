@@ -10,7 +10,7 @@ from lunchinator.gui_general import lunchinator
 from lunchinator import get_settings, get_server
 from lunchinator.lunch_settings import lunch_options_parser
 from PyQt4.QtGui import QSystemTrayIcon, QIcon, QApplication
-import sys
+import sys,os,platform
 
 import signal
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -23,7 +23,10 @@ if __name__ == "__main__":
     
     def serverInitialized():
         lanschi.serverInitialized()
-        icon = QIcon(get_settings().lunchdir+"/images/lunch.svg")
+        icon_file = get_settings().lunchdir+os.path.sep+"images"+os.path.sep+"qt.png"
+        if platform.system()=="Windows":
+            get_settings().lunchdir+os.path.sep+"images"+os.path.sep+"lunch.svg"
+        icon = QIcon(icon_file)
         statusicon = QSystemTrayIcon(icon, mainWindow)
         contextMenu = lanschi.init_menu(mainWindow)
         statusicon.setContextMenu(contextMenu)
