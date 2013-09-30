@@ -74,7 +74,7 @@ class LunchinatorWindow(QMainWindow):
         if self.guiHandler != None:
             self.guiHandler.clicked_add_host(w)
         
-    def closeEvent(self, *args, **kwargs):
+    def closeEvent(self, closeEvent):
         try:
             order = []
             for i in range(self.nb.count()):
@@ -91,10 +91,9 @@ class LunchinatorWindow(QMainWindow):
                 get_settings().set_last_gui_plugin_index(self.nb.currentIndex())
         except:
             log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
-        self.nb = None
         
         self.guiHandler.window_msgClosed(self)
-        QMainWindow.closeEvent(self, *args, **kwargs)     
+        QMainWindow.closeEvent(self, closeEvent)     
         
     def centerOnScreen(self):
         r = self.geometry()
