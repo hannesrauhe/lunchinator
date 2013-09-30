@@ -56,7 +56,7 @@ class maintainer_gui(QObject):
 
     def get_selected_log_member(self):
         member = str(self.dropdown_members.currentText())
-        if member == None:
+        if member == None or len(member) == 0:
             return None
         
         if "(" in member:
@@ -135,7 +135,8 @@ class maintainer_gui(QObject):
                 info = self.dropdown_members_dict[m_ip]
                 if m_name != info[1]:
                     #name has changed
-                    self.dropdown_members_model.setItem(info[0], 0, QStandardItem(self.get_dropdown_member_text(m_ip, m_name)))
+                    anItem = self.dropdown_members_model.item(info[0], column=0)
+                    anItem.setText(self.get_dropdown_member_text(m_ip, m_name))
                     self.dropdown_members_dict[m_ip] = (info[0], m_name)
                     
     def create_logs_widget(self, parent):
@@ -144,6 +145,7 @@ class maintainer_gui(QObject):
         
         self.dropdown_members_dict = {}
         self.dropdown_members_model = QStandardItemModel()
+        self.dropdown_members_model.appendRow(QStandardItem(""))
         self.dropdown_members = QComboBox(widget)
         self.dropdown_members.setModel(self.dropdown_members_model)
         self.update_dropdown_members()
