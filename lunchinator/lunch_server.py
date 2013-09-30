@@ -57,20 +57,18 @@ class lunch_server(object):
         self.init_done = threading.Event()
         self.shared_dict = {} #for plugins
         
-    def getDBConnection(self,conn_name=None):
-        conn=None
+    def getDBConnection(self,db_name=None):
+        if None!=db_name:
+            pluginInfo = self.plugin_manager.getPluginByName(db_name, "db")
+            if pluginInfo and pluginInfo.plugin_object.is_activated:
+                return pluginInfo.plugin_object
+            log_error("No DB connection for %s available, falling back to default"%db_name)
+        
         for pluginInfo in self.plugin_manager.getPluginsOfCategory("db"):
-            try:
-                if None==conn_name:
-                    conn=pluginInfo.plugin_object
-                    break
-                if conn_name in pluginInfo.plugin_object.get_connections():
-                    conn=pluginInfo.plugin_object
-                    conn.switch_connection(conn_name)                    
-                    break
-            except:
-                log_exception("plugin error in %s while choosing DB Connection %s: %s"%(pluginInfo.name, conn_name, str(sys.exc_info())))
-        return conn
+            if pluginInfo.plugin_object.is_activated:
+                return pluginInfo.plugin_object
+        log_error("No DB Connection available - activate a db plugin and check settings")
+        return None
     
     def getOwnIP(self):
         return self.own_ip
