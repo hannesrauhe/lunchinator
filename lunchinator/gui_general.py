@@ -41,9 +41,14 @@ class lunchinator(QThread):
         
         self.mainWindow.serverInitialized()
         get_server().messagePrepended.connect(messagesModel.externalRowPrepended)
+        
         get_server().memberAppended.connect(membersModel.externalRowAppended)
+        get_server().memberAppended.connect(messagesModel.updateSenders)
         get_server().memberUpdated.connect(membersModel.externalRowUpdated)
+        get_server().memberUpdated.connect(messagesModel.updateSenders)
         get_server().memberRemoved.connect(membersModel.externalRowRemoved)
+        get_server().memberRemoved.connect(messagesModel.updateSenders)
+        
     
     def run(self):
         get_server().start_server()

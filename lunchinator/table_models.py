@@ -137,6 +137,9 @@ class MessagesTableModel(TableModelBase):
     
     def _updateMessageItem(self, m, item):
         item.setText(m[2])
+        
+    def updateSenders(self, _ = None):
+        self.updateColumn(1)
     
     def keys(self):
         return self.dataSource.get_last_msgs()

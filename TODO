@@ -1,7 +1,5 @@
 - Problem when launching start_lunchinator and there is no .lunchinator directory
 - Problem when the members cfg is empty (division by zero)
-- 0.0.0.0 (empty string) aus members entfernen
-- member info updated -> update messages first column
 - maintainer: log dropdown: leeren Eintrag einf�gen, Auswahl beibehalten
 - maintainer: are threads destroyed?
 - thread safety in lunch_server durch signals
