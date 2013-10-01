@@ -299,6 +299,11 @@ class iface_database_plugin(iface_plugin):
         
     def _conn(self):
         return self._connection
+        
+    def commit(self):
+        if self._conn():
+            self._conn().commit()
+        #raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
     '''abstract methods - basic functionality'''
     def _open(self):
@@ -308,9 +313,6 @@ class iface_database_plugin(iface_plugin):
         raise  NotImplementedError("%s does not implement the close method"%self.db_type)
             
     def _execute(self, query, wildcards, returnResults=True, commit=False):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-        
-    def commit(self):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
     def existsTable(self, tableName):

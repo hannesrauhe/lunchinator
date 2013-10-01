@@ -23,7 +23,7 @@ class panic_button(iface_general_plugin):
         log_info("Stopping panic button listener")
         if self.panic_thread:
             self.panic_thread.stop_daemon()
-            self.panic_thread.join()
+            #TODO: self.panic_thread.join()
         iface_general_plugin.deactivate(self)
     
 class panic_button_listener(QThread):
