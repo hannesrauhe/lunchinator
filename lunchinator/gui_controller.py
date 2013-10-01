@@ -1,16 +1,12 @@
-import sys,types
+import sys
 from lunchinator import get_server, log_exception, log_info, get_settings,\
     log_error
-import time, socket,logging,os
+import socket,os
 import platform
-import urllib2
-import traceback    
-from StringIO import StringIO   
 from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QSortFilterProxyModel, QAction, QSystemTrayIcon, QIcon
-from PyQt4.QtCore import Qt, QThread, QTimer, pyqtSignal, pyqtSlot, QObject
-from PyQt4 import QtCore
+from PyQt4.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot, QObject
 from functools import partial
-from lunchinator.lunch_datathread import DataReceiverThread, DataSenderThread
+from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
@@ -285,14 +281,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
     @pyqtSlot(unicode, unicode, unicode)
     def processEventSlot(self, cmd, value, addr):
-        cmd = cmd.toUtf8()
-        value = value.toUtf8()
-        addr = addr.toUtf8()
-        
         member_info = {}
-        if self.member_info.has_key(addr):
-            member_info = self.member_info[addr]
-        for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
+        if get_server().member_info.has_key(addr):
+            member_info = get_server().member_info[addr]
+        for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("called")+get_server().plugin_manager.getPluginsOfCategory("gui"):
             if pluginInfo.plugin_object.is_activated:
                 try:
                     pluginInfo.plugin_object.process_event(cmd,value,addr,member_info)
