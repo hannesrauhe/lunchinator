@@ -1,5 +1,4 @@
 from lunchinator.iface_plugins import iface_gui_plugin, PluginManagerSingleton
-from PyQt4.QtGui import QTextEdit
     
 class list_plugins(iface_gui_plugin):
     def __init__(self):
@@ -13,6 +12,7 @@ class list_plugins(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
+        from PyQt4.QtGui import QTextEdit
         textView = QTextEdit(parent)
         textView.setLineWrapMode(QTextEdit.WidgetWidth)
         textView.setReadOnly(True)

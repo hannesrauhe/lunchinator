@@ -7,3 +7,4 @@
 - PyQt, threading aus lunch_server extrahieren
 --> non_interactive
 - start_lunchinator durch gui_tray ersetzen, Kommandozeilenargumente
+- concurrent callbacks if possible

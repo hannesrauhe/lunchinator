@@ -1,9 +1,7 @@
-from lunchinator.iface_plugins import *
-from maintainer_gui import *
-from lunchinator import log_debug, log_info, log_critical, log_error, get_settings, get_server
-from lunchinator.lunch_datathread import DataReceiverThread
-import os
-
+from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator import log_debug, log_info, log_critical, log_error, get_settings, get_server,\
+    log_exception
+import os, time
 import subprocess    
 
 class maintainer(iface_gui_plugin):
@@ -20,7 +18,11 @@ class maintainer(iface_gui_plugin):
             log_error("Maintainer Plugin: Cannot read old bug reports, no DB Connection.")
             return []
         else:
-            return stats.getBugsFromDB(mode)
+            try:
+                return stats.getBugsFromDB(mode)
+            except:
+                log_exception("Could not get bug reports from database")
+                return []
         
     def activate(self):
         iface_gui_plugin.activate(self)  
@@ -29,6 +31,7 @@ class maintainer(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
+        from maintainer_gui import maintainer_gui
         iface_gui_plugin.create_widget(self, parent)
         self.w = maintainer_gui(parent, self)
         return self.w.create_widget(parent)
@@ -57,6 +60,7 @@ class maintainer(iface_gui_plugin):
         elif cmd.startswith("HELO_LOGFILE"):
             if self.w == None:
                 return
+            from lunchinator.lunch_datathread import DataReceiverThread
             #someone will send me his logfile on tcp
             file_size=int(value.strip())
             if not os.path.exists(get_settings().main_config_dir+"/logs"):

@@ -4,18 +4,6 @@ from optparse import OptionParser
 '''integrate the cli-parser into the default_config sooner or later'''
 from lunchinator import log_exception, log_warning, log_error,\
     log_info, setLoggingLevel
-class lunch_options_parser(object):
-    def parse_args(self):
-        usage = "usage: %prog [options]"
-        optionParser = OptionParser(usage = usage)
-        optionParser.add_option("-v", "--verbose",
-                          action = "store_true", dest = "verbose", default = False,
-                          help = "Enable verbose output")
-        optionParser.add_option("--autoUpdate",
-                          default = True, dest = "noUpdates", action = "store_false",
-                          help = "Automatically pull updates from Git.")
-        return optionParser.parse_args()
-
     
 class lunch_settings(object):
     _instance = None
@@ -60,6 +48,8 @@ class lunch_settings(object):
         self.internal_plugin_dir = self.lunchdir+os.path.sep+"plugins"+os.path.sep
         self.external_plugin_dir = self.main_config_dir+os.path.sep+"plugins"
         self.plugin_dirs = [self.internal_plugin_dir, self.external_plugin_dir]
+        self.load_plugins = True
+        self.load_gui_plugins = True
         
         #insert plugin folders into path
         for aDir in self.plugin_dirs:

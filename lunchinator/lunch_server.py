@@ -1,8 +1,7 @@
 #!/usr/bin/python
-from lunch_datathread import DataSenderThread, DataReceiverThread
-from iface_plugins import *
-from time import strftime, localtime, time, mktime, gmtime
-import socket,subprocess,sys,os,ctypes,getpass,json,logging
+from iface_plugins import iface_called_plugin, iface_database_plugin, iface_general_plugin, PluginManagerSingleton
+from time import strftime, localtime, time, mktime
+import socket,sys,os,json
 from threading import Lock
 
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
@@ -37,7 +36,6 @@ class lunch_server(object):
         self.member_info = {}
         self.plugin_manager = None
         self.no_updates = False
-        self.with_plugins = True
         self.own_ip = "0.0.0.0"
         self.messagesLock = Lock()
         
@@ -52,15 +50,19 @@ class lunch_server(object):
         self.plugin_manager.app = self
         self.plugin_manager.setConfigParser(get_settings().config_file,get_settings().write_config_to_hd)
         self.plugin_manager.setPluginPlaces(get_settings().plugin_dirs)
-        self.plugin_manager.setCategoriesFilter({
-           "general" : iface_general_plugin,
-           "called" : iface_called_plugin,
-           "gui" : iface_gui_plugin,
-           "db" : iface_database_plugin
-           }) 
+        if get_settings().load_plugins:
+            categoriesFilter = {
+               "general" : iface_general_plugin,
+               "called" : iface_called_plugin,
+               "db" : iface_database_plugin
+               }
+            if get_settings().load_gui_plugins:
+                from lunchinator.iface_plugins import iface_gui_plugin
+                categoriesFilter["gui"] = iface_gui_plugin
+            self.plugin_manager.setCategoriesFilter(categoriesFilter) 
         self.shared_dict = {} #for plugins
         
-        if self.with_plugins:
+        if get_settings().load_plugins:
             try:
                 self.plugin_manager.collectPlugins()
             except:

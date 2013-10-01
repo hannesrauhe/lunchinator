@@ -1,6 +1,5 @@
-from lunchinator.iface_plugins import *
-from lunchinator import get_server, get_settings, setLoggingLevel
-import logging
+from lunchinator.iface_plugins import iface_general_plugin
+from lunchinator import get_settings, log_warning
     
 class gui_settings(iface_general_plugin):
     def __init__(self):

@@ -1,9 +1,6 @@
 from lunchinator.iface_plugins import iface_called_plugin
 from twitter import *
-from lunchinator import get_server, log_info
-from lunchinator import log_warning, log_error, log_exception
-from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox
-from PyQt4.QtCore import Qt
+from lunchinator import get_server, log_info, log_warning, log_error, log_exception
 
 import os,sys,time,pprint
 
@@ -107,6 +104,8 @@ class twitter_status(iface_called_plugin):
                     self.twitter.statuses.update(status=reply[:140])
             
     def create_options_widget(self, parent):
+        from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox
+        from PyQt4.QtCore import Qt
         widget = QWidget(parent)
         w = super(twitter_status, self).create_options_widget(widget)
         layout = QVBoxLayout(widget)

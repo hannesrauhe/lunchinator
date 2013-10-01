@@ -1,8 +1,5 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from rot13 import rot13box
 from lunchinator import get_server, log_exception
-from PyQt4.QtGui import QImage, QPixmap, QLabel
-from PyQt4.QtCore import Qt
 
 class rot13(iface_gui_plugin):
     def __init__(self):
@@ -17,6 +14,10 @@ class rot13(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
+        from PyQt4.QtGui import QImage, QPixmap, QLabel
+        from PyQt4.QtCore import Qt
+        from rot13.rot13 import rot13box
+        
         w = rot13box(parent)
         if get_server().messagesCount() > 0:
             w.encodeText(get_server().getMessage(0)[2])

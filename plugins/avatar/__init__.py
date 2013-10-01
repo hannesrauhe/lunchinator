@@ -2,26 +2,8 @@ from lunchinator.iface_plugins import iface_general_plugin
 from avatar.l_avatar import l_avatar
 import mimetypes
 from lunchinator import get_server, get_settings, log_error
-from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox, QFileDialog, QSortFilterProxyModel, QImage, QPixmap
-from PyQt4.QtCore import Qt
 from functools import partial
 import os
-
-class FileFilterProxyModel(QSortFilterProxyModel):
-    MIME_TYPES = ["image/png", "image/jpeg", "image/gif"]
-    EXTENSIONS = ["png", "jpg", "jpeg", "jpe", "gif", "tif", "tiff", "xpm"]
-        
-    def filterAcceptsFile(self, path):
-        if os.path.isdir(path):
-            return True
-        mimeType = mimetypes.guess_type(path)
-        return mimeType in self.MIME_TYPES or path.split(".")[-1] in self.EXTENSIONS
-        
-    def filterAcceptsRow(self, sourceRow, sourceParent):
-        fileModel = self.sourceModel()
-        index0 = fileModel.index(sourceRow, 0, sourceParent)
-        path = str(fileModel.filePath(index0).toUtf8())
-        return self.filterAcceptsFile(path)
 
 class avatar(iface_general_plugin):
     def __init__(self):
@@ -38,14 +20,31 @@ class avatar(iface_general_plugin):
         pass    
     
     def _setImage(self, selectedFile, label):
-            qimg = QImage(selectedFile)
-            label.setPixmap(QPixmap.fromImage(qimg))
-            label.setToolTip(selectedFile)
+        from PyQt4.QtGui import QImage, QPixmap
+        qimg = QImage(selectedFile)
+        label.setPixmap(QPixmap.fromImage(qimg))
+        label.setToolTip(selectedFile)
     
     def parentWindow(self, w):
         return w if w.parentWidget() == None else self.parentWindow(w.parentWidget())
     
     def _chooseFile(self):  
+        from PyQt4.QtGui import QSortFilterProxyModel, QFileDialog
+        class FileFilterProxyModel(QSortFilterProxyModel):
+            MIME_TYPES = ["image/png", "image/jpeg", "image/gif"]
+            EXTENSIONS = ["png", "jpg", "jpeg", "jpe", "gif", "tif", "tiff", "xpm"]
+                
+            def filterAcceptsFile(self, path):
+                if os.path.isdir(path):
+                    return True
+                mimeType = mimetypes.guess_type(path)
+                return mimeType in self.MIME_TYPES or path.split(".")[-1] in self.EXTENSIONS
+                
+            def filterAcceptsRow(self, sourceRow, sourceParent):
+                fileModel = self.sourceModel()
+                index0 = fileModel.index(sourceRow, 0, sourceParent)
+                path = str(fileModel.filePath(index0).toUtf8())
+                return self.filterAcceptsFile(path)
         dialog = QFileDialog(self.parentWindow(self.label), "Choose Avatar Picture:")
         fileFilter = FileFilterProxyModel()
         dialog.setProxyModel(fileFilter)
@@ -63,6 +62,7 @@ class avatar(iface_general_plugin):
                 log_error("Selected invalid file: '%s' is of invalid type" % selectedFile)
     
     def create_options_widget(self, parent):
+        from PyQt4.QtGui import QLabel, QWidget, QVBoxLayout, QPushButton
         img_path = get_settings().get_avatar_dir()+get_settings().get_avatar_file()
         
         widget = QWidget(parent)

@@ -1,6 +1,5 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 import urllib2
-from PyQt4.QtGui import QTextEdit
     
 class lunch_menu(iface_gui_plugin):
     def __init__(self):
@@ -14,6 +13,7 @@ class lunch_menu(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
+        from PyQt4.QtGui import QTextEdit
         textview = QTextEdit(parent)
         textview.setLineWrapMode(QTextEdit.WidgetWidth)
         textview.setReadOnly(True)

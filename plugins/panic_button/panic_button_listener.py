@@ -1,39 +1,15 @@
-from lunchinator.iface_plugins import iface_general_plugin
-import usb
-from lunchinator import get_server, log_info, log_error
-from PyQt4.QtCore import QThread
-    
-class panic_button(iface_general_plugin):
-    panic_thread = None
-    
-    def __init__(self):
-        super(panic_button, self).__init__()
-        self.options={"idVendor":"0x1d34",
-                      "idProduct":"0x000d",
-                      "panic_msg":"lunch panic" }
-        
-    def activate(self):
-        iface_general_plugin.activate(self)
-        log_info("Starting panic button listener")
-        self.panic_thread = panic_button_listener(get_server(),self.options["idVendor"],self.options["idProduct"],self.options["panic_msg"])
-        self.panic_thread.start()
-        
-        
-    def deactivate(self):
-        log_info("Stopping panic button listener")
-        if self.panic_thread:
-            self.panic_thread.stop_daemon()
-            #TODO: self.panic_thread.join()
-        iface_general_plugin.deactivate(self)
-    
-class panic_button_listener(QThread):
+import usb, time
+from lunchinator import log_error, log_info, get_server
+from threading import Thread
+
+class panic_button_listener(Thread):
     idVendor = None
     idProduct = None
     running = True
     msg = "lunch panic"
     
-    def __init__(self,parent,idV,idP,msg):
-        super(panic_button_listener, self).__init__(parent)
+    def __init__(self,idV,idP,msg):
+        super(panic_button_listener, self).__init__()
         self.idVendor = idV
         self.idProduct = idP
         self.msg = msg      
@@ -85,7 +61,7 @@ class panic_button_listener(QThread):
                 # Sometimes this fails. Unsure why.
                 pass
         
-            QThread.msleep(endpoint.interval)
+            time.sleep(endpoint.interval / float(1000))
         
         handle.releaseInterface()
         

@@ -1,8 +1,6 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
 from lunchinator import log_warning, log_error
-from PyQt4.QtGui import QLabel, QWidget, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox
-from PyQt4.QtCore import Qt
 import types
 
 class iface_plugin(IPlugin):    
@@ -86,6 +84,8 @@ class iface_plugin(IPlugin):
                     log_error("could not convert value of",o,"from config to type",type(v),"(",new_v,") using default")
         
     def add_option_to_layout(self, parent, grid, i, o, v):
+        from PyQt4.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
+        from PyQt4.QtCore import Qt
         e = ""
         fillHorizontal = False
         if o[0] in self.option_choice:
@@ -115,6 +115,7 @@ class iface_plugin(IPlugin):
         self.option_widgets[o[0]]=e
         
     def create_options_widget(self, parent):
+        from PyQt4.QtGui import QWidget, QGridLayout
         if not self.options:
             return None
         optionsWidget = QWidget(parent)
@@ -139,6 +140,7 @@ class iface_plugin(IPlugin):
         return optionsWidget
     
     def save_data(self, set_value):
+        from PyQt4.QtCore import Qt
         if not self.option_widgets:
             return
         for o,e in self.option_widgets.iteritems():
