@@ -46,6 +46,7 @@ class twitter_status(iface_called_plugin):
                 get_server().call("HELO_TWITTER_REMOTE %s"%self.remote_account)
             except:
                 self.is_remote_account = False
+                self.twitter = None
                 log_exception("Authentication with twitter was unsuccessful. Check your key and secret. %s"%str(sys.exc_info()))
         else:
             self.is_remote_account = False
@@ -55,10 +56,9 @@ class twitter_status(iface_called_plugin):
         
     def process_message(self,msg,addr,member_info):
         pass
-
-            
+                
     def process_lunch_call(self,_,__,member_info):
-        if self.twitter:
+        if self.is_remote_account and self.twitter:
             statustxt = "Lunchtime!"
             if member_info and member_info.has_key("name"):
                 statustxt += " "+member_info["name"]
