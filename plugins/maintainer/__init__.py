@@ -31,7 +31,7 @@ class maintainer(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
-        from maintainer_gui import maintainer_gui
+        from maintainer.maintainer_gui import maintainer_gui
         iface_gui_plugin.create_widget(self, parent)
         self.w = maintainer_gui(parent, self)
         return self.w.create_widget(parent)
@@ -60,7 +60,7 @@ class maintainer(iface_gui_plugin):
         elif cmd.startswith("HELO_LOGFILE"):
             if self.w == None:
                 return
-            from lunchinator.lunch_datathread import DataReceiverThread
+            from lunchinator.lunch_datathread_qt import DataReceiverThread
             #someone will send me his logfile on tcp
             file_size=int(value.strip())
             if not os.path.exists(get_settings().main_config_dir+"/logs"):
