@@ -1,7 +1,7 @@
 import sys
 from lunchinator import get_server, log_exception, log_info, get_settings,\
     log_error
-import socket,os
+import socket,os,time
 import platform
 from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QSortFilterProxyModel, QAction, QSystemTrayIcon, QIcon
 from PyQt4.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot, QObject
@@ -28,7 +28,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _memberAppended = pyqtSignal(unicode, dict)
     _memberUpdated = pyqtSignal(unicode, dict)
     _memberRemoved = pyqtSignal(unicode)
-    _messagePrepended = pyqtSignal(float, unicode, unicode)
+    _messagePrepended = pyqtSignal(time.struct_time, list)
     _sendFile = pyqtSignal(unicode, unicode, int)
     _receiveFile = pyqtSignal(unicode, int, unicode)
     _processEvent = pyqtSignal(unicode, unicode, unicode)

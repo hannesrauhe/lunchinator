@@ -59,11 +59,11 @@ class LunchinatorWindow(QMainWindow):
         
     def clicked_send_msg(self, w):
         if self.guiHandler != None:
-            self.guiHandler.clicked_send_msg(w)
+            self.guiHandler.sendMessageClicked(None, w)
             
     def clicked_add_host(self, w):
         if self.guiHandler != None:
-            self.guiHandler.clicked_add_host(w)
+            self.guiHandler.addHostClicked(None, w)
         
     def closeEvent(self, closeEvent):
         try:
