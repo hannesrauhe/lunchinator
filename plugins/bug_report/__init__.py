@@ -11,7 +11,7 @@ class bug_report(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
-        from bug_report_gui import bug_report_gui
+        from bug_report.bug_report_gui import bug_report_gui
         w = bug_report_gui(parent)
         return w.create_widget(parent)
             
