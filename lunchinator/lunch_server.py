@@ -87,7 +87,7 @@ class lunch_server(QObject):
         self.memberRemoved.emit(index)
 
     def getDBConnection(self,db_name=None):
-        if None!=db_name:
+        if None!=db_name and ""!=db_name:
             pluginInfo = self.plugin_manager.getPluginByName(db_name, "db")
             if pluginInfo and pluginInfo.plugin_object.is_activated:
                 return pluginInfo.plugin_object
@@ -527,7 +527,7 @@ class lunch_server(QObject):
         if self.own_ip.startswith("127.") or self.own_ip.startswith("0."):
             self.own_ip = socket.gethostbyname(socket.getfqdn())        
         if self.own_ip.startswith("127.") or self.own_ip.startswith("0."):
-            log_error("IP address could not be determined, so I'm using your hostname, some things might not work correctly (e.g., statistics)")
+            log_warning("IP address could not be determined, so I'm using your hostname, some things might not work correctly (e.g., statistics)")
             self.own_ip = socket.gethostname()[:15]
             
         try: 
