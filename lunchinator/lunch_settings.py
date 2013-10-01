@@ -30,7 +30,7 @@ class lunch_settings(object):
         if path == None:
             path = self.lunchdir
         
-        call = ["git","--git-dir="+path+"/.git","--work-tree="+path+"/.git"]
+        call = ["git","--git-dir="+path+"/.git","--work-tree="+path]
         call = call + args
         
         fh = subprocess.PIPE    
@@ -90,22 +90,25 @@ class lunch_settings(object):
             os.makedirs(self.avatar_dir)
         
         try:
-            _, self.version, __ = self.runGitCommand(["log", "-1"], self.lunchdir)
+            _, self.version, __ = self.runGitCommand(["log", "-1"], self.lunchdir, quiet=False)
             for line in self.version.splitlines():
                 if line.startswith("Date:"):
-                    self.version_short = line[5:].strip()
-            
+                    self.version_short = line[5:].strip()            
+        except:
+            log_exception("git log could not be executed correctly - version information not available")
+        
+        try:    
             revListArgs = ["rev-list", "HEAD", "--count"]
-            _, cco, __ = self.runGitCommand(revListArgs, self.lunchdir)
+            _, cco, __ = self.runGitCommand(revListArgs, self.lunchdir, quiet=False)
             self.commit_count = cco.strip()
             
             if os.path.exists(self.external_plugin_dir):
-                retCode, cco, __ = self.runGitCommand(revListArgs, self.external_plugin_dir)
+                retCode, cco, __ = self.runGitCommand(revListArgs, self.external_plugin_dir, quiet=False)
                 if retCode == 0:
                     self.commit_count_plugins = cco.strip()
         except:
-            log_exception("git log could not be executed correctly - version information not available")
-            pass
+            log_exception("git rev-list could not be executed correctly - commit count information not available")
+            
         self.config_file = ConfigParser.SafeConfigParser()
         self.read_config_from_hd()
             
