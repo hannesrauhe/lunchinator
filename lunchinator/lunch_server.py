@@ -558,11 +558,7 @@ class lunch_server(object):
             except:
                 log_warning("Wasn't able to send the leave call and close the socket...")
             log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service")
-#            self.write_config_to_hd()
-            for pluginInfo in self.plugin_manager.getAllPlugins():
-                if pluginInfo.plugin_object.is_activated:
-                    pluginInfo.plugin_object.deactivate()
-            os._exit(self.exitCode)
+            self.controller.serverStopped()
             
     def lockMessages(self):
         self.messagesLock.acquire()

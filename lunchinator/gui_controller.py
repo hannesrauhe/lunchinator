@@ -28,6 +28,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _menu = None
     # ---- SIGNALS ----------------
     _initDone = pyqtSignal()
+    _serverStopped = pyqtSignal()
     _memberAppended = pyqtSignal(unicode, dict)
     _memberUpdated = pyqtSignal(unicode, dict)
     _memberRemoved = pyqtSignal(unicode)
@@ -86,12 +87,14 @@ class LunchinatorGuiController(QObject, LunchServerController):
         statusicon.show()
         
         # connect private signals
-        self._initDone.connect(self.serverInitialized)
+        self._initDone.connect(self.initDoneSlot)
+        self._serverStopped.connect(self.serverStoppedSlot)
         self._receiveFile.connect(self.receiveFileSlot)
         self._sendFile.connect(self.sendFileSlot)
         
         
-        self.serverThread = LunchServerThread(self, self).start()
+        self.serverThread = LunchServerThread(self, self)
+        self.serverThread.start()
         
     def getPlugins(self, cats):
         allPlugins = {}
@@ -104,6 +107,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     def initDone(self):
         self._initDone.emit()
+        
+    def serverStopped(self):
+        self._serverStopped.emit()
         
     def memberAppended(self, ip, infoDict):
         self._memberAppended.emit(ip, infoDict)
@@ -179,9 +185,16 @@ class LunchinatorGuiController(QObject, LunchServerController):
     """---------------------- SLOTS ------------------------------"""
     
     @pyqtSlot()
-    def serverInitialized(self):
+    def initDoneSlot(self):
         # TODO necessary?
         pass
+    
+    @pyqtSlot()
+    def serverStoppedSlot(self):
+        for pluginInfo in get_server().plugin_manager.getAllPlugins():
+            if pluginInfo.plugin_object.is_activated:
+                pluginInfo.plugin_object.deactivate()
+        QApplication.quit()
         
     @pyqtSlot(QAction, unicode, bool)
     def toggle_plugin(self,w,p_cat,new_state):

@@ -1,4 +1,5 @@
 """Base class for Lunch Server Controller classes"""
+from lunchinator import get_server
 class LunchServerController(object):
     def __init__(self):
         super(LunchServerController, self).__init__()
@@ -27,3 +28,7 @@ class LunchServerController(object):
     def processEvent(self, cmd, hostName, senderIP):
         pass
     
+    def serverStopped(self):
+        for pluginInfo in get_server().plugin_manager.getAllPlugins():
+            if pluginInfo.plugin_object.is_activated:
+                pluginInfo.plugin_object.deactivate()
