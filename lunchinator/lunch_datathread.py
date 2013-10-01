@@ -4,7 +4,7 @@ from PyQt4.QtCore import QThread, pyqtSignal
 
 class DataThreadBase(QThread):
     successfullyTransferred = pyqtSignal(QThread, str)
-    errorOnTransfer = pyqtSignal(QThread)
+    errorOnTransfer = pyqtSignal(QThread, str)
         
     def __init__(self, parent, file_path, tcp_port):
         super(DataThreadBase, self).__init__(parent)
@@ -84,7 +84,7 @@ class DataReceiverThread(DataThreadBase):
             self.successfullyTransferred.emit(self, self.file_path)
         except:
             log_exception("I caught something unexpected when trying to receive file",self.file_path, sys.exc_info()[0])
-            self.errorOnTransfer.emit(self)
+            self.errorOnTransfer.emit(self, None)
         
         if self.con:    
             self.con.close()

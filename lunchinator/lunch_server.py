@@ -3,7 +3,7 @@ from lunch_datathread import DataSenderThread, DataReceiverThread
 from iface_plugins import *
 from time import strftime, localtime, time, mktime, gmtime
 import socket,subprocess,sys,os,ctypes,getpass,json,logging
-from PyQt4.QtCore import pyqtSignal, QObject, QString
+from threading import Lock
 
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning
@@ -11,7 +11,7 @@ from lunchinator import log_debug, log_info, log_critical, get_settings, log_exc
 EXIT_CODE_UPDATE = 2
 EXIT_CODE_STOP = 3
         
-class lunch_server(QObject):
+class lunch_server(object):
     _instance = None
     
     @classmethod
@@ -20,20 +20,11 @@ class lunch_server(QObject):
             cls._instance = cls()
         return cls._instance
         
-    # ---- SIGNALS ----------------
-    init_done = pyqtSignal()
-    memberAppended = pyqtSignal()
-    memberUpdated = pyqtSignal(int)
-    memberRemoved = pyqtSignal(int)
-    messagePrepended = pyqtSignal()
-    sendFile = pyqtSignal(str, str, int)
-    receiveFile = pyqtSignal(str, int, str)
-    processEvent = pyqtSignal(str, str, str)
-    # -----------------------------
-        
     #TODO: if started with plugins: make sure they are deactivated when destroying lunchinator (destructor anyone?)
     def __init__(self):
         super(lunch_server, self).__init__()
+        self.controller = None
+        
         self.running = False
         self.update_request = False
         self.new_msg = False
@@ -48,6 +39,7 @@ class lunch_server(QObject):
         self.no_updates = False
         self.with_plugins = True
         self.own_ip = "0.0.0.0"
+        self.messagesLock = Lock()
         
         self.exitCode = 0  
         self.read_config()
@@ -68,23 +60,26 @@ class lunch_server(QObject):
            }) 
         self.shared_dict = {} #for plugins
         
-        self.sendFile.connect(self.send_file_callback)
-        self.receiveFile.connect(self.receive_file_callback)
-        self.processEvent.connect(self.process_event_callback)
+        if self.with_plugins:
+            try:
+                self.plugin_manager.collectPlugins()
+            except:
+                log_exception("problem when loading plugin: %s"%(str(sys.exc_info())))
+            
+            #always load these plugins
+            self.plugin_manager.activatePluginByName("General Settings", "general") 
+            self.plugin_manager.activatePluginByName("Notify", "called") 
+        else:
+            log_info("lunchinator initialised without plugins")  
         
-    def _memberAppended(self):
-        self.memberAppended.emit()
+    def _memberAppended(self, ip):
+        self.controller.memberAppended(ip, self.member_info[ip])
     
-    def _memberUpdated(self, index):
-        if type(index) in (str, unicode):
-            if not index in self.members:
-                log_error("Requested to update info for member %s but there is no member entry" % index)
-                return
-            index = self.members.index(index)
-        self.memberUpdated.emit(index)
+    def _memberUpdated(self, ip):
+        self.controller.memberUpdated(ip, self.member_info[ip])
     
-    def _memberRemoved(self, index):
-        self.memberRemoved.emit(index)
+    def _memberRemoved(self, ip):
+        self.controller.memberRemoved(ip)
 
     def getDBConnection(self,db_name=None):
         if None!=db_name:
@@ -158,6 +153,7 @@ class lunch_server(QObject):
     def read_config(self):              
         if len(self.members)==0:
             self.init_members_from_file()
+        # TODO lock messages? should not be necessary here
         if len(self.last_messages)==0:
             self.last_messages=self.init_messages_from_file()
     
@@ -178,9 +174,9 @@ class lunch_server(QObject):
         if not ip in self.members:
             self.members.append(ip)
             if inform:
-                self._memberAppended()
+                self._memberAppended(ip)
         elif inform:
-            self._memberUpdated(self.members.index(ip))
+            self._memberUpdated(ip)
             
     def init_members_from_file(self):
         members = []
@@ -224,16 +220,17 @@ class lunch_server(QObject):
     
     def write_messages_to_file(self):
         try:
-            if len(self.last_messages)>0:
-                f = open(get_settings().messages_file,'w')
-                f.truncate()
-                try:
+            if self.messagesCount()>0:
+                with open(get_settings().messages_file,'w') as f:
+                    f.truncate()
                     msg = []
-                    for m in self.last_messages:
-                        msg.append([mktime(m[0]),m[1],m[2]])
+                    self.messagesLock.acquire()
+                    try:
+                        for m in self.last_messages:
+                            msg.append([mktime(m[0]),m[1],m[2]])
+                    finally:
+                        self.messagesLock.release()
                     json.dump(msg,f)
-                finally:
-                    f.close();
         except:
             log_exception("Could not write messages to %s: %s"%(get_settings().messages_file, sys.exc_info()[0]))    
     
@@ -331,9 +328,8 @@ class lunch_server(QObject):
             elif cmd.startswith("HELO_LEAVE"):
                 #the sender tells me, that he is going
                 if addr[0] in self.members:
-                    leftMemberIndex = self.members.index(addr[0])
                     self.members.remove(addr[0])
-                    self._memberRemoved(leftMemberIndex)
+                    self._memberRemoved(addr[0])
                     self.write_members_to_file()
                 self.call("HELO_DICT "+json.dumps(self.createMembersDict()),client=addr[0])
                
@@ -348,7 +344,7 @@ class lunch_server(QObject):
                 
                 if len(file_name):
                     log_info("Receiving file of size %d on port %d"%(file_size,get_settings().tcp_port))
-                    self.receiveFile.emit(addr[0],file_size,file_name)
+                    self.controller.receiveFile(addr[0],file_size,file_name)
                 
             elif cmd.startswith("HELO_REQUEST_AVATAR"):
                 #someone wants my pic 
@@ -364,7 +360,7 @@ class lunch_server(QObject):
                     fileSize = os.path.getsize(fileToSend)
                     log_info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
                     self.call("HELO_AVATAR "+str(fileSize), addr[0])
-                    self.sendFile.emit(addr[0],fileToSend, other_tcp_port)
+                    self.controller.sendFile(addr[0],fileToSend, other_tcp_port)
                 else:
                     log_error("Want to send file %s, but cannot find it"%(fileToSend))   
                 
@@ -384,7 +380,7 @@ class lunch_server(QObject):
                     fileSize = os.path.getsize(fileToSend)
                     log_info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
                     self.call("HELO_LOGFILE "+str(fileSize), addr[0])
-                    self.sendFile.emit(addr[0],fileToSend, other_tcp_port)
+                    self.controller.sendFile(addr[0],fileToSend, other_tcp_port)
                 else:
                     log_error("Want to send file %s, but cannot find it"%(fileToSend))   
             elif "HELO"==cmd:
@@ -397,7 +393,7 @@ class lunch_server(QObject):
             else:
                 log_info("received unknown command from %s: %s with value %s"%(addr[0],cmd,value))        
             
-            self.processEvent.emit(cmd,value,addr[0])
+            self.controller.processEvent(cmd,value,addr[0])
         except:
             log_exception("Unexpected error while handling HELO call: %s"%(str(sys.exc_info())))
             log_critical("The data received was: %s"%data)
@@ -407,35 +403,30 @@ class lunch_server(QObject):
             return self.member_info[addr]['name']
         return addr
     
-    def send_file_callback(self, addr, fileToSend, other_tcp_port):
-        ds = DataSenderThread(self,addr,fileToSend, other_tcp_port)
-        ds.successfullyTransferred.connect(self.threadFinished)
-        ds.errorOnTransfer.connect(self.threadFinished)
-        ds.start()
+    def insertMessage(self, mtime,addr,msg):
+        self.messagesLock.acquire()
+        try:
+            self.last_messages.insert(0,[mtime,addr,msg])
+        finally:
+            self.messagesLock.release()
+            
+    def getMessage(self, index):
+        message = None
+        self.messagesLock.acquire()
+        try:
+            message = self.last_messages[index]
+        finally:
+            self.messagesLock.release()
+        return message
     
-    def threadFinished(self, thread, _):
-        thread.deleteLater()
-    
-    def receive_file_callback(self, addr, file_size, file_name):
-        dr = DataReceiverThread(self,addr,file_size,file_name,get_settings().tcp_port)
-        dr.successfullyTransferred.connect(self.threadFinished)
-        dr.errorOnTransfer.connect(self.threadFinished)
-        dr.start()
-        
-    def process_event_callback(self, cmd,value,addr):
-        cmd = unicode(cmd.toUtf8(), 'utf-8')
-        value = unicode(value.toUtf8(), 'utf-8')
-        addr = unicode(addr.toUtf8(), 'utf-8')
-        
-        member_info = {}
-        if self.member_info.has_key(addr):
-            member_info = self.member_info[addr]
-        for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
-            if pluginInfo.plugin_object.is_activated:
-                try:
-                    pluginInfo.plugin_object.process_event(cmd,value,addr,member_info)
-                except:
-                    log_exception("plugin error in %s while processing event message %s"%(pluginInfo.name, str(sys.exc_info())))
+    def messagesCount(self):
+        length = 0
+        self.messagesLock.acquire()
+        try:
+            length = len(self.last_messages)
+        finally:
+            self.messagesLock.release()
+        return length
     
     def incoming_call(self,msg,addr):
         mtime = localtime()
@@ -445,10 +436,10 @@ class lunch_server(QObject):
             
         log_info("%s: [%s] %s" % (t,m,msg))
         
-        self.last_messages.insert(0,[mtime,addr,msg])
-        self.messagePrepended.emit()
+        self.insertMessage(mtime,addr,msg)
+        self.controller.messagePrepended(mtime,addr,msg)
         self.new_msg = True
-        self.write_messages_to_file()        
+        self.write_messages_to_file()
         
         if not msg.startswith("ignore"):
             member_info = {}
@@ -487,8 +478,8 @@ class lunch_server(QObject):
                 else:
                     indicesToRemove.append(memberIndex)
             for memberIndex in reversed(indicesToRemove):
+                self._memberRemoved(self.members[memberIndex])
                 del self.members[memberIndex]
-                self._memberRemoved(memberIndex)
         except:
             log_exception("Something went wrong while trying to clean up the members-table")
             
@@ -507,19 +498,6 @@ class lunch_server(QObject):
         self.running = True
         self.my_master=-1 #the peer i use as master
         announce_name=0 #how often did I announce my name        
-        
-        if self.with_plugins:
-            try:
-                self.plugin_manager.collectPlugins()
-            except:
-                log_exception("problem when loading plugin: %s"%(str(sys.exc_info())))
-            
-            #always load these plugins
-            self.plugin_manager.activatePluginByName("General Settings", "general") 
-            self.plugin_manager.activatePluginByName("Notify", "called") 
-        else:
-            log_info("lunchinator initialised without plugins")  
-            
             
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         #getting your IP address is hard...:
@@ -533,9 +511,9 @@ class lunch_server(QObject):
         try: 
             s.bind(("", 50000)) 
             s.settimeout(5.0)
-            self.init_done.emit()
+            self.controller.initDone()
             while self.running:
-                if self.new_msg and (time()-mktime(self.last_messages[0][0]))>(get_settings().reset_icon_time*60):
+                if self.new_msg and (time()-mktime(self.getMessage(0)[0]))>(get_settings().reset_icon_time*60):
                     self.new_msg=False
                 try:
                     daten, addr = s.recvfrom(1024)
@@ -586,7 +564,13 @@ class lunch_server(QObject):
                     pluginInfo.plugin_object.deactivate()
             os._exit(self.exitCode)
             
-    def get_last_msgs(self):  
+    def lockMessages(self):
+        self.messagesLock.acquire()
+        
+    def releaseMessages(self):
+        self.messagesLock.release()
+            
+    def getMessages(self):  
         return self.last_messages
     
     def get_members(self):  

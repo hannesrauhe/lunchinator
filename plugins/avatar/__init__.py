@@ -1,5 +1,5 @@
 from lunchinator.iface_plugins import iface_general_plugin
-from l_avatar import l_avatar
+from avatar.l_avatar import l_avatar
 import mimetypes
 from lunchinator import get_server, get_settings, log_error
 from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox, QFileDialog, QSortFilterProxyModel, QImage, QPixmap

@@ -7,37 +7,27 @@ import traceback
 from functools import partial
 
 class LunchinatorWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, controller):
         super(LunchinatorWindow, self).__init__(None)
         
-        self.guiHandler = None
-        
-        #window.set_border_width(10)
-        self.centerOnScreen() # TODO do this here?
+        self.guiHandler = controller
         self.setWindowTitle("Lunchinator")
 
-        # Contains box1 and plug-ins
-        #centralWidget = QWidget(self)
-        #centralLayout = QHBoxLayout(centralWidget)
+        centralWidget = QSplitter(Qt.Horizontal)
+        widget, self.messagesTable = self.createTableWidget(centralWidget, MessageTable, "Send Message", self.clicked_send_msg)
+        centralWidget.addWidget(widget)
+        widget, self.membersTable = self.createTableWidget(centralWidget, MembersTable, "Add Host", self.clicked_add_host)
+        centralWidget.addWidget(widget)
 
-        tablesPane = QSplitter(Qt.Horizontal)
-        widget, self.messagesTable = self.createTableWidget(tablesPane, MessageTable, "Send Message", self.clicked_send_msg)
-        tablesPane.addWidget(widget)
-        widget, self.membersTable = self.createTableWidget(tablesPane, MembersTable, "Add Host", self.clicked_add_host)
-        tablesPane.addWidget(widget)
-
-        #centralLayout.addWidget(tablesPane, 1)
-        #box0.pack_start(tablesPane, True, True, 0)
         
-        self.nb = QTabWidget(tablesPane)
+        self.nb = QTabWidget(centralWidget)
         self.nb.setMovable(True)
         self.nb.setTabPosition(QTabWidget.North)
+        centralWidget.addWidget(self.nb)
         
-        tablesPane.addWidget(self.nb)
+        self.setCentralWidget(centralWidget)
         
-        self.setCentralWidget(tablesPane)
-        
-    def serverInitialized(self):
+        # add plugins
         plugin_widgets = []
         try:
             for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
@@ -65,6 +55,7 @@ class LunchinatorWindow(QMainWindow):
             index = get_settings().last_gui_plugin_index
         
         self.nb.setCurrentIndex(index)
+        self.centerOnScreen()
         
     def clicked_send_msg(self, w):
         if self.guiHandler != None:
@@ -92,7 +83,6 @@ class LunchinatorWindow(QMainWindow):
         except:
             log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
         
-        self.guiHandler.window_msgClosed(self)
         QMainWindow.closeEvent(self, closeEvent)     
         
     def centerOnScreen(self):

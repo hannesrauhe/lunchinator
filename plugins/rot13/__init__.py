@@ -1,7 +1,8 @@
-from lunchinator.iface_plugins import *
-from rot13 import *
+from lunchinator.iface_plugins import iface_gui_plugin
+from rot13 import rot13box
 from lunchinator import get_server, log_exception
-from PyQt4.QtGui import QImage, QPixmap
+from PyQt4.QtGui import QImage, QPixmap, QLabel
+from PyQt4.QtCore import Qt
 
 class rot13(iface_gui_plugin):
     def __init__(self):
@@ -17,8 +18,8 @@ class rot13(iface_gui_plugin):
     
     def create_widget(self, parent):
         w = rot13box(parent)
-        if (len(get_server().last_messages)):
-            w.encodeText(get_server().get_last_msgs()[0][2])
+        if get_server().messagesCount() > 0:
+            w.encodeText(get_server().getMessage(0)[2])
         add_widget = None
         if self.shared_dict.has_key("tdtnotify_file"):
             try:

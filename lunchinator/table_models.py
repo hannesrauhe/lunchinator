@@ -1,6 +1,7 @@
-from PyQt4.QtCore import Qt, QVariant, QStringList, QSize
+from PyQt4.QtCore import Qt, QVariant, QStringList, QSize, pyqtSlot
 from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
 import time
+from lunchinator import get_server
 
 class TableModelBase(QStandardItemModel):
     def __init__(self, dataSource, columns):
@@ -8,64 +9,63 @@ class TableModelBase(QStandardItemModel):
         self.dataSource = dataSource
         self.columns = columns
         self.setColumnCount(len(self.columns))
+        self.keys = []
         
         stringList = QStringList()
         for colName, _ in self.columns:
             stringList.append(colName)
         self.setHorizontalHeaderLabels(stringList)
 
-        for key in self.keys():
-            self.appendContentRow(key)
-        
-    def createItem(self, key, column):
+    def createItem(self, key, data, column):
         item = QStandardItem()
         item.setEditable(False)
-        self.columns[column][1](key, item)
+        self.columns[column][1](key, data, item)
         item.setData(QSize(0, 20), Qt.SizeHintRole)
         return item
     
-    def updateItem(self, key, row, column):
+    def updateItem(self, key, data, row, column):
         item = self.item(row, column)
         if item != None:
-            self.columns[column][1](key, item)
+            self.columns[column][1](key, data, item)
 
-    def createRow(self, key):
+    def createRow(self, key, data):
         row = []
         for column in range(self.columnCount()):
-            row.append(self.createItem(key, column))
+            row.append(self.createItem(key, data, column))
         return row
 
-    def appendContentRow(self, key):
-        self.appendRow(self.createRow(key))
+    def appendContentRow(self, key, data):
+        self.keys.append(key)
+        self.appendRow(self.createRow(key, data))
         
-    def prependContentRow(self, key):
-        self.insertRow(0, self.createRow(key))
-    
-    def externalRowAppended(self):
-        self.appendContentRow(self.keys()[-1])
-        
-    def externalRowPrepended(self):
-        self.prependContentRow(self.keys()[0])
-    
-    def externalRowUpdated(self, index):
-        self.updateRow(index)
-    
-    def externalRowRemoved(self, index):
-        self.removeRow(index)
+    def prependContentRow(self, key, data):
+        self.keys.insert(0, key)
+        self.insertRow(0, self.createRow(key, data))
 
-    def updateItemNoKey(self, row, column):
-        key = self.keys()[row]
-        self.updateItem(key, row, column)
-        
     def updateColumn(self, column):
-        keys = self.keys()
-        for row, key in enumerate(keys):
-            self.updateItem(key, row, column)
+        for row, key in enumerate(self.keys):
+            self.updateItem(key, None, row, column)
             
-    def updateRow(self, row):
-        key = self.keys()[row]
+    def updateRow(self, key, data, row):
         for column in range(self.columnCount()):
-            self.updateItem(key, row, column)
+            self.updateItem(key, data, row, column)
+            
+    """ ----------------- SLOTS ------------------- """
+            
+    def externalRowAppended(self, key, data):
+        self.appendContentRow(key, data)
+        
+    def externalRowPrepended(self, key, data):
+        self.prependContentRow(key, data)
+    
+    def externalRowUpdated(self, key, data):
+        if key in self.keys:
+            index = self.keys.index(key)
+            self.updateRow(key, data, index)
+    
+    def externalRowRemoved(self, key):
+        if key in self.keys:
+            self.removeRow(self.keys.index(key))
 
 class MembersTableModel(TableModelBase):
     def __init__(self, dataSource):
@@ -79,48 +79,44 @@ class MembersTableModel(TableModelBase):
         self.nameColIndex = 1
         self.lunchTimeColIndex = 2
         self.lastSeenColIndex = 3
+        
+        infoDicts = get_server().get_member_info()
+        for ip in get_server().get_members():
+            infoDict = None
+            if ip in infoDicts:
+                infoDict = infoDicts[ip]
+            self.appendContentRow(ip, infoDict)
 
-    def _updateIpItem(self, ip, item):
+    def _updateIpItem(self, ip, _, item):
         item.setText(ip)
 
-    def _updateNameItem(self, ip, item):
-        infoDict = self.dataSource.get_member_info()
-        if ip in infoDict and 'name' in infoDict[ip]:
-            item.setText(infoDict[ip]['name'])
+    def _updateNameItem(self, ip, infoDict, item):
+        if 'name' in infoDict:
+            item.setText(infoDict['name'])
         else:
             item.setText(ip)
         
-    def _updateLunchTimeItem(self, ip, item):
-        infoDict = self.dataSource.get_member_info()
-        if ip in infoDict and "next_lunch_begin" in infoDict[ip] and "next_lunch_end" in infoDict[ip]:
-            item.setText(infoDict[ip]["next_lunch_begin"]+"-"+infoDict[ip]["next_lunch_end"])
-            if self.dataSource.is_now_in_time_span(infoDict[ip]["next_lunch_begin"],infoDict[ip]["next_lunch_end"]):
+    def _updateLunchTimeItem(self, _, infoDict, item):
+        if "next_lunch_begin" in infoDict and "next_lunch_end" in infoDict:
+            item.setText(infoDict["next_lunch_begin"]+"-"+infoDict["next_lunch_end"])
+            if self.dataSource.is_now_in_time_span(infoDict["next_lunch_begin"],infoDict["next_lunch_end"]):
                 item.setData(QColor(0, 255, 0), Qt.DecorationRole)
             else:
                 item.setData(QColor(255, 0, 0), Qt.DecorationRole)
         
         
-    def _updateLastSeenItem(self, ip, item):
+    def _updateLastSeenItem(self, ip, _, item):
         intValue = -1
         if ip in self.dataSource.get_member_timeout():
             intValue = int(time.time()-self.dataSource.get_member_timeout()[ip])
         item.setData(QVariant(intValue), Qt.DisplayRole)
         return item
         
-    def keys(self):
-        return self.dataSource.get_members()
+    """ --------------------- SLOTS ---------------------- """
     
+    @pyqtSlot()
     def updateTimeouts(self):
         self.updateColumn(self.lastSeenColIndex)
-            
-    def updateIpItem(self, ip, row):
-        self.updateItem(ip, row, self.ipColIndex)
-    def updateNameItem(self, ip, row):
-        self.updateItem(ip, row, self.nameColIndex)
-    def updateLunchTimeItem(self, ip, row):
-        self.updateItem(ip, row, self.lunchTimeColIndex)
-    def updateLastSeenItem(self, ip, row):
-        self.updateItem(ip, row, self.lastSeenColIndex)
 
 class MessagesTableModel(TableModelBase):
     def __init__(self, dataSource):
@@ -128,18 +124,33 @@ class MessagesTableModel(TableModelBase):
                    ("Sender", self._updateSenderItem),
                    ("Message", self._updateMessageItem)]
         super(MessagesTableModel, self).__init__(dataSource, columns)
-            
-    def _updateTimeItem(self, m, item):
-        item.setText(time.strftime("%d.%m.%Y %H:%M:%S", m[0]))
-    
-    def _updateSenderItem(self, m, item):
-        item.setText(self.dataSource.memberName(m[1]))
-    
-    def _updateMessageItem(self, m, item):
-        item.setText(m[2])
         
-    def updateSenders(self, _ = None):
-        self.updateColumn(1)
+        get_server().lockMessages()
+        try:
+            for aMsg in get_server().getMessages():
+                self.appendContentRow(aMsg[0], [aMsg[1], aMsg[2]])
+        finally:
+            get_server().releaseMessages()
+            
+    def _updateTimeItem(self, mTime, _, item):
+        item.setText(time.strftime("%d.%m.%Y %H:%M:%S", mTime))
     
-    def keys(self):
-        return self.dataSource.get_last_msgs()
+    def _updateSenderItem(self, _, m, item):
+        item.setText(self.dataSource.memberName(m[0]))
+    
+    def _updateMessageItem(self, _, m, item):
+        item.setText(m[1])
+        
+    def initialKeys(self):
+        return get_server().get_members()
+    
+    """ --------------------- SLOTS ---------------------- """
+    
+    @pyqtSlot()
+    def updateSenders(self):
+        get_server().lockMessages()
+        try:
+            for row, aMsg in enumerate(get_server().getMessages()):
+                self.updateItem(aMsg[0], [aMsg[1], aMsg[2]], row, 1)
+        finally:
+            get_server().releaseMessages()

@@ -1,7 +1,7 @@
-from lunchinator.iface_plugins import *
+from lunchinator.iface_plugins import iface_database_plugin
 import sys,sqlite3,threading
 from lunchinator import get_server, get_settings, log_debug
-    
+
 class db_SQLITE(iface_database_plugin):    
     VERSION_TABLE = "DB_VERSION"
     DATABASE_VERSION_EMPTY = 0
