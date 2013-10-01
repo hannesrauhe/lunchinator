@@ -189,7 +189,7 @@ class lunch_settings(object):
         if self.getGitCommandResult(["diff","--cached","--exit-code","--quiet"], repo) != 0:
             return (False, "There are staged, uncommitted changes")
         
-        _, branch, __ = self.runGitCommand(["symbolic-ref","HEAD"], repo)
+        _, branch, __ = self.runGitCommand(["symbolic-ref","HEAD"], repo, quiet=False)
         if "master" not in branch:
             return (False, "The selected branch is not the master branch")
         
