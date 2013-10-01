@@ -107,7 +107,6 @@ if __name__ == "__main__":
         print "Sent stop command to local lunchinator"
     elif options.noGui:
     #    sys.settrace(trace)
-        get_settings().load_gui_plugins = False
         get_server().no_updates = options.noUpdates
         get_server().controller = LunchServerController()
         get_server().start_server()

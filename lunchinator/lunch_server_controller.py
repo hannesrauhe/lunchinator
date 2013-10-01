@@ -33,7 +33,7 @@ class LunchServerController(object):
         member_info = {}
         if get_server().member_info.has_key(addr):
             member_info = get_server().member_info[addr]
-        for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("called")+get_server().plugin_manager.getPluginsOfCategory("gui"):
+        for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("called"):
             if pluginInfo.plugin_object.is_activated:
                 try:
                     pluginInfo.plugin_object.process_event(cmd,value,addr,member_info)

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from iface_plugins import iface_called_plugin, iface_database_plugin, iface_general_plugin, PluginManagerSingleton
+from iface_plugins import iface_called_plugin, iface_database_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
 from time import strftime, localtime, time, mktime
 import socket,sys,os,json
 from threading import Lock
@@ -54,11 +54,9 @@ class lunch_server(object):
             categoriesFilter = {
                "general" : iface_general_plugin,
                "called" : iface_called_plugin,
+               "gui" : iface_gui_plugin,
                "db" : iface_database_plugin
                }
-            if get_settings().load_gui_plugins:
-                from lunchinator.iface_plugins import iface_gui_plugin
-                categoriesFilter["gui"] = iface_gui_plugin
             self.plugin_manager.setCategoriesFilter(categoriesFilter) 
         self.shared_dict = {} #for plugins
         

@@ -49,7 +49,6 @@ class lunch_settings(object):
         self.external_plugin_dir = self.main_config_dir+os.path.sep+"plugins"
         self.plugin_dirs = [self.internal_plugin_dir, self.external_plugin_dir]
         self.load_plugins = True
-        self.load_gui_plugins = True
         
         #insert plugin folders into path
         for aDir in self.plugin_dirs:
