@@ -35,7 +35,7 @@ class gui_settings(iface_general_plugin):
     
     def save_options_widget_data(self):
         # override category as "general"
-        self.save_data(lambda o, new_v: get_settings().config_file.set('general', o, str(new_v)))
+        self.save_data(lambda o, new_v: get_settings().get_config_file().set('general', o, str(new_v)))
         self.set_settings()
         
     def read_options_from_file(self):

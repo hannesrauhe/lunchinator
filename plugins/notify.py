@@ -6,7 +6,7 @@ import os
 class Notify(iface_called_plugin):    
     def __init__(self):
         super(Notify, self).__init__()
-        self.options = {"icon_file":get_settings().lunchdir+"/images/mini_breakfast.png","audio_file":get_settings().lunchdir+"/sounds/sonar.wav" }
+        self.options = {"icon_file":get_settings().get_lunchdir()+"/images/mini_breakfast.png","audio_file":get_settings().get_lunchdir()+"/sounds/sonar.wav" }
         
     def activate(self):        
         iface_called_plugin.activate(self)

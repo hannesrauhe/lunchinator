@@ -5,7 +5,7 @@ import urllib2,sys
 class webcam(iface_gui_plugin):
     def __init__(self):
         super(webcam, self).__init__()
-        self.options = {"fallback_pic":get_settings().lunchdir+"/images/webcam.jpg",
+        self.options = {"fallback_pic":get_settings().get_lunchdir()+"/images/webcam.jpg",
                         "pic_url":"http://lunchinator.de/files/webcam_dummy.jpg",
                         "timeout":5,
                         "no_proxy":False}

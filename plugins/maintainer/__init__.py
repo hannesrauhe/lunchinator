@@ -63,11 +63,11 @@ class maintainer(iface_gui_plugin):
             from lunchinator.lunch_datathread_qt import DataReceiverThread
             #someone will send me his logfile on tcp
             file_size=int(value.strip())
-            if not os.path.exists(get_settings().main_config_dir+"/logs"):
-                os.makedirs(get_settings().main_config_dir+"/logs")
-            file_name=get_settings().main_config_dir+"/logs/"+str(ip)+".log"
-            log_info("Receiving file of size %d on port %d"%(file_size,get_settings().tcp_port))
-            dr = DataReceiverThread(self.w, ip,file_size,file_name,get_settings().tcp_port)
+            if not os.path.exists(get_settings().get_main_config_dir()+"/logs"):
+                os.makedirs(get_settings().get_main_config_dir()+"/logs")
+            file_name=get_settings().get_main_config_dir()+"/logs/"+str(ip)+".log"
+            log_info("Receiving file of size %d on port %d"%(file_size,get_settings().get_tcp_port()))
+            dr = DataReceiverThread(self.w, ip,file_size,file_name,get_settings().get_tcp_port())
             dr.successfullyTransferred.connect(self.w.cb_log_transfer_success)
             dr.errorOnTransfer.connect(self.w.cb_log_transfer_error)
             dr.start()

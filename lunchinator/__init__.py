@@ -15,11 +15,12 @@ class _lunchinator_logger:
             
             cls.lunch_logger = logging.getLogger("LunchinatorLogger")
             cls.lunch_logger.addHandler(loghandler)
+            cls.lunch_logger.addHandler(logging.StreamHandler())
             
             yapsi_logger = logging.getLogger('yapsy')
             yapsi_logger.setLevel(logging.WARNING)
             yapsi_logger.addHandler(loghandler)
-            
+            yapsi_logger.addHandler(logging.StreamHandler())
             
             loghandler.doRollover()
         return cls.lunch_logger
@@ -27,11 +28,26 @@ class _lunchinator_logger:
 #initialize loggers
 _lunchinator_logger.get_singleton_logger()
 
+def convert_string(string):
+    import traceback
+    if type(string) == unicode:
+        return string
+    elif type(string) == str:
+        print "Encountered string of type str"
+        traceback.print_stack()
+        return str.decode('utf-8')
+    try:
+        print "Encountered string unknown type %s, assuming QString" % type(string)
+        traceback.print_stack()
+        return unicode(string.toUtf8(), 'utf-8')
+    except:
+        return u""
+
 def _get_logger():
     return _lunchinator_logger.get_singleton_logger()
 
 def setLoggingLevel(newLevel):
-    _get_logger().setLevel(newLevel)
+    _get_logger().setLevel(logging.INFO)
     logging.basicConfig(level=newLevel)
     
 def _generate_string(*s):
@@ -61,16 +77,15 @@ def get_settings():
     return lunch_settings.lunch_settings.get_singleton_instance()
     
 def get_lunchinator_dir():
-    return get_settings().main_config_dir
+    return get_settings().get_main_config_dir()
 
 def get_plugin_dirs():
-    return get_settings().plugin_dirs
+    return get_settings().get_plugin_dirs()
 
 #initialize settings
-setLoggingLevel(get_settings().get_logging_level())
+get_settings().set_logging_level(get_settings().get_logging_level())
 
 import lunch_server
 
 def get_server():
     return lunch_server.lunch_server.get_singleton_server()
-

@@ -73,9 +73,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._memberRemoved.connect(self.membersModel.externalRowRemoved)
         
         # initialize tray icon
-        icon_file = get_settings().lunchdir+os.path.sep+"images"+os.path.sep+"lunch.svg"
+        icon_file = get_settings().get_lunchdir()+os.path.sep+"images"+os.path.sep+"lunch.svg"
         if platform.system()=="Windows":
-            get_settings().lunchdir+os.path.sep+"images"+os.path.sep+"lunch.svg"
+            get_settings().get_lunchdir()+os.path.sep+"images"+os.path.sep+"lunch.svg"
         icon = QIcon(icon_file)
         statusicon = QSystemTrayIcon(icon, self.mainWindow)
         contextMenu = self.init_menu(self.mainWindow)
@@ -160,11 +160,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         return menu
         
-    def quit(self):        
+    def quit(self):
+        if self.mainWindow != None:
+            self.mainWindow.close()
         if self.serverThread.isRunning():
             get_server().running = False
-            self.serverThread.wait()  
-            log_info("server stopped") 
         else:
             log_info("server not running")
     
@@ -175,7 +175,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         get_server().new_msg=False
         
     def disable_auto_update(self):
-        get_settings().auto_update=False
+        get_settings().set_auto_update_enabled(False)
                   
                   
     """---------------------- SLOTS ------------------------------"""
@@ -187,9 +187,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     @pyqtSlot()
     def serverStoppedSlot(self):
+        log_info("server stopped") 
         for pluginInfo in get_server().plugin_manager.getAllPlugins():
             if pluginInfo.plugin_object.is_activated:
                 pluginInfo.plugin_object.deactivate()
+        log_info("plug-ins deactivated, exiting")
+        # TODO quit with return code
         QApplication.quit()
         
     @pyqtSlot(QAction, unicode, bool)
@@ -265,16 +268,16 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def threadFinished(self, thread, _):
         thread.deleteLater()
         
-    @pyqtSlot(unicode, unicode, unicode, int)
+    @pyqtSlot(unicode, unicode, int)
     def sendFileSlot(self, addr, fileToSend, other_tcp_port):
         ds = DataSenderThread(self,addr,fileToSend, other_tcp_port)
         ds.successfullyTransferred.connect(self.threadFinished)
         ds.errorOnTransfer.connect(self.threadFinished)
         ds.start()
     
-    @pyqtSlot(unicode, unicode, unicode)
+    @pyqtSlot(unicode, int, unicode)
     def receiveFileSlot(self, addr, file_size, file_name):
-        dr = DataReceiverThread(self,addr,file_size,file_name,get_settings().tcp_port)
+        dr = DataReceiverThread(self,addr,file_size,file_name,get_settings().get_tcp_port())
         dr.successfullyTransferred.connect(self.threadFinished)
         dr.errorOnTransfer.connect(self.threadFinished)
         dr.start()

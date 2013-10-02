@@ -22,7 +22,7 @@ class LunchServerController(object):
         pass
     
     def receiveFile(self, ip, fileSize, fileName):
-        dr = DataReceiverThread(self,ip,fileSize,fileName,get_settings().tcp_port)
+        dr = DataReceiverThread(self,ip,fileSize,fileName,get_settings().get_tcp_port())
         dr.start()
     
     def sendFile(self, ip, filePath, otherTCPPort):

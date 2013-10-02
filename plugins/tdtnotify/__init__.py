@@ -7,7 +7,7 @@ import urllib2, tempfile, json, time
 class tdtnotify(iface_called_plugin):    
     def __init__(self):
         super(tdtnotify, self).__init__()
-        self.options = {"icon_file":get_settings().lunchdir+"/images/mini_breakfast.png",
+        self.options = {"icon_file":get_settings().get_lunchdir()+"/images/mini_breakfast.png",
                         "blog_name":"tittendestages",
                         "trigger_word":"",
                         "polling_time":30}

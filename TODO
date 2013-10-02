@@ -6,3 +6,7 @@
 - search for TODOs
 - concurrent callbacks if possible
 - tdt_notify: threading
+- Sent messages appear twice
+- avatar: Image durch Qt-Zeug ersetzen
+- open durch codecs.open ersetzen
+- exceptions during plugin collection are not printed (?!)

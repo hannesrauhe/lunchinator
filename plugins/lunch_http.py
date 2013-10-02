@@ -28,7 +28,7 @@ class lunch_http(iface_called_plugin):
 
     def __init__(self):
         super(lunch_http, self).__init__()
-        self.options = {"http_port":50002,"html_dir":get_settings().main_config_dir}
+        self.options = {"http_port":50002,"html_dir":get_settings().get_main_config_dir()}
         
     def activate(self):
         iface_called_plugin.activate(self)
@@ -70,7 +70,7 @@ class lunch_http(iface_called_plugin):
                 for k,v in infodict.iteritems():
                     if not table_data.has_key(k):
                         table_data[k]=[""]*len(get_server().get_member_info())
-                    if k=="avatar" and os.path.isfile(get_settings().avatar_dir+"/"+v):
+                    if k=="avatar" and os.path.isfile(get_settings().get_avatar_dir()+"/"+v):
                         table_data[k][index]="<img width='200' src=\"avatars/%s\" />"%v
                     else:
                         table_data[k][index]=v
@@ -88,7 +88,7 @@ class lunch_http(iface_called_plugin):
                     indexhtml.write("<td>%s</td>"%table_data[k][i]) 
                 indexhtml.write("</tr>") 
             indexhtml.write("</table>\n")
-            indexhtml.write(get_settings().version)
+            indexhtml.write(get_settings().get_version())
             indexhtml.close()
         except:
             log_exception("HTTP plugin: problem while writing html file")

@@ -16,6 +16,7 @@ while os.path.dirname(path) != path:
 from optparse import OptionParser
 from lunchinator import log_info, log_warning, log_error, get_settings,\
     get_server
+    
 
 def parse_args():
     usage = "usage: %prog [options]"
@@ -54,22 +55,22 @@ def updateRepositories():
             if get_settings().runGitCommand(["pull"]) != 0:
                 log_error("git pull did not work (main repository). The Update mechanism therefore does not work.\n\
 If you do not know, what to do now:\n\
-it should be safe to call 'git stash' in the lunchinator directory %s start lunchinator again."%get_settings().lunchdir)
+it should be safe to call 'git stash' in the lunchinator directory %s start lunchinator again."%get_settings().get_lunchdir())
 
-        if os.path.exists(get_settings().external_plugin_dir):    
+        if os.path.exists(get_settings().get_external_plugin_dir()):    
             canUpdate, reason = get_settings().getCanUpdatePlugins()
             if not canUpdate:
                 log_warning("Cannot update plugin repository: %s" % reason)
             else:
                 log_info("Updating plugin repository")
                 #locate plugins repository
-                if get_settings().runGitCommand(["pull"], get_settings().external_plugin_dir) != 0:
+                if get_settings().runGitCommand(["pull"], get_settings().get_external_plugin_dir()) != 0:
                     log_error("git pull did not work (plugin repository). The Update mechanism therefore does not work.\n\
 If you do not know, what to do now:\n\
-it should be safe to call 'git stash' in the plugins directory %s/plugins and start lunchinator again."%get_settings().main_config_dir)
+it should be safe to call 'git stash' in the plugins directory %s/plugins and start lunchinator again."%get_settings().get_main_config_dir())
     else:
         msg = "local update"
-        get_settings().load_plugins = False
+        get_settings().set_plugins_enabled(False)
         get_server().call("HELO_UPDATE "+msg,client="127.0.0.1")
         print "Sent update command to local lunchinator"
 
@@ -81,7 +82,7 @@ def sendMessage(msg, cli):
     if msg == None:
         msg = "lunch"
     
-    get_settings().load_plugins = False
+    get_settings().set_plugins_enabled(False)
     recv_nr=get_server().call(msg,client=cli)
     print "sent to",recv_nr,"clients"
     
@@ -94,7 +95,7 @@ if __name__ == "__main__":
         # don't start Lunchinator, do update
         updateRepositories()
     elif options.checkAutoUpdate:
-        if get_settings().auto_update:
+        if get_settings().get_update_enabled():
             sys.exit(1)
         else:
             sys.exit(0)
@@ -102,7 +103,7 @@ if __name__ == "__main__":
         sendMessage(options.message, options.client)
     elif options.stop:
         msg = "local"
-        get_settings().load_plugins = False
+        get_settings().set_plugins_enabled(False)
         recv_nr=get_server().call("HELO_STOP "+msg,client="127.0.0.1")
         print "Sent stop command to local lunchinator"
     elif options.noGui:

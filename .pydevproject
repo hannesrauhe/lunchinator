@@ -4,6 +4,7 @@
 <pydev_project>
 <pydev_pathproperty name="org.python.pydev.PROJECT_SOURCE_PATH">
 <path>/lunchinator</path>
+<path>/lunchinator</path>
 <path>/lunchinator/bin</path>
 <path>/lunchinator/lunchinator</path>
 <path>/lunchinator/plugins</path>
