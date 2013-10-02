@@ -476,6 +476,7 @@ class PluginManager(object):
 			# cover the case when the __init__ of a package has been
 			# explicitely indicated
 			if "__init__" in  os.path.basename(candidate_filepath):
+				sys.path.append(plugin_info.path)
 				candidate_filepath = os.path.dirname(candidate_filepath)
 			try:
 				# use imp to correctly load the plugin as a module
