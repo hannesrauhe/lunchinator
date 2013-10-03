@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from iface_plugins import iface_called_plugin, iface_database_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
 from time import strftime, localtime, time, mktime
-import socket,sys,os,json
+import socket,sys,os,json,codecs
 from threading import Lock
 
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
@@ -181,27 +181,25 @@ class lunch_server(object):
     def init_members_from_file(self):
         members = []
         if os.path.exists(get_settings().get_members_file()):
-            f = open(get_settings().get_members_file(),'r')    
-            for hostn in f.readlines():
-                hostn = hostn.strip()
-                if len(hostn) == 0:
-                    continue
-                try:
-                    ip = socket.gethostbyname(hostn)
-                    self.append_member(ip, hostn, False)
-                except:
-                    log_warning("cannot find host specified in members_file by %s with name %s"%(get_settings().get_members_file(),hostn))
-            f.close()
+            with codecs.open(get_settings().get_members_file(),'r','utf-8') as f:    
+                for hostn in f.readlines():
+                    hostn = hostn.strip()
+                    if len(hostn) == 0:
+                        continue
+                    try:
+                        ip = socket.gethostbyname(hostn)
+                        self.append_member(ip, hostn, False)
+                    except:
+                        log_warning("cannot find host specified in members_file by %s with name %s"%(get_settings().get_members_file(),hostn))
         return members
     
     def write_members_to_file(self):
         try:
             if len(self.members)>1:
-                f = open(get_settings().get_members_file(),'w')
-                f.truncate()
-                for m in self.members:
-                    f.write(m+"\n")
-                f.close();
+                with codecs.open(get_settings().get_members_file(),'w','utf-8') as f:
+                    f.truncate()
+                    for m in self.members:
+                        f.write(m+"\n")
         except:
             log_exception("Could not write members to %s"%(get_settings().get_members_file()))
             
@@ -209,11 +207,10 @@ class lunch_server(object):
         messages = []
         if os.path.exists(get_settings().get_messages_file()):
             try:
-                f = open(get_settings().get_messages_file(),'r')    
-                tmp_msg = json.load(f)
-                for m in tmp_msg:
-                    messages.append([localtime(m[0]),m[1],m[2]])
-                f.close()
+                with codecs.open(get_settings().get_messages_file(),'r','utf-8') as f:    
+                    tmp_msg = json.load(f)
+                    for m in tmp_msg:
+                        messages.append([localtime(m[0]),m[1],m[2]])
             except:
                 log_exception("Could not read messages file %s,but it seems to exist"%(get_settings().get_messages_file()))
         return messages
@@ -221,7 +218,7 @@ class lunch_server(object):
     def write_messages_to_file(self):
         try:
             if self.messagesCount()>0:
-                with open(get_settings().get_messages_file(),'w') as f:
+                with codecs.open(get_settings().get_messages_file(),'w','utf-8') as f:
                     f.truncate()
                     msg = []
                     self.messagesLock.acquire()

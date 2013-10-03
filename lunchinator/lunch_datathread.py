@@ -1,5 +1,6 @@
 import socket,sys
 from lunchinator import log_exception
+import codecs
 
 def _sendFile(con, receiver, file_path, tcp_port):
     try:
@@ -8,14 +9,13 @@ def _sendFile(con, receiver, file_path, tcp_port):
         log_exception("Could not initiate connection to",receiver,"on Port",tcp_port,e.strerror)
         raise
     
-    sendfile = open(file_path, 'rb')           
-    data = sendfile.read()
-    
-    try:
-        con.sendall(data)                      
-    except socket.error as e:
-        log_exception("Could not send data",e.strerror)
-        raise
+    with codecs.open(file_path, 'rb', 'utf-8') as sendfile:           
+        data = sendfile.read()
+        try:
+            con.sendall(data)                      
+        except socket.error as e:
+            log_exception("Could not send data",e.strerror)
+            raise
     
 def sendFile(receiver, file_path, tcp_port, sleep):
     sleep(5)
@@ -29,16 +29,16 @@ def sendFile(receiver, file_path, tcp_port, sleep):
         con.close()     
     
 def _receiveFile(con, file_path, size):
-    writefile = open(file_path, 'wb')
-    length = size
-    try:
-        while length:
-            rec = con.recv(min(1024, length))
-            writefile.write(rec)
-            length -= len(rec)
-    except socket.error as e:
-        log_exception("Error while receiving the data, Bytes to receive left:",length,"Error:",e.strerror)
-        raise
+    with codecs.open(file_path, 'wb', 'utf-8') as writefile:
+        length = size
+        try:
+            while length:
+                rec = con.recv(min(1024, length))
+                writefile.write(rec)
+                length -= len(rec)
+        except socket.error as e:
+            log_exception("Error while receiving the data, Bytes to receive left:",length,"Error:",e.strerror)
+            raise
 
 def receiveFile(sender, file_path, size, tcp_port, success, error):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

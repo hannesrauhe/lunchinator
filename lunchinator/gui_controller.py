@@ -11,7 +11,7 @@ from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.table_models import MembersTableModel, MessagesTableModel
-        
+
 class LunchServerThread(QThread):
     def __init__(self, parent, controller):
         super(LunchServerThread, self).__init__(parent)

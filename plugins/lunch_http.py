@@ -1,5 +1,5 @@
 from lunchinator.iface_plugins import iface_called_plugin
-import SimpleHTTPServer, SocketServer, os
+import SimpleHTTPServer, SocketServer, os, codecs
 from lunchinator import get_server, get_settings, log_info, log_exception
 from threading import Thread
 
@@ -58,10 +58,9 @@ class lunch_http(iface_called_plugin):
     def write_info_html(self):
         try:
             if len(get_server().get_member_info())==0:
-                indexhtml = open(self.options["html_dir"]+"/index.html","w")
-                indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' >no peers\n")
-                indexhtml.close()
-                return
+                with codecs.open(self.options["html_dir"]+"/index.html","w",'utf-8') as indexhtml:
+                    indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' >no peers\n")
+                    return
             
             table_data = {"ip":[""]*len(get_server().get_member_info())}
             index = 0
@@ -76,19 +75,18 @@ class lunch_http(iface_called_plugin):
                         table_data[k][index]=v
                 index+=1
                         
-            indexhtml = open(self.options["html_dir"]+"/index.html","w")
-            indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' ><table>\n")
-            indexhtml.write("<tr>") 
-            for th in table_data.iterkeys():
-                indexhtml.write("<th>%s</th>"%th) 
-            indexhtml.write("</tr>") 
-            for i in range(0,len(get_server().get_member_info())):
+            with codecs.open(self.options["html_dir"]+"/index.html","w",'utf-8') as indexhtml:
+                indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' ><table>\n")
                 indexhtml.write("<tr>") 
-                for k in table_data.iterkeys():
-                    indexhtml.write("<td>%s</td>"%table_data[k][i]) 
+                for th in table_data.iterkeys():
+                    indexhtml.write("<th>%s</th>"%th) 
                 indexhtml.write("</tr>") 
-            indexhtml.write("</table>\n")
-            indexhtml.write(get_settings().get_version())
-            indexhtml.close()
+                for i in range(0,len(get_server().get_member_info())):
+                    indexhtml.write("<tr>") 
+                    for k in table_data.iterkeys():
+                        indexhtml.write("<td>%s</td>"%table_data[k][i]) 
+                    indexhtml.write("</tr>") 
+                indexhtml.write("</table>\n")
+                indexhtml.write(get_settings().get_version())
         except:
             log_exception("HTTP plugin: problem while writing html file")

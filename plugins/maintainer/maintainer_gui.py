@@ -1,4 +1,4 @@
-import time
+import time,codecs
 from lunchinator import get_server, get_settings
 from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeWidget, QStandardItemModel, QStandardItem, QSpinBox, QTabWidget
 from PyQt4.QtCore import QObject
@@ -23,9 +23,8 @@ class maintainer_gui(QObject):
         
         fcontent = ""
         try:
-            fhandler = open(path,"r")
-            fcontent = fhandler.read()
-            fhandler.close()
+            with codecs.open(path,"r",'utf8') as fhandler:
+                fcontent = fhandler.read()
         except Exception as e:
             fcontent = "File not ready: %s"%str(e)
         self.log_area.setText(fcontent)

@@ -15,12 +15,12 @@ class _lunchinator_logger:
             
             cls.lunch_logger = logging.getLogger("LunchinatorLogger")
             cls.lunch_logger.addHandler(loghandler)
-            cls.lunch_logger.addHandler(logging.StreamHandler())
+            #cls.lunch_logger.addHandler(logging.StreamHandler())
             
             yapsi_logger = logging.getLogger('yapsy')
             yapsi_logger.setLevel(logging.WARNING)
             yapsi_logger.addHandler(loghandler)
-            yapsi_logger.addHandler(logging.StreamHandler())
+            #yapsi_logger.addHandler(logging.StreamHandler())
             
             loghandler.doRollover()
         return cls.lunch_logger

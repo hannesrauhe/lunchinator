@@ -1,4 +1,4 @@
-import sys,os,getpass,ConfigParser,types,subprocess,logging
+import sys,os,getpass,ConfigParser,types,subprocess,logging,codecs
 
 '''integrate the cli-parser into the default_config sooner or later'''
 from lunchinator import log_exception, log_warning, log_error, setLoggingLevel, convert_string
@@ -127,15 +127,15 @@ class lunch_settings(object):
             self._debug = True            
             
         if os.path.exists(self._main_config_dir+"/username.cfg"):
-            with open(self._main_config_dir+"/username.cfg") as f:
+            with codecs.open(self._main_config_dir+"/username.cfg", 'utf-8') as f:
                 self.set_user_name(f.readline().strip())
                 
         if os.path.exists(self._main_config_dir+"/avatar.cfg"):
-            with open(self._main_config_dir+"/avatar.cfg") as f:
+            with codecs.open(self._main_config_dir+"/avatar.cfg", 'utf-8') as f:
                 self.set_avatar_file(f.readline().strip())
                 
         if os.path.exists(self._main_config_dir+"/sound.cfg"):
-            with open(self._main_config_dir+"/sound.cfg") as f:
+            with codecs.open(self._main_config_dir+"/sound.cfg", 'utf-8') as f:
                 audio_file = f.readline().strip()
                 if os.path.exists(self._main_config_dir+"/sounds/"+audio_file):
                     self._audio_file = self._main_config_dir+"/sounds/"+audio_file
@@ -163,8 +163,9 @@ class lunch_settings(object):
             log_exception("error while reading %s from config file",name)
         return value
         
-    def write_config_to_hd(self): 
-        self._config_file.write(open(self._main_config_dir+'/settings.cfg','w'))
+    def write_config_to_hd(self):
+        with codecs.open(self._main_config_dir+'/settings.cfg','w','utf-8') as f: 
+            self._config_file.write(f)
         
     def getCanUpdate(self, repo):
         if self.getGitCommandResult(["rev-parse"], repo) != 0:
@@ -194,9 +195,8 @@ class lunch_settings(object):
     #special handling for debug 
     def set_debug(self,activate):
         if activate:
-            f = open(self._main_config_dir+"/debug.cfg",'w')
-            f.write("debugging activated because this file exists")
-            f.close()
+            with codecs.open(self._main_config_dir+"/debug.cfg",'w','utf-8') as f:
+                f.write("debugging activated because this file exists")
         else:
             os.remove(self._main_config_dir+"/debug.cfg")
         self._debug = activate

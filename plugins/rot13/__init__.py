@@ -16,7 +16,7 @@ class rot13(iface_gui_plugin):
     def create_widget(self, parent):
         from PyQt4.QtGui import QImage, QPixmap, QLabel
         from PyQt4.QtCore import Qt
-        from rot13.rot13 import rot13box
+        from rot13 import rot13box
         
         w = rot13box(parent)
         if get_server().messagesCount() > 0:
