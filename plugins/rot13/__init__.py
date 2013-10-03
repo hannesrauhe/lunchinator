@@ -25,16 +25,16 @@ class rot13(iface_gui_plugin):
         if self.shared_dict.has_key("tdtnotify_file"):
             try:
                 qtimage = QImage(self.shared_dict["tdtnotify_file"])
-                
-                width = self.maxwidth
-                height = qtimage.height()*self.maxwidth/qtimage.width()
-                if height>self.maxheight:
-                    height = self.maxheight
-                    width = qtimage.width()*self.maxheight/qtimage.height()
-                # TODO use different scaling parameters?
-                qtimage = qtimage.scaled(width, height, aspectRatioMode=Qt.IgnoreAspectRatio, transformMode=Qt.FastTransformation)
-                add_widget = QLabel()
-                add_widget.setPixmap(QPixmap.fromImage(qtimage))
+                if qtimage.width() > 0 and qtimage.height() > 0:
+                    width = self.maxwidth
+                    height = qtimage.height()*self.maxwidth/qtimage.width()
+                    if height>self.maxheight:
+                        height = self.maxheight
+                        width = qtimage.width()*self.maxheight/qtimage.height()
+                    # TODO use different scaling parameters?
+                    qtimage = qtimage.scaled(width, height, aspectRatioMode=Qt.IgnoreAspectRatio, transformMode=Qt.FastTransformation)
+                    add_widget = QLabel()
+                    add_widget.setPixmap(QPixmap.fromImage(qtimage))
             except:
                 log_exception("Error creating image label")
         return w.create_widget(parent, add_widget)
