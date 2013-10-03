@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import *
 import subprocess, sys, ctypes
-from lunchinator import get_server, log_exception, get_settings
+from lunchinator import get_server, log_exception, get_settings, convert_string
 from lunchinator.download_thread import DownloadThread
 from lunchinator.utilities import displayNotification, getValidQtParent
 
@@ -37,7 +37,7 @@ class tdtnotify(iface_called_plugin):
         pass
     
     def errorDownloadingPicture(self, thread, url):
-        log_error("Error downloading picture from url %s" % url)
+        log_error("Error downloading picture from url %s" % convert_string(url))
         thread.deleteLater()
         
     def downloadedPicture(self, thread, _):
@@ -48,7 +48,7 @@ class tdtnotify(iface_called_plugin):
         self.last_time = time.time() 
         
     def errorDownloadingJSON(self, thread, url):
-        log_error("Error downloading JSON from url %s" % url)
+        log_error("Error downloading JSON from url %s" % convert_string(url))
         thread.deleteLater()
     
     def downloadedJSON(self, thread, _):

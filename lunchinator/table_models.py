@@ -88,6 +88,7 @@ class MembersTableModel(TableModelBase):
         
         self.dontSendTo = set()
         
+        # Called before server is running, no need to lock here
         infoDicts = get_server().get_member_info()
         for ip in get_server().get_members():
             infoDict = None
@@ -160,12 +161,9 @@ class MessagesTableModel(TableModelBase):
                    ("Message", self._updateMessageItem)]
         super(MessagesTableModel, self).__init__(dataSource, columns)
         
-        get_server().lockMessages()
-        try:
-            for aMsg in get_server().getMessages():
-                self.appendContentRow(aMsg[0], [aMsg[1], aMsg[2]])
-        finally:
-            get_server().releaseMessages()
+        # called before server is running, no need to lock here
+        for aMsg in get_server().getMessages():
+            self.appendContentRow(aMsg[0], [aMsg[1], aMsg[2]])
             
     def _updateTimeItem(self, mTime, _, item):
         item.setText(time.strftime("%d.%m.%Y %H:%M:%S", mTime))
@@ -175,17 +173,18 @@ class MessagesTableModel(TableModelBase):
     
     def _updateMessageItem(self, _, m, item):
         item.setText(m[1])
-        
-    def initialKeys(self):
-        return get_server().get_members()
     
     """ --------------------- SLOTS ---------------------- """
     
     @pyqtSlot()
     def updateSenders(self):
-        get_server().lockMessages()
+        get_server().lockMembers()
         try:
-            for row, aMsg in enumerate(get_server().getMessages()):
-                self.updateItem(aMsg[0], [aMsg[1], aMsg[2]], row, 1)
+            get_server().lockMessages()
+            try:
+                for row, aMsg in enumerate(get_server().getMessages()):
+                    self.updateItem(aMsg[0], [aMsg[1], aMsg[2]], row, 1)
+            finally:
+                get_server().releaseMessages()
         finally:
-            get_server().releaseMessages()
+            get_server().releaseMembers()

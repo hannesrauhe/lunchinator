@@ -1,7 +1,7 @@
 import time,codecs
-from lunchinator import get_server, get_settings
+from lunchinator import get_server, get_settings, convert_string
 from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeWidget, QStandardItemModel, QStandardItem, QSpinBox, QTabWidget
-from PyQt4.QtCore import QObject
+from PyQt4.QtCore import QObject, pyqtSlot, QThread
 from PyQt4 import QtCore
 
 class maintainer_gui(QObject):
@@ -17,10 +17,12 @@ class maintainer_gui(QObject):
         self.dropdown_members_model = None
         self.visible = False      
         
+    @pyqtSlot(QThread, unicode)
     def cb_log_transfer_success(self, thread, path):
         if not self.visible:
             return False
         
+        path = convert_string(path)
         fcontent = ""
         try:
             with codecs.open(path,"r",'utf8') as fhandler:
@@ -30,6 +32,7 @@ class maintainer_gui(QObject):
         self.log_area.setText(fcontent)
         thread.deleteLater()
     
+    @pyqtSlot(QThread)
     def cb_log_transfer_error(self, thread):
         if not self.visible:
             return False

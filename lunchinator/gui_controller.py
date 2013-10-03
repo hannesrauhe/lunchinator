@@ -1,6 +1,6 @@
 import sys
 from lunchinator import get_server, log_exception, log_info, get_settings,\
-    log_error
+    log_error, convert_string
 import socket,os,time
 import platform
 from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QSortFilterProxyModel, QAction, QSystemTrayIcon, QIcon
@@ -11,6 +11,8 @@ from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.table_models import MembersTableModel, MessagesTableModel
+from lunchinator.iface_plugins import iface_called_plugin
+from lunchinator.utilities import processPluginCall
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -31,6 +33,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _sendFile = pyqtSignal(unicode, unicode, int)
     _receiveFile = pyqtSignal(unicode, int, unicode)
     _processEvent = pyqtSignal(unicode, unicode, unicode)
+    _processMessage = pyqtSignal(unicode, unicode)
+    _processLunchCall = pyqtSignal(unicode, unicode)
     # -----------------------------
     
     def __init__(self, noUpdates = False): 
@@ -88,6 +92,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._receiveFile.connect(self.receiveFileSlot)
         self._sendFile.connect(self.sendFileSlot)
         
+        self._processEvent.connect(self.processEventSlot)
+        self._processMessage.connect(self.processMessageSlot)
+        self._processLunchCall.connect(self.processLunchCallSlot)
         
         self.serverThread = LunchServerThread(self)
         self.serverThread.start()
@@ -124,10 +131,18 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     def sendFile(self, ip, filePath, otherTCPPort):
         self._sendFile.emit(ip, filePath, otherTCPPort)
-    
+
+    """ process any non-message event """    
     def processEvent(self, cmd, hostName, senderIP):
         self._processEvent.emit(cmd, hostName, senderIP)
-
+    
+    """ process any message event, including lunch calls """
+    def processMessage(self, msg, addr):
+        self._processMessage.emit(msg, addr)
+                    
+    """ process a lunch call """
+    def processLunchCall(self, msg, addr):
+        self._processLunchCall.emit(msg, addr)
         
     """ ----------------- CALLED ON MAIN THREAD -------------------"""
     
@@ -197,6 +212,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
     @pyqtSlot(QAction, unicode, bool)
     def toggle_plugin(self,w,p_cat,new_state):
+        p_cat = convert_string(p_cat)
         p_name = unicode(w.text().toUtf8(), 'utf-8')
         if new_state:
             po = get_server().plugin_manager.activatePluginByName(p_name,p_cat)
@@ -210,6 +226,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     @pyqtSlot(unicode, QObject)
     def sendMessageClicked(self, message, w):
+        message = convert_string(message)
         if message != None:
             get_server().call_all_members(message)
         else:
@@ -221,7 +238,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         hostn = unicode(w.text().toUtf8(), 'utf-8')
         try:
             ip = socket.gethostbyname(hostn.strip())
-            get_server().append_member(ip, hostn)
+            get_server()._append_member(ip, hostn)
             w.setText("")
         except:
             d = QMessageBox(QMessageBox.Critical, "Error adding host", "Cannot add host: Hostname unknown", QMessageBox.Ok, w)
@@ -262,7 +279,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                     pluginInfo.plugin_object.discard_options_widget_data()
         get_settings().write_config_to_hd()
             
-        get_server().call("HELO_INFO "+get_server().build_info_string())        
+        get_server().call("HELO_INFO "+get_server()._build_info_string())        
 
     @pyqtSlot(QThread, unicode)
     def threadFinished(self, thread, _):
@@ -270,6 +287,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
     @pyqtSlot(unicode, unicode, int)
     def sendFileSlot(self, addr, fileToSend, other_tcp_port):
+        addr = convert_string(addr)
+        fileToSend = convert_string(fileToSend)
         ds = DataSenderThread(self,addr,fileToSend, other_tcp_port)
         ds.successfullyTransferred.connect(self.threadFinished)
         ds.errorOnTransfer.connect(self.threadFinished)
@@ -277,6 +296,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     @pyqtSlot(unicode, int, unicode)
     def receiveFileSlot(self, addr, file_size, file_name):
+        addr = convert_string(addr)
+        file_name = convert_string(file_name)
         dr = DataReceiverThread(self,addr,file_size,file_name,get_settings().get_tcp_port())
         dr.successfullyTransferred.connect(self.threadFinished)
         dr.errorOnTransfer.connect(self.threadFinished)
@@ -284,16 +305,23 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
     @pyqtSlot(unicode, unicode, unicode)
     def processEventSlot(self, cmd, value, addr):
-        member_info = {}
-        if get_server().member_info.has_key(addr):
-            member_info = get_server().member_info[addr]
-        for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("called")+get_server().plugin_manager.getPluginsOfCategory("gui"):
-            if pluginInfo.plugin_object.is_activated:
-                try:
-                    pluginInfo.plugin_object.process_event(cmd,value,addr,member_info)
-                except:
-                    log_exception(u"plugin error in %s while processing event message" % pluginInfo.name)
+        cmd = convert_string(cmd)
+        value = convert_string(value)
+        addr = convert_string(addr)
+        processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info))
      
+    @pyqtSlot(unicode, unicode)
+    def processMessageSlot(self, msg, addr):
+        msg = convert_string(msg)
+        addr = convert_string(addr)
+        processPluginCall(addr, lambda p, ip, member_info: p.process_message(msg, ip, member_info))
+                    
+    @pyqtSlot(unicode, unicode)
+    def processLunchCallSlot(self, msg, addr):
+        msg = convert_string(msg)
+        addr = convert_string(addr)
+        processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
+        
     @pyqtSlot()
     def updateSendersInMessagesTable(self):
         self.messagesProxyModel.setDynamicSortFilter(False)

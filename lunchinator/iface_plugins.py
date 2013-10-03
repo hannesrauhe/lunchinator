@@ -168,41 +168,24 @@ class iface_plugin(IPlugin):
     def discard_options_widget_data(self):
         self.option_widgets = {}
         
-class iface_general_plugin(iface_plugin):    
-    def activate(self):
-        """
-        Call the parent class's activation method
-        """
-        iface_plugin.activate(self)
-        return
+class iface_general_plugin(iface_plugin): 
+    pass
 
-
-    def deactivate(self):
-        """
-        Just call the parent class's method
-        """
-        iface_plugin.deactivate(self)
-
-class iface_gui_plugin(iface_plugin):
+class iface_called_plugin(iface_plugin):  
+    def process_message(self,msg,ip,member_info):
+        pass
+        
+    def process_lunch_call(self,msg,ip,member_info):
+        pass
+        
+    def process_event(self,cmd,value,ip,member_info):
+        pass
+        
+class iface_gui_plugin(iface_called_plugin):
     def __init__(self):
         super(iface_gui_plugin, self).__init__()
         self.sortOrder = -1
         self.visible = False
-    
-    def activate(self):
-        """
-        Call the parent class's activation method
-        """
-        iface_plugin.activate(self)
-        return
-
-
-    def deactivate(self):
-        """
-        Just call the parent class's method
-        """
-        iface_plugin.deactivate(self)
-        
         
     def read_options_from_file(self):
         super(iface_gui_plugin, self).read_options_from_file()
@@ -227,15 +210,6 @@ class iface_gui_plugin(iface_plugin):
     
     def add_menu(self,menu):
         pass    
-        
-    def process_message(self,msg,ip,member_info):
-        pass
-        
-    def process_lunch_call(self,msg,ip,member_info):
-        pass
-        
-    def process_event(self,cmd,value,ip,member_info):
-        pass
     
     @classmethod
     def run_standalone(cls, factory):
@@ -250,31 +224,6 @@ class iface_gui_plugin(iface_plugin):
         window.show()
     
         sys.exit(app.exec_())
-
-class iface_called_plugin(iface_plugin):    
-    def activate(self):
-        """
-        Call the parent class's activation method
-        """
-        iface_plugin.activate(self)
-        return
-
-
-    def deactivate(self):
-        """
-        Just call the parent class's method
-        """
-        iface_plugin.deactivate(self)
-        
-    def process_message(self,msg,ip,member_info):
-        pass
-        
-    def process_lunch_call(self,msg,ip,member_info):
-        pass
-        
-    def process_event(self,cmd,value,ip,member_info):
-        pass
-    
 
 class iface_database_plugin(iface_plugin):
     #connection_names = {}

@@ -87,3 +87,13 @@ def getValidQtParent():
         return get_server().controller
     raise Exception("Could not find a valid QObject instance")
     
+def processPluginCall(ip, call):
+    member_info = {}
+    if get_server().member_info.has_key(ip):
+        member_info = get_server().member_info[ip]
+    for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("called") + get_server().plugin_manager.getPluginsOfCategory("gui"):
+        if pluginInfo.plugin_object.is_activated:
+            try:
+                call(pluginInfo.plugin_object, ip, member_info)
+            except:
+                log_exception(u"plugin error in %s while processing event" % pluginInfo.name)

@@ -36,12 +36,7 @@ def convert_string(string):
         print "Encountered string of type str"
         traceback.print_stack()
         return str.decode('utf-8')
-    try:
-        print "Encountered string unknown type %s, assuming QString" % type(string)
-        traceback.print_stack()
-        return unicode(string.toUtf8(), 'utf-8')
-    except:
-        return u""
+    return unicode(string.toUtf8(), 'utf-8')
 
 def _get_logger():
     return _lunchinator_logger.get_singleton_logger()

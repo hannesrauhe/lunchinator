@@ -4,7 +4,9 @@
 - unicode support
 - lunch menu structured: tooltips
 - search for TODOs
-- concurrent callbacks if possible
 - Sent messages appear twice
 - avatar: Image durch Qt-Zeug ersetzen
 - avatar: discard implementieren
+- ensure to deactivate all plugins before exiting
+- concatenate logfiles before sending
+- incoming call nicht von localhost?

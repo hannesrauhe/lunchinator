@@ -2,8 +2,8 @@ from lunchinator.lunch_datathread import sendFile, receiveFile
 from PyQt4.QtCore import QThread, pyqtSignal
 
 class DataThreadBase(QThread):
-    successfullyTransferred = pyqtSignal(QThread, str)
-    errorOnTransfer = pyqtSignal(QThread, str)
+    successfullyTransferred = pyqtSignal(QThread, unicode)
+    errorOnTransfer = pyqtSignal(QThread, unicode)
         
     def __init__(self, parent, file_path, tcp_port):
         super(DataThreadBase, self).__init__(parent)
