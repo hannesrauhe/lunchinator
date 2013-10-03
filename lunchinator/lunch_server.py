@@ -6,7 +6,6 @@ from threading import Lock
 
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning
-import traceback
 
 EXIT_CODE_UPDATE = 2
 EXIT_CODE_STOP = 3
@@ -24,7 +23,8 @@ class lunch_server(object):
     def __init__(self):
         super(lunch_server, self).__init__()
         self.controller = None
-        
+        self.initialized = False
+        self._load_plugins = True
         self.running = False
         self.update_request = False
         self.new_msg = False
@@ -39,8 +39,19 @@ class lunch_server(object):
         self.no_updates = False
         self.own_ip = "0.0.0.0"
         self.messagesLock = Lock()
+        self.shared_dict = {} #for plugins
         
         self.exitCode = 0  
+        
+    def initialize(self, controller = None):
+        if self.initialized:
+            return
+        if controller != None:
+            self.controller = controller
+        else:
+            from lunchinator.lunch_server_controller import LunchServerController
+            self.controller = LunchServerController
+        
         self.read_config()
         
         PluginManagerSingleton.setBehaviour([
@@ -50,7 +61,7 @@ class lunch_server(object):
         self.plugin_manager.app = self
         self.plugin_manager.setConfigParser(get_settings().get_config_file(),get_settings().write_config_to_hd)
         self.plugin_manager.setPluginPlaces(get_settings().get_plugin_dirs())
-        if get_settings().get_plugins_enabled():
+        if self.get_plugins_enabled():
             categoriesFilter = {
                "general" : iface_general_plugin,
                "called" : iface_called_plugin,
@@ -58,9 +69,8 @@ class lunch_server(object):
                "db" : iface_database_plugin
                }
             self.plugin_manager.setCategoriesFilter(categoriesFilter) 
-        self.shared_dict = {} #for plugins
         
-        if get_settings().get_plugins_enabled():
+        if self.get_plugins_enabled():
             try:
                 self.plugin_manager.collectPlugins()
             except:
@@ -71,6 +81,7 @@ class lunch_server(object):
             self.plugin_manager.activatePluginByName("Notify", "called") 
         else:
             log_info("lunchinator initialised without plugins")  
+        self.initialized = True
         
     def _memberAppended(self, ip):
         self.controller.memberAppended(ip, self.member_info[ip])
@@ -107,6 +118,7 @@ class lunch_server(object):
             return False;
         
     def call(self,msg,client='',hosts=[]):
+        self.initialize()
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         i=0
         if client:
@@ -491,6 +503,7 @@ class lunch_server(object):
             
     '''listening method - should be started in its own thread'''    
     def start_server(self):
+        self.initialize()
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service")
         self.running = True
         self.my_master=-1 #the peer i use as master
@@ -571,6 +584,11 @@ class lunch_server(object):
 
     def get_member_timeout(self):  
         return self.member_timeout    
+    
+    def get_plugins_enabled(self):
+        return self._load_plugins
+    def set_plugins_enabled(self, enable):
+        self._load_plugins = enable
     
     def get_member_info(self):  
         return self.member_info    

@@ -17,7 +17,6 @@ from optparse import OptionParser
 from lunchinator import log_info, log_warning, log_error, get_settings,\
     get_server
     
-
 def parse_args():
     usage = "usage: %prog [options]"
     optionParser = OptionParser(usage = usage)
@@ -70,7 +69,7 @@ If you do not know, what to do now:\n\
 it should be safe to call 'git stash' in the plugins directory %s/plugins and start lunchinator again."%get_settings().get_main_config_dir())
     else:
         msg = "local update"
-        get_settings().set_plugins_enabled(False)
+        get_server().set_plugins_enabled(False)
         get_server().call("HELO_UPDATE "+msg,client="127.0.0.1")
         print "Sent update command to local lunchinator"
 
@@ -82,7 +81,7 @@ def sendMessage(msg, cli):
     if msg == None:
         msg = "lunch"
     
-    get_settings().set_plugins_enabled(False)
+    get_server().set_plugins_enabled(False)
     recv_nr=get_server().call(msg,client=cli)
     print "sent to",recv_nr,"clients"
     
@@ -103,13 +102,12 @@ if __name__ == "__main__":
         sendMessage(options.message, options.client)
     elif options.stop:
         msg = "local"
-        get_settings().set_plugins_enabled(False)
+        get_server().set_plugins_enabled(False)
         recv_nr=get_server().call("HELO_STOP "+msg,client="127.0.0.1")
         print "Sent stop command to local lunchinator"
     elif options.noGui:
     #    sys.settrace(trace)
         get_server().no_updates = options.noUpdates
-        get_server().controller = LunchServerController()
         get_server().start_server()
     else:
         from lunchinator.gui_controller import LunchinatorGuiController

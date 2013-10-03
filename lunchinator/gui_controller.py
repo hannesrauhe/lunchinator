@@ -13,9 +13,8 @@ from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.table_models import MembersTableModel, MessagesTableModel
 
 class LunchServerThread(QThread):
-    def __init__(self, parent, controller):
+    def __init__(self, parent):
         super(LunchServerThread, self).__init__(parent)
-        get_server().controller = controller
     
     def run(self):
         get_server().start_server()
@@ -40,6 +39,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         self.serverThread = None
         get_server().no_updates = noUpdates
+        get_server().initialize(self)
         
         # initialize main window
         self.mainWindow = LunchinatorWindow(self)
@@ -89,7 +89,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._sendFile.connect(self.sendFileSlot)
         
         
-        self.serverThread = LunchServerThread(self, self)
+        self.serverThread = LunchServerThread(self)
         self.serverThread.start()
         
     def getPlugins(self, cats):

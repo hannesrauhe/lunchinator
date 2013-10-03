@@ -46,7 +46,6 @@ class lunch_settings(object):
         self._internal_plugin_dir = unicode(self._lunchdir+os.path.sep+"plugins"+os.path.sep)
         self._external_plugin_dir = unicode(self._main_config_dir+os.path.sep+"plugins")
         self._plugin_dirs = [self._internal_plugin_dir, self._external_plugin_dir]
-        self._load_plugins = True
         
         #insert plugin folders into path
         for aDir in self._plugin_dirs:
@@ -209,11 +208,6 @@ class lunch_settings(object):
     def set_auto_update_enabled(self, enable):
         self._auto_update = enable
     
-    def get_plugins_enabled(self):
-        return self._load_plugins
-    def set_plugins_enabled(self, enable):
-        self._load_plugins = enable
-    
     def get_lunchdir(self):
         return self._lunchdir
     
@@ -300,7 +294,6 @@ class lunch_settings(object):
         self._default_lunch_end = convert_string(new_value)
     
     def get_alarm_begin_time(self):
-        print type(self._alarm_begin_time)
         return self._alarm_begin_time
     def set_alarm_begin_time(self, new_value):
         self._alarm_begin_time = convert_string(new_value)
