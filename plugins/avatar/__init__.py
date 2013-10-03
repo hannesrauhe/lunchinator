@@ -1,7 +1,7 @@
 from lunchinator.iface_plugins import iface_general_plugin
 from avatar.l_avatar import l_avatar
 import mimetypes
-from lunchinator import get_server, get_settings, log_error
+from lunchinator import get_server, get_settings, log_error, convert_string
 from functools import partial
 import os
 
@@ -32,13 +32,13 @@ class avatar(iface_general_plugin):
         from PyQt4.QtGui import QSortFilterProxyModel, QFileDialog
         class FileFilterProxyModel(QSortFilterProxyModel):
             MIME_TYPES = ["image/png", "image/jpeg", "image/gif"]
-            EXTENSIONS = ["png", "jpg", "jpeg", "jpe", "gif", "tif", "tiff", "xpm"]
+            EXTENSIONS = [u"png", u"jpg", u"jpeg", u"jpe", u"gif", u"tif", u"tiff", u"xpm"]
                 
             def filterAcceptsFile(self, path):
                 if os.path.isdir(path):
                     return True
                 mimeType = mimetypes.guess_type(path)
-                return mimeType in self.MIME_TYPES or path.split(".")[-1] in self.EXTENSIONS
+                return mimeType in self.MIME_TYPES or path.split(".")[-1].lower() in self.EXTENSIONS
                 
             def filterAcceptsRow(self, sourceRow, sourceParent):
                 fileModel = self.sourceModel()
@@ -53,10 +53,10 @@ class avatar(iface_general_plugin):
         dialog.setAcceptMode(QFileDialog.AcceptOpen)
         if dialog.exec_():
             selectedFiles = dialog.selectedFiles()
-            selectedFile = str(selectedFiles.first().toUtf8())
+            selectedFile = convert_string(selectedFiles.first())
             if not os.path.isdir(selectedFile) and fileFilter.filterAcceptsFile(selectedFile):
                 l = l_avatar()
-                selectedFile = l.use_as_avatar( get_settings(), selectedFile)
+                selectedFile = l.use_as_avatar(selectedFile)
                 self._setImage(selectedFile, self.label)
             else:
                 log_error("Selected invalid file: '%s' is of invalid type" % selectedFile)
