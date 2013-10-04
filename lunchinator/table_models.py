@@ -200,22 +200,15 @@ class ExtendedMembersModel(TableModelBase):
     """ may be called concurrently """
     @pyqtSlot(dict)
     def updateModel(self, member_info, update = False, prepend = False):
-        table_data = {"ip":[""]*len(member_info)}
-        index = 0
-        for ip,infodict in member_info.iteritems():
-            table_data["ip"][index] = ip
-            for k,v in infodict.iteritems():
-                if not table_data.has_key(k):
-                    table_data[k]=[""]*len(member_info)
-                if False:#k=="avatar" and os.path.isfile(get_settings().get_avatar_dir()+"/"+v):
-                    # TODO add avatar image
-                    table_data[k][index]="avatars/%s"%v
-                else:
-                    table_data[k][index]=v
-            index+=1
+        table_headers = set()
+        table_headers.add(u"ip") 
+        for infodict in member_info.itervalues():
+            for k in infodict:
+                if not k in table_headers:
+                    table_headers.add(convert_string(k))
         
         # update columns labels
-        for aHeaderName in table_data:
+        for aHeaderName in table_headers:
             if not aHeaderName in self.headerNames:
                 self.setHorizontalHeaderItem(len(self.headerNames), QStandardItem(aHeaderName))
                 self.headerNames.append(aHeaderName)
