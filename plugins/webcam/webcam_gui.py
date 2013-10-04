@@ -3,7 +3,7 @@ from lunchinator import log_exception
 from PyQt4.QtGui import QImage, QPixmap, QLabel, QSizePolicy
 from PyQt4.QtCore import QTimer, Qt
 class UpdatingImage(QLabel):
-    def __init__(self,parent,fallback_pic,pic_url,timeout,no_proxy):
+    def __init__(self,parent,fallback_pic,pic_url,timeout,no_proxy,smooth_scaling):
         super(UpdatingImage, self).__init__(parent)
         
         self.rawPixmap = None
@@ -11,6 +11,7 @@ class UpdatingImage(QLabel):
         self.pic_url = pic_url
         self.timeout = int(timeout)*1000
         self.no_proxy = no_proxy
+        self.smooth_scaling = smooth_scaling
         #self.setScaledContents(True)
         self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         try:     
@@ -28,7 +29,7 @@ class UpdatingImage(QLabel):
         # set a scaled pixmap to a w x h window keeping its aspect ratio 
         if self.rawPixmap != None:
             # TODO better scaling? Setting?
-            self.setPixmap(self.rawPixmap.scaled(self.width(),self.height(),Qt.KeepAspectRatio))
+            self.setPixmap(self.rawPixmap.scaled(self.width(),self.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation if self.smooth_scaling else Qt.FastTransformation))
     
     def resizeEvent(self, event):
         super(UpdatingImage, self).resizeEvent(event)
