@@ -57,7 +57,6 @@ class lunch_settings(object):
         self._audio_file = unicode(self._lunchdir+os.path.sep+"sounds"+os.path.sep+"sonar.wav")
         self._user_name = u""
         self._avatar_file = u""    
-        self._debug = False 
         self._tcp_port = 50001
         self._auto_update = True   
         self._default_lunch_begin = u"12:15"
@@ -120,11 +119,6 @@ class lunch_settings(object):
         #not shown in settings-plugin - handled by avatar-plugin
         self._avatar_file =  self.read_value_from_config_file(self._avatar_file,"general","avatar_file")
                      
-        self._debug = False
-                        
-        if os.path.exists(self._main_config_dir+"/debug.cfg"):
-            self._debug = True            
-            
         if os.path.exists(self._main_config_dir+"/username.cfg"):
             with codecs.open(self._main_config_dir+"/username.cfg",'r','utf-8') as f:
                 self.set_user_name(f.readline().strip())
@@ -190,18 +184,6 @@ class lunch_settings(object):
         
     def getCanUpdatePlugins(self):
         return self.getCanUpdate(self._main_config_dir + "/plugins/")
-    
-    #special handling for debug 
-    def set_debug(self,activate):
-        if activate:
-            with codecs.open(self._main_config_dir+"/debug.cfg",'w','utf-8') as f:
-                f.write("debugging activated because this file exists")
-        else:
-            os.remove(self._main_config_dir+"/debug.cfg")
-        self._debug = activate
-        
-    def get_debug(self):
-        return self._debug
     
     def get_auto_update_enabled(self):
         return self._auto_update
