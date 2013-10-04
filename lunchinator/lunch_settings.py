@@ -126,15 +126,15 @@ class lunch_settings(object):
             self._debug = True            
             
         if os.path.exists(self._main_config_dir+"/username.cfg"):
-            with codecs.open(self._main_config_dir+"/username.cfg", 'utf-8') as f:
+            with codecs.open(self._main_config_dir+"/username.cfg",'r','utf-8') as f:
                 self.set_user_name(f.readline().strip())
                 
         if os.path.exists(self._main_config_dir+"/avatar.cfg"):
-            with codecs.open(self._main_config_dir+"/avatar.cfg", 'utf-8') as f:
+            with codecs.open(self._main_config_dir+"/avatar.cfg",'r','utf-8') as f:
                 self.set_avatar_file(f.readline().strip())
                 
         if os.path.exists(self._main_config_dir+"/sound.cfg"):
-            with codecs.open(self._main_config_dir+"/sound.cfg", 'utf-8') as f:
+            with codecs.open(self._main_config_dir+"/sound.cfg",'r','utf-8') as f:
                 audio_file = f.readline().strip()
                 if os.path.exists(self._main_config_dir+"/sounds/"+audio_file):
                     self._audio_file = self._main_config_dir+"/sounds/"+audio_file
