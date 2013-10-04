@@ -319,6 +319,9 @@ class lunch_settings(object):
             setLoggingLevel(logging.INFO)
         elif self._logging_level == u"DEBUG":
             setLoggingLevel(logging.DEBUG)
+            
+    def get_advanced_gui_enabled(self):
+        return self._logging_level == u"DEBUG"
         
     def set_last_gui_plugin_index(self, index):
         self._last_gui_plugin_index = index

@@ -2,7 +2,7 @@ from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex, QSt
 from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
 import time,datetime
 from lunchinator import log_exception, convert_string, log_error, log_warning,\
-    get_server
+    get_server, get_settings
 
 class TableModelBase(QStandardItemModel):
     SORT_ROLE = Qt.UserRole
@@ -118,8 +118,9 @@ class MembersTableModel(TableModelBase):
         columns = [("IP", self._updateIpItem),
                    ("Name", self._updateNameItem),
                    ("LunchTime", self._updateLunchTimeItem),
-                   ("LastSeen", self._updateLastSeenItem),
-                   ("SendTo", self._updateSendToItem)]
+                   ("LastSeen", self._updateLastSeenItem)]
+        if get_settings().get_advanced_gui_enabled():
+            columns.append(("SendTo", self._updateSendToItem))
         super(MembersTableModel, self).__init__(dataSource, columns)
         
         self.ipColIndex = 0
