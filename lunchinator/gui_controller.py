@@ -232,8 +232,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     @pyqtSlot(unicode, QObject)
     def sendMessageClicked(self, message, w):
-        message = convert_string(message)
         if message != None:
+            message = convert_string(message)
             get_server().call_all_members(message)
         else:
             get_server().call_all_members(unicode(w.text().toUtf8(), 'utf-8'))

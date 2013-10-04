@@ -42,6 +42,7 @@ class lunch_server(object):
         self.messagesLock = Lock()
         self.membersLock = Lock()
         self.shared_dict = {} #for plugins
+        self.dontSendTo = set()
         
         self.exitCode = 0  
         
@@ -153,7 +154,7 @@ class lunch_server(object):
                     else:
                         if announce_name==10:
                             #it's time to announce my name again and switch the master
-                            self.call("HELO "+get_settings().get_user_name(),hosts=self.members)
+                            self.call("HELO "+get_settings().get_user_name())
                             announce_name=0
                             self._remove_inactive_members()
                             self._call_for_dict()
@@ -233,43 +234,37 @@ class lunch_server(object):
         
     def call(self,msg,client='',hosts=[]):
         self.initialize()
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        i=0
+        
+        target = None
         if client:
-            log_debug("Sending message %s to %s"%(msg,client))
-            try:
-                s.sendto(msg.encode('utf-8'), (client.strip(), 50000)) 
-                i+=1
-            except:
-                log_exception("Exception while sending msg %s to %s: %s"%(msg,client, str(sys.exc_info()[0])))
+            # send to client regardless of the dontSendTo state
+            target = [client.strip()]
         elif 0==len(hosts):
-            if 0==len(self.members):
-                log_error("Cannot send message, no peers connected, no peer found in members file")
-                return 0
-            log_debug("Sending message %s to %s"%(msg,str(self.members)))
-            for ip in self.members:
-                try:
-                    s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
-                    i+=1
-                except:
-                    log_exception("Exception while sending msg %s to %s: %s"%(msg,client, str(sys.exc_info()[0])))
-                    continue        
+            target = set(self.members) - self.dontSendTo
         else:
-            log_debug(u"Sending message %s to %s",msg,str(hosts))
-            for ip in hosts:
+            # send to all specified hosts regardless of the dontSendTo state
+            target = set(hosts)
+        
+        if 0==len(target):
+            log_error("Cannot send message, no peers connected, no peer found in members file")
+
+        i = 0
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
+        try:      
+            for ip in target:
                 try:
                     s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
                     i+=1
                 except:
                     log_exception("Exception while sending msg %s to %s: %s"%(msg,client, str(sys.exc_info()[0])))
                     continue
-        
-        s.close() 
+        finally:
+            s.close() 
         return i
         
     '''short for the call function above for backward compatibility'''
     def call_all_members(self,msg):        
-        self.call(msg,hosts=self.members)   
+        self.call(msg)   
             
     """ ---------------------- PRIVATE -------------------------------- """
     

@@ -1,7 +1,8 @@
 from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex, QString
 from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
 import time,datetime
-from lunchinator import log_exception, convert_string, log_error, log_warning
+from lunchinator import log_exception, convert_string, log_error, log_warning,\
+    get_server
 
 class TableModelBase(QStandardItemModel):
     SORT_ROLE = Qt.UserRole
@@ -131,8 +132,6 @@ class MembersTableModel(TableModelBase):
         self.lunchBeginKey = u"next_lunch_begin"
         self.lunchEndKey = u"next_lunch_end"
         
-        self.dontSendTo = set()
-        
         # Called before server is running, no need to lock here
         infoDicts = self.dataSource.get_member_info()
         for ip in self.dataSource.get_members():
@@ -179,8 +178,9 @@ class MembersTableModel(TableModelBase):
         item.setData(QVariant(intValue), Qt.DisplayRole)
     
     def _updateSendToItem(self, ip, _, item):
-        item.setData(QVariant(not ip in self.dontSendTo), Qt.DisplayRole)
-        item.setEditable(True)
+        checkstate = Qt.Unchecked if ip in self.dataSource.dontSendTo else Qt.Checked
+        item.setCheckState(checkstate)
+        item.setCheckable(True)
         
     """ --------------------- SLOTS ---------------------- """
     
@@ -193,11 +193,11 @@ class MembersTableModel(TableModelBase):
         column = item.index().column()
         if column == self.sendToColIndex:
             ip = self.keys[row]
-            sendTo = item.data(Qt.DisplayRole).toBool()
-            if sendTo and ip in self.dontSendTo:
-                self.dontSendTo.remove(ip)
-            elif not sendTo and ip not in self.dontSendTo:
-                self.dontSendTo.add(ip)
+            sendTo = item.checkState() == Qt.Checked
+            if sendTo and ip in self.dataSource.dontSendTo:
+                self.dataSource.dontSendTo.remove(ip)
+            elif not sendTo and ip not in self.dataSource.dontSendTo:
+                self.dataSource.dontSendTo.add(ip)
 
 class ExtendedMembersModel(TableModelBase):
     def __init__(self, dataSource):
