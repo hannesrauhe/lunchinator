@@ -40,6 +40,10 @@ class maintainer(iface_gui_plugin):
         get_server().controller.memberUpdatedSignal.connect(self.w.info_table.model().externalRowUpdated)
         get_server().controller.memberRemovedSignal.connect(self.w.info_table.model().externalRowRemoved)
         
+        get_server().controller.memberAppendedSignal.connect(self.w.update_dropdown_members)
+        get_server().controller.memberUpdatedSignal.connect(self.w.update_dropdown_members)
+        get_server().controller.memberRemovedSignal.connect(self.w.update_dropdown_members)
+        
         return widget
     
     def destroy_widget(self):
@@ -47,6 +51,10 @@ class maintainer(iface_gui_plugin):
             get_server().controller.memberAppendedSignal.disconnect(self.w.info_table.model().externalRowAppended)
             get_server().controller.memberUpdatedSignal.disconnect(self.w.info_table.model().externalRowUpdated)
             get_server().controller.memberRemovedSignal.disconnect(self.w.info_table.model().externalRowRemoved)
+            
+            get_server().controller.memberAppendedSignal.disconnect(self.w.update_dropdown_members)
+            get_server().controller.memberUpdatedSignal.disconnect(self.w.update_dropdown_members)
+            get_server().controller.memberRemovedSignal.disconnect(self.w.update_dropdown_members)
             self.w.destroy_widget()
         iface_gui_plugin.destroy_widget(self)
             
@@ -60,10 +68,17 @@ class maintainer(iface_gui_plugin):
             from lunchinator.lunch_datathread_qt import DataReceiverThread
             #someone will send me his logfile on tcp
             file_size=int(value.strip())
-            if not os.path.exists(get_settings().get_main_config_dir()+"/logs"):
-                os.makedirs(get_settings().get_main_config_dir()+"/logs")
-            file_name=get_settings().get_main_config_dir()+"/logs/"+str(ip)+".log"
+            
+            logDir = "%s/logs/%s" % (get_settings().get_main_config_dir(), ip)
+            if not os.path.exists(logDir):
+                os.makedirs(logDir)
+            
+            if cmd.startswith("HELO_LOGFILE_TGZ"):
+                file_name="%s/tmp.tgz" % logDir
+            else:
+                file_name="%s/tmp.log" % logDir
             log_info("Receiving file of size %d on port %d"%(file_size,get_settings().get_tcp_port()))
+            
             dr = DataReceiverThread(self.w, ip,file_size,file_name,get_settings().get_tcp_port())
             dr.successfullyTransferred.connect(self.w.cb_log_transfer_success)
             dr.errorOnTransfer.connect(self.w.cb_log_transfer_error)

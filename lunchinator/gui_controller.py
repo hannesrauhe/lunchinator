@@ -4,7 +4,7 @@ from lunchinator import get_server, log_exception, log_info, get_settings,\
 import socket,os,time
 import platform
 from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QSortFilterProxyModel, QAction, QSystemTrayIcon, QIcon
-from PyQt4.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot, QObject
+from PyQt4.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot, QObject, QString, QByteArray
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
@@ -13,6 +13,7 @@ from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.table_models import MembersTableModel, MessagesTableModel
 from lunchinator.iface_plugins import iface_called_plugin
 from lunchinator.utilities import processPluginCall
+from pydoc import isdata
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -30,7 +31,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     memberUpdatedSignal = pyqtSignal(unicode, dict)
     memberRemovedSignal = pyqtSignal(unicode)
     _messagePrepended = pyqtSignal(time.struct_time, list)
-    _sendFile = pyqtSignal(unicode, unicode, int)
+    _sendFile = pyqtSignal(unicode, QByteArray, int, bool)
     _receiveFile = pyqtSignal(unicode, int, unicode)
     _processEvent = pyqtSignal(unicode, unicode, unicode)
     _processMessage = pyqtSignal(unicode, unicode)
@@ -129,8 +130,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def receiveFile(self, ip, fileSize, fileName):
         self._receiveFile.emit(ip, fileSize, fileName)
     
-    def sendFile(self, ip, filePath, otherTCPPort):
-        self._sendFile.emit(ip, filePath, otherTCPPort)
+    def sendFile(self, ip, fileOrData, otherTCPPort, isData = False):
+        if not isData:
+            # encode to send as str
+            fileOrData = fileOrData.encode('utf-8')
+        self._sendFile.emit(ip, QByteArray.fromRawData(fileOrData), otherTCPPort, isData)
 
     """ process any non-message event """    
     def processEvent(self, cmd, hostName, senderIP):
@@ -285,11 +289,14 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def threadFinished(self, thread, _):
         thread.deleteLater()
         
-    @pyqtSlot(unicode, unicode, int)
-    def sendFileSlot(self, addr, fileToSend, other_tcp_port):
+    @pyqtSlot(unicode, QByteArray, int, bool)
+    def sendFileSlot(self, addr, fileToSend, other_tcp_port, isData):
         addr = convert_string(addr)
-        fileToSend = convert_string(fileToSend)
-        ds = DataSenderThread(self,addr,fileToSend, other_tcp_port)
+        if isData:
+            fileToSend = str(fileToSend)
+        else:
+            fileToSend = str(fileToSend).decode("utf-8")
+        ds = DataSenderThread(self,addr,fileToSend, other_tcp_port, isData)
         ds.successfullyTransferred.connect(self.threadFinished)
         ds.errorOnTransfer.connect(self.threadFinished)
         ds.start()

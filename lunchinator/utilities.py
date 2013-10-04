@@ -91,7 +91,8 @@ def processPluginCall(ip, call):
     member_info = {}
     if get_server().member_info.has_key(ip):
         member_info = get_server().member_info[ip]
-    for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("called") + get_server().plugin_manager.getPluginsOfCategory("gui"):
+    # called also contains gui plugins
+    for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("called"):
         if pluginInfo.plugin_object.is_activated:
             try:
                 call(pluginInfo.plugin_object, ip, member_info)

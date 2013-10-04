@@ -11,13 +11,16 @@ class DataThreadBase(Thread):
         self.con = None
 
 class DataSenderThread(DataThreadBase):
-    def __init__(self, receiver, file_path, tcp_port):
-        super(DataSenderThread, self).__init__(file_path, tcp_port)
-     
+    def __init__(self, receiver, path_or_data, tcp_port, is_data = False):
+        super(DataSenderThread, self).__init__(None if is_data else path_or_data, tcp_port)
+        
+        self.data = None
+        if is_data:
+            self.data = path_or_data
         self.receiver = receiver
  
     def run(self):
-        sendFile(self.receiver, self.file_path, self.tcp_port, lambda secs : time.sleep(secs))
+        sendFile(self.receiver, self.data if self.data != None else self.file_path, self.tcp_port, lambda secs : time.sleep(secs), self.data != None)
         
     def stop_server(self):
         pass

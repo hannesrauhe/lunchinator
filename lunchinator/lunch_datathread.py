@@ -2,34 +2,42 @@ import socket,sys
 from lunchinator import log_exception
 import codecs
 
-def _sendFile(con, receiver, file_path, tcp_port):
+def _sendFile(con, receiver, path_or_data, tcp_port, is_data):
     try:
         con.connect((receiver, tcp_port))            
     except socket.error as e:
         log_exception("Could not initiate connection to",receiver,"on Port",tcp_port,e.strerror)
         raise
     
-    with codecs.open(file_path, 'rb', 'utf-8') as sendfile:           
-        data = sendfile.read()
-        try:
-            con.sendall(data)                      
-        except socket.error as e:
-            log_exception("Could not send data",e.strerror)
-            raise
+    data = None
+    if is_data:
+        data = path_or_data
+    else:
+        with codecs.open(path_or_data, 'rb', 'utf-8') as sendfile:           
+            data = sendfile.read()
+    try:
+        con.sendall(data)                      
+    except socket.error as e:
+        log_exception("Could not send data",e.strerror)
+        raise
     
-def sendFile(receiver, file_path, tcp_port, sleep):
+def sendFile(receiver, path_or_data, tcp_port, sleep, is_data = False):
     sleep(5)
     con = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        _sendFile(con, receiver, file_path, tcp_port)       
+        _sendFile(con, receiver, path_or_data, tcp_port, is_data)       
     except:
-        log_exception("An error occured while trying to send file",file_path, sys.exc_info()[0])   
+        if is_data:
+            log_exception("An error occured while trying to send binary data")
+        else:
+            log_exception("An error occured while trying to send file",path_or_data)   
          
     if con:
         con.close()     
     
 def _receiveFile(con, file_path, size):
-    with codecs.open(file_path, 'wb', 'utf-8') as writefile:
+    # no utf-8, can be binary data as well
+    with open(file_path, 'wb') as writefile:
         length = size
         try:
             while length:
@@ -42,6 +50,7 @@ def _receiveFile(con, file_path, size):
 
 def receiveFile(sender, file_path, size, tcp_port, success, error):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    con = None
     try: 
         s.bind(("", tcp_port)) 
         s.settimeout(30.0)

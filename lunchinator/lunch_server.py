@@ -3,9 +3,11 @@ from iface_plugins import iface_called_plugin, iface_database_plugin, iface_gene
 from time import strftime, localtime, time, mktime
 import socket,sys,os,json,codecs
 from threading import Lock
+from cStringIO import StringIO
 
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning
+import tarfile
 
 EXIT_CODE_UPDATE = 2
 EXIT_CODE_STOP = 3
@@ -114,8 +116,11 @@ class lunch_server(object):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         #getting your IP address is hard...:
         socket.gethostbyname(socket.gethostname()) #may return something like 127.* or 0.*
-        if self.own_ip.startswith("127.") or self.own_ip.startswith("0."):
-            self.own_ip = socket.gethostbyname(socket.getfqdn())        
+        try:
+            if self.own_ip.startswith("127.") or self.own_ip.startswith("0."):
+                self.own_ip = socket.gethostbyname(socket.getfqdn())        
+        except:
+            log_exception("Exception trying to determine own IP")
         if self.own_ip.startswith("127.") or self.own_ip.startswith("0."):
             log_warning("IP address could not be determined, so I'm using your hostname, some things might not work correctly (e.g., statistics)")
             self.own_ip = socket.gethostname()[:15]
@@ -536,22 +541,25 @@ class lunch_server(object):
             elif cmd.startswith("HELO_REQUEST_LOGFILE"):
                 #someone wants my logfile 
                 other_tcp_port = get_settings().get_tcp_port()
-                log_num=0
                 try:                
-                    (oport, onum) = value.split(" ",1)    
+                    (oport, _) = value.split(" ",1)    
                     other_tcp_port=int(oport.strip())
-                    log_num = int(onum.strip())
                 except:
                     log_exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0"%(str(ip),str(value),other_tcp_port))
                 
-                fileToSend = "%s.%d"%(get_settings().get_log_file(),log_num) if log_num>0 else get_settings().get_log_file()
-                if os.path.exists(fileToSend):
-                    fileSize = os.path.getsize(fileToSend)
-                    log_info("Sending file of size %d to %s : %d"%(fileSize,str(ip),other_tcp_port))
-                    self.call("HELO_LOGFILE "+str(fileSize), ip)
-                    self.controller.sendFile(ip,fileToSend, other_tcp_port)
-                else:
-                    log_error("Want to send file %s, but cannot find it"%(fileToSend))   
+                fileToSend = StringIO()
+                with tarfile.open(mode='w:gz', fileobj=fileToSend) as tarWriter:
+                    if os.path.exists(get_settings().get_log_file()):
+                        tarWriter.add(get_settings().get_log_file(), arcname="0.log")
+                    logIndex = 1
+                    while os.path.exists("%s.%d" % (get_settings().get_log_file(), logIndex)):
+                        tarWriter.add("%s.%d" % (get_settings().get_log_file(), logIndex), arcname="%d.log" % logIndex)
+                        logIndex = logIndex + 1
+                
+                fileSize = fileToSend.tell()
+                log_info("Sending file of size %d to %s : %d"%(fileSize,str(ip),other_tcp_port))
+                self.call("HELO_LOGFILE_TGZ "+str(fileSize), ip)
+                self.controller.sendFile(ip,fileToSend.getvalue(), other_tcp_port, True)
             elif "HELO"==cmd:
                 #someone tells me his name
                 didKnowMember = ip in self.members

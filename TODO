@@ -13,6 +13,9 @@
 - incoming call nicht von localhost?
 - Draggable Widgets
 - "SendTo" implementieren
+- remove unused members does not work properly
+- hosts not written to file?
+
 - Werden dict-inhalte nun konvertiert oder nicht?
 --> PyQt Version auf mac:   4.10.3 (264707)
 --> PyQt Version auf 12.04: 4. 9.1 (264449)
