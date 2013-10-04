@@ -171,8 +171,8 @@ class lunch_server(object):
             self.controller.serverStopped()
             
     def memberName(self, addr):
-        if addr in self.member_info and 'name' in self.member_info[addr]:
-            return self.member_info[addr]['name']
+        if addr in self.member_info and u'name' in self.member_info[addr]:
+            return self.member_info[addr][u'name']
         return addr
     
     def messagesCount(self):
@@ -303,7 +303,7 @@ class lunch_server(object):
         memberInfo = {}
         if ip in self.member_info:
             memberInfo = self.member_info[ip]
-        memberInfo['name'] = hostn
+        memberInfo[u'name'] = hostn
         
         self.lockMembers()
         try:
@@ -372,24 +372,24 @@ class lunch_server(object):
             log_exception("Could not write messages to %s: %s"%(get_settings().get_messages_file(), sys.exc_info()[0]))    
     
     def _build_info_string(self):
-        info_d = {"avatar": get_settings().get_avatar_file(),
-                   "name": get_settings().get_user_name(),
-                   "next_lunch_begin":get_settings().get_default_lunch_begin(),
-                   "next_lunch_end":get_settings().get_default_lunch_end(),
-                   "version":get_settings().get_version_short(),
-                   "version_commit_count":get_settings().get_commit_count(),
-                   "version_commit_count_plugins":get_settings().get_commit_count_plugins()}
+        info_d = {u"avatar": get_settings().get_avatar_file(),
+                   u"name": get_settings().get_user_name(),
+                   u"next_lunch_begin":get_settings().get_default_lunch_begin(),
+                   u"next_lunch_end":get_settings().get_default_lunch_end(),
+                   u"version":get_settings().get_version_short(),
+                   u"version_commit_count":get_settings().get_commit_count(),
+                   u"version_commit_count_plugins":get_settings().get_commit_count_plugins()}
         if get_settings().get_next_lunch_begin():
-            info_d["next_lunch_begin"] = get_settings().get_next_lunch_begin()
+            info_d[u"next_lunch_begin"] = get_settings().get_next_lunch_begin()
         if get_settings().get_next_lunch_end():
-            info_d["next_lunch_end"] = get_settings().get_next_lunch_end()
+            info_d[u"next_lunch_end"] = get_settings().get_next_lunch_end()
         return json.dumps(info_d)      
         
     def _createMembersDict(self):
         membersDict = {}
         for ip in self.members:
-            if ip in self.member_info and 'name' in self.member_info[ip]:
-                membersDict[ip] = self.member_info[ip]['name']
+            if ip in self.member_info and u'name' in self.member_info[ip]:
+                membersDict[ip] = self.member_info[ip][u'name']
             else:
                 membersDict[ip] = ip
         return membersDict

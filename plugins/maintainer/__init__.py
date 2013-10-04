@@ -34,30 +34,27 @@ class maintainer(iface_gui_plugin):
         from maintainer.maintainer_gui import maintainer_gui
         iface_gui_plugin.create_widget(self, parent)
         self.w = maintainer_gui(parent, self)
-        return self.w.create_widget(parent)
+        
+        widget = self.w.create_widget(parent)
+        get_server().controller.memberAppendedSignal.connect(self.w.info_table.model().externalRowAppended)
+        get_server().controller.memberUpdatedSignal.connect(self.w.info_table.model().externalRowUpdated)
+        get_server().controller.memberRemovedSignal.connect(self.w.info_table.model().externalRowRemoved)
+        
+        return widget
     
     def destroy_widget(self):
         if self.w != None:
+            get_server().controller.memberAppendedSignal.disconnect(self.w.info_table.model().externalRowAppended)
+            get_server().controller.memberUpdatedSignal.disconnect(self.w.info_table.model().externalRowUpdated)
+            get_server().controller.memberRemovedSignal.disconnect(self.w.info_table.model().externalRowRemoved)
             self.w.destroy_widget()
         iface_gui_plugin.destroy_widget(self)
             
     def add_menu(self,menu):
         pass
     
-    def process_event(self,cmd,value,ip,member_info):
-        if "HELO_INFO" in cmd or "HELO_DICT" in cmd:
-            if self.w == None:
-                return
-            self.w.updateInfoTable()
-            self.w.update_dropdown_members()
-        if cmd=="HELO_BUGREPORT_DESCR":
-            self.recorded_reports.append((time.time(),ip,value))
-            name = " [" + ip + "]"
-            if member_info.has_key("name"):
-                name = " [" + member_info["name"] + "]"
-            subprocess.call(["notify-send", name, "new bug report"])            
-               
-        elif cmd.startswith("HELO_LOGFILE"):
+    def process_event(self,cmd,value,ip,_member_info):
+        if cmd.startswith("HELO_LOGFILE"):
             if self.w == None:
                 return
             from lunchinator.lunch_datathread_qt import DataReceiverThread

@@ -1,32 +1,38 @@
-from PyQt4.QtCore import Qt, QVariant, QStringList, QSize, pyqtSlot, QString
+from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex
 from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
 import time
-from lunchinator import get_server, log_exception
+from lunchinator import log_exception
 
 class TableModelBase(QStandardItemModel):
     def __init__(self, dataSource, columns):
         super(TableModelBase, self).__init__()
         self.dataSource = dataSource
         self.columns = columns
-        self.setColumnCount(len(self.columns))
+        if self.columns != None:
+            self.setColumnCount(len(self.columns))
+            stringList = QStringList()
+            for colName, _ in self.columns:
+                stringList.append(colName)
+            self.setHorizontalHeaderLabels(stringList)
         self.keys = []
-        
-        stringList = QStringList()
-        for colName, _ in self.columns:
-            stringList.append(colName)
-        self.setHorizontalHeaderLabels(stringList)
+
+    def callItemInitializer(self, column, key, data, item):
+        self.columns[column][1](key, data, item)
 
     def createItem(self, key, data, column):
         item = QStandardItem()
         item.setEditable(False)
-        self.columns[column][1](key, data, item)
+        self.callItemInitializer(column, key, data, item)
         item.setData(QSize(0, 20), Qt.SizeHintRole)
         return item
     
     def updateItem(self, key, data, row, column):
         item = self.item(row, column)
         if item != None:
-            self.columns[column][1](key, data, item)
+            self.callItemInitializer(column, key, data, item)
+        else:
+            # item not initialized yet
+            self.setItem(row, column, self.createItem(key, data, column))
 
     def createRow(self, key, data):
         row = []
@@ -82,21 +88,18 @@ class MembersTableModel(TableModelBase):
         self.lastSeenColIndex = 3
         self.sendToColIndex = 4
         
-        self.nameKey= QString('name')
-        self.lunchBeginKey = QString("next_lunch_begin")
-        self.lunchEndKey = QString("next_lunch_end")
+        self.nameKey= u'name'
+        self.lunchBeginKey = u"next_lunch_begin"
+        self.lunchEndKey = u"next_lunch_end"
         
         self.dontSendTo = set()
         
         # Called before server is running, no need to lock here
-        infoDicts = get_server().get_member_info()
-        for ip in get_server().get_members():
+        infoDicts = self.dataSource.get_member_info()
+        for ip in self.dataSource.get_members():
             infoDict = None
             if ip in infoDicts:
-                infoDictTmp = infoDicts[ip]
-                infoDict = {}
-                for aKey in infoDictTmp:
-                    infoDict[QString(aKey)] = infoDictTmp[aKey]
+                infoDict = infoDicts[ip]
             self.appendContentRow(ip, infoDict)
             
         self.itemChanged.connect(self.itemChangedSlot)
@@ -154,6 +157,68 @@ class MembersTableModel(TableModelBase):
             elif not sendTo and ip not in self.dontSendTo:
                 self.dontSendTo.add(ip)
 
+class ExtendedMembersModel(TableModelBase):
+    def __init__(self, dataSource):
+        super(ExtendedMembersModel, self).__init__(dataSource, None)
+        self.headerNames = []
+        self.mutex = QMutex()
+        self.updateModel(self.dataSource.get_member_info())
+    
+    """ may be called concurrently """
+    @pyqtSlot(dict)
+    def updateModel(self, member_info, update = False, prepend = False):
+        table_data = {"ip":[""]*len(member_info)}
+        index = 0
+        for ip,infodict in member_info.iteritems():
+            table_data["ip"][index] = ip
+            for k,v in infodict.iteritems():
+                if not table_data.has_key(k):
+                    table_data[k]=[""]*len(member_info)
+                if False:#k=="avatar" and os.path.isfile(get_settings().get_avatar_dir()+"/"+v):
+                    # TODO add avatar image
+                    table_data[k][index]="avatars/%s"%v
+                else:
+                    table_data[k][index]=v
+            index+=1
+        
+        # update columns labels
+        for aHeaderName in table_data:
+            if not aHeaderName in self.headerNames:
+                self.setHorizontalHeaderItem(len(self.headerNames), QStandardItem(aHeaderName))
+                self.headerNames.append(aHeaderName)
+
+        for ip in member_info:
+            if update:
+                if ip in self.keys:
+                    index = self.keys.index(ip)
+                    self.updateRow(ip, member_info[ip], index)
+            elif prepend:
+                self.prependContentRow(ip, member_info[ip])
+            else:
+                self.appendContentRow(ip, member_info[ip])
+    
+    def callItemInitializer(self, column, key, data, item):
+        headerName = self.headerNames[column]
+        text = ""
+        if headerName == "ip":
+            text = key
+        elif headerName in data:
+            text = data[headerName]
+        item.setData(QVariant(text), Qt.DisplayRole)
+        
+    def externalRowAppended(self, key, data):
+        self.updateModel({key: data})
+        
+    def externalRowPrepended(self, key, data):
+        self.updateModel({key: data}, prepend=True)
+    
+    def externalRowUpdated(self, key, data):
+        self.updateModel({key: data}, update=True)
+    
+    def externalRowRemoved(self, key):
+        if key in self.keys:
+            self.removeRow(self.keys.index(key))
+
 class MessagesTableModel(TableModelBase):
     def __init__(self, dataSource):
         columns = [("Time", self._updateTimeItem),
@@ -162,7 +227,7 @@ class MessagesTableModel(TableModelBase):
         super(MessagesTableModel, self).__init__(dataSource, columns)
         
         # called before server is running, no need to lock here
-        for aMsg in get_server().getMessages():
+        for aMsg in self.dataSource.getMessages():
             self.appendContentRow(aMsg[0], [aMsg[1], aMsg[2]])
             
     def _updateTimeItem(self, mTime, _, item):
@@ -178,13 +243,13 @@ class MessagesTableModel(TableModelBase):
     
     @pyqtSlot()
     def updateSenders(self):
-        get_server().lockMembers()
+        self.dataSource.lockMembers()
         try:
-            get_server().lockMessages()
+            self.dataSource.lockMessages()
             try:
-                for row, aMsg in enumerate(get_server().getMessages()):
+                for row, aMsg in enumerate(self.dataSource.getMessages()):
                     self.updateItem(aMsg[0], [aMsg[1], aMsg[2]], row, 1)
             finally:
-                get_server().releaseMessages()
+                self.dataSource.releaseMessages()
         finally:
-            get_server().releaseMembers()
+            self.dataSource.releaseMembers()

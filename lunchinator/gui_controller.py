@@ -26,9 +26,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
     # ---- SIGNALS ----------------
     _initDone = pyqtSignal()
     _serverStopped = pyqtSignal()
-    _memberAppended = pyqtSignal(unicode, dict)
-    _memberUpdated = pyqtSignal(unicode, dict)
-    _memberRemoved = pyqtSignal(unicode)
+    memberAppendedSignal = pyqtSignal(unicode, dict)
+    memberUpdatedSignal = pyqtSignal(unicode, dict)
+    memberRemovedSignal = pyqtSignal(unicode)
     _messagePrepended = pyqtSignal(time.struct_time, list)
     _sendFile = pyqtSignal(unicode, unicode, int)
     _receiveFile = pyqtSignal(unicode, int, unicode)
@@ -57,9 +57,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.mainWindow.messagesTable.setModel(self.messagesProxyModel)
         self._messagePrepended.connect(self.messagesModel.externalRowPrepended)
         
-        self._memberAppended.connect(self.updateSendersInMessagesTable)
-        self._memberUpdated.connect(self.updateSendersInMessagesTable)
-        self._memberRemoved.connect(self.updateSendersInMessagesTable)
+        self.memberAppendedSignal.connect(self.updateSendersInMessagesTable)
+        self.memberUpdatedSignal.connect(self.updateSendersInMessagesTable)
+        self.memberRemovedSignal.connect(self.updateSendersInMessagesTable)
         
         # initialize members table
         self.membersModel = MembersTableModel(get_server())
@@ -72,9 +72,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         timeoutTimer.timeout.connect(self.updateTimeoutsInMembersTables)
         timeoutTimer.start(1000)  
         
-        self._memberAppended.connect(self.membersModel.externalRowAppended)
-        self._memberUpdated.connect(self.membersModel.externalRowUpdated)
-        self._memberRemoved.connect(self.membersModel.externalRowRemoved)
+        self.memberAppendedSignal.connect(self.membersModel.externalRowAppended)
+        self.memberUpdatedSignal.connect(self.membersModel.externalRowUpdated)
+        self.memberRemovedSignal.connect(self.membersModel.externalRowRemoved)
         
         # initialize tray icon
         icon_file = get_settings().get_lunchdir()+os.path.sep+"images"+os.path.sep+"lunch.svg"
@@ -115,13 +115,13 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._serverStopped.emit()
         
     def memberAppended(self, ip, infoDict):
-        self._memberAppended.emit(ip, infoDict)
+        self.memberAppendedSignal.emit(ip, infoDict)
     
     def memberUpdated(self, ip, infoDict):
-        self._memberUpdated.emit(ip, infoDict)
+        self.memberUpdatedSignal.emit(ip, infoDict)
     
     def memberRemoved(self, ip):
-        self._memberRemoved.emit(ip)
+        self.memberRemovedSignal.emit(ip)
     
     def messagePrepended(self, messageTime, senderIP, messageText):
         self._messagePrepended.emit(messageTime, [senderIP, messageText])

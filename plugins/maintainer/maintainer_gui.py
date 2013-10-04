@@ -1,8 +1,8 @@
 import time,codecs
 from lunchinator import get_server, get_settings, convert_string
-from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeWidget, QStandardItemModel, QStandardItem, QSpinBox, QTabWidget
+from lunchinator.table_models import ExtendedMembersModel
+from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeView, QStandardItemModel, QStandardItem, QSpinBox, QTabWidget
 from PyQt4.QtCore import QObject, pyqtSlot, QThread
-from PyQt4 import QtCore
 
 class maintainer_gui(QObject):
     def __init__(self,parent,mt):
@@ -15,7 +15,7 @@ class maintainer_gui(QObject):
         self.dropdown_members = None
         self.dropdown_members_dict = None
         self.dropdown_members_model = None
-        self.visible = False      
+        self.visible = False
         
     @pyqtSlot(QThread, unicode)
     def cb_log_transfer_success(self, thread, path):
@@ -114,7 +114,9 @@ class maintainer_gui(QObject):
         return widget
     
     def create_info_table_widget(self, parent):
-        self.info_table = InfoTable(parent)
+        self.info_table = QTreeView(parent)
+        self.info_table.setAlternatingRowColors(True)
+        self.info_table.setModel(ExtendedMembersModel(get_server()))
         return self.info_table
     
     def get_dropdown_member_text(self, m_ip, m_name):
@@ -201,53 +203,6 @@ class maintainer_gui(QObject):
     def updateInfoTable(self):
         if self.info_table != None:
             self.info_table.update_model()
-  
-class InfoTable(QTreeWidget):
-    def __init__(self, parent):
-        super(InfoTable, self).__init__(parent)
-        
-        self.listModel = None
-        self.update_model()
-    
-    def update_model(self):
-        return None
-    
-        if len(get_server().get_member_info()) == 0:
-            return
-        
-        table_data = {"ip":[""]*len(get_server().get_member_info())}
-        index = 0
-        for ip,infodict in get_server().get_member_info().iteritems():
-            table_data["ip"][index] = ip
-            for k,v in infodict.iteritems():
-                if not table_data.has_key(k):
-                    table_data[k]=[""]*len(get_server().get_member_info())
-                if False:#k=="avatar" and os.path.isfile(get_settings().get_avatar_dir()+"/"+v):
-                    # TODO add avatar image
-                    table_data[k][index]="avatars/%s"%v
-                else:
-                    table_data[k][index]=v
-            index+=1
-        
-        if self.listModel == None or self.listModel.columnCount() != len(table_data):
-            # columns added/removed
-            self.listModel = QStandardItemModel(len(get_server().get_member_info()), len(table_data))
-            headerLabels = QtCore.QStringList()
-            for desc in table_data.iterkeys():
-                headerLabels.append(desc)
-            self.listModel.setHorizontalHeaderLabels(headerLabels)
-            self.setModel(self.listModel)
-            
-            # todo need to add/ remove view columns?
-        else:
-            self.listModel.clear()
-
-        for i in range(0,len(get_server().get_member_info())):
-            row = []
-            for k in table_data.iterkeys():
-                row.append(QStandardItem(table_data[k][i]))
-            self.listModel.appendRow(row)    
-    
     
 class maintainer_wrapper:
     reports = []
