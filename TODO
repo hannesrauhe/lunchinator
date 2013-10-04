@@ -8,8 +8,7 @@
 - avatar: Image durch Qt-Zeug ersetzen
 - avatar: discard implementieren
 - ensure to deactivate all plugins before exiting
-- concatenate logfiles before sending (TAR?) -> List of logs, cached locally
-- Rename Logs tab in "Members", add "Send message", member information
+- member info in members tab
 - incoming call nicht von localhost?
 - Draggable Widgets
 - "SendTo" implementieren

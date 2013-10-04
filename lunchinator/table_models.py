@@ -1,9 +1,10 @@
 from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex, QString
 from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
-import time
+import time,datetime
 from lunchinator import log_exception, convert_string, log_error, log_warning
 
 class TableModelBase(QStandardItemModel):
+    SORT_ROLE = Qt.UserRole
     def __init__(self, dataSource, columns):
         super(TableModelBase, self).__init__()
         self.dataSource = dataSource
@@ -23,6 +24,8 @@ class TableModelBase(QStandardItemModel):
         item = QStandardItem()
         item.setEditable(False)
         self.callItemInitializer(column, key, data, item)
+        if item.data(self.SORT_ROLE) == None:
+            item.setData(item.data(Qt.DisplayRole), self.SORT_ROLE)
         item.setData(QSize(0, 20), Qt.SizeHintRole)
         return item
     
@@ -32,7 +35,10 @@ class TableModelBase(QStandardItemModel):
             self.callItemInitializer(column, key, data, item)
         else:
             # item not initialized yet
-            self.setItem(row, column, self.createItem(key, data, column))
+            item = self.createItem(key, data, column)
+            self.setItem(row, column, item)
+        if item.data(self.SORT_ROLE) == None:
+            item.setData(item.data(Qt.DisplayRole), self.SORT_ROLE)
 
     def createRow(self, key, data):
         row = []
@@ -138,7 +144,7 @@ class MembersTableModel(TableModelBase):
         self.itemChanged.connect(self.itemChangedSlot)
 
     def _updateIpItem(self, ip, _, item):
-        item.setText(ip)
+        item.setData(QVariant(ip), Qt.DisplayRole)
 
     def _updateNameItem(self, ip, infoDict, item):
         if self.nameKey in infoDict:
@@ -158,6 +164,9 @@ class MembersTableModel(TableModelBase):
     def _updateLunchTimeItem(self, _, infoDict, item):
         if self.lunchBeginKey in infoDict and self.lunchEndKey in infoDict:
             item.setText(infoDict[self.lunchBeginKey]+"-"+infoDict[self.lunchEndKey])
+            beginTime = datetime.datetime.strptime(infoDict[self.lunchBeginKey], "%H:%M")
+            beginTime = beginTime.replace(year=2000)
+            item.setData(QVariant(time.mktime(beginTime.timetuple())), self.SORT_ROLE)
             if self.is_now_in_time_span(infoDict[self.lunchBeginKey],infoDict[self.lunchEndKey]):
                 item.setData(QColor(0, 255, 0), Qt.DecorationRole)
             else:
@@ -259,18 +268,22 @@ class MessagesTableModel(TableModelBase):
                    ("Message", self._updateMessageItem)]
         super(MessagesTableModel, self).__init__(dataSource, columns)
         
+        self.setSortRole(self.SORT_ROLE)
         # called before server is running, no need to lock here
         for aMsg in self.dataSource.getMessages():
             self.appendContentRow(aMsg[0], [aMsg[1], aMsg[2]])
             
     def _updateTimeItem(self, mTime, _, item):
-        item.setText(time.strftime("%d.%m.%Y %H:%M:%S", mTime))
+        item.setData(QVariant(time.strftime("%d.%m.%Y %H:%M:%S", mTime)), Qt.DisplayRole)
+        item.setData(QVariant(time.mktime(mTime)), self.SORT_ROLE)
     
     def _updateSenderItem(self, _, m, item):
-        item.setText(self.dataSource.memberName(m[0]))
+        data = QVariant(self.dataSource.memberName(m[0]))
+        item.setData(data, Qt.DisplayRole)
     
     def _updateMessageItem(self, _, m, item):
-        item.setText(m[1])
+        data = QVariant(m[1])
+        item.setData(data, Qt.DisplayRole)
     
     """ --------------------- SLOTS ---------------------- """
     

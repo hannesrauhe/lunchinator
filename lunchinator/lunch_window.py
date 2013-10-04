@@ -165,15 +165,16 @@ class UpdatingTable(QTreeView):
         self.setSortingEnabled(True)
         self.setHeaderHidden(False)
         self.setAlternatingRowColors(True)
+        self.setIndentation(0)
         if sortedColumn != None:
             self.sortByColumn(sortedColumn, Qt.AscendingOrder if ascending else Qt.DescendingOrder)
     
 class MembersTable(UpdatingTable):    
     def __init__(self, parent):
-        UpdatingTable.__init__(self, parent, 2)
+        super(MembersTable, self).__init__(parent, 2)
         
 class MessageTable(UpdatingTable):
     def __init__(self, parent):
-        UpdatingTable.__init__(self, parent)      
+        super(MessageTable, self).__init__(parent)
     
     

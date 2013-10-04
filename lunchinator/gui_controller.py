@@ -53,6 +53,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         # initialize messages table
         self.messagesModel = MessagesTableModel(get_server())
         self.messagesProxyModel = QSortFilterProxyModel(self)
+        self.messagesProxyModel.setSortRole(MessagesTableModel.SORT_ROLE)
         self.messagesProxyModel.setDynamicSortFilter(True)
         self.messagesProxyModel.setSourceModel(self.messagesModel)
         self.mainWindow.messagesTable.setModel(self.messagesProxyModel)
@@ -65,6 +66,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         # initialize members table
         self.membersModel = MembersTableModel(get_server())
         self.membersProxyModel = QSortFilterProxyModel(self)
+        self.membersProxyModel.setSortRole(MembersTableModel.SORT_ROLE)
         self.membersProxyModel.setDynamicSortFilter(True)
         self.membersProxyModel.setSourceModel(self.membersModel)
         self.mainWindow.membersTable.setModel(self.membersProxyModel)
