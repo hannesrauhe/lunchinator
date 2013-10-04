@@ -104,7 +104,7 @@ class iface_plugin(IPlugin):
             e.setValue(v)
         elif type(v)==types.BooleanType:
             e = QCheckBox(parent)
-            e.setCheckState(Qt.Checked)
+            e.setCheckState(Qt.Checked if v else Qt.Unchecked)
             fillHorizontal = True
         else:
             e = QLineEdit(v, parent)
