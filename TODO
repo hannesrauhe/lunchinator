@@ -4,15 +4,11 @@
 - unicode support
 - lunch menu structured: tooltips
 - search for TODOs
-- Sent messages appear twice
 - avatar: Image durch Qt-Zeug ersetzen
 - avatar: discard implementieren
 - ensure to deactivate all plugins before exiting
 - member info in members tab
-- incoming call nicht von localhost?
 - Draggable Widgets
-- "SendTo" implementieren
-- remove unused members does not work properly
 
 - Werden dict-inhalte nun konvertiert oder nicht?
 --> PyQt Version auf mac:   4.10.3 (264707)

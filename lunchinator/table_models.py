@@ -111,7 +111,9 @@ class TableModelBase(QStandardItemModel):
         if type(key) == QString:
             key = convert_string(key)
         if key in self.keys:
-            self.removeRow(self.keys.index(key))
+            index = self.keys.index(key)
+            del self.keys[index]
+            self.removeRow(index)
 
 class MembersTableModel(TableModelBase):
     def __init__(self, dataSource):
@@ -256,11 +258,6 @@ class ExtendedMembersModel(TableModelBase):
         key = convert_string(key)
         data = self._checkDict(data)
         self.updateModel({key: data}, update=True)
-    
-    def externalRowRemoved(self, key):
-        key = convert_string(key)
-        if key in self.keys:
-            self.removeRow(self.keys.index(key))
 
 class MessagesTableModel(TableModelBase):
     def __init__(self, dataSource):
