@@ -24,6 +24,8 @@ class LunchinatorWindow(QMainWindow):
         self.nb.setMovable(True)
         self.nb.setTabPosition(QTabWidget.North)
         centralWidget.addWidget(self.nb)
+        centralWidget.setStretchFactor(0, 2)
+        centralWidget.setStretchFactor(1, 3)
         
         self.setCentralWidget(centralWidget)
         
