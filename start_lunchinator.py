@@ -5,6 +5,8 @@
 #this script can be used to start the lunchinator as GTK tray icon without self-updating functionality
 
 import platform, os, sys
+import signal
+from functools import partial
 from lunchinator.lunch_server_controller import LunchServerController
 path = os.path.abspath(sys.argv[0])
 while os.path.dirname(path) != path:
@@ -85,6 +87,10 @@ def sendMessage(msg, cli):
     recv_nr=get_server().call(msg,client=cli)
     print "sent to",recv_nr,"clients"
     
+def handleInterrupt(lanschi, _signal, _frame):
+    lanschi.stopServer()
+    QApplication.quit()
+    
 if __name__ == "__main__":
     log_info("We are on",platform.system(),platform.release(),platform.version())   
     
@@ -109,14 +115,19 @@ if __name__ == "__main__":
     #    sys.settrace(trace)
         get_server().no_updates = options.noUpdates
         get_server().start_server()
+        sys.exit(get_server().exitCode)
     else:
         from lunchinator.gui_controller import LunchinatorGuiController
         from PyQt4.QtGui import QApplication
-        # enable CRTL-C
-        import signal
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
         app = QApplication(sys.argv)
         app.setQuitOnLastWindowClosed(False)
         lanschi = LunchinatorGuiController(options.noUpdates)
+        
+        # enable CRTL-C
+        signal.signal(signal.SIGINT, partial(handleInterrupt, lanschi))
     
-        sys.exit(app.exec_())
+        try:
+            retValue = app.exec_()
+        finally:
+            lanschi.stopServer()
+        sys.exit(retValue)

@@ -174,8 +174,7 @@ class lunch_server(object):
                 s.close()  
             except:
                 log_warning("Wasn't able to send the leave call and close the socket...")
-            log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service")
-            self.controller.serverStopped()
+            self._finish()
             
     def memberName(self, addr):
         if addr in self.member_info and u'name' in self.member_info[addr]:
@@ -268,6 +267,12 @@ class lunch_server(object):
             
     """ ---------------------- PRIVATE -------------------------------- """
     
+    def _finish(self):
+        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service")
+        self._write_members_to_file()
+        self._write_messages_to_file()
+        self.controller.serverStopped(self.exitCode)
+        
     def _read_config(self):              
         if len(self.members)==0:
             self._init_members_from_file()
@@ -478,8 +483,6 @@ class lunch_server(object):
                     self.call("HELO_REQUEST_INFO "+self._build_info_string())
                     
                 self.my_master = ip   
-                if not os.path.exists(get_settings().get_members_file()):
-                    self._write_members_to_file()
                  
             elif cmd.startswith("HELO_REQUEST_INFO"):
                 # TODO @Hannes: why aren't we requesting the avatar here?
@@ -499,7 +502,6 @@ class lunch_server(object):
                     finally:
                         self.releaseMembers()
                     self._memberRemoved(ip)
-                    self._write_members_to_file()
                 self.call("HELO_DICT "+json.dumps(self._createMembersDict()),client=ip)
                
             elif cmd.startswith("HELO_AVATAR"):
@@ -560,7 +562,6 @@ class lunch_server(object):
                 didKnowMember = ip in self.members
                 self._append_member(ip, value) 
                 if not didKnowMember:
-                    self._write_members_to_file()
                     self.call("HELO_INFO "+self._build_info_string(),client=ip)
             else:
                 log_info("received unknown command from %s: %s with value %s"%(ip,cmd,value))        

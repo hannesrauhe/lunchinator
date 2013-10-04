@@ -4,7 +4,7 @@ from lunchinator import get_server, log_exception, log_info, get_settings,\
 import socket,os,time
 import platform
 from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QSortFilterProxyModel, QAction, QSystemTrayIcon, QIcon
-from PyQt4.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot, QObject, QString, QByteArray
+from PyQt4.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot, QObject, QString, QByteArray, QCoreApplication
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
@@ -26,7 +26,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _menu = None
     # ---- SIGNALS ----------------
     _initDone = pyqtSignal()
-    _serverStopped = pyqtSignal()
+    _serverStopped = pyqtSignal(int)
     memberAppendedSignal = pyqtSignal(unicode, dict)
     memberUpdatedSignal = pyqtSignal(unicode, dict)
     memberRemovedSignal = pyqtSignal(unicode)
@@ -108,14 +108,20 @@ class LunchinatorGuiController(QObject, LunchServerController):
             for info in get_server().plugin_manager.getPluginsOfCategory(p_cat):
                 allPlugins[info.name] = (p_cat, info.plugin_object)
         return allPlugins
+    
+    def stopServer(self):
+        get_server().running = False
+        log_info("Waiting maximal 30s for server to stop...")
+        # wait maximal 30s 
+        self.serverThread.wait(30000)
       
     """ ---------------- CALLED FROM LUNCH SERVER -----------------"""
     
     def initDone(self):
         self._initDone.emit()
         
-    def serverStopped(self):
-        self._serverStopped.emit()
+    def serverStopped(self, exitCode):
+        self._serverStopped.emit(exitCode)
         
     def memberAppended(self, ip, infoDict):
         self.memberAppendedSignal.emit(ip, infoDict)
@@ -206,15 +212,14 @@ class LunchinatorGuiController(QObject, LunchServerController):
         # TODO necessary?
         pass
     
-    @pyqtSlot()
-    def serverStoppedSlot(self):
+    @pyqtSlot(int)
+    def serverStoppedSlot(self, retCode):
         log_info("server stopped") 
         for pluginInfo in get_server().plugin_manager.getAllPlugins():
             if pluginInfo.plugin_object.is_activated:
                 pluginInfo.plugin_object.deactivate()
         log_info("plug-ins deactivated, exiting")
-        # TODO quit with return code
-        QApplication.quit()
+        QCoreApplication.exit(retCode)
         
     @pyqtSlot(QAction, unicode, bool)
     def toggle_plugin(self,w,p_cat,new_state):
