@@ -213,6 +213,16 @@ class ExtendedMembersModel(TableModelBase):
         self.updateModel({key: data}, prepend=True)
     
     def externalRowUpdated(self, key, data):
+        from PyQt4.QtCore import QString
+        if type(key) == QString:
+            print "encountered QString:", key
+            
+        if type(data) == dict:
+            for aKey in data:
+                if type(aKey) == QString:
+                    print "encountered QString as key of dict", data
+                if type(data[aKey]) == QString:
+                    print "encountered QString as value of dict", data
         self.updateModel({key: data}, update=True)
     
     def externalRowRemoved(self, key):
