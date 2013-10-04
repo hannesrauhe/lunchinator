@@ -9,8 +9,12 @@ class _lunchinator_logger:
     @classmethod
     def get_singleton_logger(cls):
         if cls.lunch_logger == None:
+            #TODO: how do we make sure, that this is the same directory like in the lunch_settings?
             main_config_dir = os.getenv("HOME")+os.sep+".lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+os.sep+".lunchinator"
+            if not os.path.exists(main_config_dir ):
+                os.makedirs(main_config_dir )
             log_file = main_config_dir+os.sep+"lunchinator.log"
+                
             loghandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
             loghandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
             loghandler.setLevel(logging.DEBUG)

@@ -149,20 +149,24 @@ class lunch_server(object):
                         #simple message                          
                         self._incoming_call(daten,ip)
                 except socket.timeout:
-                    if self.my_master==-1:
-                        self._call_for_dict()
-                    else:
-                        if announce_name==10:
-                            #it's time to announce my name again and switch the master
-                            self.call("HELO "+get_settings().get_user_name())
-                            announce_name=0
-                            self._remove_inactive_members()
+                    if len(self.members):
+                        if self.my_master==-1:
                             self._call_for_dict()
                         else:
-                            #just wait for the next time when i have to announce my name
-                            announce_name+=1
-                    if self.my_master==-1:
-                        log_info("no master found yet")
+                            if announce_name==10:
+                                #it's time to announce my name again and switch the master
+                                self.call("HELO "+get_settings().get_user_name())
+                                announce_name=0
+                                self._remove_inactive_members()
+                                self._call_for_dict()
+                            else:
+                                #just wait for the next time when i have to announce my name
+                                announce_name+=1
+                        if self.my_master==-1:
+                            log_info("no master found yet")
+                    else:
+                        #TODO: broadcast at this point
+                        log_warning("seems like you are alone - no lunch-peer found yet")
                     log_debug("Current Members:", self.members)
         except socket.error as e:
             log_exception("stopping lunchinator because: %s"%(str(e)))

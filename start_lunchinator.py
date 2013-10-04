@@ -92,7 +92,7 @@ def handleInterrupt(lanschi, _signal, _frame):
     QApplication.quit()
     
 if __name__ == "__main__":
-    log_info("We are on",platform.system(),platform.release(),platform.version())   
+    log_info("We are on",platform.system(),platform.release(),platform.version())
     
     (options, args) = parse_args()
 
@@ -116,9 +116,16 @@ if __name__ == "__main__":
         get_server().no_updates = options.noUpdates
         get_server().start_server()
         sys.exit(get_server().exitCode)
-    else:
+    else:    
+        try:
+            from PyQt4.QtCore import QThread
+        except:
+            log_error("pyQT4 not found - start lunchinator with --no-gui")
+            sys.exit(-1)
+            
         from lunchinator.gui_controller import LunchinatorGuiController
         from PyQt4.QtGui import QApplication
+        
         app = QApplication(sys.argv)
         app.setQuitOnLastWindowClosed(False)
         lanschi = LunchinatorGuiController(options.noUpdates)
