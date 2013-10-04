@@ -1,7 +1,7 @@
-from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex
+from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex, QString
 from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
 import time
-from lunchinator import log_exception
+from lunchinator import log_exception, convert_string, log_error, log_warning
 
 class TableModelBase(QStandardItemModel):
     def __init__(self, dataSource, columns):
@@ -56,20 +56,53 @@ class TableModelBase(QStandardItemModel):
         for column in range(self.columnCount()):
             self.updateItem(key, data, row, column)
             
+    def _convertDict(self, aDict):
+        newDict = {}
+        for aKey in aDict:
+            if type(aKey) == QString:
+                aKey = convert_string(aKey)
+            aValue = aDict[aKey]
+            if type(aValue) == QString:
+                aValue = convert_string(aValue)
+            newDict[aKey] = aValue
+        return newDict
+            
+    def _checkDict(self, data):
+        if type(data) == dict:
+            for aKey in data:
+                if type(aKey) == QString:
+                    log_warning("encountered QString as key of dict", data)
+                    return self._convertDict(data)
+                if type(data[aKey]) == QString:
+                    log_warning("encountered QString as value of dict", data)
+                    return self._convertDict(data)
+        return data
+                    
     """ ----------------- SLOTS ------------------- """
             
     def externalRowAppended(self, key, data):
+        if type(key) == QString:
+            key = convert_string(key)
+        data = self._checkDict(data)
         self.appendContentRow(key, data)
         
     def externalRowPrepended(self, key, data):
+        if type(key) == QString:
+            key = convert_string(key)
+        data = self._checkDict(data)
         self.prependContentRow(key, data)
     
     def externalRowUpdated(self, key, data):
+        if type(key) == QString:
+            key = convert_string(key)
+        data = self._checkDict(data)
         if key in self.keys:
             index = self.keys.index(key)
             self.updateRow(key, data, index)
     
     def externalRowRemoved(self, key):
+        if type(key) == QString:
+            key = convert_string(key)
         if key in self.keys:
             self.removeRow(self.keys.index(key))
 
@@ -207,25 +240,22 @@ class ExtendedMembersModel(TableModelBase):
         item.setData(QVariant(text), Qt.DisplayRole)
         
     def externalRowAppended(self, key, data):
+        key = convert_string(key)
+        data = self._checkDict(data)
         self.updateModel({key: data})
         
     def externalRowPrepended(self, key, data):
+        key = convert_string(key)
+        data = self._checkDict(data)
         self.updateModel({key: data}, prepend=True)
     
     def externalRowUpdated(self, key, data):
-        from PyQt4.QtCore import QString
-        if type(key) == QString:
-            print "encountered QString:", key
-            
-        if type(data) == dict:
-            for aKey in data:
-                if type(aKey) == QString:
-                    print "encountered QString as key of dict", data
-                if type(data[aKey]) == QString:
-                    print "encountered QString as value of dict", data
+        key = convert_string(key)
+        data = self._checkDict(data)
         self.updateModel({key: data}, update=True)
     
     def externalRowRemoved(self, key):
+        key = convert_string(key)
         if key in self.keys:
             self.removeRow(self.keys.index(key))
 

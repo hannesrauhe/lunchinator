@@ -130,17 +130,18 @@ class lunch_server(object):
                 try:
                     daten, addr = s.recvfrom(1024)
                     daten = daten.decode('utf-8')
-                    if not addr[0].startswith("127."):
-                        self.member_timeout[addr[0]]=time()
-                        if not addr[0] in self.members:
-                            self._append_member(addr[0], addr[0])
+                    ip = unicode(addr[0])
+                    if not ip.startswith("127."):
+                        self.member_timeout[ip]=time()
+                        if not ip in self.members:
+                            self._append_member(ip, ip)
                         
                     if daten.startswith("HELO"):
                         #simple infrastructure protocol messages starting with HELO''' 
-                        self._incoming_event(daten, addr)                            
+                        self._incoming_event(daten, ip)                            
                     else:  
                         #simple message                          
-                        self._incoming_call(daten,addr[0])
+                        self._incoming_call(daten,ip)
                 except socket.timeout:
                     if self.my_master==-1:
                         self._call_for_dict()
@@ -327,7 +328,7 @@ class lunch_server(object):
                     if len(hostn) == 0:
                         continue
                     try:
-                        ip = socket.gethostbyname(hostn)
+                        ip = unicode(socket.gethostbyname(hostn))
                         self._append_member(ip, hostn, False)
                     except:
                         log_warning("cannot find host specified in members_file by %s with name %s"%(get_settings().get_members_file(),hostn))
@@ -431,8 +432,8 @@ class lunch_server(object):
                 if not os.path.exists(get_settings().get_avatar_dir()+"/"+self.member_info[ip]["avatar"]):
                     self.call("HELO_REQUEST_AVATAR "+str(get_settings().get_tcp_port()),client=ip)     
       
-    def _incoming_event(self,data,addr):   
-        if addr[0].startswith("127."):
+    def _incoming_event(self,data,ip):   
+        if ip.startswith("127."):
             #stop command is only allowed from localhost :-)
             if data.startswith("HELO_STOP"):
                 log_info("Got Stop Command from localhost: %s"%data)
@@ -457,17 +458,17 @@ class lunch_server(object):
                 t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
                 self.update_request = True
                 if get_settings().get_auto_update_enabled() and not self.no_updates:
-                    log_info("%s: [%s] update"%(t,addr[0]))
+                    log_info("%s: [%s] update"%(t,ip))
                     self.running = False
                     
                     #new update-script:
                     self.exitCode = EXIT_CODE_UPDATE
                 else:
-                    log_info("%s: %s issued an update but updates are disabled"%( t,addr[0]))
+                    log_info("%s: %s issued an update but updates are disabled"%( t,ip))
                 
             elif cmd.startswith("HELO_REQUEST_DICT"):
-                self._update_member_info(addr[0], json.loads(value))
-                self.call("HELO_DICT "+json.dumps(self._createMembersDict()),client=addr[0])                   
+                self._update_member_info(ip, json.loads(value))
+                self.call("HELO_DICT "+json.dumps(self._createMembersDict()),client=ip)                   
                 
             elif cmd.startswith("HELO_DICT"):
                 #the master send me the list of members - yeah
@@ -476,43 +477,43 @@ class lunch_server(object):
                 if self.my_master==-1:
                     self.call("HELO_REQUEST_INFO "+self._build_info_string())
                     
-                self.my_master = addr[0]   
+                self.my_master = ip   
                 if not os.path.exists(get_settings().get_members_file()):
                     self._write_members_to_file()
                  
             elif cmd.startswith("HELO_REQUEST_INFO"):
                 # TODO @Hannes: why aren't we requesting the avatar here?
-                self._update_member_info(addr[0], json.loads(value), requestAvatar=False)
-                self.call("HELO_INFO "+self._build_info_string(),client=addr[0])
+                self._update_member_info(ip, json.loads(value), requestAvatar=False)
+                self.call("HELO_INFO "+self._build_info_string(),client=ip)
                          
             elif cmd.startswith("HELO_INFO"):
                 #someone sends his info
-                self._update_member_info(addr[0], json.loads(value)) 
+                self._update_member_info(ip, json.loads(value)) 
                                     
             elif cmd.startswith("HELO_LEAVE"):
                 #the sender tells me, that he is going
-                if addr[0] in self.members:
+                if ip in self.members:
                     self.lockMembers()
                     try:
-                        self.members.remove(addr[0])
+                        self.members.remove(ip)
                     finally:
                         self.releaseMembers()
-                    self._memberRemoved(addr[0])
+                    self._memberRemoved(ip)
                     self._write_members_to_file()
-                self.call("HELO_DICT "+json.dumps(self._createMembersDict()),client=addr[0])
+                self.call("HELO_DICT "+json.dumps(self._createMembersDict()),client=ip)
                
             elif cmd.startswith("HELO_AVATAR"):
                 #someone wants to send me his pic via TCP
                 file_size=int(value.strip())
                 file_name=""
-                if self.member_info[addr[0]].has_key("avatar"):
-                    file_name=get_settings().get_avatar_dir()+os.sep+self.member_info[addr[0]]["avatar"]
+                if self.member_info[ip].has_key("avatar"):
+                    file_name=get_settings().get_avatar_dir()+os.sep+self.member_info[ip]["avatar"]
                 else:
-                    log_error("%s tried to send his avatar, but I don't know where to safe it"%(addr[0]))
+                    log_error("%s tried to send his avatar, but I don't know where to safe it"%(ip))
                 
                 if len(file_name):
                     log_info("Receiving file of size %d on port %d"%(file_size,get_settings().get_tcp_port()))
-                    self.controller.receiveFile(addr[0],file_size,file_name)
+                    self.controller.receiveFile(ip,file_size,file_name)
                 
             elif cmd.startswith("HELO_REQUEST_AVATAR"):
                 #someone wants my pic 
@@ -521,14 +522,14 @@ class lunch_server(object):
                 try:                    
                     other_tcp_port=int(value.strip())
                 except:
-                    log_exception("%s requested avatar, I could not parse the port from value %s, using standard %d"%(str(addr[0]),str(value),other_tcp_port))
+                    log_exception("%s requested avatar, I could not parse the port from value %s, using standard %d"%(str(ip),str(value),other_tcp_port))
                     
                 fileToSend = get_settings().get_avatar_dir()+"/"+get_settings().get_avatar_file()
                 if os.path.exists(fileToSend):
                     fileSize = os.path.getsize(fileToSend)
-                    log_info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
-                    self.call("HELO_AVATAR "+str(fileSize), addr[0])
-                    self.controller.sendFile(addr[0],fileToSend, other_tcp_port)
+                    log_info("Sending file of size %d to %s : %d"%(fileSize,str(ip),other_tcp_port))
+                    self.call("HELO_AVATAR "+str(fileSize), ip)
+                    self.controller.sendFile(ip,fileToSend, other_tcp_port)
                 else:
                     log_error("Want to send file %s, but cannot find it"%(fileToSend))   
                 
@@ -541,27 +542,27 @@ class lunch_server(object):
                     other_tcp_port=int(oport.strip())
                     log_num = int(onum.strip())
                 except:
-                    log_exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0"%(str(addr[0]),str(value),other_tcp_port))
+                    log_exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0"%(str(ip),str(value),other_tcp_port))
                 
                 fileToSend = "%s.%d"%(get_settings().get_log_file(),log_num) if log_num>0 else get_settings().get_log_file()
                 if os.path.exists(fileToSend):
                     fileSize = os.path.getsize(fileToSend)
-                    log_info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
-                    self.call("HELO_LOGFILE "+str(fileSize), addr[0])
-                    self.controller.sendFile(addr[0],fileToSend, other_tcp_port)
+                    log_info("Sending file of size %d to %s : %d"%(fileSize,str(ip),other_tcp_port))
+                    self.call("HELO_LOGFILE "+str(fileSize), ip)
+                    self.controller.sendFile(ip,fileToSend, other_tcp_port)
                 else:
                     log_error("Want to send file %s, but cannot find it"%(fileToSend))   
             elif "HELO"==cmd:
                 #someone tells me his name
-                didKnowMember = addr[0] in self.members
-                self._append_member(addr[0], value) 
+                didKnowMember = ip in self.members
+                self._append_member(ip, value) 
                 if not didKnowMember:
                     self._write_members_to_file()
-                    self.call("HELO_INFO "+self._build_info_string(),client=addr[0])
+                    self.call("HELO_INFO "+self._build_info_string(),client=ip)
             else:
-                log_info("received unknown command from %s: %s with value %s"%(addr[0],cmd,value))        
+                log_info("received unknown command from %s: %s with value %s"%(ip,cmd,value))        
             
-            self.controller.processEvent(cmd,value,addr[0])
+            self.controller.processEvent(cmd,value,ip)
         except:
             log_exception("Unexpected error while handling HELO call: %s"%(str(sys.exc_info())))
             log_critical("The data received was: %s"%data)
