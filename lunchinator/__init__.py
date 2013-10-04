@@ -4,6 +4,7 @@ import logging, logging.handlers, os
 
 class _lunchinator_logger:
     lunch_logger = None
+    streamHandler = None
      
     @classmethod
     def get_singleton_logger(cls):
@@ -12,15 +13,20 @@ class _lunchinator_logger:
             log_file = main_config_dir+os.sep+"lunchinator.log"
             loghandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
             loghandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+            loghandler.setLevel(logging.DEBUG)
+            
+            cls.streamHandler = logging.StreamHandler()
+            cls.streamHandler.setFormatter(logging.Formatter("[%(levelname)7s] %(message)s"))
             
             cls.lunch_logger = logging.getLogger("LunchinatorLogger")
+            cls.lunch_logger.setLevel(logging.DEBUG)
             cls.lunch_logger.addHandler(loghandler)
-            #cls.lunch_logger.addHandler(logging.StreamHandler())
+            cls.lunch_logger.addHandler(cls.streamHandler)
             
             yapsi_logger = logging.getLogger('yapsy')
             yapsi_logger.setLevel(logging.WARNING)
             yapsi_logger.addHandler(loghandler)
-            #yapsi_logger.addHandler(logging.StreamHandler())
+            yapsi_logger.addHandler(cls.streamHandler)
             
             loghandler.doRollover()
         return cls.lunch_logger
@@ -42,8 +48,9 @@ def _get_logger():
     return _lunchinator_logger.get_singleton_logger()
 
 def setLoggingLevel(newLevel):
-    _get_logger().setLevel(logging.INFO)
-    logging.basicConfig(level=newLevel)
+    # ensure logger is initialized
+    _get_logger()
+    _lunchinator_logger.streamHandler.setLevel(newLevel)
     
 def _generate_string(*s):
     return u" ".join(x if type(x) in (str, unicode) else str(x) for x in s)

@@ -110,10 +110,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
         return allPlugins
     
     def stopServer(self):
-        get_server().running = False
-        log_info("Waiting maximal 30s for server to stop...")
-        # wait maximal 30s 
-        self.serverThread.wait(30000)
+        if self.serverThread.isRunning():
+            get_server().running = False
+            log_info("Waiting maximal 30s for server to stop...")
+            # wait maximal 30s 
+            self.serverThread.wait(30000)
       
     """ ---------------- CALLED FROM LUNCH SERVER -----------------"""
     

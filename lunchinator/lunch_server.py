@@ -163,7 +163,7 @@ class lunch_server(object):
                             announce_name+=1
                     if self.my_master==-1:
                         log_info("no master found yet")
-                    log_debug(str(self.members))
+                    log_debug("Current Members:", self.members)
         except socket.error as e:
             log_exception("stopping lunchinator because: %s"%(str(e)))
         except:
@@ -587,6 +587,8 @@ class lunch_server(object):
                         indicesToRemove.append(memberIndex)
                 else:
                     indicesToRemove.append(memberIndex)
+                    
+            log_debug("Removing inactive members: %s (%s)" %([self.members[i] for i in indicesToRemove], indicesToRemove))
             for memberIndex in reversed(indicesToRemove):
                 self._memberRemoved(self.members[memberIndex])
             self.lockMembers()
