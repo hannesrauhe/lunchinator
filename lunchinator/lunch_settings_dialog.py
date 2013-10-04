@@ -4,15 +4,12 @@ from lunchinator import get_server, log_exception
 from lunchinator.ComboTabWidget import ComboTabWidget
 
 class LunchinatorSettingsDialog(QDialog):
-    RESULT_SAVE = 0
-    RESULT_CANCEL = -1
-    
     def __init__(self, parent):
         super(LunchinatorSettingsDialog, self).__init__(parent, Qt.Dialog)
         
         self.setWindowTitle("Lunchinator Settings")
         #self.setModal(True)
-        self.setResult(self.RESULT_CANCEL)
+        self.setResult(QDialog.Rejected)
         
         contentLayout = QVBoxLayout(self)
         
@@ -44,6 +41,7 @@ class LunchinatorSettingsDialog(QDialog):
         bottomLayout = QHBoxLayout()
         bottomLayout.addWidget(QWidget(self), 1)
         saveButton = QPushButton("Save", self)
+        saveButton.setAutoDefault(True)
         saveButton.clicked.connect(self.savePressed)
         bottomLayout.addWidget(saveButton)
         
@@ -61,7 +59,7 @@ class LunchinatorSettingsDialog(QDialog):
             self.setMaximumSize(2000, size.height())
         
     def savePressed(self):
-        self.setResult(self.RESULT_SAVE)
+        self.setResult(QDialog.Accepted)
         self.setVisible(False)
         
     def cancelPressed(self):

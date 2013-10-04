@@ -1,11 +1,13 @@
 #!/usr/bin/python
 import hashlib, shutil
 import os
-import Image
 from lunchinator import log_exception, log_error, get_settings
+from PyQt4.QtGui import QImage, QPixmap
+from PyQt4.QtCore import Qt
 
 class l_avatar(object):
-    size = 128, 128
+    width = 128
+    height = 128
          
     def md5_for_file(self,file_path, block_size=2**20):
         with open(file_path,'rb') as f:
@@ -20,9 +22,10 @@ class l_avatar(object):
     def scale_image(self,infile,outfile):
         if infile != outfile:
             try:
-                im = Image.open(infile)
-                im.thumbnail(self.size, Image.ANTIALIAS)
-                im.save(outfile, "JPEG")
+                qtimage = QImage(infile)
+                pixmap = QPixmap.fromImage(qtimage)
+                pixmap = pixmap.scaled(self.width,self.height,Qt.KeepAspectRatio,Qt.SmoothTransformation)
+                pixmap.save(outfile, "JPEG")
             except IOError:
                 log_exception("cannot create thumbnail for '%s'" % infile)
                 raise

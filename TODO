@@ -4,11 +4,11 @@
 - unicode support
 - lunch menu structured: tooltips
 - search for TODOs
-- avatar: Image durch Qt-Zeug ersetzen
-- avatar: discard implementieren
 - ensure to deactivate all plugins before exiting
 - member info in members tab
 - Draggable Widgets
+- maintainer: automatically download all logs from old versions (compare to the cached ones)
+- webcam: smooth scaling setting
 
 - Werden dict-inhalte nun konvertiert oder nicht?
 --> PyQt Version auf mac:   4.10.3 (264707)

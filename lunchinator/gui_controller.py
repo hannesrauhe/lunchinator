@@ -282,7 +282,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         for pluginInfo in get_server().plugin_manager.getAllPlugins():
             if pluginInfo.plugin_object.is_activated:
-                if resp==LunchinatorSettingsDialog.RESULT_SAVE:
+                if resp==LunchinatorSettingsDialog.Accepted:
                     try:
                         pluginInfo.plugin_object.save_options_widget_data()
                     except:

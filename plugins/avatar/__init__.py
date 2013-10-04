@@ -9,6 +9,7 @@ class avatar(iface_general_plugin):
     def __init__(self):
         super(avatar, self).__init__()
         self.label = None
+        self.selectedFile = None
         
     def activate(self):
         iface_general_plugin.activate(self)
@@ -21,8 +22,10 @@ class avatar(iface_general_plugin):
     
     def _setImage(self, selectedFile, label):
         from PyQt4.QtGui import QImage, QPixmap
+        from PyQt4.QtCore import Qt
         qimg = QImage(selectedFile)
-        label.setPixmap(QPixmap.fromImage(qimg))
+        pixmap = QPixmap.fromImage(qimg).scaled(l_avatar.width,l_avatar.height,Qt.KeepAspectRatio,Qt.SmoothTransformation)
+        label.setPixmap(pixmap)
         label.setToolTip(selectedFile)
     
     def parentWindow(self, w):
@@ -55,26 +58,35 @@ class avatar(iface_general_plugin):
             selectedFiles = dialog.selectedFiles()
             selectedFile = convert_string(selectedFiles.first())
             if not os.path.isdir(selectedFile) and fileFilter.filterAcceptsFile(selectedFile):
-                l = l_avatar()
-                selectedFile = l.use_as_avatar(selectedFile)
+                self.selectedFile = selectedFile
                 self._setImage(selectedFile, self.label)
             else:
                 log_error("Selected invalid file: '%s' is of invalid type" % selectedFile)
     
     def create_options_widget(self, parent):
-        from PyQt4.QtGui import QLabel, QWidget, QVBoxLayout, QPushButton
+        from PyQt4.QtGui import QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton
+        from PyQt4.QtCore import Qt
         img_path = get_settings().get_avatar_dir()+get_settings().get_avatar_file()
         
         widget = QWidget(parent)
         layout = QVBoxLayout(widget)
         
         self.label = QLabel(widget)
-        layout.addWidget(self.label)
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(self.label, 0, Qt.AlignCenter)
+        layout.addLayout(hlayout)
         
         self._setImage(img_path, self.label)
                 
         b = QPushButton("Choose Picture", widget)
         b.clicked.connect(self._chooseFile)
-        
-        layout.addWidget(b)
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(b,0, Qt.AlignCenter)
+        layout.addLayout(hlayout)
+        layout.addWidget(QWidget(widget), 1)
         return widget
+
+    def save_options_widget_data(self):
+        if self.selectedFile != None:
+            l = l_avatar()
+            l.use_as_avatar(self.selectedFile)
