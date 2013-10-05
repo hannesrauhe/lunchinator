@@ -105,7 +105,6 @@ class LunchinatorWindow(QMainWindow):
         #check if widget is already present
         if self.widgetIndex(text) == -1:
             widget = self.window_msgCheckCreatePluginWidget(self.nb, po, text)   
-            # TODO append page correctly
             self.nb.addTab(widget, text)
             self.nb.setCurrentIndex(self.nb.count() - 1)
             

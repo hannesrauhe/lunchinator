@@ -210,7 +210,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     @pyqtSlot()
     def initDoneSlot(self):
-        # TODO necessary?
         pass
     
     @pyqtSlot(int)

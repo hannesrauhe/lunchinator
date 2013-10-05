@@ -31,8 +31,7 @@ class rot13(iface_gui_plugin):
                     if height>self.maxheight:
                         height = self.maxheight
                         width = qtimage.width()*self.maxheight/qtimage.height()
-                    # TODO use different scaling parameters?
-                    qtimage = qtimage.scaled(width, height, aspectRatioMode=Qt.IgnoreAspectRatio, transformMode=Qt.FastTransformation)
+                    qtimage = qtimage.scaled(width, height, aspectRatioMode=Qt.IgnoreAspectRatio, transformMode=Qt.SmoothTransformation)
                     add_widget = QLabel()
                     add_widget.setPixmap(QPixmap.fromImage(qtimage))
             except:

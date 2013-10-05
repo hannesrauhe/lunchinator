@@ -20,7 +20,7 @@ class DataSenderThread(DataThreadBase):
         self.receiver = receiver
  
     def run(self):
-        sendFile(self.receiver, self.data if self.data != None else self.file_path, self.tcp_port, lambda secs : time.sleep(secs), self.data != None)
+        sendFile(self.receiver, self.data if self.data != None else self.file_path, self.tcp_port, lambda secs : time.sleep(secs * 0.001), self.data != None)
         
     def stop_server(self):
         pass

@@ -256,6 +256,7 @@ class lunch_server(object):
         try:      
             for ip in target:
                 try:
+                    log_debug("Sending", msg, "to", ip.strip())
                     s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
                     i+=1
                 except:
@@ -280,7 +281,6 @@ class lunch_server(object):
     def _read_config(self):              
         if len(self.members)==0:
             self._init_members_from_file()
-        # TODO lock messages? should not be necessary here
         if len(self.last_messages)==0:
             self.last_messages=self._init_messages_from_file()
     
@@ -559,7 +559,7 @@ class lunch_server(object):
                 
                 fileSize = fileToSend.tell()
                 log_info("Sending file of size %d to %s : %d"%(fileSize,str(ip),other_tcp_port))
-                self.call("HELO_LOGFILE_TGZ "+str(fileSize), ip)
+                self.call("HELO_LOGFILE_TGZ %d %d" %(fileSize, other_tcp_port), ip)
                 self.controller.sendFile(ip,fileToSend.getvalue(), other_tcp_port, True)
             elif "HELO"==cmd:
                 #someone tells me his name
