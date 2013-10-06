@@ -161,7 +161,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         #main _menu
         anAction = menu.addAction('Call for lunch')
-        anAction.triggered.connect(partial(self.sendMessageClicked, 'lunch', None))
+        anAction.triggered.connect(partial(self.sendMessageClicked, u'lunch', None))
         
         anAction = menu.addAction('Show Lunchinator')
         anAction.triggered.connect(self.openWindowClicked)
@@ -217,10 +217,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
     @pyqtSlot(unicode, QObject)
     def sendMessageClicked(self, message, w):
         if message != None:
-            message = convert_string(message)
-            get_server().call_all_members(message)
+            get_server().call_all_members(convert_string(message))
         else:
-            get_server().call_all_members(unicode(w.text().toUtf8(), 'utf-8'))
+            get_server().call_all_members(convert_string(w.text()))
             w.setText("")
         
     @pyqtSlot(QLineEdit)

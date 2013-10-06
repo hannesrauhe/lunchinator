@@ -62,7 +62,7 @@ def convert_string(string):
         traceback.print_stack(None, None, trace)
         log_warning(trace.getvalue())
         trace.close()
-        return str.decode('utf-8')
+        return string.decode('utf-8')
     return unicode(string.toUtf8(), 'utf-8')
 
 def _get_logger():
