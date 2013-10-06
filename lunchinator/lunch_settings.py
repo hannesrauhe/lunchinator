@@ -66,7 +66,6 @@ class lunch_settings(object):
         self._peer_timeout = 604800 #one week so that we don't forget someone too soon
         self._mute_timeout = 30
         self._reset_icon_time = 5
-        self._last_gui_plugin_index = 0
         self._logging_level = u"ERROR"
         
         if not os.path.exists(self._main_config_dir):
@@ -113,7 +112,6 @@ class lunch_settings(object):
         self._mute_timeout = self.read_value_from_config_file(self._mute_timeout, "general", "mute_timeout")
         self._reset_icon_time = self.read_value_from_config_file(self._reset_icon_time, "general", "reset_icon_time")
         
-        self._last_gui_plugin_index = self.read_value_from_config_file(self._last_gui_plugin_index, 'general', 'last_gui_plugin_index')
         self._logging_level = self.read_value_from_config_file(self._logging_level, 'general', 'logging_level')
         
         #not shown in settings-plugin - handled by avatar-plugin
@@ -226,9 +224,6 @@ class lunch_settings(object):
     def get_log_file(self):
         return self._log_file
     
-    def get_last_gui_plugin_index(self):
-        return self._last_gui_plugin_index
-    
     #the rest is read from/written to the config file          
     def get_user_name(self):
         return self._user_name    
@@ -322,9 +317,4 @@ class lunch_settings(object):
             
     def get_advanced_gui_enabled(self):
         return self._logging_level == u"DEBUG"
-        
-    def set_last_gui_plugin_index(self, index):
-        self._last_gui_plugin_index = index
-        self._config_file.set('general', 'last_gui_plugin_index', str(index))
-        self.write_config_to_hd()
     

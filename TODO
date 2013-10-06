@@ -3,6 +3,7 @@
 - lunch menu structured: tooltips
 - avatare auch nach pull-prinzip?
 - Maintainer: update logs shows "requesting" if there are no new logs
+- Add size hints to plugin widgets
 
 - Werden dict-inhalte nun konvertiert oder nicht?
 --> PyQt Version auf mac:   4.10.3 (264707)

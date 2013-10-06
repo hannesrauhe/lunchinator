@@ -1,61 +1,141 @@
-from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QApplication
-from lunchinator import get_settings, get_server, log_exception
-import sys
+from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QApplication, QDockWidget, QApplication
+from PyQt4.QtCore import Qt, QSettings
+from lunchinator import get_settings, get_server, log_exception, convert_string
+import sys, os
 from StringIO import StringIO
 import traceback
+
+class PluginDockWidget(QDockWidget):
+    def __init__(self, name, parent, closeCallback):
+        super(PluginDockWidget, self).__init__(name, parent)
+        self.closeCallback = closeCallback
+        
+    def closeEvent(self, _closeEvent):
+        self.closeCallback(self)
+        #return super(PluginDockWidget, self).closeEvent(closeEvent)
 
 class LunchinatorWindow(QMainWindow):
     def __init__(self, controller):
         super(LunchinatorWindow, self).__init__(None)
-        
+
         self.guiHandler = controller
         self.setWindowTitle("Lunchinator")
 
-        self.nb = QTabWidget(self)
-        self.nb.setMovable(True)
-        self.nb.setTabPosition(QTabWidget.North)
+        self.setDockNestingEnabled(True)
+        self.setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
         
-        self.setCentralWidget(self.nb)
+        self.pluginNameToDockWidget = {}
+        self.objectNameToPluginName = {}
+        self.settings = QSettings(get_settings().get_main_config_dir() + os.sep + u"gui_settings.ini", QSettings.IniFormat)
+        
+        savedGeometry = self.settings.value("geometry", None)
+        savedState = self.settings.value("state", None)
+        
+        if savedState == None:
+            # first run, create initial state
+            self.addPluginWidgetByName(u"Messages")
+            self.addPluginWidgetByName(u"Members")
+            
+            # check if an old-stype plugins are enabled, if not, display "about plugins"
+            foundOldStylePlugin = False
+            for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
+                if pluginInfo.name not in ("Messages", "Members") and pluginInfo.plugin_object.is_activated:
+                    foundOldStylePlugin = True
+            
+            if not foundOldStylePlugin:
+                self.addPluginWidgetByName(u"About Plugins")
         
         # add plugins
-        plugin_widgets = []
         try:
             for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
-                    plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(self.nb, pluginInfo.plugin_object, pluginInfo.name)))
-            if len(plugin_widgets) == 0:
-                #activate help plugin
-                get_server().plugin_manager.activatePluginByName("About Plugins", "gui")
-                pluginInfo = get_server().plugin_manager.getPluginByName("About Plugins", "gui")
-                if pluginInfo != None:
-                    plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(self.nb, pluginInfo.plugin_object, pluginInfo.name)))
-                pass                    
+                    self.addPluginWidget(pluginInfo.plugin_object, pluginInfo.name)
+        except:
+            log_exception("while including plugins %s"%str(sys.exc_info()))
+        
+        if savedGeometry != None:
+            self.restoreGeometry(savedGeometry.toByteArray())
+        else:
+            self.centerOnScreen()
+        
+        if savedState != None:
+            self.restoreState(savedState.toByteArray())
+
+        if len(self.pluginNameToDockWidget) == 0:
+            # no gui plugins activated, show about plugins
+            self.addPluginWidgetByName(u"About Plugins")
+        
+        # prevent from closing twice
+        self.closed = False
+            
+    def addPluginWidgetByName(self, name):
+        try:
+            pluginInfo = get_server().plugin_manager.getPluginByName(name, u"gui")
+            if not pluginInfo.plugin_object.is_activated:
+                po = get_server().plugin_manager.activatePluginByName(name, u"gui")
+            else:
+                po = pluginInfo.plugin_object
+            self.addPluginWidget(po, name)
         except:
             log_exception("while including plugins %s"%str(sys.exc_info()))
             
-        plugin_widgets.sort(key=lambda tup: tup[0].name)
-        plugin_widgets.sort(key=lambda tup: tup[0].plugin_object.sortOrder)
+    def closePlugin(self, dockWidget):
+        name = self.objectNameToPluginName[convert_string(dockWidget.objectName())]
+        self.guiHandler.plugin_widget_closed(name)
+            
+    def addPluginWidget(self, po, name, makeVisible = False):
+        if name in self.pluginNameToDockWidget:
+            # widget already visible
+            return
         
-        for info,widget in plugin_widgets:
-            self.nb.addTab(widget, info.name)
+        dockWidget = PluginDockWidget(name, self, self.closePlugin)
+        dockWidget.setObjectName(u"plugin.%s" % name)
+        newWidget = self.window_msgCheckCreatePluginWidget(dockWidget, po, name)
+        dockWidget.setWidget(newWidget)
+        self.pluginNameToDockWidget[name] = dockWidget
+        self.objectNameToPluginName[convert_string(dockWidget.objectName())] = name.decode()
+
+        widgetToTabify = None
+        for aDockWidget in self.pluginNameToDockWidget.values():
+            tabified = self.tabifiedDockWidgets(aDockWidget)
+            if len(tabified) > 0:
+                widgetToTabify = aDockWidget
+                break
         
-        # select previously selected widget
-        index = 0
-        if get_settings().get_last_gui_plugin_index() < self.nb.count() and get_settings().get_last_gui_plugin_index() >= 0:
-            index = get_settings().get_last_gui_plugin_index()
+        if widgetToTabify == None:
+            for aDockWidget in self.pluginNameToDockWidget.values():
+                if self.objectNameToPluginName[convert_string(aDockWidget.objectName())] not in (u"Members", u"Messages", name):
+                    widgetToTabify = aDockWidget
+                    break
         
-        self.nb.setCurrentIndex(index)
-        self.centerOnScreen()
-        # prevent from closing twice
-        self.closed = False
+        if widgetToTabify != None:
+            dockArea = self.dockWidgetArea(widgetToTabify)
+            self.addDockWidget(dockArea, dockWidget)
+            self.tabifyDockWidget(widgetToTabify, dockWidget)
+            if makeVisible:
+                QApplication.processEvents()
+                dockWidget.raise_()
+        else:
+            self.addDockWidget(Qt.TopDockWidgetArea, dockWidget)
+       
+    def removePluginWidget(self, name):
+        if not name in self.pluginNameToDockWidget:
+            return
         
+        dockWidget = self.pluginNameToDockWidget[name]
+        del self.objectNameToPluginName[convert_string(dockWidget.objectName())]
+        del self.pluginNameToDockWidget[name]
+        dockWidget.close()
+         
     def closeEvent(self, closeEvent):
         if not self.closed:
             self.closed = True
             try:
                 order = []
-                for i in range(self.nb.count()):
-                    order.append(self.nb.tabText(i))
+                
+                self.settings.setValue("geometry", self.saveGeometry())
+                self.settings.setValue("state", self.saveState())
+                self.settings.sync()
                 for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
                     # store sort order
                     if pluginInfo.name in order:
@@ -63,9 +143,6 @@ class LunchinatorWindow(QMainWindow):
                         pluginInfo.plugin_object.save_sort_order()
                     if pluginInfo.plugin_object.is_activated:
                         pluginInfo.plugin_object.destroy_widget()
-                        
-                if self.nb != None:
-                    get_settings().set_last_gui_plugin_index(self.nb.currentIndex())
             except:
                 log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
         
@@ -75,27 +152,6 @@ class LunchinatorWindow(QMainWindow):
         r = self.geometry()
         r.moveCenter(QApplication.desktop().availableGeometry().center())
         self.setGeometry(r)
-    
-    def widgetIndex(self, tabText):
-        index = -1
-        for i in range(self.nb.count()):
-            curText = self.nb.tabText(i)
-            if curText == tabText:
-                index = i
-                break
-        return index
-    
-    def addPluginWidget(self, po, text):
-        #check if widget is already present
-        if self.widgetIndex(text) == -1:
-            widget = self.window_msgCheckCreatePluginWidget(self.nb, po, text)   
-            self.nb.addTab(widget, text)
-            self.nb.setCurrentIndex(self.nb.count() - 1)
-            
-    def removePluginWidget(self, tabText):        
-        widgetIndex = self.widgetIndex(tabText)
-        if widgetIndex >= 0:
-            self.nb.removeTab(widgetIndex)
 
     def window_msgCheckCreatePluginWidget(self,parent,plugin_object,p_name):
         sw = None

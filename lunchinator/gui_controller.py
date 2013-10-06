@@ -42,6 +42,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         get_server().no_updates = noUpdates
         get_server().initialize(self)
         
+        self.pluginNameToMenuAction = {}
+        
         # initialize main window
         self.mainWindow = LunchinatorWindow(self)
         self.setParent(self.mainWindow)
@@ -68,6 +70,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         self.serverThread = LunchServerThread(self)
         self.serverThread.start()
+        
+        # TODO remove
+        self.mainWindow.show()
         
     def getPlugins(self, cats):
         allPlugins = {}
@@ -155,6 +160,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             anAction.setCheckable(True)
             anAction.setChecked(allPlugins[pluginName][1].is_activated)
             anAction.toggled.connect(partial(self.toggle_plugin, anAction, allPlugins[pluginName][0]))
+            self.pluginNameToMenuAction[pluginName] = anAction
         
         #main _menu
         anAction = menu.addAction('Call for lunch')
@@ -189,6 +195,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def initDoneSlot(self):
         pass
     
+    @pyqtSlot(unicode)
+    def plugin_widget_closed(self, p_name):
+        # just un-check the menu item, this will cause a callback
+        anAction = self.pluginNameToMenuAction[p_name]
+        anAction.setChecked(False)
+
     @pyqtSlot(QAction, unicode, bool)
     def toggle_plugin(self,w,p_cat,new_state):
         p_cat = convert_string(p_cat)
@@ -197,7 +209,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             log_debug("Activating plugin '%s' of type '%s'" % (p_name, p_cat))
             po = get_server().plugin_manager.activatePluginByName(p_name,p_cat)
             if p_cat=="gui" and self.mainWindow != None:
-                self.mainWindow.addPluginWidget(po, p_name)
+                self.mainWindow.addPluginWidget(po, p_name, makeVisible=True)
         else:
             log_debug("Deactivating plugin '%s' of type '%s'" % (p_name, p_cat))
             get_server().plugin_manager.deactivatePluginByName(p_name,p_cat)  
