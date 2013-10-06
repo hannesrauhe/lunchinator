@@ -1,4 +1,4 @@
-import time,codecs,os,tarfile,shutil
+import time,codecs,os,tarfile,shutil,copy
 from datetime import datetime
 from functools import partial
 from lunchinator import get_server, get_settings, convert_string, log_exception,\
@@ -381,11 +381,42 @@ class maintainer_gui(QObject):
         self.sendMessageButton.setEnabled(isMemberSelected)
         self.update_button.setEnabled(isMemberSelected)
         self.requestLogsButton.setEnabled(isMemberSelected)
+        self.updateMemberInformation()
         
     def sendMessageToMember(self, lineEdit):
         selectedMember = self.get_selected_log_member()
         if selectedMember != None:
             get_server().call(convert_string(lineEdit.text()),client=selectedMember)
+        
+    def updateMemberInformation(self):
+        self.memberInformationTable.clear()
+        
+        if self.get_selected_log_member() == None:
+            self.memberInformationTable.setColumnCount(0)
+            self.memberInformationTable.setHeaderLabel("No member selected.")
+            return
+
+        get_server().lockMembers()
+        memberInformation = None
+        try:
+            if self.get_selected_log_member() in get_server().get_member_info():
+                memberInformation = copy.deepcopy(get_server().get_member_info()[self.get_selected_log_member()])
+        finally:
+            get_server().releaseMembers()
+            
+        if memberInformation == None:
+            self.memberInformationTable.setColumnCount(0)
+            self.memberInformationTable.setHeaderLabel("No member information available.")
+            return
+        
+        self.memberInformationTable.setColumnCount(len(memberInformation))
+        headers = sorted(memberInformation.keys())
+        self.memberInformationTable.setHeaderLabels(QStringList(headers))
+        item = QTreeWidgetItem(self.memberInformationTable)
+        for col, header in enumerate(headers):
+            item.setData(col, Qt.DisplayRole, QVariant(memberInformation[header]))
+        for col in range(self.memberInformationTable.columnCount()):
+            self.memberInformationTable.resizeColumnToContents(col)
         
     def create_members_widget(self, parent):
         widget = QWidget(parent)
@@ -408,7 +439,12 @@ class maintainer_gui(QObject):
         self.requestLogsButton = QPushButton("Request Logfiles", widget)
         topLayout.addWidget(self.requestLogsButton)
         layout.addLayout(topLayout)
-        
+
+        layout.addWidget(QLabel("Member Information:", widget))
+        self.memberInformationTable = QTreeWidget(widget)
+        self.memberInformationTable.setMaximumHeight(55)
+        layout.addWidget(self.memberInformationTable, 0)
+                
         layout.addWidget(QLabel("Send Message:", widget))
         
         sendMessageLayout = QHBoxLayout()

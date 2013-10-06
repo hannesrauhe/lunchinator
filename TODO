@@ -3,9 +3,7 @@
 - unicode support
 - lunch menu structured: tooltips
 - ensure to deactivate all plugins before exiting
-- member info in members tab
 - Draggable Widgets
-- CTRL-C: save settings
 - avatare auch nach pull-prinzip?
 - Maintainer: update logs shows "requesting" if there are no new logs
 
