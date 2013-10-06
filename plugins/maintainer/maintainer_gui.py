@@ -1,4 +1,4 @@
-import time,codecs,os,tarfile,shutil,copy
+import time,codecs,os,tarfile,shutil,copy,sip
 from datetime import datetime
 from functools import partial
 from lunchinator import get_server, get_settings, convert_string, log_exception,\
@@ -112,6 +112,10 @@ class maintainer_gui(QObject):
         
         return numNew, addedLogfiles, renamedLogfiles
     
+    def requestFinished(self):
+        self.requestLogsButton.setEnabled(True)
+        self.dropdown_members.setEnabled(True)
+    
     @pyqtSlot(QThread, unicode)
     def cb_log_transfer_success(self, thread, path):
         path = convert_string(path)
@@ -121,12 +125,13 @@ class maintainer_gui(QObject):
         if not os.path.exists(tmpPath):
             os.makedirs(tmpPath)
 
-        logsAdded = []        
+        logsAdded = []   
         if path.endswith(".tgz"):
             #extract received log files
             with tarfile.open(path, 'r:gz') as tarContent:
                 tarContent.extractall(tmpPath)
             _, logsAdded, logsRenamed = self.handleNewLogFiles(basePath, tmpPath)
+            self.requestFinished()
         else:
             # log comes from old version
             logNum = 0
@@ -151,11 +156,15 @@ class maintainer_gui(QObject):
             elif thread.sender in self.logRequests:
                 # request finished
                 del self.logRequests[thread.sender]
+                self.requestFinished()
+            else:
+                self.requestFinished()
             
         if not self.visible:
             return False
         
-        self.updateLogList(logsAdded, logsRenamed)
+        if len(logsAdded) > 0 or len(logsRenamed) > 0:
+            self.updateLogList(logsAdded, logsRenamed)
         thread.deleteLater()
     
     @pyqtSlot(QThread)
@@ -164,6 +173,7 @@ class maintainer_gui(QObject):
             return False
         self.log_area.setText("Error while getting log")
         thread.deleteLater()
+        self.requestFinished()
         
     def update_reports(self):
         mode="open"
@@ -204,6 +214,8 @@ class maintainer_gui(QObject):
             
     @pyqtSlot()
     def requestLogClicked(self):
+        self.requestLogsButton.setEnabled(False)
+        self.dropdown_members.setEnabled(False)
         self.updateLogList([(0, None)])
         self.request_log()
             
@@ -256,6 +268,7 @@ class maintainer_gui(QObject):
             return "%s (%s)" % (m_name.strip(), m_ip.strip())
     
     def update_dropdown_members(self):
+        self.updateMemberInformation()
         if self.dropdown_members_model == None:
             return
         for m_ip in get_server().get_members():
@@ -283,8 +296,9 @@ class maintainer_gui(QObject):
         return len(self.listLogFilesForMember(member))
             
     def requestTimedOut(self, item):
-        if item != None and item.data(0, Qt.UserRole) == None:
+        if not sip.isdeleted(item) and item != None and item.data(0, Qt.UserRole) == None:
             self.log_tree_view.takeTopLevelItem(self.log_tree_view.indexFromItem(item).row())
+            self.requestFinished()
              
     def initializeLogItem(self, item, logFile):
         firstDate, lastDate = self.getLogDates(logFile)
@@ -319,7 +333,7 @@ class maintainer_gui(QObject):
             
         if logsRenamed != None:
             for index, oldName, newName in logsRenamed:
-                # index + 1 because of "requesting" item
+                # index + 1 because of the "requesting" item
                 item = self.log_tree_view.topLevelItem(index + 1)
                 if item != None:
                     itemLogFile = convert_string(item.data(0, Qt.UserRole).toString())
@@ -327,26 +341,29 @@ class maintainer_gui(QObject):
                         log_warning("index does not correspond to item in list:\n\t%s\n\t%s" % (itemLogFile, oldName))
                     self.initializeLogItem(item, newName)
             
-        for index, logFile in logsAdded:
-            oldItem = self.log_tree_view.topLevelItem(index)
-            item = None
-            if oldItem != None and oldItem.data(0, Qt.UserRole) == None:
-                # requested item has been received
-                item = oldItem
-            else:
-                item = QTreeWidgetItem()
-                oldItem = None
-            
-            if logFile == None:
-                item.setData(0, Qt.DisplayRole, QVariant("Requesting..."))
-                QTimer.singleShot(6000, partial(self.requestTimedOut, item)) 
-            else:
-                self.initializeLogItem(item, logFile)
-            
-            if oldItem is None:
-                # else, the old item is being modified
-                self.log_tree_view.insertTopLevelItem(index, item)
-            self.log_tree_view.setSelectionMode(QTreeWidget.SingleSelection)
+        if len(logsAdded) == 0:
+            self.log_tree_view.takeTopLevelItem(0)
+        else:
+            for index, logFile in logsAdded:
+                oldItem = self.log_tree_view.topLevelItem(index)
+                item = None
+                if oldItem != None and oldItem.data(0, Qt.UserRole) == None:
+                    # requested item has been received
+                    item = oldItem
+                else:
+                    item = QTreeWidgetItem()
+                    oldItem = None
+                
+                if logFile == None:
+                    item.setData(0, Qt.DisplayRole, QVariant("Requesting..."))
+                    QTimer.singleShot(6000, partial(self.requestTimedOut, item)) 
+                else:
+                    self.initializeLogItem(item, logFile)
+                
+                if oldItem is None:
+                    # else, the old item is being modified
+                    self.log_tree_view.insertTopLevelItem(index, item)
+                self.log_tree_view.setSelectionMode(QTreeWidget.SingleSelection)
         self.displaySelectedLogfile()
     
     def getSelectedLogContent(self):
@@ -428,7 +445,6 @@ class maintainer_gui(QObject):
         self.dropdown_members_model.appendRow(QStandardItem(""))
         self.dropdown_members = QComboBox(widget)
         self.dropdown_members.setModel(self.dropdown_members_model)
-        self.update_dropdown_members()
         
         self.update_button = QPushButton("Send Update Command", widget)
 
@@ -477,6 +493,7 @@ class maintainer_gui(QObject):
         
         layout.addWidget(logSplitter, 1)
         
+        self.update_dropdown_members()
         self.memberSelectionChanged()
         self.log_tree_view.selectionModel().selectionChanged.connect(self.displaySelectedLogfile)
         self.dropdown_members.currentIndexChanged.connect(self.memberSelectionChanged)
@@ -489,7 +506,7 @@ class maintainer_gui(QObject):
     
     def create_widget(self, parent):
         nb = QTabWidget(parent)
-        nb.setTabPosition(QTabWidget.West)
+        #nb.setTabPosition(QTabWidget.West)
         
         reports_widget = self.create_reports_widget(nb)
         logs_widget = self.create_members_widget(nb)

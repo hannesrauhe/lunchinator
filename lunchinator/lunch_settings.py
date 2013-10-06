@@ -66,7 +66,7 @@ class lunch_settings(object):
         self._peer_timeout = 604800 #one week so that we don't forget someone too soon
         self._mute_timeout = 30
         self._reset_icon_time = 5
-        self._logging_level = u"ERROR"
+        self._logging_level = u"WARNING" # TODO reset to ERROR
         
         if not os.path.exists(self._main_config_dir):
             os.makedirs(self._main_config_dir)
