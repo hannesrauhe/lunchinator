@@ -254,13 +254,15 @@ class lunch_server(object):
         i = 0
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
         try:      
+            print target
             for ip in target:
                 try:
                     log_debug("Sending", msg, "to", ip.strip())
                     s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
                     i+=1
                 except:
-                    log_exception("Exception while sending msg %s to %s: %s"%(msg,client, str(sys.exc_info()[0])))
+                    # only debug message; happens sometimes if the host is not reachable
+                    log_debug("Message could not be delivered to %s: %s" % (ip, str(sys.exc_info()[0])))
                     continue
         finally:
             s.close() 
