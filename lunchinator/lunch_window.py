@@ -1,5 +1,5 @@
 from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QApplication, QDockWidget, QApplication, QMenu, QKeySequence
-from PyQt4.QtCore import Qt, QSettings
+from PyQt4.QtCore import Qt, QSettings, QVariant
 from lunchinator import get_settings, get_server, log_exception, convert_string
 import sys, os
 from StringIO import StringIO
@@ -30,6 +30,7 @@ class LunchinatorWindow(QMainWindow):
         
         savedGeometry = self.settings.value("geometry", None)
         savedState = self.settings.value("state", None)
+        self.locked = self.settings.value("locked", QVariant(False)).toBool()
         
         if savedState == None:
             # first run, create initial state
@@ -65,6 +66,9 @@ class LunchinatorWindow(QMainWindow):
             # no gui plugins activated, show about plugins
             self.addPluginWidgetByName(u"About Plugins")
         
+        if self.locked:
+            self.lockDockWidgets()
+        
         # prevent from closing twice
         self.closed = False
             
@@ -84,10 +88,12 @@ class LunchinatorWindow(QMainWindow):
         menuBar.addMenu(pluginMenu)
             
     def lockDockWidgets(self):
+        self.locked = True
         for aDockWidget in self.pluginNameToDockWidget.values():
             aDockWidget.setFeatures(aDockWidget.features() & ~(QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable))
             
     def unlockWidgets(self):
+        self.locked = False
         for aDockWidget in self.pluginNameToDockWidget.values():
             aDockWidget.setFeatures(aDockWidget.features() | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
             
@@ -160,6 +166,7 @@ class LunchinatorWindow(QMainWindow):
                 
                 self.settings.setValue("geometry", self.saveGeometry())
                 self.settings.setValue("state", self.saveState())
+                self.settings.setValue("locked", QVariant(self.locked))
                 self.settings.sync()
                 for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
                     # store sort order
