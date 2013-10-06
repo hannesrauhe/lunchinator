@@ -136,7 +136,7 @@ class lunch_settings(object):
                     log_warning("configured audio file %s does not exist in sounds folder, using old one: %s",audio_file,self._audio_file)  
         
         if self._user_name=="":
-            self._user_name = getpass.getuser()  
+            self._user_name = getpass.getuser().decode()  
             
     def read_value_from_config_file(self,value,section,name):
         try:
