@@ -71,9 +71,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.serverThread = LunchServerThread(self)
         self.serverThread.start()
         
-        # TODO remove
-        self.mainWindow.show()
-        
     def getPlugins(self, cats):
         allPlugins = {}
         for p_cat in cats:
