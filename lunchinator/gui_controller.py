@@ -58,6 +58,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         statusicon.setContextMenu(contextMenu)
         statusicon.show()
         
+        self.mainWindow.createMenuBar(self.plugin_menu)
+        
         # connect private signals
         self._initDone.connect(self.initDoneSlot)
         self._receiveFile.connect(self.receiveFileSlot)
@@ -149,11 +151,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def init_menu(self, parent):        
         #create the plugin submenu
         menu = QMenu(parent)
-        plugin_menu = QMenu("PlugIns", menu)
+        self.plugin_menu = QMenu("PlugIns", menu)
         
         allPlugins= self.getPlugins([u'general',u'called',u'gui',u'db'])
         for pluginName in sorted(allPlugins.iterkeys()):
-            anAction = plugin_menu.addAction(pluginName)
+            anAction = self.plugin_menu.addAction(pluginName)
             anAction.setCheckable(True)
             anAction.setChecked(allPlugins[pluginName][1].is_activated)
             anAction.toggled.connect(partial(self.toggle_plugin, anAction, allPlugins[pluginName][0]))
@@ -169,7 +171,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         anAction = menu.addAction('Settings')
         anAction.triggered.connect(self.openSettingsClicked)
         
-        menu.addMenu(plugin_menu)
+        menu.addMenu(self.plugin_menu)
         
         anAction = menu.addAction('Exit')
         anAction.triggered.connect(self.quitClicked)

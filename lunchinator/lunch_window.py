@@ -1,4 +1,4 @@
-from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QApplication, QDockWidget, QApplication
+from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QApplication, QDockWidget, QApplication, QMenu, QKeySequence
 from PyQt4.QtCore import Qt, QSettings
 from lunchinator import get_settings, get_server, log_exception, convert_string
 import sys, os
@@ -67,6 +67,26 @@ class LunchinatorWindow(QMainWindow):
         
         # prevent from closing twice
         self.closed = False
+            
+    def createMenuBar(self, pluginsMenu):
+        menuBar = self.menuBar()
+        
+        windowMenu = QMenu("Window", menuBar)
+        windowMenu.addAction("Lock Widgets", self.lockDockWidgets)
+        windowMenu.addAction("Unlock Widgets", self.unlockWidgets)
+        windowMenu.addSeparator()
+        windowMenu.addAction("Close", self.close, QKeySequence(QKeySequence.Close))
+        
+        menuBar.addMenu(windowMenu)
+        menuBar.addMenu(pluginsMenu)
+            
+    def lockDockWidgets(self):
+        for aDockWidget in self.pluginNameToDockWidget.values():
+            aDockWidget.setFeatures(aDockWidget.features() & ~(QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable))
+            
+    def unlockWidgets(self):
+        for aDockWidget in self.pluginNameToDockWidget.values():
+            aDockWidget.setFeatures(aDockWidget.features() | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
             
     def addPluginWidgetByName(self, name):
         try:
