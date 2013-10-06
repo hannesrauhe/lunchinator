@@ -1,16 +1,15 @@
 import sys
 from lunchinator import get_server, log_exception, log_info, get_settings,\
-    log_error, convert_string, log_warning
+    log_error, convert_string, log_warning, log_debug
 import socket,os,time
 import platform
-from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QSortFilterProxyModel, QAction, QSystemTrayIcon, QIcon
-from PyQt4.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication
+from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QAction, QSystemTrayIcon, QIcon
+from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication, Qt
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
-from lunchinator.table_models import MembersTableModel, MessagesTableModel
 from lunchinator.utilities import processPluginCall
 
 class LunchServerThread(QThread):
@@ -27,7 +26,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     memberAppendedSignal = pyqtSignal(unicode, dict)
     memberUpdatedSignal = pyqtSignal(unicode, dict)
     memberRemovedSignal = pyqtSignal(unicode)
-    _messagePrepended = pyqtSignal(time.struct_time, list)
+    messagePrependedSignal = pyqtSignal(time.struct_time, list)
     _sendFile = pyqtSignal(unicode, QByteArray, int, bool)
     _receiveFile = pyqtSignal(unicode, int, unicode)
     _processEvent = pyqtSignal(unicode, unicode, unicode)
@@ -46,35 +45,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         # initialize main window
         self.mainWindow = LunchinatorWindow(self)
         self.setParent(self.mainWindow)
-        
-        # initialize messages table
-        self.messagesModel = MessagesTableModel(get_server())
-        self.messagesProxyModel = QSortFilterProxyModel(self)
-        self.messagesProxyModel.setSortRole(MessagesTableModel.SORT_ROLE)
-        self.messagesProxyModel.setDynamicSortFilter(True)
-        self.messagesProxyModel.setSourceModel(self.messagesModel)
-        self.mainWindow.messagesTable.setModel(self.messagesProxyModel)
-        self._messagePrepended.connect(self.messagesModel.externalRowPrepended)
-        
-        self.memberAppendedSignal.connect(self.updateSendersInMessagesTable)
-        self.memberUpdatedSignal.connect(self.updateSendersInMessagesTable)
-        self.memberRemovedSignal.connect(self.updateSendersInMessagesTable)
-        
-        # initialize members table
-        self.membersModel = MembersTableModel(get_server())
-        self.membersProxyModel = QSortFilterProxyModel(self)
-        self.membersProxyModel.setSortRole(MembersTableModel.SORT_ROLE)
-        self.membersProxyModel.setDynamicSortFilter(True)
-        self.membersProxyModel.setSourceModel(self.membersModel)
-        self.mainWindow.membersTable.setModel(self.membersProxyModel)
-        timeoutTimer = QTimer(self.membersModel)
-        timeoutTimer.setInterval(1000)
-        timeoutTimer.timeout.connect(self.updateTimeoutsInMembersTables)
-        timeoutTimer.start(1000)  
-        
-        self.memberAppendedSignal.connect(self.membersModel.externalRowAppended)
-        self.memberUpdatedSignal.connect(self.membersModel.externalRowUpdated)
-        self.memberRemovedSignal.connect(self.membersModel.externalRowRemoved)
         
         # initialize tray icon
         icon_file = get_settings().get_lunchdir()+os.path.sep+"images"+os.path.sep+"lunch.svg"
@@ -149,7 +119,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.memberRemovedSignal.emit(ip)
     
     def messagePrepended(self, messageTime, senderIP, messageText):
-        self._messagePrepended.emit(messageTime, [senderIP, messageText])
+        self.messagePrependedSignal.emit(messageTime, [senderIP, messageText])
     
     def receiveFile(self, ip, fileSize, fileName):
         self._receiveFile.emit(ip, fileSize, fileName)
@@ -179,12 +149,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
         menu = QMenu(parent)
         plugin_menu = QMenu("PlugIns", menu)
         
-        allPlugins= self.getPlugins(['general','called','gui','db'])
+        allPlugins= self.getPlugins([u'general',u'called',u'gui',u'db'])
         for pluginName in sorted(allPlugins.iterkeys()):
             anAction = plugin_menu.addAction(pluginName)
             anAction.setCheckable(True)
             anAction.setChecked(allPlugins[pluginName][1].is_activated)
-            anAction.triggered.connect(partial(self.toggle_plugin, anAction, allPlugins[pluginName][0]))
+            anAction.toggled.connect(partial(self.toggle_plugin, anAction, allPlugins[pluginName][0]))
         
         #main _menu
         anAction = menu.addAction('Call for lunch')
@@ -224,10 +194,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
         p_cat = convert_string(p_cat)
         p_name = unicode(w.text().toUtf8(), 'utf-8')
         if new_state:
+            log_debug("Activating plugin '%s' of type '%s'" % (p_name, p_cat))
             po = get_server().plugin_manager.activatePluginByName(p_name,p_cat)
             if p_cat=="gui" and self.mainWindow != None:
                 self.mainWindow.addPluginWidget(po, p_name)
         else:
+            log_debug("Deactivating plugin '%s' of type '%s'" % (p_name, p_cat))
             get_server().plugin_manager.deactivatePluginByName(p_name,p_cat)  
             if p_cat=="gui" and self.mainWindow != None:
                 self.mainWindow.removePluginWidget(p_name)
@@ -333,18 +305,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         msg = convert_string(msg)
         addr = convert_string(addr)
         processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
-        
-    @pyqtSlot()
-    def updateSendersInMessagesTable(self):
-        self.messagesProxyModel.setDynamicSortFilter(False)
-        self.messagesModel.updateSenders()
-        self.messagesProxyModel.setDynamicSortFilter(True)
-    
-    @pyqtSlot()
-    def updateTimeoutsInMembersTables(self):
-        self.membersProxyModel.setDynamicSortFilter(False)
-        self.membersModel.updateTimeouts()
-        self.membersProxyModel.setDynamicSortFilter(True)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

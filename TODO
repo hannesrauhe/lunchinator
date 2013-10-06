@@ -1,9 +1,6 @@
 - Problem when launching start_lunchinator and there is no .lunchinator directory
 - Problem when the members cfg is empty (division by zero)
-- unicode support
 - lunch menu structured: tooltips
-- ensure to deactivate all plugins before exiting
-- Draggable Widgets
 - avatare auch nach pull-prinzip?
 - Maintainer: update logs shows "requesting" if there are no new logs
 

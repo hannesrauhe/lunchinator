@@ -1,10 +1,8 @@
-from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QLineEdit, QWidget, QHBoxLayout, QVBoxLayout, QSplitter, QApplication, QPushButton, QTreeView, QStyledItemDelegate
-from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QApplication
 from lunchinator import get_settings, get_server, log_exception
 import sys
 from StringIO import StringIO
 import traceback
-from functools import partial
 
 class LunchinatorWindow(QMainWindow):
     def __init__(self, controller):
@@ -13,21 +11,11 @@ class LunchinatorWindow(QMainWindow):
         self.guiHandler = controller
         self.setWindowTitle("Lunchinator")
 
-        centralWidget = QSplitter(Qt.Horizontal)
-        widget, self.messagesTable = self.createTableWidget(centralWidget, MessageTable, "Send Message", self.clicked_send_msg)
-        centralWidget.addWidget(widget)
-        widget, self.membersTable = self.createTableWidget(centralWidget, MembersTable, "Add Host", self.clicked_add_host)
-        centralWidget.addWidget(widget)
-
-        
-        self.nb = QTabWidget(centralWidget)
+        self.nb = QTabWidget(self)
         self.nb.setMovable(True)
         self.nb.setTabPosition(QTabWidget.North)
-        centralWidget.addWidget(self.nb)
-        centralWidget.setStretchFactor(0, 2)
-        centralWidget.setStretchFactor(1, 3)
         
-        self.setCentralWidget(centralWidget)
+        self.setCentralWidget(self.nb)
         
         # add plugins
         plugin_widgets = []
@@ -60,14 +48,6 @@ class LunchinatorWindow(QMainWindow):
         self.centerOnScreen()
         # prevent from closing twice
         self.closed = False
-        
-    def clicked_send_msg(self, w):
-        if self.guiHandler != None:
-            self.guiHandler.sendMessageClicked(None, w)
-            
-    def clicked_add_host(self, w):
-        if self.guiHandler != None:
-            self.guiHandler.addHostClicked(w)
         
     def closeEvent(self, closeEvent):
         if not self.closed:
@@ -117,31 +97,6 @@ class LunchinatorWindow(QMainWindow):
         if widgetIndex >= 0:
             self.nb.removeTab(widgetIndex)
 
-    def createTableWidget(self, parent, TableClass, buttonText, triggeredEvent):
-        # create HBox in VBox for each table
-        # Create message table
-        tableWidget = QWidget(parent)
-        tableLayout = QVBoxLayout(tableWidget)
-        tableBottomLayout = QHBoxLayout()
-        
-        table = TableClass(tableWidget)
-        tableLayout.addWidget(table)
-        #tableLayout.pack_start(table.scrollTree, True, True, 0)
-        
-        entry = QLineEdit(tableWidget)
-        tableBottomLayout.addWidget(entry)
-        #tableBottomLayout.pack_start(entry, True, True, 3)
-        button = QPushButton(buttonText, tableWidget)
-        tableBottomLayout.addWidget(button)
-        #tableBottomLayout.pack_start(button, False, True, 10)
-        tableLayout.addLayout(tableBottomLayout)
-        #tableLayout.pack_start(tableBottomLayout, False, True, 0)
-        
-        entry.returnPressed.connect(partial(triggeredEvent, entry))
-        button.clicked.connect(partial(triggeredEvent, entry))
-        
-        return (tableWidget, table)
-   
     def window_msgCheckCreatePluginWidget(self,parent,plugin_object,p_name):
         sw = None
         try:
@@ -157,29 +112,3 @@ class LunchinatorWindow(QMainWindow):
             sw.setPlainText(stringOut.getvalue())
             stringOut.close() 
         return sw
-        
-class MembersTableItemDelegate(QStyledItemDelegate):
-    # void paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index)
-    def paint(self, painter, option, index):
-        super(MembersTableItemDelegate, self).paint(painter, option, index)
-
-class UpdatingTable(QTreeView):
-    def __init__(self, parent, sortedColumn = None, ascending = True):
-        super(UpdatingTable, self).__init__(parent)
-        
-        self.setSortingEnabled(True)
-        self.setHeaderHidden(False)
-        self.setAlternatingRowColors(True)
-        self.setIndentation(0)
-        if sortedColumn != None:
-            self.sortByColumn(sortedColumn, Qt.AscendingOrder if ascending else Qt.DescendingOrder)
-    
-class MembersTable(UpdatingTable):    
-    def __init__(self, parent):
-        super(MembersTable, self).__init__(parent, 2)
-        
-class MessageTable(UpdatingTable):
-    def __init__(self, parent):
-        super(MessageTable, self).__init__(parent)
-    
-    

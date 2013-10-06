@@ -56,7 +56,7 @@ def convert_string(string):
     if type(string) == unicode:
         return string
     elif type(string) == str:
-        print "Encountered string of type str"
+        log_warning("Encountered string of type str")
         traceback.print_stack()
         return str.decode('utf-8')
     return unicode(string.toUtf8(), 'utf-8')

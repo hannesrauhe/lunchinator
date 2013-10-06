@@ -1,6 +1,7 @@
 from lunchinator.lunch_datathread import sendFile, receiveFile
 import time
 from threading import Thread
+from lunchinator import log_info
 
 class DataThreadBase(Thread):
     def __init__(self, file_path, tcp_port):
@@ -33,10 +34,10 @@ class DataReceiverThread(DataThreadBase):
         self.size = size
         
     def success(self, filePath):
-        print "successfully received file %s" % filePath
+        log_info("successfully received file %s" % filePath)
     
     def error(self):
-        print "Error receiving file"
+        log_info("Error receiving file")
  
     def run(self):
         receiveFile(self.sender, self.file_path, self.size, self.tcp_port, self.success, self.error)

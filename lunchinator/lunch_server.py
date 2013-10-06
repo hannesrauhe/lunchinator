@@ -254,7 +254,6 @@ class lunch_server(object):
         i = 0
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
         try:      
-            print target
             for ip in target:
                 try:
                     log_debug("Sending", msg, "to", ip.strip())
