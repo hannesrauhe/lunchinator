@@ -40,6 +40,9 @@ class messages_table(iface_gui_plugin):
         self.messagesTable.setModel(self.messagesProxyModel)
         
         get_server().controller.messagePrependedSignal.connect(self.messagesModel.externalRowPrepended)
+        get_server().controller.memberAppendedSignal.connect(self.updateSendersInMessagesTable)
+        get_server().controller.memberUpdatedSignal.connect(self.updateSendersInMessagesTable)
+        get_server().controller.memberRemovedSignal.connect(self.updateSendersInMessagesTable)
         
         return self.messagesTable
     
