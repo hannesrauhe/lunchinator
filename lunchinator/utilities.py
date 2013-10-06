@@ -30,7 +30,7 @@ def displayNotification(name,msg,icon):
     except:
         log_exception("error displaying notification")
             
-def drawAttention(self, audioFile):
+def drawAttention(audioFile):
     myPlatform = getPlatform()
     if myPlatform == PLATFORM_LINUX:
         _drawAttentionLinux(audioFile)

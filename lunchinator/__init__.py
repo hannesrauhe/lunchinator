@@ -1,6 +1,19 @@
+from datetime import datetime
 __all__ = ["gui_general", "lunch_settings", "lunch_server", "iface_plugins", "lunch_datathread"]
 
-import logging, logging.handlers, os
+import logging, logging.handlers, os, time
+
+class _log_formatter (logging.Formatter):
+    LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+    TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+    def __init__(self):
+        super(_log_formatter, self).__init__(self.LOG_FORMAT)
+        
+    def formatTime(self, record, _datefmt=None):
+        ct = self.converter(record.created)
+        t = time.strftime(self.TIME_FORMAT, ct)
+        s = "%s,%03d" % (t, record.msecs)
+        return s
 
 class _lunchinator_logger:
     lunch_logger = None
@@ -16,7 +29,7 @@ class _lunchinator_logger:
             log_file = main_config_dir+os.sep+"lunchinator.log"
                 
             loghandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
-            loghandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+            loghandler.setFormatter(_log_formatter())
             loghandler.setLevel(logging.DEBUG)
             
             cls.streamHandler = logging.StreamHandler()
@@ -40,16 +53,35 @@ _lunchinator_logger.get_singleton_logger()
 
 def convert_string(string):
     import traceback
+    from cStringIO import StringIO
     if type(string) == unicode:
         return string
     elif type(string) == str:
-        print "Encountered string of type str"
-        traceback.print_stack()
-        return str.decode('utf-8')
+        log_warning("Encountered string of type str")
+        trace = StringIO()
+        traceback.print_stack(None, None, trace)
+        log_warning(trace.getvalue())
+        trace.close()
+        return string.decode('utf-8')
     return unicode(string.toUtf8(), 'utf-8')
 
 def _get_logger():
     return _lunchinator_logger.get_singleton_logger()
+
+def getLogLineTime(logLine):
+    logLineWords = logLine.split()
+    if len(logLineWords) < 2:
+        return None
+    possiblyLogDate = "%s %s" % (logLineWords[0], logLineWords[1])
+    dateParts = possiblyLogDate.split(",")
+    if len(dateParts) != 2:
+        return
+    
+    try:
+        formattedDate = ("%s,%6d" % (dateParts[0], int(dateParts[1]) * 1000))
+        return datetime.strptime(formattedDate, "%Y-%m-%d %H:%M:%S,%f")
+    except:
+        return None
 
 def setLoggingLevel(newLevel):
     # ensure logger is initialized

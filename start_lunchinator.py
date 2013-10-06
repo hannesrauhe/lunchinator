@@ -7,7 +7,6 @@
 import platform, os, sys
 import signal
 from functools import partial
-from lunchinator.lunch_server_controller import LunchServerController
 path = os.path.abspath(sys.argv[0])
 while os.path.dirname(path) != path:
     if os.path.exists(os.path.join(path, 'lunchinator', '__init__.py')):
@@ -88,7 +87,7 @@ def sendMessage(msg, cli):
     print "sent to",recv_nr,"clients"
     
 def handleInterrupt(lanschi, _signal, _frame):
-    lanschi.stopServer()
+    lanschi.quit()
     QApplication.quit()
     
 if __name__ == "__main__":
@@ -134,7 +133,7 @@ if __name__ == "__main__":
         signal.signal(signal.SIGINT, partial(handleInterrupt, lanschi))
     
         try:
-            retValue = app.exec_()
+            app.exec_()
         finally:
-            lanschi.stopServer()
-        sys.exit(retValue)
+            retValue = lanschi.quit()
+            sys.exit(retValue)

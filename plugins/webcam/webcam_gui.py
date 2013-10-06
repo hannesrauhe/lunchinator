@@ -28,7 +28,6 @@ class UpdatingImage(QLabel):
     def setScaledPixmap(self):
         # set a scaled pixmap to a w x h window keeping its aspect ratio 
         if self.rawPixmap != None:
-            # TODO better scaling? Setting?
             self.setPixmap(self.rawPixmap.scaled(self.width(),self.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation if self.smooth_scaling else Qt.FastTransformation))
     
     def resizeEvent(self, event):

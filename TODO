@@ -1,14 +1,6 @@
-- Problem when launching start_lunchinator and there is no .lunchinator directory
-- Problem when the members cfg is empty (division by zero)
-- thread safety in lunch_server through signals
-- unicode support
 - lunch menu structured: tooltips
-- search for TODOs
-- ensure to deactivate all plugins before exiting
-- member info in members tab
-- Draggable Widgets
-- maintainer: automatically download all logs from old versions (compare to the cached ones)
-- webcam: smooth scaling setting
+- avatare auch nach pull-prinzip?
+- Add size hints to plugin widgets
 
 - Werden dict-inhalte nun konvertiert oder nicht?
 --> PyQt Version auf mac:   4.10.3 (264707)

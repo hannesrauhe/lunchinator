@@ -1,89 +1,182 @@
-from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QLineEdit, QWidget, QHBoxLayout, QVBoxLayout, QSplitter, QApplication, QPushButton, QTreeView, QStyledItemDelegate
-from PyQt4.QtCore import Qt
-from lunchinator import get_settings, get_server, log_exception
-import sys
+from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QApplication, QDockWidget, QApplication, QMenu, QKeySequence
+from PyQt4.QtCore import Qt, QSettings, QVariant
+from lunchinator import get_settings, get_server, log_exception, convert_string
+import sys, os
 from StringIO import StringIO
 import traceback
-from functools import partial
+
+class PluginDockWidget(QDockWidget):
+    def __init__(self, name, parent, closeCallback):
+        super(PluginDockWidget, self).__init__(name, parent)
+        self.closeCallback = closeCallback
+        
+    def closeEvent(self, _closeEvent):
+        self.closeCallback(self)
+        #return super(PluginDockWidget, self).closeEvent(closeEvent)
 
 class LunchinatorWindow(QMainWindow):
     def __init__(self, controller):
         super(LunchinatorWindow, self).__init__(None)
-        
+
         self.guiHandler = controller
         self.setWindowTitle("Lunchinator")
 
-        centralWidget = QSplitter(Qt.Horizontal)
-        widget, self.messagesTable = self.createTableWidget(centralWidget, MessageTable, "Send Message", self.clicked_send_msg)
-        centralWidget.addWidget(widget)
-        widget, self.membersTable = self.createTableWidget(centralWidget, MembersTable, "Add Host", self.clicked_add_host)
-        centralWidget.addWidget(widget)
-
+        self.setDockNestingEnabled(True)
+        self.setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
         
-        self.nb = QTabWidget(centralWidget)
-        self.nb.setMovable(True)
-        self.nb.setTabPosition(QTabWidget.North)
-        centralWidget.addWidget(self.nb)
-        centralWidget.setStretchFactor(0, 2)
-        centralWidget.setStretchFactor(1, 3)
+        self.pluginNameToDockWidget = {}
+        self.objectNameToPluginName = {}
+        self.settings = QSettings(get_settings().get_main_config_dir() + os.sep + u"gui_settings.ini", QSettings.IniFormat)
         
-        self.setCentralWidget(centralWidget)
+        savedGeometry = self.settings.value("geometry", None)
+        savedState = self.settings.value("state", None)
+        self.locked = self.settings.value("locked", QVariant(False)).toBool()
+        
+        if savedState == None:
+            # first run, create initial state
+            self.addPluginWidgetByName(u"Messages")
+            self.addPluginWidgetByName(u"Members")
+            
+            # check if an old-stype plugins are enabled, if not, display "about plugins"
+            foundOldStylePlugin = False
+            for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
+                if pluginInfo.name not in ("Messages", "Members") and pluginInfo.plugin_object.is_activated:
+                    foundOldStylePlugin = True
+            
+            if not foundOldStylePlugin:
+                self.addPluginWidgetByName(u"About Plugins")
         
         # add plugins
-        plugin_widgets = []
         try:
             for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
-                    plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(self.nb, pluginInfo.plugin_object, pluginInfo.name)))
-            if len(plugin_widgets) == 0:
-                #activate help plugin
-                get_server().plugin_manager.activatePluginByName("About Plugins", "gui")
-                pluginInfo = get_server().plugin_manager.getPluginByName("About Plugins", "gui")
-                if pluginInfo != None:
-                    plugin_widgets.append((pluginInfo,self.window_msgCheckCreatePluginWidget(self.nb, pluginInfo.plugin_object, pluginInfo.name)))
-                pass                    
+                    self.addPluginWidget(pluginInfo.plugin_object, pluginInfo.name)
+        except:
+            log_exception("while including plugins %s"%str(sys.exc_info()))
+        
+        if savedGeometry != None:
+            self.restoreGeometry(savedGeometry.toByteArray())
+        else:
+            self.centerOnScreen()
+        
+        if savedState != None:
+            self.restoreState(savedState.toByteArray())
+
+        if len(self.pluginNameToDockWidget) == 0:
+            # no gui plugins activated, show about plugins
+            self.addPluginWidgetByName(u"About Plugins")
+        
+        if self.locked:
+            self.lockDockWidgets()
+        
+        # prevent from closing twice
+        self.closed = False
+            
+    def createMenuBar(self, pluginActions):
+        menuBar = self.menuBar()
+        
+        windowMenu = QMenu("Window", menuBar)
+        windowMenu.addAction("Lock Widgets", self.lockDockWidgets)
+        windowMenu.addAction("Unlock Widgets", self.unlockWidgets)
+        windowMenu.addSeparator()
+        windowMenu.addAction("Close", self.close, QKeySequence(QKeySequence.Close))
+        menuBar.addMenu(windowMenu)
+        
+        pluginMenu = QMenu("PlugIns", menuBar)
+        for anAction in pluginActions:
+            pluginMenu.addAction(anAction)
+        menuBar.addMenu(pluginMenu)
+            
+    def lockDockWidgets(self):
+        self.locked = True
+        for aDockWidget in self.pluginNameToDockWidget.values():
+            aDockWidget.setFeatures(aDockWidget.features() & ~(QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable))
+            
+    def unlockWidgets(self):
+        self.locked = False
+        for aDockWidget in self.pluginNameToDockWidget.values():
+            aDockWidget.setFeatures(aDockWidget.features() | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
+            
+    def addPluginWidgetByName(self, name):
+        try:
+            pluginInfo = get_server().plugin_manager.getPluginByName(name, u"gui")
+            if not pluginInfo.plugin_object.is_activated:
+                po = get_server().plugin_manager.activatePluginByName(name, u"gui")
+            else:
+                po = pluginInfo.plugin_object
+            self.addPluginWidget(po, name)
         except:
             log_exception("while including plugins %s"%str(sys.exc_info()))
             
-        plugin_widgets.sort(key=lambda tup: tup[0].name)
-        plugin_widgets.sort(key=lambda tup: tup[0].plugin_object.sortOrder)
-        
-        for info,widget in plugin_widgets:
-            self.nb.addTab(widget, info.name)
-        
-        # select previously selected widget
-        index = 0
-        if get_settings().get_last_gui_plugin_index() < self.nb.count() and get_settings().get_last_gui_plugin_index() >= 0:
-            index = get_settings().get_last_gui_plugin_index()
-        
-        self.nb.setCurrentIndex(index)
-        self.centerOnScreen()
-        
-    def clicked_send_msg(self, w):
-        if self.guiHandler != None:
-            self.guiHandler.sendMessageClicked(None, w)
+    def closePlugin(self, dockWidget):
+        objectName = convert_string(dockWidget.objectName())
+        if objectName in self.objectNameToPluginName:
+            name = self.objectNameToPluginName[objectName]
+            self.guiHandler.plugin_widget_closed(name)
             
-    def clicked_add_host(self, w):
-        if self.guiHandler != None:
-            self.guiHandler.addHostClicked(w)
+    def addPluginWidget(self, po, name, makeVisible = False):
+        if name in self.pluginNameToDockWidget:
+            # widget already visible
+            return
         
+        dockWidget = PluginDockWidget(name, self, self.closePlugin)
+        dockWidget.setObjectName(u"plugin.%s" % name)
+        newWidget = self.window_msgCheckCreatePluginWidget(dockWidget, po, name)
+        dockWidget.setWidget(newWidget)
+        self.pluginNameToDockWidget[name] = dockWidget
+        self.objectNameToPluginName[convert_string(dockWidget.objectName())] = name.decode()
+
+        widgetToTabify = None
+        for aDockWidget in self.pluginNameToDockWidget.values():
+            tabified = self.tabifiedDockWidgets(aDockWidget)
+            if len(tabified) > 0:
+                widgetToTabify = aDockWidget
+                break
+        
+        if widgetToTabify == None:
+            for aDockWidget in self.pluginNameToDockWidget.values():
+                if self.objectNameToPluginName[convert_string(aDockWidget.objectName())] not in (u"Members", u"Messages", name):
+                    widgetToTabify = aDockWidget
+                    break
+        
+        if widgetToTabify != None:
+            dockArea = self.dockWidgetArea(widgetToTabify)
+            self.addDockWidget(dockArea, dockWidget)
+            self.tabifyDockWidget(widgetToTabify, dockWidget)
+            if makeVisible:
+                QApplication.processEvents()
+                dockWidget.raise_()
+        else:
+            self.addDockWidget(Qt.TopDockWidgetArea, dockWidget)
+       
+    def removePluginWidget(self, name):
+        if not name in self.pluginNameToDockWidget:
+            return
+        
+        dockWidget = self.pluginNameToDockWidget[name]
+        del self.objectNameToPluginName[convert_string(dockWidget.objectName())]
+        del self.pluginNameToDockWidget[name]
+        dockWidget.close()
+         
     def closeEvent(self, closeEvent):
-        try:
-            order = []
-            for i in range(self.nb.count()):
-                order.append(self.nb.tabText(i))
-            for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
-                # store sort order
-                if pluginInfo.name in order:
-                    pluginInfo.plugin_object.sortOrder = order.index(pluginInfo.name)
-                    pluginInfo.plugin_object.save_sort_order()
-                if pluginInfo.plugin_object.is_activated:
-                    pluginInfo.plugin_object.destroy_widget()
-                    
-            if self.nb != None:
-                get_settings().set_last_gui_plugin_index(self.nb.currentIndex())
-        except:
-            log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
+        if not self.closed:
+            self.closed = True
+            try:
+                order = []
+                
+                self.settings.setValue("geometry", self.saveGeometry())
+                self.settings.setValue("state", self.saveState())
+                self.settings.setValue("locked", QVariant(self.locked))
+                self.settings.sync()
+                for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
+                    # store sort order
+                    if pluginInfo.name in order:
+                        pluginInfo.plugin_object.sortOrder = order.index(pluginInfo.name)
+                        pluginInfo.plugin_object.save_sort_order()
+                    if pluginInfo.plugin_object.is_activated:
+                        pluginInfo.plugin_object.destroy_widget()
+            except:
+                log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
         
         QMainWindow.closeEvent(self, closeEvent)     
         
@@ -91,54 +184,7 @@ class LunchinatorWindow(QMainWindow):
         r = self.geometry()
         r.moveCenter(QApplication.desktop().availableGeometry().center())
         self.setGeometry(r)
-    
-    def widgetIndex(self, tabText):
-        index = -1
-        for i in range(self.nb.count()):
-            curText = self.nb.tabText(i)
-            if curText == tabText:
-                index = i
-                break
-        return index
-    
-    def addPluginWidget(self, po, text):
-        #check if widget is already present
-        if self.widgetIndex(text) == -1:
-            widget = self.window_msgCheckCreatePluginWidget(self.nb, po, text)   
-            # TODO append page correctly
-            self.nb.addTab(widget, text)
-            self.nb.setCurrentIndex(self.nb.count() - 1)
-            
-    def removePluginWidget(self, tabText):        
-        widgetIndex = self.widgetIndex(tabText)
-        if widgetIndex >= 0:
-            self.nb.removeTab(widgetIndex)
 
-    def createTableWidget(self, parent, TableClass, buttonText, triggeredEvent):
-        # create HBox in VBox for each table
-        # Create message table
-        tableWidget = QWidget(parent)
-        tableLayout = QVBoxLayout(tableWidget)
-        tableBottomLayout = QHBoxLayout()
-        
-        table = TableClass(tableWidget)
-        tableLayout.addWidget(table)
-        #tableLayout.pack_start(table.scrollTree, True, True, 0)
-        
-        entry = QLineEdit(tableWidget)
-        tableBottomLayout.addWidget(entry)
-        #tableBottomLayout.pack_start(entry, True, True, 3)
-        button = QPushButton(buttonText, tableWidget)
-        tableBottomLayout.addWidget(button)
-        #tableBottomLayout.pack_start(button, False, True, 10)
-        tableLayout.addLayout(tableBottomLayout)
-        #tableLayout.pack_start(tableBottomLayout, False, True, 0)
-        
-        entry.returnPressed.connect(partial(triggeredEvent, entry))
-        button.clicked.connect(partial(triggeredEvent, entry))
-        
-        return (tableWidget, table)
-   
     def window_msgCheckCreatePluginWidget(self,parent,plugin_object,p_name):
         sw = None
         try:
@@ -154,29 +200,3 @@ class LunchinatorWindow(QMainWindow):
             sw.setPlainText(stringOut.getvalue())
             stringOut.close() 
         return sw
-        
-class MembersTableItemDelegate(QStyledItemDelegate):
-    # void paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index)
-    def paint(self, painter, option, index):
-        super(MembersTableItemDelegate, self).paint(painter, option, index)
-
-class UpdatingTable(QTreeView):
-    def __init__(self, parent, sortedColumn = None, ascending = True):
-        super(UpdatingTable, self).__init__(parent)
-        
-        self.setSortingEnabled(True)
-        self.setHeaderHidden(False)
-        self.setAlternatingRowColors(True)
-        self.setIndentation(0)
-        if sortedColumn != None:
-            self.sortByColumn(sortedColumn, Qt.AscendingOrder if ascending else Qt.DescendingOrder)
-    
-class MembersTable(UpdatingTable):    
-    def __init__(self, parent):
-        super(MembersTable, self).__init__(parent, 2)
-        
-class MessageTable(UpdatingTable):
-    def __init__(self, parent):
-        super(MessageTable, self).__init__(parent)
-    
-    

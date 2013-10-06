@@ -1,19 +1,24 @@
 import socket,sys
 from lunchinator import log_exception
-import codecs
 
-def _sendFile(con, receiver, path_or_data, tcp_port, is_data):
-    try:
-        con.connect((receiver, tcp_port))            
-    except socket.error as e:
-        log_exception("Could not initiate connection to",receiver,"on Port",tcp_port,e.strerror)
-        raise
-    
+def _sendFile(con, receiver, path_or_data, tcp_port, sleep, is_data):
+    for numAttempts in range(10):
+        sleep(500)
+        try:
+            con.connect((receiver, tcp_port)) 
+            break           
+        except Exception as e:
+            numAttempts = numAttempts + 1
+            if numAttempts == 10:
+                log_exception("Could not initiate connection to",receiver,"on Port",tcp_port)
+                return
+        
     data = None
     if is_data:
         data = path_or_data
     else:
-        with codecs.open(path_or_data, 'rb', 'utf-8') as sendfile:           
+        # no utf-8, might be binary file
+        with open(path_or_data, 'rb') as sendfile:           
             data = sendfile.read()
     try:
         con.sendall(data)                      
@@ -22,10 +27,10 @@ def _sendFile(con, receiver, path_or_data, tcp_port, is_data):
         raise
     
 def sendFile(receiver, path_or_data, tcp_port, sleep, is_data = False):
-    sleep(5)
+    #sleep(5)
     con = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        _sendFile(con, receiver, path_or_data, tcp_port, is_data)       
+        _sendFile(con, receiver, path_or_data, tcp_port, sleep, is_data)       
     except:
         if is_data:
             log_exception("An error occured while trying to send binary data")
@@ -48,13 +53,21 @@ def _receiveFile(con, file_path, size):
             log_exception("Error while receiving the data, Bytes to receive left:",length,"Error:",e.strerror)
             raise
 
-def receiveFile(sender, file_path, size, tcp_port, success, error):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def receiveFile(sender, file_path, size, portOrSocket, success, error):
+    s = None
+    bind = True
+    if type(portOrSocket) == int:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    else:
+        s = portOrSocket
+        bind = False
+    
     con = None
     try: 
-        s.bind(("", tcp_port)) 
-        s.settimeout(30.0)
-        s.listen(1)
+        if bind:
+            s.bind(("", portOrSocket)) 
+            s.settimeout(30.0)
+            s.listen(1)
         con, addr = s.accept()
         con.settimeout(5.0)
         if addr[0]==sender:

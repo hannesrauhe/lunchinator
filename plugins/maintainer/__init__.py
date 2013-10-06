@@ -67,7 +67,11 @@ class maintainer(iface_gui_plugin):
                 return
             from lunchinator.lunch_datathread_qt import DataReceiverThread
             #someone will send me his logfile on tcp
-            file_size=int(value.strip())
+            values = value.split()
+            file_size=int(values[0])
+            tcp_port = 0
+            if len(values) > 1:
+                tcp_port = int(values[1])
             
             logDir = "%s/logs/%s" % (get_settings().get_main_config_dir(), ip)
             if not os.path.exists(logDir):
@@ -77,9 +81,8 @@ class maintainer(iface_gui_plugin):
                 file_name="%s/tmp.tgz" % logDir
             else:
                 file_name="%s/tmp.log" % logDir
-            log_info("Receiving file of size %d on port %d"%(file_size,get_settings().get_tcp_port()))
             
-            dr = DataReceiverThread(self.w, ip,file_size,file_name,get_settings().get_tcp_port())
+            dr = DataReceiverThread(self.w, ip,file_size,file_name,tcp_port,category="log%s"%ip)
             dr.successfullyTransferred.connect(self.w.cb_log_transfer_success)
             dr.errorOnTransfer.connect(self.w.cb_log_transfer_error)
             dr.start()
