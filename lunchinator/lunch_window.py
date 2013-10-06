@@ -68,7 +68,7 @@ class LunchinatorWindow(QMainWindow):
         # prevent from closing twice
         self.closed = False
             
-    def createMenuBar(self, pluginsMenu):
+    def createMenuBar(self, pluginActions):
         menuBar = self.menuBar()
         
         windowMenu = QMenu("Window", menuBar)
@@ -76,9 +76,12 @@ class LunchinatorWindow(QMainWindow):
         windowMenu.addAction("Unlock Widgets", self.unlockWidgets)
         windowMenu.addSeparator()
         windowMenu.addAction("Close", self.close, QKeySequence(QKeySequence.Close))
-        
         menuBar.addMenu(windowMenu)
-        menuBar.addMenu(pluginsMenu)
+        
+        pluginMenu = QMenu("PlugIns", menuBar)
+        for anAction in pluginActions:
+            pluginMenu.addAction(anAction)
+        menuBar.addMenu(pluginMenu)
             
     def lockDockWidgets(self):
         for aDockWidget in self.pluginNameToDockWidget.values():
@@ -100,8 +103,10 @@ class LunchinatorWindow(QMainWindow):
             log_exception("while including plugins %s"%str(sys.exc_info()))
             
     def closePlugin(self, dockWidget):
-        name = self.objectNameToPluginName[convert_string(dockWidget.objectName())]
-        self.guiHandler.plugin_widget_closed(name)
+        objectName = convert_string(dockWidget.objectName())
+        if objectName in self.objectNameToPluginName:
+            name = self.objectNameToPluginName[objectName]
+            self.guiHandler.plugin_widget_closed(name)
             
     def addPluginWidget(self, po, name, makeVisible = False):
         if name in self.pluginNameToDockWidget:
