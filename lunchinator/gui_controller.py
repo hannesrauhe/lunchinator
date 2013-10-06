@@ -1,19 +1,17 @@
 import sys
 from lunchinator import get_server, log_exception, log_info, get_settings,\
-    log_error, convert_string
+    log_error, convert_string, log_warning
 import socket,os,time
 import platform
 from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QSortFilterProxyModel, QAction, QSystemTrayIcon, QIcon
-from PyQt4.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot, QObject, QString, QByteArray, QCoreApplication
+from PyQt4.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.table_models import MembersTableModel, MessagesTableModel
-from lunchinator.iface_plugins import iface_called_plugin
 from lunchinator.utilities import processPluginCall
-from pydoc import isdata
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -26,7 +24,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _menu = None
     # ---- SIGNALS ----------------
     _initDone = pyqtSignal()
-    _serverStopped = pyqtSignal(int)
     memberAppendedSignal = pyqtSignal(unicode, dict)
     memberUpdatedSignal = pyqtSignal(unicode, dict)
     memberRemovedSignal = pyqtSignal(unicode)
@@ -91,13 +88,13 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         # connect private signals
         self._initDone.connect(self.initDoneSlot)
-        self._serverStopped.connect(self.serverStoppedSlot)
         self._receiveFile.connect(self.receiveFileSlot)
         self._sendFile.connect(self.sendFileSlot)
         
         self._processEvent.connect(self.processEventSlot)
         self._processMessage.connect(self.processMessageSlot)
         self._processLunchCall.connect(self.processLunchCallSlot)
+        self.running = True
         
         self.serverThread = LunchServerThread(self)
         self.serverThread.start()
@@ -110,15 +107,28 @@ class LunchinatorGuiController(QObject, LunchServerController):
         return allPlugins
     
     def quit(self):
+        
         if self.mainWindow != None:
             self.mainWindow.close()
         if self.serverThread.isRunning():
             get_server().running = False
             log_info("Waiting maximal 30s for server to stop...")
             # wait maximal 30s 
-            self.serverThread.wait(30000)
+            if self.serverThread.wait(30000):
+                log_info("server stopped")
+            else:
+                log_warning("server not stopped properly")
         else:
             log_info("server not running")
+             
+        if self.running:
+            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                if pluginInfo.plugin_object.is_activated:
+                    pluginInfo.plugin_object.deactivate()
+            log_info("plug-ins deactivated, exiting")
+            self.running = False
+        QCoreApplication.exit(get_server().exitCode)
+        return get_server().exitCode
             
     """ ---------------- CALLED FROM LUNCH SERVER -----------------"""
     
@@ -126,7 +136,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._initDone.emit()
         
     def serverStopped(self, exitCode):
-        self._serverStopped.emit(exitCode)
+        # emitted signal won't be processed anyway (plug-ins deactivated in quit())
+        pass
         
     def memberAppended(self, ip, infoDict):
         self.memberAppendedSignal.emit(ip, infoDict)
@@ -208,15 +219,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def initDoneSlot(self):
         pass
     
-    @pyqtSlot(int)
-    def serverStoppedSlot(self, retCode):
-        log_info("server stopped") 
-        for pluginInfo in get_server().plugin_manager.getAllPlugins():
-            if pluginInfo.plugin_object.is_activated:
-                pluginInfo.plugin_object.deactivate()
-        log_info("plug-ins deactivated, exiting")
-        QCoreApplication.exit(retCode)
-        
     @pyqtSlot(QAction, unicode, bool)
     def toggle_plugin(self,w,p_cat,new_state):
         p_cat = convert_string(p_cat)

@@ -261,8 +261,8 @@ class lunch_server(object):
                     s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
                     i+=1
                 except:
-                    # only debug message; happens sometimes if the host is not reachable
-                    log_debug("Message could not be delivered to %s: %s" % (ip, str(sys.exc_info()[0])))
+                    # only warning message; happens sometimes if the host is not reachable
+                    log_warning("Message could not be delivered to %s: %s" % (ip, str(sys.exc_info()[0])))
                     continue
         finally:
             s.close() 

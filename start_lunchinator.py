@@ -7,7 +7,6 @@
 import platform, os, sys
 import signal
 from functools import partial
-from lunchinator.lunch_server_controller import LunchServerController
 path = os.path.abspath(sys.argv[0])
 while os.path.dirname(path) != path:
     if os.path.exists(os.path.join(path, 'lunchinator', '__init__.py')):
@@ -134,7 +133,7 @@ if __name__ == "__main__":
         signal.signal(signal.SIGINT, partial(handleInterrupt, lanschi))
     
         try:
-            retValue = app.exec_()
+            app.exec_()
         finally:
-            lanschi.quit()
-        sys.exit(retValue)
+            retValue = lanschi.quit()
+            sys.exit(retValue)
