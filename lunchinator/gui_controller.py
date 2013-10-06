@@ -109,13 +109,17 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 allPlugins[info.name] = (p_cat, info.plugin_object)
         return allPlugins
     
-    def stopServer(self):
+    def quit(self):
+        if self.mainWindow != None:
+            self.mainWindow.close()
         if self.serverThread.isRunning():
             get_server().running = False
             log_info("Waiting maximal 30s for server to stop...")
             # wait maximal 30s 
             self.serverThread.wait(30000)
-      
+        else:
+            log_info("server not running")
+            
     """ ---------------- CALLED FROM LUNCH SERVER -----------------"""
     
     def initDone(self):
@@ -187,14 +191,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         anAction.triggered.connect(self.quitClicked)
             
         return menu
-        
-    def quit(self):
-        if self.mainWindow != None:
-            self.mainWindow.close()
-        if self.serverThread.isRunning():
-            get_server().running = False
-        else:
-            log_info("server not running")
     
     def check_new_msgs(self):
         return get_server().new_msg

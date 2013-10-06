@@ -88,7 +88,7 @@ def sendMessage(msg, cli):
     print "sent to",recv_nr,"clients"
     
 def handleInterrupt(lanschi, _signal, _frame):
-    lanschi.stopServer()
+    lanschi.quit()
     QApplication.quit()
     
 if __name__ == "__main__":
@@ -136,5 +136,5 @@ if __name__ == "__main__":
         try:
             retValue = app.exec_()
         finally:
-            lanschi.stopServer()
+            lanschi.quit()
         sys.exit(retValue)

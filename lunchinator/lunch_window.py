@@ -58,6 +58,8 @@ class LunchinatorWindow(QMainWindow):
         
         self.nb.setCurrentIndex(index)
         self.centerOnScreen()
+        # prevent from closing twice
+        self.closed = False
         
     def clicked_send_msg(self, w):
         if self.guiHandler != None:
@@ -68,22 +70,24 @@ class LunchinatorWindow(QMainWindow):
             self.guiHandler.addHostClicked(w)
         
     def closeEvent(self, closeEvent):
-        try:
-            order = []
-            for i in range(self.nb.count()):
-                order.append(self.nb.tabText(i))
-            for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
-                # store sort order
-                if pluginInfo.name in order:
-                    pluginInfo.plugin_object.sortOrder = order.index(pluginInfo.name)
-                    pluginInfo.plugin_object.save_sort_order()
-                if pluginInfo.plugin_object.is_activated:
-                    pluginInfo.plugin_object.destroy_widget()
-                    
-            if self.nb != None:
-                get_settings().set_last_gui_plugin_index(self.nb.currentIndex())
-        except:
-            log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
+        if not self.closed:
+            self.closed = True
+            try:
+                order = []
+                for i in range(self.nb.count()):
+                    order.append(self.nb.tabText(i))
+                for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
+                    # store sort order
+                    if pluginInfo.name in order:
+                        pluginInfo.plugin_object.sortOrder = order.index(pluginInfo.name)
+                        pluginInfo.plugin_object.save_sort_order()
+                    if pluginInfo.plugin_object.is_activated:
+                        pluginInfo.plugin_object.destroy_widget()
+                        
+                if self.nb != None:
+                    get_settings().set_last_gui_plugin_index(self.nb.currentIndex())
+            except:
+                log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
         
         QMainWindow.closeEvent(self, closeEvent)     
         
