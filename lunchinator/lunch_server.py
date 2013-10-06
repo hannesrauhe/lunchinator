@@ -57,7 +57,7 @@ class lunch_server(object):
             self.controller = controller
         else:
             from lunchinator.lunch_server_controller import LunchServerController
-            self.controller = LunchServerController
+            self.controller = LunchServerController()
         
         self._read_config()
         
