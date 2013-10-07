@@ -1,6 +1,9 @@
 - lunch menu structured: tooltips
 - avatare auch nach pull-prinzip?
 - Add size hints to plugin widgets
+- Clear logs button in maintainer plugin
+- light icons for Ubuntu
+- Left-Click on tray icon in Gnome 2
 
 - Werden dict-inhalte nun konvertiert oder nicht?
 --> PyQt Version auf mac:   4.10.3 (264707)

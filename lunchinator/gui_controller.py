@@ -3,8 +3,8 @@ from lunchinator import get_server, log_exception, log_info, get_settings,\
     log_error, convert_string, log_warning, log_debug
 import socket,os,time
 import platform
-from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QAction, QSystemTrayIcon, QIcon
-from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication, Qt
+from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
+from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
@@ -55,10 +55,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if platform.system()=="Windows":
             get_settings().get_lunchdir()+os.path.sep+"images"+os.path.sep+"lunch.svg"
         icon = QIcon(icon_file)
-        statusicon = QSystemTrayIcon(icon, self.mainWindow)
+        self.statusicon = QSystemTrayIcon(icon, self.mainWindow)
         contextMenu = self.init_menu(self.mainWindow)
-        statusicon.setContextMenu(contextMenu)
-        statusicon.show()
+        self.statusicon.activated.connect(self.trayActivated)
+        self.statusicon.setContextMenu(contextMenu)
+        self.statusicon.show()
         
         self.mainWindow.createMenuBar(self.pluginActions)
         
@@ -75,6 +76,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         self.serverThread = LunchServerThread(self)
         self.serverThread.start()
+        
+    def trayActivated(self, reason):
+        if reason == QSystemTrayIcon.Trigger:
+            self.statusicon.contextMenu().popup(QCursor.pos())
         
     def getPlugins(self, cats):
         allPlugins = {}
