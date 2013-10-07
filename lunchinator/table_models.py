@@ -66,12 +66,13 @@ class TableModelBase(QStandardItemModel):
     def _convertDict(self, aDict):
         newDict = {}
         for aKey in aDict:
+            newKey = aKey
             if type(aKey) == QString:
-                aKey = convert_string(aKey)
+                newKey = convert_string(aKey)
             aValue = aDict[aKey]
             if type(aValue) == QString:
                 aValue = convert_string(aValue)
-            newDict[aKey] = aValue
+            newDict[newKey] = aValue
         return newDict
             
     def _checkDict(self, data):

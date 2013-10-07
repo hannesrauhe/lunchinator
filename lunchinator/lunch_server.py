@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from iface_plugins import iface_called_plugin, iface_database_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
 from time import strftime, localtime, time, mktime
-import socket,sys,os,json,codecs
+import socket,sys,os,json,codecs,contextlib
 from threading import Lock
 from cStringIO import StringIO
 
@@ -550,7 +550,7 @@ class lunch_server(object):
                     log_exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0"%(str(ip),str(value),other_tcp_port))
                 
                 fileToSend = StringIO()
-                with tarfile.open(mode='w:gz', fileobj=fileToSend) as tarWriter:
+                with contextlib.closing(tarfile.open(mode='w:gz', fileobj=fileToSend)) as tarWriter:
                     if os.path.exists(get_settings().get_log_file()):
                         tarWriter.add(get_settings().get_log_file(), arcname="0.log")
                     logIndex = 1

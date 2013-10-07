@@ -1,6 +1,7 @@
 import subprocess,sys,ctypes
-from lunchinator import log_exception, get_settings, get_server
+from lunchinator import log_exception, get_settings, get_server, log_warning
 import os
+from lunchinator.iface_plugins import iface_called_plugin
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -93,6 +94,9 @@ def processPluginCall(ip, call):
         member_info = get_server().member_info[ip]
     # called also contains gui plugins
     for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("called"):
+        if not isinstance(pluginInfo.plugin_object, iface_called_plugin):
+            log_warning("Plugin '%s' is not a called plugin" % pluginInfo.name)
+            continue
         if pluginInfo.plugin_object.is_activated:
             try:
                 call(pluginInfo.plugin_object, ip, member_info)

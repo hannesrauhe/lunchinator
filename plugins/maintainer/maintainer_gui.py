@@ -1,4 +1,4 @@
-import time,codecs,os,tarfile,shutil,copy,sip
+import time,codecs,os,tarfile,shutil,copy,sip,contextlib
 from datetime import datetime
 from functools import partial
 from lunchinator import get_server, get_settings, convert_string, log_exception,\
@@ -128,7 +128,7 @@ class maintainer_gui(QObject):
         logsAdded = []   
         if path.endswith(".tgz"):
             #extract received log files
-            with tarfile.open(path, 'r:gz') as tarContent:
+            with contextlib.closing(tarfile.open(path, 'r:gz')) as tarContent:
                 tarContent.extractall(tmpPath)
             _, logsAdded, logsRenamed = self.handleNewLogFiles(basePath, tmpPath)
             self.requestFinished()
@@ -458,7 +458,8 @@ class maintainer_gui(QObject):
 
         layout.addWidget(QLabel("Member Information:", widget))
         self.memberInformationTable = QTreeWidget(widget)
-        self.memberInformationTable.setMaximumHeight(55)
+        self.memberInformationTable.setMaximumHeight(65)
+        self.memberInformationTable.setSelectionMode(QTreeWidget.NoSelection)
         layout.addWidget(self.memberInformationTable, 0)
                 
         layout.addWidget(QLabel("Send Message:", widget))

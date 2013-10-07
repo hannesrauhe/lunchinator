@@ -274,8 +274,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         get_server().call("HELO_INFO "+get_server()._build_info_string())        
 
+    @pyqtSlot(QThread)
     @pyqtSlot(QThread, unicode)
-    def threadFinished(self, thread, _):
+    def threadFinished(self, thread, _ = None):
         thread.deleteLater()
         
     @pyqtSlot(unicode, QByteArray, int, bool)

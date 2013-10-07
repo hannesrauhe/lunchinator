@@ -7,7 +7,7 @@ class _log_formatter (logging.Formatter):
     LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     def __init__(self):
-        super(_log_formatter, self).__init__(self.LOG_FORMAT)
+        logging.Formatter.__init__(self, self.LOG_FORMAT)
         
     def formatTime(self, record, _datefmt=None):
         ct = self.converter(record.created)
