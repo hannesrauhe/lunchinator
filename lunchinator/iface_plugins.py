@@ -171,7 +171,7 @@ class iface_plugin(IPlugin):
 class iface_general_plugin(iface_plugin): 
     pass
 
-class iface_called_plugin(iface_plugin):  
+class iface_called_plugin(iface_plugin): 
     def process_message(self,msg,ip,member_info):
         pass
         
@@ -179,9 +179,9 @@ class iface_called_plugin(iface_plugin):
         pass
         
     def process_event(self,cmd,value,ip,member_info):
-        pass
+        pass 
         
-class iface_gui_plugin(iface_called_plugin):
+class iface_gui_plugin(iface_plugin):
     def __init__(self):
         super(iface_gui_plugin, self).__init__()
         self.sortOrder = -1
@@ -224,6 +224,15 @@ class iface_gui_plugin(iface_called_plugin):
         window.show()
     
         sys.exit(app.exec_())
+        
+    def process_message(self,msg,ip,member_info):
+        pass
+        
+    def process_lunch_call(self,msg,ip,member_info):
+        pass
+        
+    def process_event(self,cmd,value,ip,member_info):
+        pass
 
 class iface_database_plugin(iface_plugin):
     #connection_names = {}
