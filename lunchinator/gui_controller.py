@@ -11,6 +11,7 @@ from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall
+from lunchinator.lunch_server import EXIT_CODE_UPDATE
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -32,6 +33,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _processEvent = pyqtSignal(unicode, unicode, unicode)
     _processMessage = pyqtSignal(unicode, unicode)
     _processLunchCall = pyqtSignal(unicode, unicode)
+    _updateRequested = pyqtSignal()
     # -----------------------------
     
     def __init__(self, noUpdates = False): 
@@ -68,6 +70,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processEvent.connect(self.processEventSlot)
         self._processMessage.connect(self.processMessageSlot)
         self._processLunchCall.connect(self.processLunchCallSlot)
+        self._updateRequested.connect(self.updateRequested)
         self.running = True
         
         self.serverThread = LunchServerThread(self)
@@ -110,8 +113,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._initDone.emit()
         
     def serverStopped(self, exitCode):
-        # emitted signal won't be processed anyway (plug-ins deactivated in quit())
-        pass
+        # usually, the emitted signal won't be processed anyway (plug-ins deactivated in quit())
+        if exitCode == EXIT_CODE_UPDATE:
+            self._updateRequested.emit()
         
     def memberAppended(self, ip, infoDict):
         self.memberAppendedSignal.emit(ip, infoDict)
@@ -195,6 +199,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
     @pyqtSlot()
     def initDoneSlot(self):
         pass
+    
+    @pyqtSlot()
+    def updateRequested(self):
+        self.quit()
     
     @pyqtSlot(unicode)
     def plugin_widget_closed(self, p_name):
