@@ -197,6 +197,12 @@ class lunch_settings(object):
     def get_plugin_dirs(self):
         return self._plugin_dirs
     
+    def get_internal_plugin_dir(self):
+        return self._internal_plugin_dir
+    
+    def get_external_plugin_dir(self):
+        return self._external_plugin_dir
+    
     def get_config_file(self):
         return self._config_file
     

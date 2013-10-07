@@ -17,6 +17,7 @@ while os.path.dirname(path) != path:
 from optparse import OptionParser
 from lunchinator import log_info, log_warning, log_error, get_settings,\
     get_server
+from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP
     
 def parse_args():
     usage = "usage: %prog [options]"
@@ -41,6 +42,10 @@ def parse_args():
                       help="Send call to this specific member.")
     optionParser.add_option("--stop", default=False, dest="stop", action="store_true",
                       help="Stop local Lunch server.")
+    optionParser.add_option("--updateCode", default=False, dest="exitWithUpdateCode", action="store_true",
+                      help="Exits immediately with the update exit code.")
+    optionParser.add_option("--stopCode", default=False, dest="exitWithStopCode", action="store_true",
+                      help="Exits immediately with the stop exit code.")
     return optionParser.parse_args()
 
 def updateRepositories():
@@ -95,11 +100,15 @@ if __name__ == "__main__":
     
     (options, args) = parse_args()
 
-    if options.doUpdate:
+    if options.exitWithUpdateCode:
+        sys.exit(EXIT_CODE_UPDATE)
+    elif options.exitWithStopCode:
+        sys.exit(EXIT_CODE_STOP)
+    elif options.doUpdate:
         # don't start Lunchinator, do update
         updateRepositories()
     elif options.checkAutoUpdate:
-        if get_settings().get_update_enabled():
+        if get_settings().get_auto_update_enabled():
             sys.exit(1)
         else:
             sys.exit(0)
