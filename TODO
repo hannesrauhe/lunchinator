@@ -11,6 +11,7 @@
 - port cli version back
 - messages on gui_controller sendFile / receiveFile success / error
 - log time parse does not work if only one message is in the log
+- lunchinator gui does not close when startup of lunch-server fails
 
 - Werden dict-inhalte nun konvertiert oder nicht?
 --> PyQt Version auf mac:   4.10.3 (264707)
