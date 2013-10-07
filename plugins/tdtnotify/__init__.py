@@ -42,7 +42,6 @@ class tdtnotify(iface_called_plugin):
         
     def downloadedPicture(self, thread, _):
         self.localFile.flush()
-        thread.deleteLater()
         get_server().call("HELO_TDTNOTIFY_NEW_PIC "+self.pic_url)
         displayNotification("TDT", "New picture", self.localFile.name)
         self.last_time = time.time() 
@@ -53,7 +52,6 @@ class tdtnotify(iface_called_plugin):
     
     def downloadedJSON(self, thread, _):
         j = json.loads(thread.getResult())
-        thread.deleteLater()
         #if :
         #    self.rotate_counter = 0
         oldurl = self.pic_url
@@ -64,6 +62,7 @@ class tdtnotify(iface_called_plugin):
             thread = DownloadThread(getValidQtParent(), self.pic_url, self.localFile)
             thread.success.connect(self.downloadedPicture)
             thread.error.connect(self.errorDownloadingPicture)
+            thread.finished.connect(thread.deleteLater)
             thread.start()
           
     def download_pic(self,force=False):
@@ -71,6 +70,7 @@ class tdtnotify(iface_called_plugin):
         downloadThread = DownloadThread(getValidQtParent(), "http://api.tumblr.com/v2/blog/"+self.options['blog_name']+".tumblr.com/posts/photo?api_key=SyMOX3RGVS4OnK2bGWBcXNUfX34lnzQJY5FRB6uxpFqjEHz2SY")
         downloadThread.success.connect(self.downloadedJSON)
         downloadThread.error.connect(self.errorDownloadingJSON)
+        downloadThread.finished.connect(downloadThread.deleteLater)
         downloadThread.start()
             
     def process_lunch_call(self,msg,ip,member_info):

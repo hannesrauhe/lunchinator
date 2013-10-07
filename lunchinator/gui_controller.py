@@ -37,7 +37,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     # -----------------------------
     
     def __init__(self, noUpdates = False): 
-        QThread.__init__(self)
+        QObject.__init__(self)
         LunchServerController.__init__(self)
         
         self.serverThread = None
@@ -89,7 +89,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         return allPlugins
     
     def quit(self):
-        
         if self.mainWindow != None:
             self.mainWindow.close()
         if self.serverThread.isRunning():
@@ -287,11 +286,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         get_server().call("HELO_INFO "+get_server()._build_info_string())        
 
-    @pyqtSlot(QThread)
-    @pyqtSlot(QThread, unicode)
-    def threadFinished(self, thread, _ = None):
-        thread.deleteLater()
-        
     @pyqtSlot(unicode, QByteArray, int, bool)
     def sendFileSlot(self, addr, fileToSend, other_tcp_port, isData):
         addr = convert_string(addr)
@@ -300,8 +294,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         else:
             fileToSend = str(fileToSend).decode("utf-8")
         ds = DataSenderThread(self,addr,fileToSend, other_tcp_port, isData)
-        ds.successfullyTransferred.connect(self.threadFinished)
-        ds.errorOnTransfer.connect(self.threadFinished)
+        ds.finished.connect(ds.deleteLater)
         ds.start()
     
     @pyqtSlot(unicode, int, unicode)
@@ -309,8 +302,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         addr = convert_string(addr)
         file_name = convert_string(file_name)
         dr = DataReceiverThread(self,addr,file_size,file_name,get_settings().get_tcp_port())
-        dr.successfullyTransferred.connect(self.threadFinished)
-        dr.errorOnTransfer.connect(self.threadFinished)
+        dr.finished.connect(dr.deleteLater)
         dr.start()
         
     @pyqtSlot(unicode, unicode, unicode)

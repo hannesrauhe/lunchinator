@@ -165,14 +165,12 @@ class maintainer_gui(QObject):
         
         if len(logsAdded) > 0 or len(logsRenamed) > 0:
             self.updateLogList(logsAdded, logsRenamed)
-        thread.deleteLater()
     
     @pyqtSlot(QThread)
-    def cb_log_transfer_error(self, thread):
+    def cb_log_transfer_error(self, _thread):
         if not self.visible:
             return False
         self.log_area.setText("Error while getting log")
-        thread.deleteLater()
         self.requestFinished()
         
     def update_reports(self):

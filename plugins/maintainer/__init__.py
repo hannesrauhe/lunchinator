@@ -85,5 +85,6 @@ class maintainer(iface_gui_plugin):
             dr = DataReceiverThread(self.w, ip,file_size,file_name,tcp_port,category="log%s"%ip)
             dr.successfullyTransferred.connect(self.w.cb_log_transfer_success)
             dr.errorOnTransfer.connect(self.w.cb_log_transfer_error)
+            dr.finished.connect(dr.deleteLater)
             dr.start()
             

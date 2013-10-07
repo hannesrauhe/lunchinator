@@ -3,18 +3,18 @@
 
 <pydev_project>
 <pydev_pathproperty name="org.python.pydev.PROJECT_SOURCE_PATH">
-<path>/lunch_notifier</path>
-<path>/lunch_notifier</path>
-<path>/lunch_notifier/bin</path>
-<path>/lunch_notifier/lunchinator</path>
-<path>/lunch_notifier/plugins</path>
-<path>/lunch_notifier/plugins/avatar</path>
-<path>/lunch_notifier/plugins/bug_report</path>
-<path>/lunch_notifier/plugins/db_SQLITE</path>
-<path>/lunch_notifier/plugins/maintainer</path>
-<path>/lunch_notifier/plugins/rot13</path>
-<path>/lunch_notifier/plugins/tdtnotify</path>
-<path>/lunch_notifier/plugins/twitter_status</path>
+<path>/lunchinator</path>
+<path>/lunchinator</path>
+<path>/lunchinator/bin</path>
+<path>/lunchinator/lunchinator</path>
+<path>/lunchinator/plugins</path>
+<path>/lunchinator/plugins/avatar</path>
+<path>/lunchinator/plugins/bug_report</path>
+<path>/lunchinator/plugins/db_SQLITE</path>
+<path>/lunchinator/plugins/maintainer</path>
+<path>/lunchinator/plugins/rot13</path>
+<path>/lunchinator/plugins/tdtnotify</path>
+<path>/lunchinator/plugins/twitter_status</path>
 </pydev_pathproperty>
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_VERSION">python 2.7</pydev_property>
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_INTERPRETER">Default</pydev_property>
