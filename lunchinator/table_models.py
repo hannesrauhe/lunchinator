@@ -277,7 +277,7 @@ class MessagesTableModel(TableModelBase):
         item.setData(QVariant(time.mktime(mTime)), self.SORT_ROLE)
     
     def _updateSenderItem(self, _, m, item):
-        data = QVariant(self.dataSource.memberName(m[0]))
+        data = QVariant(self.dataSource.memberName(convert_string(m[0])))
         item.setData(data, Qt.DisplayRole)
     
     def _updateMessageItem(self, _, m, item):
