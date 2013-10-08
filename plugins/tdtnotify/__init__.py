@@ -44,7 +44,6 @@ class tdtnotify(iface_called_plugin):
         self.localFile.flush()
         get_server().call("HELO_TDTNOTIFY_NEW_PIC "+self.pic_url)
         displayNotification("TDT", "New picture", self.localFile.name)
-        self.last_time = time.time() 
         
     def errorDownloadingJSON(self, thread, url):
         log_error("Error downloading JSON from url %s" % convert_string(url))
@@ -78,6 +77,7 @@ class tdtnotify(iface_called_plugin):
         
     def process_event(self,cmd,value,_,__):
         if cmd=="HELO_TDTNOTIFY_NEW_PIC" or (time.time()-self.last_time) > (60*self.options["polling_time"]):
+            self.last_time = time.time()
             if not cmd=="HELO_TDTNOTIFY_NEW_PIC":
                 get_server().call("HELO_TDTNOTIFY_POLL "+str(self.options["polling_time"]))
                 
