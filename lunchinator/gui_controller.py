@@ -307,6 +307,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
             log_error("mainWindow is not initialized")
             return
         self.mainWindow.show()
+        self.mainWindow.activateWindow()
+        self.mainWindow.raise_()
             
     @pyqtSlot(bool)
     def openSettingsClicked(self,_):
