@@ -147,7 +147,6 @@ class LunchinatorWindow(QMainWindow):
                 QApplication.processEvents()
                 dockWidget.raise_()
         else:
-            print "add dock widget", name
             self.addDockWidget(Qt.TopDockWidgetArea, dockWidget)
        
     def removePluginWidget(self, name):
