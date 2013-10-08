@@ -1,8 +1,6 @@
 #!/usr/bin/python
 #
-#in general you should use start_lunchinator.py in the root-directory to use the lunchinator
-#
-#this script can be used to start the lunchinator as GTK tray icon without self-updating functionality
+#this script is used to start the lunchinator in all its flavors
 
 import platform, os, sys
 import signal
