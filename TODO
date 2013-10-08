@@ -14,3 +14,5 @@ TODOs added by Hannes:
 
 - gui does not close when lunch_server.py goes down
 - what happens when more lunchinator processes access the same log-file (lunchinator running while send-call is started from cli)
+- focus/activate lunchinator window on tray click if its already open 
+- secondary DB connection plugin
