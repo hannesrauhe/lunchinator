@@ -11,7 +11,7 @@ from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall
-from lunchinator.lunch_server import EXIT_CODE_UPDATE
+from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -40,6 +40,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         QObject.__init__(self)
         LunchServerController.__init__(self)
         
+        self.exitCode = 0
         self.serverThread = None
         self.running = True
         get_server().no_updates = noUpdates
@@ -67,6 +68,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._updateRequested.connect(self.updateRequested)
         
         self.serverThread = LunchServerThread(self)
+        self.serverThread.finished.connect(self.serverFinishedUnexpectedly)
+        self.serverThread.finished.connect(self.serverThread.deleteLater)
         self.serverThread.start()
         
     def createTrayIcon(self):
@@ -81,7 +84,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 if result == QMessageBox.Yes:
                     if subprocess.call(['gksu', get_settings().get_lunchdir()+'/bin/install-lunch-icons.sh lunch'])==0:
                         log_info("restarting after icons were installed")
-                        get_server().exitCode = EXIT_CODE_UPDATE
                         self.quit(EXIT_CODE_UPDATE)
                         sys.exit(EXIT_CODE_UPDATE)
                         return False
@@ -118,6 +120,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if self.mainWindow != None:
             self.mainWindow.close()
         if self.serverThread != None and self.serverThread.isRunning():
+            self.serverThread.finished.disconnect(self.serverFinishedUnexpectedly)
             get_server().running = False
             log_info("Waiting maximal 30s for server to stop...")
             # wait maximal 30s 
@@ -134,13 +137,27 @@ class LunchinatorGuiController(QObject, LunchServerController):
                     pluginInfo.plugin_object.deactivate()
             log_info("plug-ins deactivated, exiting")
             self.running = False
-        QCoreApplication.exit(exitCode if exitCode != 0 else get_server().exitCode)
-        return exitCode if exitCode != 0 else get_server().exitCode
+            
+        finalExitCode = 0
+        if exitCode != 0:
+            finalExitCode = exitCode
+        elif self.exitCode != 0:
+            finalExitCode = self.exitCode
+        else:
+            finalExitCode = get_server().exitCode
+            
+        self.exitCode = finalExitCode
+        QCoreApplication.exit(finalExitCode)
+        return finalExitCode
             
     """ ---------------- CALLED FROM LUNCH SERVER -----------------"""
     
     def initDone(self):
         self._initDone.emit()
+        
+    def serverFinishedUnexpectedly(self):
+        self.serverThread = None
+        self.quit(EXIT_CODE_ERROR)
         
     def serverStopped(self, exitCode):
         # usually, the emitted signal won't be processed anyway (plug-ins deactivated in quit())
@@ -232,7 +249,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     @pyqtSlot()
     def updateRequested(self):
-        self.quit()
+        self.quit(EXIT_CODE_UPDATE)
     
     @pyqtSlot(unicode)
     def plugin_widget_closed(self, p_name):

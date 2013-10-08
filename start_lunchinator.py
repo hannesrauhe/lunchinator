@@ -91,7 +91,6 @@ def sendMessage(msg, cli):
     
 def handleInterrupt(lanschi, _signal, _frame):
     lanschi.quit()
-    QApplication.quit()
     
 if __name__ == "__main__":
     log_info("We are on",platform.system(),platform.release(),platform.version())

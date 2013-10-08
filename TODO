@@ -9,8 +9,3 @@
 --> PyQt Version auf 12.04: 4. 9.1 (264449)
 
 - Remove dict checking from table models
-
-TODOs added by Hannes:
-
-- gui does not close when lunch_server.py goes down
-- what happens when more lunchinator processes access the same log-file (lunchinator running while send-call is started from cli)

@@ -9,6 +9,7 @@ from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning
 import tarfile
 
+EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
 EXIT_CODE_STOP = 3
         
