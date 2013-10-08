@@ -4,11 +4,11 @@ from functools import partial
 from lunchinator import get_server, get_settings, convert_string, log_exception,\
     log_debug, getLogLineTime, log_warning
 from lunchinator.table_models import ExtendedMembersModel
-from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeView, QStandardItemModel, QStandardItem, QTabWidget, QLineEdit, QSplitter, QTreeWidget, QTreeWidgetItem, QSortFilterProxyModel
-from PyQt4.QtCore import QObject, pyqtSlot, QThread, Qt, QStringList, QVariant, QTimer, Qt
+from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeView, QStandardItemModel, QStandardItem, QTabWidget, QLineEdit, QSplitter, QTreeWidget, QTreeWidgetItem, QSortFilterProxyModel, QSizePolicy
+from PyQt4.QtCore import  pyqtSlot, QThread, Qt, QStringList, QVariant, QTimer, QSize
 from lunchinator.lunch_datathread_qt import DataReceiverThread
 
-class maintainer_gui(QObject):
+class maintainer_gui(QTabWidget):
     LOG_REQUEST_TIMEOUT = 10 # 10 seconds until request is invalid
     def __init__(self,parent,mt):
         super(maintainer_gui, self).__init__(parent)
@@ -24,6 +24,19 @@ class maintainer_gui(QObject):
         self.update_button = None
         self.requestLogsButton = None
         self.logRequests = {}
+        
+        reports_widget = self.create_reports_widget(self)
+        logs_widget = self.create_members_widget(self)
+        info_table_widget = self.create_info_table_widget(self)
+        
+        self.addTab(reports_widget, "Bug Reports")        
+        self.addTab(logs_widget, "Members")        
+        self.addTab(info_table_widget, "Info")
+        
+        self.setCurrentIndex(0)
+        self.visible = True
+        
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
         
     def listLogfiles(self, basePath, sort = None):
         if sort is None:
@@ -551,23 +564,6 @@ class maintainer_gui(QObject):
         messageInput.returnPressed.connect(partial(self.sendMessageToMember, messageInput))
         
         return widget
-    
-    def create_widget(self, parent):
-        nb = QTabWidget(parent)
-        #nb.setTabPosition(QTabWidget.West)
-        
-        reports_widget = self.create_reports_widget(nb)
-        logs_widget = self.create_members_widget(nb)
-        info_table_widget = self.create_info_table_widget(nb)
-        
-        nb.addTab(reports_widget, "Bug Reports")        
-        nb.addTab(logs_widget, "Members")        
-        nb.addTab(info_table_widget, "Info")
-        
-        nb.setCurrentIndex(0)
-        self.visible = True
-        
-        return nb
     
     def destroy_widget(self):
         self.visible = False

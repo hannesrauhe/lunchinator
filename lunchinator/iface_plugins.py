@@ -187,19 +187,6 @@ class iface_gui_plugin(iface_plugin):
         self.sortOrder = -1
         self.visible = False
         
-    def read_options_from_file(self):
-        super(iface_gui_plugin, self).read_options_from_file()
-        
-        if self.hasConfigOption("sort_order"):
-            new_v = self.getConfigOption("sort_order")
-            try:
-                self.sortOrder = int(new_v)
-            except:
-                log_warning("could not read sort order configuration")
-        
-    def save_sort_order(self):
-        self.setConfigOption("sort_order",str(self.sortOrder))
-        
     def create_widget(self, _parent):
         self.visible = True
         return None

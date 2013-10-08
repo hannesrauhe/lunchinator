@@ -5,7 +5,6 @@
 - port cli version back
 - tdt notify gui
 - interface to exchange strings between plugins
-- log file received -> dont re-load selected log
 
 - Werden dict-inhalte nun konvertiert oder nicht?
 --> PyQt Version auf mac:   4.10.3 (264707)

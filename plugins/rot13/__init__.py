@@ -16,13 +16,14 @@ class rot13(iface_gui_plugin):
         from PyQt4.QtCore import Qt
         from rot13 import rot13box
         
-        w = rot13box(parent)
+        if self.shared_dict.has_key("tdtnotify_file"):
+            w = rot13box(parent, self.shared_dict["tdtnotify_file"])
+        else:
+            w = rot13box(parent)
         if get_server().messagesCount() > 0:
             w.encodeText(get_server().getMessage(0)[2])
-        if self.shared_dict.has_key("tdtnotify_file"):
-            return w.create_widget(parent, self.shared_dict["tdtnotify_file"])
-        else:
-            return w.create_widget(parent)
+            
+        return w
         
     def add_menu(self,menu):
         pass

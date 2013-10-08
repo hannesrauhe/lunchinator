@@ -147,6 +147,7 @@ class LunchinatorWindow(QMainWindow):
                 QApplication.processEvents()
                 dockWidget.raise_()
         else:
+            print "add dock widget", name
             self.addDockWidget(Qt.TopDockWidgetArea, dockWidget)
        
     def removePluginWidget(self, name):
@@ -158,23 +159,19 @@ class LunchinatorWindow(QMainWindow):
         del self.pluginNameToDockWidget[name]
         dockWidget.close()
          
+    def setVisible(self, visible):
+        if visible:
+            self.closed = False
+        return QMainWindow.setVisible(self, visible)
+         
     def closeEvent(self, closeEvent):
         if not self.closed:
             self.closed = True
             try:
-                order = []
-                
                 self.settings.setValue("geometry", self.saveGeometry())
                 self.settings.setValue("state", self.saveState())
                 self.settings.setValue("locked", QVariant(self.locked))
                 self.settings.sync()
-                for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
-                    # store sort order
-                    if pluginInfo.name in order:
-                        pluginInfo.plugin_object.sortOrder = order.index(pluginInfo.name)
-                        pluginInfo.plugin_object.save_sort_order()
-                    if pluginInfo.plugin_object.is_activated:
-                        pluginInfo.plugin_object.destroy_widget()
             except:
                 log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
         

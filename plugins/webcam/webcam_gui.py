@@ -1,7 +1,7 @@
 import urllib2, sys
 from lunchinator import log_exception
 from PyQt4.QtGui import QImage, QPixmap, QLabel, QSizePolicy
-from PyQt4.QtCore import QTimer, Qt
+from PyQt4.QtCore import QTimer, Qt, QSize
 class UpdatingImage(QLabel):
     def __init__(self,parent,fallback_pic,pic_url,timeout,no_proxy,smooth_scaling):
         super(UpdatingImage, self).__init__(parent)
@@ -13,8 +13,7 @@ class UpdatingImage(QLabel):
         self.no_proxy = no_proxy
         self.smooth_scaling = smooth_scaling
         self.setAlignment(Qt.AlignCenter)
-        #self.setScaledContents(True)
-        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         try:     
             qtimage = QImage(self.fallback_pic)
             self.rawPixmap = QPixmap.fromImage(qtimage) 
@@ -25,6 +24,9 @@ class UpdatingImage(QLabel):
             updateImageTimer.start(self.timeout)
         except:
             log_exception("Something went wrong when trying to display the fallback image",self.fallback_pis,sys.exc_info()[0])
+            
+    def sizeHint(self):
+        return (640, 480)
             
     def setScaledPixmap(self):
         # set a scaled pixmap to a w x h window keeping its aspect ratio 

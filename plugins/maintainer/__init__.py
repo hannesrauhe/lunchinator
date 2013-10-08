@@ -35,7 +35,6 @@ class maintainer(iface_gui_plugin):
         iface_gui_plugin.create_widget(self, parent)
         self.w = maintainer_gui(parent, self)
         
-        widget = self.w.create_widget(parent)
         get_server().controller.memberAppendedSignal.connect(self.w.info_table_model.externalRowAppended)
         get_server().controller.memberUpdatedSignal.connect(self.w.info_table_model.externalRowUpdated)
         get_server().controller.memberRemovedSignal.connect(self.w.info_table_model.externalRowRemoved)
@@ -44,7 +43,7 @@ class maintainer(iface_gui_plugin):
         get_server().controller.memberUpdatedSignal.connect(self.w.update_dropdown_members)
         get_server().controller.memberRemovedSignal.connect(self.w.update_dropdown_members)
         
-        return widget
+        return self.w
     
     def destroy_widget(self):
         if self.w != None:

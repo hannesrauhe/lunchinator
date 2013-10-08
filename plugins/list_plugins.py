@@ -12,7 +12,7 @@ class list_plugins(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
-        from PyQt4.QtGui import QTextEdit
+        from PyQt4.QtGui import QTextEdit, QSizePolicy
         textView = QTextEdit(parent)
         textView.setLineWrapMode(QTextEdit.WidgetWidth)
         textView.setReadOnly(True)
@@ -30,6 +30,7 @@ class list_plugins(iface_gui_plugin):
 #            txt+=pluginInfo.details + " "
             txt+="\n\n"
         textView.setPlainText(txt)
+        textView.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         return textView
     
     def add_menu(self,menu):

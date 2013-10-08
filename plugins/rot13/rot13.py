@@ -1,10 +1,10 @@
 import string #fixed typo was using
-from PyQt4.QtGui import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QLineEdit, QImage, QPixmap, QLabel
-from PyQt4.QtCore import QObject, Qt
+from PyQt4.QtGui import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QLineEdit, QImage, QPixmap, QLabel, QSizePolicy
+from PyQt4.QtCore import Qt
 from lunchinator import log_exception
 
-class rot13box(QObject):
-    def __init__(self, parent):
+class rot13box(QWidget):
+    def __init__(self, parent, picture_file = None):
         super(rot13box, self).__init__(parent)
         self.entry = None
         self.but = None
@@ -14,6 +14,27 @@ class rot13box(QObject):
         self.maxwidth=400
         self.maxheight=400
         self.show_pic=False
+        
+        layout = QVBoxLayout(self)
+        self.picture_file = picture_file
+        
+        self.entry = QLineEdit(self)
+        self.but = QPushButton("ROT13", self)
+        if self.buffer is not None:
+            self.encodeText(self.buffer)
+        
+        layout.addWidget(self.entry)
+        
+        butLayout = QHBoxLayout()
+        butLayout.addWidget(self.but)
+        butLayout.addWidget(QWidget(self), 1)
+        butLayout.setSpacing(0)
+        layout.addLayout(butLayout)
+        layout.addWidget(self.additional_widget, 1)
+        
+        self.but.clicked.connect(self.enc)
+        
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         
     def encodeText(self,text):
         if self.entry is not None:
@@ -47,25 +68,4 @@ class rot13box(QObject):
                 self.additional_widget.setPixmap(QPixmap())
             self.show_pic = not self.show_pic
         
-    def create_widget(self,parent,picture_file=None):
-        widget = QWidget(parent)
-        layout = QVBoxLayout(widget)
-        self.picture_file = picture_file
-        
-        self.entry = QLineEdit(widget)
-        self.but = QPushButton("ROT13", widget)
-        if self.buffer is not None:
-            self.encodeText(self.buffer)
-        
-        layout.addWidget(self.entry)
-        
-        butLayout = QHBoxLayout()
-        butLayout.addWidget(self.but)
-        butLayout.addWidget(QWidget(widget), 1)
-        butLayout.setSpacing(0)
-        layout.addLayout(butLayout)
-        layout.addWidget(self.additional_widget, 1)
-        
-        self.but.clicked.connect(self.enc)
-        return widget
     

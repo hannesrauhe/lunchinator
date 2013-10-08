@@ -13,7 +13,7 @@ class lunch_menu(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
-        from PyQt4.QtGui import QTextEdit
+        from PyQt4.QtGui import QTextEdit, QSizePolicy
         textview = QTextEdit(parent)
         textview.setLineWrapMode(QTextEdit.WidgetWidth)
         textview.setReadOnly(True)
@@ -21,6 +21,7 @@ class lunch_menu(iface_gui_plugin):
         resp = urllib2.urlopen(self.options["url"])
         txt = resp.read()
         textview.setPlainText(txt)
+        textview.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         return textview
     
     def add_menu(self,menu):

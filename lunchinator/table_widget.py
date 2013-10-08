@@ -1,8 +1,10 @@
-from PyQt4.QtGui import QTreeView, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton
-from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QTreeView, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QSizePolicy
+from PyQt4.QtCore import Qt, QSize
 from functools import partial
 
 class TableWidget(QWidget):
+    PREFERRED_WIDTH = 400
+    
     def __init__(self, parent, buttonText, triggeredEvent, sortedColumn = None, ascending = True):
         super(TableWidget, self).__init__(parent)
         
@@ -28,6 +30,12 @@ class TableWidget(QWidget):
         
         entry.returnPressed.connect(partial(triggeredEvent, entry))
         button.clicked.connect(partial(triggeredEvent, entry))
+        
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
+        
+    def sizeHint(self):
+        sizeHint = QWidget.sizeHint(self)
+        return QSize(self.PREFERRED_WIDTH, sizeHint.height())
         
     def setModel(self, model):
         self.table.setModel(model)
