@@ -8,7 +8,7 @@ class twitter_status(iface_called_plugin):
     twitter = None
     def __init__(self):
         super(twitter_status, self).__init__()
-        self.options = {"key":"","secret":"","twitter_account":"","polling_time":1}
+        self.options = {"key":"","secret":"","twitter_account":"","polling_time":30}
         self.last_time=0
         self.last_since_id=0
         self.other_twitter_users={}
@@ -40,6 +40,7 @@ class twitter_status(iface_called_plugin):
                 self.is_remote_account = False
                 self.twitter = None
                 log_exception("Authentication with twitter was unsuccessful. Check your key and secret. %s"%str(sys.exc_info()))
+                
             self.get_mentions()
         else:
             self.is_remote_account = False
