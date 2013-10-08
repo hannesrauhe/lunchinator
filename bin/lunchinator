@@ -1,9 +1,9 @@
 #!/bin/bash
 
-LUNCH_DIR=$HOME/.lunchinator-dist-sap
-LUNCH_GIT=drgit@luder.dhcp.wdf.sap.corp:/lunchinator.git
-LUNCH_PLUGINS_DIR=$HOME/.lunchinator/plugins
-LUNCH_PLUGINS_GIT=drgit@luder.dhcp.wdf.sap.corp:/lunchinator_plugins.git
+LUNCH_DIR=${LUNCHINATOR_DIR:="$HOME/.lunchinator-dist-sap"}
+LUNCH_GIT=${LUNCHINATOR_GIT:="drgit@luder.dhcp.wdf.sap.corp:/lunchinator.git"}
+LUNCH_PLUGINS_DIR=${LUNCHINATOR_PLUGINS_DIR:="$HOME/.lunchinator/plugins"}
+LUNCH_PLUGINS_GIT=${LUNCHINATOR_PLUGINS_GIT:="drgit@luder.dhcp.wdf.sap.corp:/lunchinator_plugins.git"}
 
 if test "$1" = "--reinstall"
 then
