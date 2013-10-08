@@ -87,6 +87,6 @@ class lunch_http(iface_called_plugin):
                         indexhtml.write("<td>%s</td>"%table_data[k][i]) 
                     indexhtml.write("</tr>") 
                 indexhtml.write("</table>\n")
-                indexhtml.write(get_settings().get_version())
+                #indexhtml.write(get_settings().get_version())
         except:
             log_exception("HTTP plugin: problem while writing html file")
