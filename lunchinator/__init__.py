@@ -46,7 +46,7 @@ class _lunchinator_logger:
             yapsi_logger.addHandler(cls.logfileHandler)
             yapsi_logger.addHandler(cls.streamHandler)
             
-            loghandler.doRollover()
+            cls.logfileHandler.doRollover()
         return cls.lunch_logger
 
 #initialize loggers
