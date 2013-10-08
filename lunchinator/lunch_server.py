@@ -55,6 +55,7 @@ class lunch_server(object):
     def initialize(self, controller = None):
         if self.initialized:
             return
+        self.initialized = True
         if controller != None:
             self.controller = controller
         else:
@@ -90,7 +91,6 @@ class lunch_server(object):
             self.plugin_manager.activatePluginByName("Notify", "called") 
         else:
             log_info("lunchinator initialised without plugins")  
-        self.initialized = True
         
     def getDBConnection(self,db_name=None):
         if None!=db_name and ""!=db_name:
