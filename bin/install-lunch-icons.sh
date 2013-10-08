@@ -8,6 +8,7 @@
 ICON_BASE="$1"
 
 cd "$( dirname "$0" )"
+echo "Base: '$ICON_BASE'"
 
 # install icons for mono-dark (yes, the 'light' icon is for the dark theme)
 cp ../images/${ICON_BASE}light.svg /usr/share/icons/ubuntu-mono-dark/status/24/lunchinator.svg

@@ -1,7 +1,7 @@
 import sys
 from lunchinator import get_server, log_exception, log_info, get_settings,\
     log_error, convert_string, log_warning, log_debug
-import socket,os,time
+import socket,os,time, subprocess
 import platform
 from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication
@@ -41,6 +41,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         LunchServerController.__init__(self)
         
         self.serverThread = None
+        self.running = True
         get_server().no_updates = noUpdates
         get_server().initialize(self)
         
@@ -50,14 +51,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.mainWindow = LunchinatorWindow(self)
         self.setParent(self.mainWindow)
         
-        # initialize tray icon
-        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg")
-        icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
-        self.statusicon = QSystemTrayIcon(icon, self.mainWindow)
-        contextMenu = self.init_menu(self.mainWindow)
-        self.statusicon.activated.connect(self.trayActivated)
-        self.statusicon.setContextMenu(contextMenu)
-        self.statusicon.show()
+        if not self.createTrayIcon():
+            return
         
         self.mainWindow.createMenuBar(self.pluginActions)
         
@@ -70,10 +65,43 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processMessage.connect(self.processMessageSlot)
         self._processLunchCall.connect(self.processLunchCallSlot)
         self._updateRequested.connect(self.updateRequested)
-        self.running = True
         
         self.serverThread = LunchServerThread(self)
         self.serverThread.start()
+        
+    def createTrayIcon(self):
+        if platform.linux_distribution()[0] == "Ubuntu":
+            if not os.path.exists('/usr/share/icons/ubuntu-mono-light/status/24/lunchinator.svg') or \
+               not os.path.exists('/usr/share/icons/ubuntu-mono-dark/status/24/lunchinator.svg'):
+                result = QMessageBox.question(self.mainWindow,
+                                              "Install Icons",
+                                              "Do you want to install the Lunchinator icons into the Ubuntu theme folders? You will have to enter your sudo password.",
+                                              buttons=QMessageBox.Yes | QMessageBox.No,
+                                              defaultButton=QMessageBox.Yes)
+                if result == QMessageBox.Yes:
+                    if subprocess.call(['gksu', get_settings().get_lunchdir()+'/bin/install-lunch-icons.sh lunch'])==0:
+                        log_info("restarting after icons were installed")
+                        get_server().exitCode = EXIT_CODE_UPDATE
+                        self.quit(EXIT_CODE_UPDATE)
+                        sys.exit(EXIT_CODE_UPDATE)
+                        return False
+                    else:
+                        QMessageBox.critical(self.mainWindow,
+                                             "Error installing icons",
+                                             "The icons were not installed, there was an error.",
+                                             buttons=QMessageBox.Ok,
+                                             defaultButton=QMessageBox.Ok)
+                        log_info("icons were not installed because of an error")
+        
+        # initialize tray icon
+        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg")
+        icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
+        self.statusicon = QSystemTrayIcon(icon, self.mainWindow)
+        contextMenu = self.init_menu(self.mainWindow)
+        self.statusicon.activated.connect(self.trayActivated)
+        self.statusicon.setContextMenu(contextMenu)
+        self.statusicon.show()
+        return True
         
     def trayActivated(self, reason):
         if reason == QSystemTrayIcon.Trigger:
@@ -86,10 +114,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 allPlugins[info.name] = (p_cat, info.plugin_object)
         return allPlugins
     
-    def quit(self):
+    def quit(self, exitCode = 0):
         if self.mainWindow != None:
             self.mainWindow.close()
-        if self.serverThread.isRunning():
+        if self.serverThread != None and self.serverThread.isRunning():
             get_server().running = False
             log_info("Waiting maximal 30s for server to stop...")
             # wait maximal 30s 
@@ -106,8 +134,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
                     pluginInfo.plugin_object.deactivate()
             log_info("plug-ins deactivated, exiting")
             self.running = False
-        QCoreApplication.exit(get_server().exitCode)
-        return get_server().exitCode
+        QCoreApplication.exit(exitCode if exitCode != 0 else get_server().exitCode)
+        return exitCode if exitCode != 0 else get_server().exitCode
             
     """ ---------------- CALLED FROM LUNCH SERVER -----------------"""
     
