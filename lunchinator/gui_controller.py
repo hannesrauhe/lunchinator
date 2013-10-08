@@ -10,7 +10,7 @@ from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
-from lunchinator.utilities import processPluginCall
+from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 
 class LunchServerThread(QThread):
@@ -106,6 +106,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         return True
         
     def trayActivated(self, reason):
+        if getPlatform() == PLATFORM_MAC:
+            # Trigger is sent even though the context menu is shown.
+            return
         if reason == QSystemTrayIcon.Trigger:
             self.statusicon.contextMenu().popup(QCursor.pos())
         
