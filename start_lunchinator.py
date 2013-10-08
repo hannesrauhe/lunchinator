@@ -14,7 +14,7 @@ while os.path.dirname(path) != path:
     
 from optparse import OptionParser
 from lunchinator import log_info, log_warning, log_error, get_settings,\
-    get_server
+    get_server, lunch_cli
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP
     
 def parse_args():
@@ -32,6 +32,9 @@ def parse_args():
     optionParser.add_option("--no-gui",
                       default = False, dest = "noGui", action = "store_true",
                       help = "Start Lunchinator without the GUI.")
+    optionParser.add_option("--cli",
+                      default = False, dest = "cli", action = "store_true",
+                      help = "Start Lunchinator with a command line interface.")
     optionParser.add_option("-s", "--send-message", default=None, dest="message",
                       help="Send a message to all members.")
     optionParser.add_option("-l", "--lunch-call", default=False, dest="lunchCall", action="store_true",
@@ -116,6 +119,9 @@ if __name__ == "__main__":
         get_server().set_plugins_enabled(False)
         recv_nr=get_server().call("HELO_STOP "+msg,client="127.0.0.1")
         print "Sent stop command to local lunchinator"
+    elif options.cli:
+        cli = lunch_cli.LunchCommandLineInterface()
+        sys.exit(cli.start())
     elif options.noGui:
     #    sys.settrace(trace)
         get_server().no_updates = options.noUpdates
