@@ -43,6 +43,7 @@ class lunch_server(object):
         self.membersLock = Lock()
         self.shared_dict = {} #for plugins
         self.dontSendTo = set()
+        self.unknown_cmd = []
         
         self.exitCode = 0  
         
@@ -568,7 +569,9 @@ class lunch_server(object):
                 self._append_member(ip, value) 
                 if not didKnowMember:
                     self.call("HELO_INFO "+self._build_info_string(),client=ip)
-            else:
+            elif cmd not in self.unknown_cmd:
+                #Report unknown commands once
+                self.unknown_cmd.append(cmd)
                 log_info("received unknown command from %s: %s with value %s"%(ip,cmd,value))        
             
             self.controller.processEvent(cmd,value,ip)

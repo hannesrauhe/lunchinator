@@ -18,6 +18,7 @@ class _log_formatter (logging.Formatter):
 class _lunchinator_logger:
     lunch_logger = None
     streamHandler = None
+    logfileHandler = None
      
     @classmethod
     def get_singleton_logger(cls):
@@ -28,21 +29,21 @@ class _lunchinator_logger:
                 os.makedirs(main_config_dir )
             log_file = main_config_dir+os.sep+"lunchinator.log"
                 
-            loghandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
-            loghandler.setFormatter(_log_formatter())
-            loghandler.setLevel(logging.DEBUG)
+            cls.logfileHandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
+            cls.logfileHandler.setFormatter(_log_formatter())
+            cls.logfileHandler.setLevel(logging.DEBUG)
             
             cls.streamHandler = logging.StreamHandler()
             cls.streamHandler.setFormatter(logging.Formatter("[%(levelname)7s] %(message)s"))
             
             cls.lunch_logger = logging.getLogger("LunchinatorLogger")
             cls.lunch_logger.setLevel(logging.DEBUG)
-            cls.lunch_logger.addHandler(loghandler)
+            cls.lunch_logger.addHandler(cls.logfileHandler)
             cls.lunch_logger.addHandler(cls.streamHandler)
             
             yapsi_logger = logging.getLogger('yapsy')
             yapsi_logger.setLevel(logging.WARNING)
-            yapsi_logger.addHandler(loghandler)
+            yapsi_logger.addHandler(cls.logfileHandler)
             yapsi_logger.addHandler(cls.streamHandler)
             
             loghandler.doRollover()
@@ -87,6 +88,7 @@ def setLoggingLevel(newLevel):
     # ensure logger is initialized
     _get_logger()
     _lunchinator_logger.streamHandler.setLevel(newLevel)
+    _lunchinator_logger.logfileHandler.setLevel(newLevel)
     
 def _generate_string(*s):
     return u" ".join(x if type(x) in (str, unicode) else str(x) for x in s)
