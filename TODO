@@ -9,3 +9,8 @@
 --> PyQt Version auf 12.04: 4. 9.1 (264449)
 
 - Remove dict checking from table models
+
+TODOs added by Hannes:
+
+- focus/activate lunchinator window on tray click if its already open 
+- secondary DB connection plugin
