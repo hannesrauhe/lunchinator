@@ -3,12 +3,12 @@
 - Add size hints to plugin widgets
 - Clear logs button in maintainer plugin
 - light icons for Ubuntu
-- Left-Click on tray icon in Gnome 2
 - Maintainer info table not updated after member update
 - port cli version back
 - lunchinator gui does not close when startup of lunch-server fails
 - tdt notify gui
 - interface to exchange strings between plugins
+- log file received -> dont re-load selected log
 
 - Werden dict-inhalte nun konvertiert oder nicht?
 --> PyQt Version auf mac:   4.10.3 (264707)

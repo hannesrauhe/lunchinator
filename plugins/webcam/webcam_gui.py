@@ -12,6 +12,7 @@ class UpdatingImage(QLabel):
         self.timeout = int(timeout)*1000
         self.no_proxy = no_proxy
         self.smooth_scaling = smooth_scaling
+        self.setAlignment(Qt.AlignCenter)
         #self.setScaledContents(True)
         self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         try:     
