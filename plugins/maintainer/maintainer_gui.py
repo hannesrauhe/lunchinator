@@ -308,6 +308,12 @@ class maintainer_gui(QObject):
             self.log_tree_view.takeTopLevelItem(self.log_tree_view.indexFromItem(item).row())
             self.requestFinished()
              
+    def formatFileSize(self, num):
+        for x in ['Bytes','KB','MB','GB','TB']:
+            if num < 1024.0:
+                return "%3.1f %s" % (num, x)
+            num /= 1024.0
+             
     def initializeLogItem(self, item, logFile):
         firstDate, lastDate = self.getLogDates(logFile)
         text = None
@@ -319,11 +325,17 @@ class maintainer_gui(QObject):
             timestamp = datetime.fromtimestamp(os.path.getmtime(logFile)).strftime("%Y-%m-%d %H:%M:%S")
             text = u"%s" % os.path.basename(logFile)
             tooltip = u"File:%s\nModification Date: %s" % (logFile, timestamp)
+        text = text + "\n%s" % self.formatFileSize(os.path.getsize(logFile))
         if tooltip != None:
             item.setData(0, Qt.ToolTipRole, QVariant(tooltip)) 
         item.setData(0, Qt.UserRole, logFile)
         item.setData(0, Qt.DisplayRole, QVariant(text))
-                 
+    
+    @pyqtSlot()
+    def clearLogs(self):
+        for aLogFile in self.listLogFilesForMember(self.get_selected_log_member()):
+            os.remove(aLogFile)
+        self.updateLogList()
        
     def updateLogList(self, logsAdded = None, logsRenamed = None):
         selectedMember = self.get_selected_log_member()
@@ -337,6 +349,8 @@ class maintainer_gui(QObject):
                 self.log_tree_view.clear()
                 self.log_tree_view.addTopLevelItem(QTreeWidgetItem(self.log_tree_view, QStringList("No logs available.")))
                 self.log_tree_view.setSelectionMode(QTreeWidget.NoSelection)
+                self.logSizeLabel.setText("No logs")
+                self.clearLogsButton.setEnabled(False)
                 return
             
         if logsRenamed != None:
@@ -372,7 +386,14 @@ class maintainer_gui(QObject):
                     # else, the old item is being modified
                     self.log_tree_view.insertTopLevelItem(index, item)
                 self.log_tree_view.setSelectionMode(QTreeWidget.SingleSelection)
-        self.displaySelectedLogfile()
+        
+        totalSize = 0
+        for aLogFile in self.listLogFilesForMember(selectedMember):
+            totalSize += os.path.getsize(aLogFile)
+        
+        self.logSizeLabel.setText("%s consumed" % self.formatFileSize(totalSize))
+        self.clearLogsButton.setEnabled(True)
+        #self.displaySelectedLogfile()
     
     def getSelectedLogContent(self):
         member = self.get_selected_log_member()
@@ -483,6 +504,10 @@ class maintainer_gui(QObject):
         layout.addWidget(QLabel("Log files:", widget))
         logSplitter = QSplitter(Qt.Horizontal, widget)
         
+        logListWidget = QWidget(widget)
+        logListLayout = QVBoxLayout(logListWidget)
+        logListLayout.setContentsMargins(0, 0, 0, 0)
+        
         self.log_tree_view = QTreeWidget(logSplitter)
         self.log_tree_view.setAlternatingRowColors(True)
         self.log_tree_view.setColumnCount(1)
@@ -490,10 +515,24 @@ class maintainer_gui(QObject):
         self.log_tree_view.setItemsExpandable(False)
         self.log_tree_view.setIndentation(0)
         
-        logSplitter.addWidget(self.log_tree_view)
+        logListLayout.addWidget(self.log_tree_view, 1)
         
-        self.log_area = QTextEdit(widget)
+        logListBottomLayout = QHBoxLayout()
+        self.logSizeLabel = QLabel(logListWidget)
+        logListBottomLayout.addWidget(self.logSizeLabel, 1)
+        
+        self.clearLogsButton = QPushButton("Clear", logListWidget)
+        self.clearLogsButton.setEnabled(False)
+        self.clearLogsButton.clicked.connect(self.clearLogs)
+        logListBottomLayout.addWidget(self.clearLogsButton, 0)
+        
+        logListLayout.addLayout(logListBottomLayout)
+        
+        logSplitter.addWidget(logListWidget)
+        
+        self.log_area = QTextEdit(logListWidget)
         self.log_area.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.log_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.log_area.setReadOnly(True)
         logSplitter.addWidget(self.log_area)
         
