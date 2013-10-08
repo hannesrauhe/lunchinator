@@ -36,9 +36,9 @@ class maintainer(iface_gui_plugin):
         self.w = maintainer_gui(parent, self)
         
         widget = self.w.create_widget(parent)
-        get_server().controller.memberAppendedSignal.connect(self.w.info_table.model().externalRowAppended)
-        get_server().controller.memberUpdatedSignal.connect(self.w.info_table.model().externalRowUpdated)
-        get_server().controller.memberRemovedSignal.connect(self.w.info_table.model().externalRowRemoved)
+        get_server().controller.memberAppendedSignal.connect(self.w.info_table_model.externalRowAppended)
+        get_server().controller.memberUpdatedSignal.connect(self.w.info_table_model.externalRowUpdated)
+        get_server().controller.memberRemovedSignal.connect(self.w.info_table_model.externalRowRemoved)
         
         get_server().controller.memberAppendedSignal.connect(self.w.update_dropdown_members)
         get_server().controller.memberUpdatedSignal.connect(self.w.update_dropdown_members)
@@ -48,9 +48,9 @@ class maintainer(iface_gui_plugin):
     
     def destroy_widget(self):
         if self.w != None:
-            get_server().controller.memberAppendedSignal.disconnect(self.w.info_table.model().externalRowAppended)
-            get_server().controller.memberUpdatedSignal.disconnect(self.w.info_table.model().externalRowUpdated)
-            get_server().controller.memberRemovedSignal.disconnect(self.w.info_table.model().externalRowRemoved)
+            get_server().controller.memberAppendedSignal.disconnect(self.w.info_table_model.externalRowAppended)
+            get_server().controller.memberUpdatedSignal.disconnect(self.w.info_table_model.externalRowUpdated)
+            get_server().controller.memberRemovedSignal.disconnect(self.w.info_table_model.externalRowRemoved)
             
             get_server().controller.memberAppendedSignal.disconnect(self.w.update_dropdown_members)
             get_server().controller.memberUpdatedSignal.disconnect(self.w.update_dropdown_members)

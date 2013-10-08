@@ -4,8 +4,8 @@ from functools import partial
 from lunchinator import get_server, get_settings, convert_string, log_exception,\
     log_debug, getLogLineTime, log_warning
 from lunchinator.table_models import ExtendedMembersModel
-from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeView, QStandardItemModel, QStandardItem, QTabWidget, QLineEdit, QSplitter, QTreeWidget, QTreeWidgetItem
-from PyQt4.QtCore import QObject, pyqtSlot, QThread, Qt, QStringList, QVariant, QTimer
+from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeView, QStandardItemModel, QStandardItem, QTabWidget, QLineEdit, QSplitter, QTreeWidget, QTreeWidgetItem, QSortFilterProxyModel
+from PyQt4.QtCore import QObject, pyqtSlot, QThread, Qt, QStringList, QVariant, QTimer, Qt
 from lunchinator.lunch_datathread_qt import DataReceiverThread
 
 class maintainer_gui(QObject):
@@ -255,8 +255,18 @@ class maintainer_gui(QObject):
     
     def create_info_table_widget(self, parent):
         self.info_table = QTreeView(parent)
+        self.info_table.setSortingEnabled(True)
+        self.info_table.setHeaderHidden(False)
         self.info_table.setAlternatingRowColors(True)
-        self.info_table.setModel(ExtendedMembersModel(get_server()))
+        self.info_table.setIndentation(0)
+        
+        self.info_table_model = ExtendedMembersModel(get_server())
+        proxyModel = QSortFilterProxyModel(self.info_table)
+        proxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
+        proxyModel.setDynamicSortFilter(True)
+        proxyModel.setSourceModel(self.info_table_model)
+        
+        self.info_table.setModel(proxyModel)
         return self.info_table
     
     def get_dropdown_member_text(self, m_ip, m_name):

@@ -4,7 +4,6 @@
 - Clear logs button in maintainer plugin
 - light icons for Ubuntu
 - Left-Click on tray icon in Gnome 2
-- Sorting in maintainer info table
 - Maintainer info table not updated after member update
 - port cli version back
 - lunchinator gui does not close when startup of lunch-server fails
