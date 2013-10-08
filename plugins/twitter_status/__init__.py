@@ -30,12 +30,7 @@ class twitter_status(iface_called_plugin):
                 
                 self.twitter = Twitter(auth=OAuth(
                     oauth_token, oauth_secret, self.getConfigOption("key") ,self.getConfigOption("secret") ))
-                #for when I'm bored -> implementing remote calls via twitter
-                ments = self.twitter.statuses.mentions_timeline()
-                if len(ments):
-                    self.last_since_id = ments[0]['id']
-                else:
-                    self.last_since_id = 0
+                
                 self.last_time = time.time()
                 self.is_remote_account = True
                 self.remote_account="@lunchinator"
@@ -45,11 +40,32 @@ class twitter_status(iface_called_plugin):
                 self.is_remote_account = False
                 self.twitter = None
                 log_exception("Authentication with twitter was unsuccessful. Check your key and secret. %s"%str(sys.exc_info()))
+            self.get_mentions()
         else:
             self.is_remote_account = False
         
     def deactivate(self):
         iface_called_plugin.deactivate(self)
+        
+    def get_mentions(self):   
+        if self.is_remote_account:     
+            try:                
+                #for when I'm bored -> implementing remote calls via twitter
+                ments= []
+                if self.last_since_id:
+                    ments = self.twitter.statuses.mentions_timeline(since_id=self.last_since_id)
+                else:
+                    ments = self.twitter.statuses.mentions_timeline()
+                    
+                if len(ments):
+                    self.last_since_id = ments[0]['id']
+                else:
+                    self.last_since_id = 0
+                return ments
+            except:
+                self.last_since_id = 0
+                log_exception("Could not retrieve mentions from your timeline. %s"%str(sys.exc_info()))
+        return []
         
     def process_message(self,msg,addr,member_info):
         pass
@@ -86,7 +102,7 @@ class twitter_status(iface_called_plugin):
         if self.is_remote_account and (time.time()-self.last_time) > (60*self.options["polling_time"]):
             self.last_time=time.time()
             get_server().call("HELO_TWITTER_REMOTE %s"%self.remote_account)
-            ments = self.twitter.statuses.mentions_timeline(since_id=self.last_since_id)
+            ments = self.get_mentions()
             if len(ments):
                 self.last_since_id = ments[0]['id']
                 for ment in ments:
