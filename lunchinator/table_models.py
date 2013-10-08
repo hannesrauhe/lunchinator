@@ -80,10 +80,8 @@ class TableModelBase(QStandardItemModel):
         if type(data) == dict:
             for aKey in data:
                 if type(aKey) == QString:
-                    log_warning("encountered QString as key of dict", data)
                     return self._convertDict(data)
                 if type(data[aKey]) == QString:
-                    log_warning("encountered QString as value of dict", data)
                     return self._convertDict(data)
         return data
                     
