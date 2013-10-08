@@ -79,9 +79,10 @@ def getLogLineTime(logLine):
         return
     
     try:
-        formattedDate = ("%s,%6d" % (dateParts[0], int(dateParts[1]) * 1000))
+        formattedDate = ("%s,%06d" % (dateParts[0], int(dateParts[1]) * 1000))
         return datetime.strptime(formattedDate, "%Y-%m-%d %H:%M:%S,%f")
-    except:
+    except Exception as e:
+        print e
         return None
 
 def setLoggingLevel(newLevel):

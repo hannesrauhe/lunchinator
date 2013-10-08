@@ -5,7 +5,7 @@ from lunchinator import log_exception, convert_string, log_error, log_warning,\
     get_server, get_settings
 
 class TableModelBase(QStandardItemModel):
-    SORT_ROLE = Qt.UserRole
+    SORT_ROLE = Qt.UserRole + 1
     def __init__(self, dataSource, columns):
         super(TableModelBase, self).__init__()
         self.dataSource = dataSource
@@ -19,6 +19,7 @@ class TableModelBase(QStandardItemModel):
         self.keys = []
 
     def callItemInitializer(self, column, key, data, item):
+        item.setData(None, self.SORT_ROLE)
         self.columns[column][1](key, data, item)
 
     def createItem(self, key, data, column):
@@ -79,10 +80,8 @@ class TableModelBase(QStandardItemModel):
         if type(data) == dict:
             for aKey in data:
                 if type(aKey) == QString:
-                    log_warning("encountered QString as key of dict", data)
                     return self._convertDict(data)
                 if type(data[aKey]) == QString:
-                    log_warning("encountered QString as value of dict", data)
                     return self._convertDict(data)
         return data
                     
@@ -174,6 +173,8 @@ class MembersTableModel(TableModelBase):
                 item.setData(QColor(0, 255, 0), Qt.DecorationRole)
             else:
                 item.setData(QColor(255, 0, 0), Qt.DecorationRole)
+        else:
+            item.setData(QVariant(-1), self.SORT_ROLE)
         
     def _updateLastSeenItem(self, ip, _, item):
         intValue = -1
@@ -277,7 +278,7 @@ class MessagesTableModel(TableModelBase):
         item.setData(QVariant(time.mktime(mTime)), self.SORT_ROLE)
     
     def _updateSenderItem(self, _, m, item):
-        data = QVariant(self.dataSource.memberName(m[0]))
+        data = QVariant(self.dataSource.memberName(convert_string(m[0])))
         item.setData(data, Qt.DisplayRole)
     
     def _updateMessageItem(self, _, m, item):

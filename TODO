@@ -4,14 +4,11 @@
 - Clear logs button in maintainer plugin
 - light icons for Ubuntu
 - Left-Click on tray icon in Gnome 2
-- Updates in table are not reflected in sort order
-- Sorting in maintainer info table
 - Maintainer info table not updated after member update
-- New messages in message table should be initialized with correct member name
 - port cli version back
-- messages on gui_controller sendFile / receiveFile success / error
-- log time parse does not work if only one message is in the log
 - lunchinator gui does not close when startup of lunch-server fails
+- tdt notify gui
+- interface to exchange strings between plugins
 
 - Werden dict-inhalte nun konvertiert oder nicht?
 --> PyQt Version auf mac:   4.10.3 (264707)
