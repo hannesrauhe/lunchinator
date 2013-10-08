@@ -3,7 +3,6 @@
 - Add size hints to plugin widgets
 - Maintainer info table not updated after member update
 - port cli version back
-- lunchinator gui does not close when startup of lunch-server fails
 - tdt notify gui
 - interface to exchange strings between plugins
 - log file received -> dont re-load selected log
@@ -13,3 +12,8 @@
 --> PyQt Version auf 12.04: 4. 9.1 (264449)
 
 - Remove dict checking from table models
+
+TODOs added by Hannes:
+
+- gui does not close when lunch_server.py goes down
+- what happens when more lunchinator processes access the same log-file (lunchinator running while send-call is started from cli)
