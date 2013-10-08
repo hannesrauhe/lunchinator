@@ -51,10 +51,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.setParent(self.mainWindow)
         
         # initialize tray icon
-        icon_file = get_settings().get_lunchdir()+os.path.sep+"images"+os.path.sep+"lunch.svg"
-        if platform.system()=="Windows":
-            get_settings().get_lunchdir()+os.path.sep+"images"+os.path.sep+"lunch.svg"
-        icon = QIcon(icon_file)
+        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg")
+        icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
         self.statusicon = QSystemTrayIcon(icon, self.mainWindow)
         contextMenu = self.init_menu(self.mainWindow)
         self.statusicon.activated.connect(self.trayActivated)
