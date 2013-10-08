@@ -157,18 +157,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.memberRemovedSignal.emit(ip)
     
     def messagePrepended(self, messageTime, senderIP, messageText):
-        
-        get_server().lockMembers()
-        try:
-            get_server().lockMessages()
-            try:
-                for row, aMsg in enumerate(self.dataSource.getMessages()):
-                    self.updateItem(aMsg[0], [aMsg[1], aMsg[2]], row, 1)
-            finally:
-                get_server().releaseMessages()
-        finally:
-            get_server().releaseMembers()
-        
         self.messagePrependedSignal.emit(messageTime, [senderIP, messageText])
     
     def receiveFile(self, ip, fileSize, fileName):
