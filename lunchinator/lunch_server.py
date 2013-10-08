@@ -486,6 +486,7 @@ class lunch_server(object):
                 #the master send me the list of members - yeah
                 ext_members = json.loads(data.split(" ",1)[1].strip())
                 self._updateMembersDict(ext_members)
+                self._update_member_info(ip, json.loads(value)) 
                 if self.my_master==-1:
                     self.call("HELO_REQUEST_INFO "+self._build_info_string())
                     
@@ -493,6 +494,7 @@ class lunch_server(object):
                  
             elif cmd.startswith("HELO_REQUEST_INFO"):
                 # TODO @Hannes: why aren't we requesting the avatar here?
+                # @cornelius because at this point the info about the members avatar is usually not there yet
                 self._update_member_info(ip, json.loads(value), requestAvatar=False)
                 self.call("HELO_INFO "+self._build_info_string(),client=ip)
                          
