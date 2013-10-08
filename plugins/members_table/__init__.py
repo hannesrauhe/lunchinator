@@ -27,7 +27,7 @@ class members_table(iface_gui_plugin):
     
     def create_widget(self, parent):
         from PyQt4.QtGui import QSortFilterProxyModel
-        from PyQt4.QtCore import QTimer
+        from PyQt4.QtCore import QTimer, Qt
         from lunchinator.table_models import MembersTableModel
         from lunchinator.table_widget import TableWidget
         
@@ -36,6 +36,7 @@ class members_table(iface_gui_plugin):
         # initialize members table
         self.membersModel = MembersTableModel(get_server())
         self.membersProxyModel = QSortFilterProxyModel(self.membersTable)
+        self.membersProxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
         self.membersProxyModel.setSortRole(MembersTableModel.SORT_ROLE)
         self.membersProxyModel.setDynamicSortFilter(True)
         self.membersProxyModel.setSourceModel(self.membersModel)
