@@ -1,12 +1,12 @@
-from lunchinator.iface_plugins import *
+from lunchinator.iface_plugins import iface_gui_plugin
 import subprocess, sys, ctypes
-from lunchinator import get_server, log_exception, get_settings, convert_string
+from lunchinator import get_server, log_exception, get_settings, convert_string, log_error
 from lunchinator.download_thread import DownloadThread
 from lunchinator.utilities import displayNotification, getValidQtParent
 
 import urllib2, tempfile, json, time
 
-class tdtnotify(iface_called_plugin):
+class tdtnotify(iface_gui_plugin):
     def __init__(self):
         super(tdtnotify, self).__init__()
         self.options = {"icon_file":get_settings().get_lunchdir()+"/images/mini_breakfast.png",
@@ -18,9 +18,10 @@ class tdtnotify(iface_called_plugin):
         self.pic_url = ""
         self.localFile = None
         self.forceDownload = False
+        self.imageLabel = None
         
     def activate(self):        
-        iface_called_plugin.activate(self)
+        iface_gui_plugin.activate(self)
         self.last_time=0
         self.rotate_counter=0
         self.pic_url = ""
@@ -31,8 +32,16 @@ class tdtnotify(iface_called_plugin):
     def deactivate(self):        
         self.localFile.close()
         del self.shared_dict["tdtnotify_file"]
-        iface_called_plugin.deactivate(self)
+        iface_gui_plugin.deactivate(self)
             
+    def create_widget(self, parent):
+        from lunchinator.resizing_image_label import ResizingImageLabel
+        from PyQt4.QtCore import QSize
+        
+        super(tdtnotify, self).create_widget(parent)
+        self.imageLabel = ResizingImageLabel(parent, True, QSize(400,400))
+        return self.imageLabel
+
     def process_message(self,msg,addr,member_info):
         pass
     
@@ -40,10 +49,11 @@ class tdtnotify(iface_called_plugin):
         log_error("Error downloading picture from url %s" % convert_string(url))
         thread.deleteLater()
         
-    def downloadedPicture(self, thread, _):
+    def downloadedPicture(self, _thread, _):
         self.localFile.flush()
         get_server().call("HELO_TDTNOTIFY_NEW_PIC "+self.pic_url)
         displayNotification("TDT", "New picture", self.localFile.name)
+        self.imageLabel.setImage(self.localFile.name)
         
     def errorDownloadingJSON(self, thread, url):
         log_error("Error downloading JSON from url %s" % convert_string(url))

@@ -1,9 +1,7 @@
 - lunch menu structured: tooltips
 - avatare auch nach pull-prinzip?
-- Add size hints to plugin widgets
 - Maintainer info table not updated after member update
 - port cli version back
-- tdt notify gui
 - interface to exchange strings between plugins
 
 - Werden dict-inhalte nun konvertiert oder nicht?
