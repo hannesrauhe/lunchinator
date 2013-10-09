@@ -89,10 +89,10 @@ class twitter_status(iface_called_plugin):
             if not self.other_twitter_users.has_key(ip) or self.other_twitter_users[ip]!=screen_name:
                 self.other_twitter_users[ip]=screen_name
                 log_debug("Twitter: I'm trying to follow %s now"%screen_name)
-                try:
-                    self.twitter.friendship.create(screen_name=screen_name)
-                except:
-                    log_exception("Unable to follow %s: %s"%(screen_name,str(sys.exc_info())))
+#                try:
+#                    self.twitter.friendship.create(screen_name=screen_name)
+#                except:
+#                    log_exception("Unable to follow %s: %s"%(screen_name,str(sys.exc_info())))
         elif (not self.is_remote_account) and cmd=="HELO_TWITTER_REMOTE":
             self.remote_account = value
             self.remote_user = member_info["name"] if member_info.has_key("name") else ip
@@ -111,7 +111,7 @@ class twitter_status(iface_called_plugin):
                 log_debug("Twitter: I found new mentions -> I will send a call")
                 for ment in ments:
                     tweet_user = ment['user']["screen_name"]
-                    tweet_text = ment['text'][len(self.remote_user):]
+                    tweet_text = ment['text'][len(self.remote_account):]
                     log_debug("Twitter: Mention was: %s from %s"%(tweet_text,tweet_user))
 
                     reply = ""
