@@ -10,6 +10,7 @@ class ResizingImageLabel(QLabel):
         self.smooth_scaling = smooth_scaling
         self.setAlignment(Qt.AlignCenter)
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.setMinimumSize(50, 50)
             
     def sizeHint(self):
         if self._sizeHint == None:
@@ -22,8 +23,8 @@ class ResizingImageLabel(QLabel):
             self.setPixmap(self.rawPixmap.scaled(self.width(),self.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation if self.smooth_scaling else Qt.FastTransformation))
     
     def resizeEvent(self, event):
-        super(ResizingImageLabel, self).resizeEvent(event)
         self.setScaledPixmap()
+        super(ResizingImageLabel, self).resizeEvent(event)
     
     def setRawPixmap(self, pixmap):
         self.rawPixmap = pixmap
