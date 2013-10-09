@@ -14,7 +14,7 @@ while os.path.dirname(path) != path:
     
 from optparse import OptionParser
 from lunchinator import log_info, log_warning, log_error, get_settings,\
-    get_server, lunch_cli
+    get_server
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP
     
 def parse_args():
@@ -120,8 +120,13 @@ if __name__ == "__main__":
         recv_nr=get_server().call("HELO_STOP "+msg,client="127.0.0.1")
         print "Sent stop command to local lunchinator"
     elif options.cli:
-        cli = lunch_cli.LunchCommandLineInterface()
-        sys.exit(cli.start())
+        try:
+            from lunchinator import lunch_cli
+            cli = lunch_cli.LunchCommandLineInterface()
+            sys.exit(cli.start())
+        except:
+            log_error("cli version cannot be started, is readline installed")
+            sys.exit(-1)
     elif options.noGui:
     #    sys.settrace(trace)
         get_server().no_updates = options.noUpdates
