@@ -149,6 +149,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         else:
             finalExitCode = get_server().exitCode
             
+        get_settings().write_config_to_hd()
+            
         self.exitCode = finalExitCode
         QCoreApplication.exit(finalExitCode)
         return finalExitCode
@@ -274,7 +276,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
             get_server().plugin_manager.deactivatePluginByName(p_name,p_cat)  
             if p_cat=="gui" and self.mainWindow != None:
                 self.mainWindow.removePluginWidget(p_name)
-        get_settings().write_config_to_hd()
     
     @pyqtSlot(unicode, QObject)
     def sendMessageClicked(self, message, w):

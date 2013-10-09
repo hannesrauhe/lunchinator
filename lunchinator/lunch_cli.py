@@ -1,5 +1,5 @@
 import cmd, threading, time, shlex
-from lunchinator import get_server, log_exception
+from lunchinator import get_server, log_exception, convert_string
 from lunchinator.lunch_server_controller import LunchServerController
 
 # enable tab completion on most platforms
@@ -87,9 +87,8 @@ Usage: send <message>                             - Send message to all members
             get_server().releaseMembers()
         return lunchmembers if lunchmembers != None else []
         
-    def complete_send(self, text, line, begidx, _endidx):
-        args = shlex.split(line[:begidx])
-        if len(args) > 1:
+    def complete_send(self, text, line, begidx, endidx):
+        if self.getArgNum(text, line, begidx, endidx)[0] > 1:
             # message is already entered, complete hostnames
             return self.completeHostnames(text)
 
@@ -133,7 +132,7 @@ Usage: call                             - Call all members
             for cat, desc in sorted(self.getOptionCategories(), key=lambda aTuple : aTuple[0]):
                 print "%s - %s" % (cat, desc)
         else:
-            # list settings in category
+            # list options in category
             category = args[0]
             optionNames = self.getOptionsOfCategory(category)
             if optionNames == None:
@@ -181,18 +180,18 @@ Usage: call                             - Call all members
             print "Unknown option. The available options for category %s are:" % category
             self.listOptions([category])
             
-        po.set_option(option, args[2])
+        po.set_option(convert_string(option), convert_string(args[2]))
     
     def resetOption(self, args):
         pass
     
     def do_options(self, args):
-        """Show or edit settings.
-Usage: options list                                 - get an overview of the option categories
-       options list <category>                      - get an overview of the options in a category
-       options get <category> <setting>             - print the current value of an option
-       options set <category> <setting> <new_value> - change the value of an option to a new value
-       options reset <category> <setting>           - reset the value of an option.
+        """Show or edit options.
+Usage: options list                                - get an overview of the option categories
+       options list <category>                     - get an overview of the options in a category
+       options get <category> <option>             - print the current value of an option
+       options set <category> <option> <new_value> - change the value of an option to a new value
+       options reset <category> <option>           - reset the value of an option.
        """
         if len(args) == 0:
             return self.do_help("options")
@@ -209,6 +208,60 @@ Usage: options list                                 - get an overview of the opt
         else:
             return self.do_help("options")
        
+    def completeList(self, _args, argNum, text):
+        if argNum == 0:
+            text = text.lower()
+            candidates = [aTuple[0].lower().replace(" ", "\\ ") for aTuple in self.getOptionCategories()]
+            return [aValue for aValue in candidates if aValue.startswith(text)]
+       
+    def completeGet(self, args, argNum, text):
+        if argNum == 0:
+            # first argument is category
+            return self.completeList(args, 0, text)
+        elif argNum == 1:
+            # second argument is option
+            cat = args[0]
+            candidates = self.getOptionsOfCategory(cat)
+            if candidates != None:
+                candidates = [aTuple[0].lower().replace(" ", "\\ ") for aTuple in self.getOptionsOfCategory(cat)]
+                return [aValue for aValue in candidates if aValue.startswith(text)]
+            return None
+       
+    def getArgNum(self, text, line, _begidx, endidx):
+        prevArgs = shlex.split(line[:endidx + 1])
+        argNum = len(prevArgs)
+        
+        if len(text) > 0 or prevArgs[-1][-1] == ' ':
+            # the current word is the completed word
+            return (argNum - 1, prevArgs[-1].replace(" ", "\\ "))
+        # complete an empty word
+        return (argNum, "")
+       
+    def complete_options(self, text, line, begidx, endidx):
+        argNum, text = self.getArgNum(text, line, begidx, endidx)
+        
+        result = None
+        if argNum == 1:
+            # subcommand
+            return [aVal for aVal in ("list", "get", "set", "reset") if aVal.startswith(text)]
+        elif argNum >= 2:
+            # argument to subcommand
+            args = shlex.split(line)[1:]
+            subcmd = args.pop(0)
+            
+            if subcmd == "list":
+                result = self.completeList(args, argNum - 2, text)
+            elif subcmd == "get":
+                result = self.completeGet(args, argNum - 2, text)
+            elif subcmd == "set":
+                result = self.completeGet(args, argNum - 2, text)
+            elif subcmd == "reset":
+                return []
+
+        numWordsToOmit = 0 if len(text.split()) == 0 else len(text.split()) - 1
+        if result != None:
+            return [" ".join(aValue.split()[numWordsToOmit:]) for aValue in result]
+        return None
     
     def do_exit(self, _):
         """Exits the application."""

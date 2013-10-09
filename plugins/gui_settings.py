@@ -24,25 +24,17 @@ class gui_settings(iface_general_plugin):
             else:
                 log_warning("settings has no attribute called '%s'" % o)
                 
-    def set_settings(self):
-        for o in self.option_names:
-            methodname = "set_"+o[0]
-            if hasattr(get_settings(), methodname): 
-                _member = getattr(get_settings(), methodname)
-                _member(self.options[o[0]])
-            else:
-                log_warning("settings has no setter for '%s'" % o)
-    
     def save_options_widget_data(self):
         self.save_data()
-        self.set_settings()
         
     def set_option_value(self, o, new_v):
         # override category as "general"
         get_settings().get_config_file().set('general', o, unicode(new_v))
         
-    def read_options_from_file(self):
-        super(gui_settings, self).read_options_from_file()
-        self.set_settings()
-        
+        methodname = "set_"+o
+        if hasattr(get_settings(), methodname): 
+            _member = getattr(get_settings(), methodname)
+            _member(self.options[o])
+        else:
+            log_warning("settings has no setter for '%s'" % o)
         

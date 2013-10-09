@@ -47,3 +47,4 @@ class LunchServerController(object):
         for pluginInfo in get_server().plugin_manager.getAllPlugins():
             if pluginInfo.plugin_object.is_activated:
                 pluginInfo.plugin_object.deactivate()
+        get_settings().write_config_to_hd()

@@ -58,11 +58,6 @@ def convert_string(string):
     if type(string) == unicode:
         return string
     elif type(string) == str:
-        log_warning("Encountered string of type str")
-        trace = StringIO()
-        traceback.print_stack(None, None, trace)
-        log_warning(trace.getvalue())
-        trace.close()
         return string.decode('utf-8')
     return unicode(string.toUtf8(), 'utf-8')
 

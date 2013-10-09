@@ -1,6 +1,6 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_warning, log_error
+from lunchinator import log_warning, log_error, log_exception
 import types
 from checkbox.reports.xml_report import convert_bool
 
@@ -74,12 +74,16 @@ class iface_plugin(IPlugin):
     def convert_and_set_option(self, o, v, new_v):
         try:
             if o in self.option_choice:
-                self.options[o] = new_v
-                if not new_v in self.option_choice[0]:
+                finalValue = None
+                for aValue in self.option_choice[o]:
+                    if new_v.upper() == aValue.upper():
+                        finalValue = aValue
+                        break
+                if finalValue == None:
                     #illegal value - use first
-                    self.options[o] = self.option_choice[0][0]
+                    self.options[o] = self.option_choice[o][0]
                 else:
-                    self.options[o] = new_v
+                    self.options[o] = finalValue
             elif type(v)==types.IntType:
                 self.options[o] = int(new_v)
             elif type(v)==types.BooleanType:
@@ -92,7 +96,7 @@ class iface_plugin(IPlugin):
             else:
                 log_error("type of value",o,v,"not supported, using default")
         except:
-            log_error("could not convert value of",o,"from config to type",type(v),"(",new_v,") using default")
+            log_exception("could not convert value of",o,"from config to type",type(v),"(",new_v,") using default")
     
     def read_options_from_file(self):
         if not self.options:
@@ -169,6 +173,7 @@ class iface_plugin(IPlugin):
             self.options[o]=new_v
             if convert:
                 self.convert_and_set_option(o, v, new_v)
+                self.set_option_value(o, self.options[o])
             else:
                 self.set_option_value(o, new_v)
             if o in self.option_callbacks:
