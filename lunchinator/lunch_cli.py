@@ -148,7 +148,7 @@ Usage: call                             - Call all members
     
     def getOption(self, args):
         if len(args) < 2:
-            return self.do_help("options")
+            return self.do_help("option")
         category = args[0]
         po = self.getPluginObject(category)
         if po == None:
@@ -165,7 +165,7 @@ Usage: call                             - Call all members
     
     def setOption(self, args):
         if len(args) < 3:
-            return self.do_help("options")
+            return self.do_help("option")
         category = args[0]
         po = self.getPluginObject(category)
         if po == None:
@@ -182,7 +182,7 @@ Usage: call                             - Call all members
     
     def resetOption(self, args):
         if len(args) < 2:
-            return self.do_help("options")
+            return self.do_help("option")
         category = args[0]
         po = self.getPluginObject(category)
         if po == None:
@@ -197,16 +197,16 @@ Usage: call                             - Call all members
             
         po.reset_option(option)
     
-    def do_options(self, args):
+    def do_option(self, args):
         """Show or edit options.
-Usage: options list                                - get an overview of the option categories
-       options list <category>                     - get an overview of the options in a category
-       options get <category> <option>             - print the current value of an option
-       options set <category> <option> <new_value> - change the value of an option to a new value
-       options reset <category> <option>           - reset the value of an option.
+Usage: option list                                - get an overview of the option categories
+       option list <category>                     - get an overview of the options in a category
+       option get <category> <option>             - print the current value of an option
+       option set <category> <option> <new_value> - change the value of an option to a new value
+       option reset <category> <option>           - reset the value of an option.
        """
         if len(args) == 0:
-            return self.do_help("options")
+            return self.do_help("option")
         args = shlex.split(args)
         subcmd = args.pop(0)
         if subcmd == "list":
@@ -218,7 +218,7 @@ Usage: options list                                - get an overview of the opti
         elif subcmd == "reset":
             self.resetOption(args)
         else:
-            return self.do_help("options")
+            return self.do_help("option")
        
     def completeList(self, _args, argNum, text):
         if argNum == 0:
@@ -274,6 +274,63 @@ Usage: options list                                - get an overview of the opti
         if result != None:
             return [" ".join(aValue.split()[numWordsToOmit:]) for aValue in result]
         return None
+    
+    def listPlugins(self, _args):
+        try:
+            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                print "%s%s" % (pluginInfo.name, " (loaded)" if pluginInfo.plugin_object.is_activated else "")
+        except:
+            log_exception("while printing plugin names")
+            
+    def loadPlugin(self, args):
+        try:
+            pluginName = args[0].upper()
+            po = None
+            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                if pluginInfo.name.upper() == pluginName:
+                    po = pluginInfo.plugin_object
+            if po == None:
+                print "Unknown plugin. The available plugins are:"
+                self.listPlugins(args)
+            else:
+                po.activate()
+        except:
+            log_exception("while loading plugin")
+            
+    def unloadPlugin(self, args):
+        try:
+            pluginName = args[0].upper()
+            po = None
+            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                if pluginInfo.name.upper() == pluginName:
+                    po = pluginInfo.plugin_object
+            if po == None:
+                print "Unknown plugin. The available plugins are:"
+                self.listPlugins(args)
+            else:
+                po.deactivate()
+        except:
+            log_exception("while unloading plugin")
+    
+    def do_plugin(self, args):
+        """Plugin management
+Usage: plugin list            - list the available plugins
+       plugin load <plugin>   - get an overview of the options in a category
+       plugin unload <plugin> - print the current value of an option
+       """
+        if len(args) == 0:
+            return self.do_help("plugin")
+        args = shlex.split(args)
+        subcmd = args.pop(0)
+        if subcmd == "list":
+            self.listPlugins(args)
+        elif subcmd == "load":
+            self.loadPlugin(args)
+        elif subcmd == "unload":
+            self.unloadPlugin(args)
+        else:
+            return self.do_help("plugin")
+        pass
     
     def do_exit(self, _):
         """Exits the application."""
