@@ -1,4 +1,4 @@
-from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QApplication, QDockWidget, QApplication, QMenu, QKeySequence
+from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplication, QMenu, QKeySequence
 from PyQt4.QtCore import Qt, QSettings, QVariant
 from lunchinator import get_settings, get_server, log_exception, convert_string
 import sys, os
@@ -10,9 +10,9 @@ class PluginDockWidget(QDockWidget):
         super(PluginDockWidget, self).__init__(name, parent)
         self.closeCallback = closeCallback
         
-    def closeEvent(self, _closeEvent):
+    def closeEvent(self, closeEvent):
         self.closeCallback(self)
-        #return super(PluginDockWidget, self).closeEvent(closeEvent)
+        return super(PluginDockWidget, self).closeEvent(closeEvent)
 
 class LunchinatorWindow(QMainWindow):
     def __init__(self, controller):
