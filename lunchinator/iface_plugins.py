@@ -1,6 +1,6 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_warning, log_error, log_exception
+from lunchinator import log_warning, log_error, log_exception, convert_string
 import types
 from checkbox.reports.xml_report import convert_bool
 
@@ -79,10 +79,7 @@ class iface_plugin(IPlugin):
                     if new_v.upper() == aValue.upper():
                         finalValue = aValue
                         break
-                if finalValue == None:
-                    #illegal value - use first
-                    self.options[o] = self.option_choice[o][0]
-                else:
+                if finalValue != None:
                     self.options[o] = finalValue
             elif type(v)==types.IntType:
                 self.options[o] = int(new_v)
@@ -91,8 +88,8 @@ class iface_plugin(IPlugin):
                     self.options[o] = True
                 else:
                     self.options[o] = False
-            elif type(v)==types.StringType:
-                self.options[o] = new_v
+            elif type(v) in (types.StringType, types.UnicodeType):
+                self.options[o] = convert_string(new_v)
             else:
                 log_error("type of value",o,v,"not supported, using default")
         except:
