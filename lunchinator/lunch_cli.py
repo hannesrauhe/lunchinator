@@ -1,6 +1,6 @@
 import cmd, threading, time, inspect, new
 from functools import partial
-from lunchinator import get_server, log_error
+from lunchinator import get_server, log_error, get_settings
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.cli.cli_message import CLIMessageHandling
 from lunchinator.cli.cli_option import CLIOptionHandling
