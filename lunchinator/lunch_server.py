@@ -492,7 +492,6 @@ class lunch_server(object):
                 #the master send me the list of members - yeah
                 ext_members = json.loads(data.split(" ",1)[1].strip())
                 self._updateMembersDict(ext_members)
-                self._update_member_info(ip, json.loads(value)) 
                 if self.my_master==-1:
                     self.call("HELO_REQUEST_INFO "+self._build_info_string())
                     
