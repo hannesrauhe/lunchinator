@@ -51,7 +51,7 @@ class twitter_status(iface_called_plugin):
         
     def get_mentions(self):   
         if self.is_remote_account:
-            log_debug("Twitter: I am trying to get mentions now, last since id is: %d",self.last_since_id)
+            log_debug("Twitter: I am trying to get mentions now, last since id is: %d"%self.last_since_id)
             try:                
                 #for when I'm bored -> implementing remote calls via twitter
                 ments= []
@@ -62,10 +62,8 @@ class twitter_status(iface_called_plugin):
                     
                 if len(ments):
                     self.last_since_id = ments[0]['id']
-                else:
-                    self.last_since_id = 0
                     
-                log_debug("Twitter: I fetched mentions, last since id is: %d",self.last_since_id)
+                log_debug("Twitter: I fetched mentions, last since id is: %d"%self.last_since_id)
                 return ments
             except:
                 self.last_since_id = 0
@@ -90,7 +88,7 @@ class twitter_status(iface_called_plugin):
             screen_name = value[1:] if value[0]=="@" else value
             if not self.other_twitter_users.has_key(ip) or self.other_twitter_users[ip]!=screen_name:
                 self.other_twitter_users[ip]=screen_name
-                log_debug("Twitter: I'm trying to follow %s now",screen_name)
+                log_debug("Twitter: I'm trying to follow %s now"%screen_name)
                 try:
                     self.twitter.friendship.create(screen_name=screen_name)
                 except:
@@ -114,18 +112,18 @@ class twitter_status(iface_called_plugin):
                 for ment in ments:
                     tweet_user = ment['user']["screen_name"]
                     tweet_text = ment['text'][len(self.remote_user):]
-                    log_debug("Twitter: Mention was: %s from %s",tweet_text,tweet_user)
-#                    DISABLED FOR NOW
-#                    reply = ""
-#                    if tweet_user in self.other_twitter_users.values():
-#                        if "lunch" in tweet_text:
-#                            reply = "OK, @%s, I called for lunch"%(tweet_user)
-#                        else:
-#                            reply = "OK, @%s, I sent your message around"%(tweet_user)
-#                        get_server().call("Remote call by %s: %s"%(tweet_user,tweet_text))
-#                    else:
-#                        reply = "Sorry, @%s, you're not authorized to call"%(tweet_user)
-#                    self.twitter.statuses.update(status=reply[:140])
+                    log_debug("Twitter: Mention was: %s from %s"%(tweet_text,tweet_user))
+
+                    reply = ""
+                    if tweet_user in self.other_twitter_users.values():
+                        if "lunch" in tweet_text:
+                            reply = "OK, @%s, I called for lunch"%(tweet_user)
+                        else:
+                            reply = "OK, @%s, I sent your message around"%(tweet_user)
+                        get_server().call("Remote call by %s: %s"%(tweet_user,tweet_text))
+                    else:
+                        reply = "Sorry, @%s, you're not authorized to call"%(tweet_user)
+                    self.twitter.statuses.update(status=reply[:140])
             
     def create_options_widget(self, parent):
         from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox
