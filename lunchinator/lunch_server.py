@@ -297,7 +297,9 @@ class lunch_server(object):
         for ip, hostn in otherDict.items():
             if noLocal and ip.startswith('127'):
                 continue
-            self._append_member(ip, hostn)
+            
+            if not ip in self.members:
+                self._append_member(ip, hostn)
             
     def _is_now_in_time_span(self,begin,end):
         try:
@@ -490,7 +492,7 @@ class lunch_server(object):
                 
             elif cmd.startswith("HELO_DICT"):
                 #the master send me the list of members - yeah
-                ext_members = json.loads(data.split(" ",1)[1].strip())
+                ext_members = json.loads(value)
                 self._updateMembersDict(ext_members)
                 if self.my_master==-1:
                     self.call("HELO_REQUEST_INFO "+self._build_info_string())
