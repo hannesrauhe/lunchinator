@@ -1,5 +1,5 @@
 import cmd, threading, time, shlex
-from lunchinator import get_server
+from lunchinator import get_server, log_exception
 from lunchinator.lunch_server_controller import LunchServerController
 
 # enable tab completion on most platforms
@@ -103,6 +103,112 @@ Usage: call                             - Call all members
         
     def complete_call(self, text, _line, _begidx, _endidx):
         return self.completeHostnames(text)
+    
+    def getOptionCategories(self):
+        categories=[]        
+        try:
+            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                if pluginInfo.plugin_object.is_activated:
+                    if pluginInfo.plugin_object.has_options():
+                        categories.append((pluginInfo.name, pluginInfo.description))
+        except:
+            log_exception("while collecting option categories")
+        return categories
+            
+    def getPluginObject(self, cat):
+        cat = cat.lower()
+        for pluginInfo in get_server().plugin_manager.getAllPlugins():
+            if pluginInfo.plugin_object.is_activated and pluginInfo.name.lower() == cat:
+                return pluginInfo.plugin_object
+        return None
+            
+    def getOptionsOfCategory(self, cat):
+        po = self.getPluginObject(cat)
+        if po != None:
+            return po.get_option_names()
+        return None
+    
+    def listOptions(self, args):
+        if len(args) == 0:
+            for cat, desc in sorted(self.getOptionCategories(), key=lambda aTuple : aTuple[0]):
+                print "%s - %s" % (cat, desc)
+        else:
+            # list settings in category
+            category = args[0]
+            optionNames = self.getOptionsOfCategory(category)
+            if optionNames == None:
+                print "Unknown category. The available categories are:"
+                self.listOptions([])
+                return
+            
+            for aTuple in optionNames:
+                name = aTuple[0]
+                desc = aTuple[1]
+                if desc == name:
+                    print name
+                else:
+                    print "%s - %s" % (name, desc)
+    
+    def getOption(self, args):
+        if len(args) < 2:
+            return self.do_help("options")
+        category = args[0]
+        po = self.getPluginObject(category)
+        if po == None:
+            print "Unknown category. The available categories are:"
+            self.listOptions([])
+            return
+        
+        option = args[1].lower()
+        if not po.has_option(option):
+            print "Unknown option. The available options for category %s are:" % category
+            self.listOptions([category])
+        value = po.get_option(option)
+        print value, type(value) 
+    
+    def setOption(self, args):
+        if len(args) < 3:
+            return self.do_help("options")
+        category = args[0]
+        po = self.getPluginObject(category)
+        if po == None:
+            print "Unknown category. The available categories are:"
+            self.listOptions([])
+            return
+        
+        option = args[1].lower()
+        if not po.has_option(option):
+            print "Unknown option. The available options for category %s are:" % category
+            self.listOptions([category])
+            
+        po.set_option(option, args[2])
+    
+    def resetOption(self, args):
+        pass
+    
+    def do_options(self, args):
+        """Show or edit settings.
+Usage: options list                                 - get an overview of the option categories
+       options list <category>                      - get an overview of the options in a category
+       options get <category> <setting>             - print the current value of an option
+       options set <category> <setting> <new_value> - change the value of an option to a new value
+       options reset <category> <setting>           - reset the value of an option.
+       """
+        if len(args) == 0:
+            return self.do_help("options")
+        args = shlex.split(args)
+        subcmd = args.pop(0)
+        if subcmd == "list":
+            self.listOptions(args)
+        elif subcmd == "get":
+            self.getOption(args)
+        elif subcmd == "set":
+            self.setOption(args)
+        elif subcmd == "reset":
+            self.resetOption(args)
+        else:
+            return self.do_help("options")
+       
     
     def do_exit(self, _):
         """Exits the application."""

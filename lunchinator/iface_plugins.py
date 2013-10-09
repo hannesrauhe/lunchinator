@@ -2,6 +2,7 @@ from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
 from lunchinator import log_warning, log_error
 import types
+from checkbox.reports.xml_report import convert_bool
 
 class iface_plugin(IPlugin):    
     def __init__(self):
@@ -54,34 +55,50 @@ class iface_plugin(IPlugin):
         Just call the parent class's method
         """
         IPlugin.deactivate(self)
-        
+    
+    def get_option_names(self):
+        return self.option_names
+    
+    def get_option_description(self, key):
+        if self.option_names != None:
+            for aKey, desc in self.option_names:
+                if key == aKey:
+                    return desc
+        return None
+    
+    def has_options(self):
+        return self.options != None and len(self.options) > 0
+    
+    def convert_and_set_option(self, o, v, new_v):
+        try:
+            if o in self.option_choice:
+                self.options[o] = new_v
+                if not new_v in self.option_choice[0]:
+                    #illegal value - use first
+                    self.options[o] = self.option_choice[0][0]
+                else:
+                    self.options[o] = new_v
+            elif type(v)==types.IntType:
+                self.options[o] = int(new_v)
+            elif type(v)==types.BooleanType:
+                if new_v.strip().upper() in ["TRUE", "YES", "1"]:
+                    self.options[o] = True
+                else:
+                    self.options[o] = False
+            elif type(v)==types.StringType:
+                self.options[o] = new_v
+            else:
+                log_error("type of value",o,v,"not supported, using default")
+        except:
+            log_error("could not convert value of",o,"from config to type",type(v),"(",new_v,") using default")
+    
     def read_options_from_file(self):
         if not self.options:
             return
         for o,v in self.options.iteritems():
             if self.hasConfigOption(o):
                 new_v = self.getConfigOption(o)
-                try:
-                    if o in self.option_choice:
-                        self.options[o] = new_v
-                        if not new_v in self.option_choice[0]:
-                            #illegal value - use first
-                            self.options[o] = self.option_choice[0][0]
-                        else:
-                            self.options[o] = new_v
-                    elif type(v)==types.IntType:
-                        self.options[o] = int(new_v)
-                    elif type(v)==types.BooleanType:
-                        if new_v.strip().upper() in ["TRUE", "YES", "1"]:
-                            self.options[o] = True
-                        else:
-                            self.options[o] = False
-                    elif type(v)==types.StringType:
-                        self.options[o] = new_v
-                    else:
-                        log_error("type of value",o,v,"not supported, using default")
-                except:
-                    log_error("could not convert value of",o,"from config to type",type(v),"(",new_v,") using default")
+                self.convert_and_set_option(o, v, new_v)
         
     def add_option_to_layout(self, parent, grid, i, o, v):
         from PyQt4.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
@@ -139,7 +156,27 @@ class iface_plugin(IPlugin):
         t.setRowStretch(row, 1)
         return optionsWidget
     
-    def save_data(self, set_value):
+    def has_option(self, o):
+        return o in self.options
+    
+    def set_option(self, o, new_v, convert = True):
+        if o not in self.options:
+            return
+        v = self.options[o]
+        if new_v!=v:
+            self.options[o]=new_v
+            if convert:
+                self.convert_and_set_option(o, v, new_v)
+            else:
+                self.set_option_value(o, new_v)
+            if o in self.option_callbacks:
+                self.option_callbacks[o](o, new_v)
+                
+    def get_option(self, o):
+        if o in self.options:
+            return self.options[o]
+    
+    def save_data(self):
         from PyQt4.QtCore import Qt
         if not self.option_widgets:
             return
@@ -154,15 +191,14 @@ class iface_plugin(IPlugin):
                 new_v = e.checkState() == Qt.Checked
             else:
                 new_v = str(e.text().toUtf8())
-            if new_v!=v:
-                self.options[o]=new_v
-                set_value(o, new_v)
-                if o in self.option_callbacks:
-                    self.option_callbacks[o](o, new_v)
+            self.set_option(o, new_v, False)
         self.discard_options_widget_data()
         
+    def set_option_value(self, o, new_v):
+        self.setConfigOption(o,str(new_v))
+        
     def save_options_widget_data(self):
-        self.save_data(lambda o, new_v: self.setConfigOption(o,str(new_v)))
+        self.save_data()
         self.discard_options_widget_data()
     
     def discard_options_widget_data(self):

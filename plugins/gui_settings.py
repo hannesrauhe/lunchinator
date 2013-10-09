@@ -34,9 +34,12 @@ class gui_settings(iface_general_plugin):
                 log_warning("settings has no setter for '%s'" % o)
     
     def save_options_widget_data(self):
-        # override category as "general"
-        self.save_data(lambda o, new_v: get_settings().get_config_file().set('general', o, unicode(new_v)))
+        self.save_data()
         self.set_settings()
+        
+    def set_option_value(self, o, new_v):
+        # override category as "general"
+        get_settings().get_config_file().set('general', o, unicode(new_v))
         
     def read_options_from_file(self):
         super(gui_settings, self).read_options_from_file()
