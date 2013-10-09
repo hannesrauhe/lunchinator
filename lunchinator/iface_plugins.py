@@ -57,6 +57,8 @@ class iface_plugin(IPlugin):
         IPlugin.deactivate(self)
     
     def get_option_names(self):
+        if self.option_names == None:
+            return [(aKey, aKey) for aKey in self.options.keys()]
         return self.option_names
     
     def get_option_description(self, key):
