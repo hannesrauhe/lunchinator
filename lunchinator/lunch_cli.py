@@ -1,5 +1,5 @@
-import sys, cmd, threading, time, shlex
-from lunchinator import get_server, get_settings
+import cmd, threading, time, shlex
+from lunchinator import get_server
 from lunchinator.lunch_server_controller import LunchServerController
 
 # enable tab completion on most platforms
@@ -19,8 +19,6 @@ class ServerThread(threading.Thread):
         get_server().running = False
 
 class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
-    FRIENDS = [ 'Alice', 'Adam', 'Barbara', 'Bob' ]
-    
     def __init__(self):
         cmd.Cmd.__init__(self)
         self.exitCode = 0
@@ -42,15 +40,43 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
         self.serverThread.stop()
         return self.exitCode
 
-    def do_call(self, args):
-        """Call for lunch.
-Usage: call [member1 [member2 [...]]]
-        """
-        args = shlex.split(args)
+    def cmdloop(self, intro=None):
+        print
+        print "Welcome to the Lunchinator. Type 'help' for an overview of the available commands."
+        while True:
+            try:
+                cmd.Cmd.cmdloop(self, intro=intro)
+                break
+            except KeyboardInterrupt:
+                print "^C"
+
+    def getHostList(self, args):
+        hosts = []
+        for member in args:
+            if len(member) == 0:
+                continue
+            ip = get_server().ipForMemberName(member)
+            if ip != None:
+                hosts.append(ip)
+            else:
+                # assume IP or host name
+                hosts.append(member)
+        return hosts
         
-    def complete_call(self, text, _line, _begidx, _endidx):
-        if text == None:
-            text = ""
+
+    def do_send(self, args):
+        """Send a message.
+Usage: send <message>                             - Send message to all members
+       send <message> <member1> [<member2> [...]] - Send message to specific members 
+        """
+        if len(args) == 0:
+            self.do_help("send")
+            return False
+        args = shlex.split(args)
+        message = args.pop(0)
+        get_server().call(message, hosts=self.getHostList(args))
+        
+    def completeHostnames(self, text):
         get_server().lockMembers()
         lunchmembers = None
         try:
@@ -60,14 +86,27 @@ Usage: call [member1 [member2 [...]]]
         finally:
             get_server().releaseMembers()
         return lunchmembers if lunchmembers != None else []
-    
-    def do_quit(self, _):
-        """ Exits the application """
-        return True
         
+    def complete_send(self, text, line, begidx, _endidx):
+        args = shlex.split(line[:begidx])
+        if len(args) > 1:
+            # message is already entered, complete hostnames
+            return self.completeHostnames(text)
+
+    def do_call(self, args):
+        """Call for lunch.
+Usage: call                             - Call all members
+       call <member1> [<member2> [...]] - Call specific members 
+        """
+        args = shlex.split(args)
+        get_server().call("lunch", hosts=self.getHostList(args))
+        
+    def complete_call(self, text, _line, _begidx, _endidx):
+        return self.completeHostnames(text)
+    
     def do_exit(self, _):
-        """ Exits the application """
+        """Exits the application."""
         return True
 
-    def do_EOF(self, line):
+    def do_EOF(self, _line):
         return True

@@ -187,6 +187,12 @@ class lunch_server(object):
             return self.member_info[addr][u'name']
         return addr
     
+    def ipForMemberName(self, name):
+        for ip, infoDict in self.member_info.iteritems():
+            if u'name' in infoDict and infoDict[u'name'] == name:
+                return ip
+        return None
+    
     def messagesCount(self):
         length = 0
         self.messagesLock.acquire()
