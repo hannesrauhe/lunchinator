@@ -20,5 +20,20 @@ class rot13(iface_gui_plugin):
             
         return w
         
+    def do_rot13(self, args):
+        """
+        Encryption, now for the command line.
+        Usage: rot13 <text> [<text2> [...]]
+        """
+        import string
+        import shlex
+        rot13 = string.maketrans( 
+            u"ABCDEFGHIJKLMabcdefghijklmNOPQRSTUVWXYZnopqrstuvwxyz", 
+            u"NOPQRSTUVWXYZnopqrstuvwxyzABCDEFGHIJKLMabcdefghijklm")
+        
+        args = shlex.split(args)
+        for aString in args:
+            print string.translate(aString, rot13)
+        
     def add_menu(self,menu):
         pass
