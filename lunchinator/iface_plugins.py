@@ -1,8 +1,7 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_warning, log_error, log_exception, convert_string
+from lunchinator import log_error, log_exception, convert_string
 import types
-from checkbox.reports.xml_report import convert_bool
 from copy import deepcopy
 
 class iface_plugin(IPlugin):    
@@ -292,6 +291,11 @@ class iface_database_plugin(iface_plugin):
         self.db_type="Unknown"
     
     def activate(self):
+        if isinstance(self, IPlugin):
+            print "is instance"
+        else:
+            print "is no instance"
+        
         iface_plugin.activate(self)
         try:
             self._connection = self._open()

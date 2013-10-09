@@ -18,7 +18,7 @@ class db_SQLITE(iface_database_plugin):
     lunch_dessert_schema = "CREATE TABLE LUNCH_DESSERT (DATE DATE, NAME TEXT, ADDITIVES TEXT, LAST_UPDATE DATE)"
     
     def __init__(self):
-        super(db_SQLITE, self).__init__()
+        iface_database_plugin.__init__(self)
         self.options = [(("sqlite_db_file", "SQLite DB file"),get_settings().get_main_config_dir()+"/statistics.sq3")]
         self.members={}
         self.db_type="sqlite"
