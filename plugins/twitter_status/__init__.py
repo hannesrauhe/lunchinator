@@ -33,8 +33,9 @@ class twitter_status(iface_called_plugin):
                 
                 self.last_time = time.time()
                 self.is_remote_account = True
-                self.remote_account="@"+self.twitter.user.screen_name
-                self.options["twitter_account"]=self.remote_account
+                status = self.twitter.statuses.update(status="I am up and running now!")
+                self.remote_account="@"+status[u'user'][u'screen_name']
+                #self.options["twitter_account"]=self.remote_account
                 get_server().call("HELO_TWITTER_REMOTE %s"%self.remote_account)
             except:
                 self.is_remote_account = False
