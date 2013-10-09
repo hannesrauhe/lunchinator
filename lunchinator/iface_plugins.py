@@ -3,11 +3,13 @@ from yapsy.PluginManager import PluginManagerSingleton
 from lunchinator import log_warning, log_error, log_exception, convert_string
 import types
 from checkbox.reports.xml_report import convert_bool
+from copy import deepcopy
 
 class iface_plugin(IPlugin):    
     def __init__(self):
         self.options = None
         self.option_names = None
+        self.option_defaults = {}
         self.option_callbacks = {}
         self.option_widgets = {}
         self.option_choice = {}
@@ -47,6 +49,8 @@ class iface_plugin(IPlugin):
                     dict_options[o] = v
                     self.option_names.append((o,o))
             self.options = dict_options
+            
+        self.option_defaults = deepcopy(self.options)
         self.read_options_from_file()
         return
 
@@ -163,6 +167,10 @@ class iface_plugin(IPlugin):
         return o in self.options
     
     def set_option(self, o, new_v, convert = True):
+        """
+        Set option o to the new value new_v.
+        If you are sure that new_v has the correct type, you can set convert = False.
+        """
         if o not in self.options:
             return
         v = self.options[o]
@@ -175,6 +183,21 @@ class iface_plugin(IPlugin):
                 self.set_option_value(o, new_v)
             if o in self.option_callbacks:
                 self.option_callbacks[o](o, new_v)
+                
+    def reset_option(self, o):
+        """
+        Reset an option to its default value.
+        """
+        if o in self.options:
+            self.set_option(o, self.option_defaults[o], False)
+            
+    def get_option_default_value(self, o):
+        """
+        Returns the default value of an option.
+        """
+        if o in self.option_defaults:
+            return self.option_defaults[o]
+        return None
                 
     def get_option(self, o):
         if o in self.options:

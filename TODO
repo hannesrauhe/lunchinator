@@ -1,9 +1,6 @@
 - lunch menu structured: tooltips
 - avatare auch nach pull-prinzip?
-- Maintainer info table not updated after member update
-- interface to exchange strings between plugins
 - test settings thoroughly
-- implement options reset
 - add plugin management to cli
 
 TODOs added by Hannes:

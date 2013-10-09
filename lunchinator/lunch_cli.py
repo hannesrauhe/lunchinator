@@ -124,7 +124,7 @@ Usage: call                             - Call all members
     def getOptionsOfCategory(self, cat):
         po = self.getPluginObject(cat)
         if po != None:
-            return po.get_option_names()
+            return [(aTuple[0], aTuple[1], po.get_option(aTuple[0]), po.get_option_default_value(aTuple[0])) for aTuple in po.get_option_names()]
         return None
     
     def listOptions(self, args):
@@ -140,13 +140,11 @@ Usage: call                             - Call all members
                 self.listOptions([])
                 return
             
-            for aTuple in optionNames:
-                name = aTuple[0]
-                desc = aTuple[1]
+            for name, desc, value, default in optionNames:
                 if desc == name:
-                    print name
+                    print "%s (value: %s, default: %s)" % (name, value, default)
                 else:
-                    print "%s - %s" % (name, desc)
+                    print "%s - %s (value: %s, default: %s)" % (name, desc, value, default)
     
     def getOption(self, args):
         if len(args) < 2:
@@ -163,7 +161,7 @@ Usage: call                             - Call all members
             print "Unknown option. The available options for category %s are:" % category
             self.listOptions([category])
         value = po.get_option(option)
-        print value, type(value) 
+        print value
     
     def setOption(self, args):
         if len(args) < 3:
@@ -183,7 +181,21 @@ Usage: call                             - Call all members
         po.set_option(convert_string(option), convert_string(args[2]))
     
     def resetOption(self, args):
-        pass
+        if len(args) < 2:
+            return self.do_help("options")
+        category = args[0]
+        po = self.getPluginObject(category)
+        if po == None:
+            print "Unknown category. The available categories are:"
+            self.listOptions([])
+            return
+        
+        option = args[1].lower()
+        if not po.has_option(option):
+            print "Unknown option. The available options for category %s are:" % category
+            self.listOptions([category])
+            
+        po.reset_option(option)
     
     def do_options(self, args):
         """Show or edit options.
