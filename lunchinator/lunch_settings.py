@@ -1,7 +1,7 @@
 import sys,os,getpass,ConfigParser,types,subprocess,logging,codecs
 
 '''integrate the cli-parser into the default_config sooner or later'''
-from lunchinator import log_exception, log_warning, log_error, setLoggingLevel, convert_string
+from lunchinator import log_exception, log_warning, log_error, setLoggingLevel, convert_string, MAIN_CONFIG_DIR
     
 class lunch_settings(object):
     _instance = None
@@ -33,7 +33,7 @@ class lunch_settings(object):
     
     def __init__(self):
         '''unchangeable for now'''
-        self._main_config_dir = unicode(os.getenv("HOME")+os.path.sep+".lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+os.path.sep+".lunchinator")
+        self._main_config_dir = MAIN_CONFIG_DIR
         self._members_file = unicode(self._main_config_dir+os.path.sep+"lunch_members.cfg")
         self._messages_file = unicode(self._main_config_dir+os.path.sep+"messages")
         self._log_file = unicode(self._main_config_dir+os.path.sep+"lunchinator.log")

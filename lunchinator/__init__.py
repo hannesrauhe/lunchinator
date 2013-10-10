@@ -3,6 +3,8 @@ __all__ = ["gui_general", "lunch_settings", "lunch_server", "iface_plugins", "lu
 
 import logging, logging.handlers, os, time
 
+MAIN_CONFIG_DIR = unicode(os.path.join(os.getenv("HOME"), ".lunchinator") if os.getenv("HOME") else os.path.join(os.getenv("USERPROFILE"), ".lunchinator"))
+        
 class _log_formatter (logging.Formatter):
     LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -23,11 +25,9 @@ class _lunchinator_logger:
     @classmethod
     def get_singleton_logger(cls):
         if cls.lunch_logger == None:
-            #TODO: how do we make sure, that this is the same directory like in the lunch_settings?
-            main_config_dir = os.getenv("HOME")+os.sep+".lunchinator" if os.getenv("HOME") else os.getenv("USERPROFILE")+os.sep+".lunchinator"
-            if not os.path.exists(main_config_dir ):
-                os.makedirs(main_config_dir )
-            log_file = main_config_dir+os.sep+"lunchinator.log"
+            if not os.path.exists(MAIN_CONFIG_DIR ):
+                os.makedirs(MAIN_CONFIG_DIR )
+            log_file = MAIN_CONFIG_DIR+os.sep+"lunchinator.log"
                 
             cls.logfileHandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
             cls.logfileHandler.setFormatter(_log_formatter())
