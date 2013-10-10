@@ -5,6 +5,7 @@ from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.cli.cli_message import CLIMessageHandling
 from lunchinator.cli.cli_option import CLIOptionHandling
 from lunchinator.cli.cli_plugin import CLIPluginHandling
+from lunchinator.lunch_server import EXIT_CODE_UPDATE
 
 # enable tab completion on most platforms
 
@@ -102,6 +103,12 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
                 break
             except KeyboardInterrupt:
                 print "^C"
+    
+    def do_update(self, _):
+        """Exits the application with the update exit code."""
+        print "Shutting down for an update..."
+        self.exitCode = EXIT_CODE_UPDATE
+        return True
     
     def do_exit(self, _):
         """Exits the application."""
