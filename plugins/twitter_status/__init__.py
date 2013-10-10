@@ -50,7 +50,7 @@ class twitter_status(iface_called_plugin):
     def post_update(self,msg):
         if self.twitter:        
             try:
-                log_info("Twitter: posting status: "%msg)
+                log_info("Twitter: posting status: %s"%msg)
                 log_exception("I do not post now, here is the stacktrace:")
 #                status = self.twitter.statuses.update(status=msg[:140])
 #                self.remote_account="@"+status[u'user'][u'screen_name']
