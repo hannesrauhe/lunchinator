@@ -431,7 +431,7 @@ class lunch_server(object):
         if not msg.startswith("ignore"):
             self.controller.processMessage(msg, addr)
             
-            if "lunch" in msg.lower():# and self._is_now_in_time_span(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
+            if "lunch" in msg.lower() and self._is_now_in_time_span(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
                 timenum = mktime(mtime)
                 if timenum - self.last_lunch_call > get_settings().get_mute_timeout():
                     self.last_lunch_call = timenum
