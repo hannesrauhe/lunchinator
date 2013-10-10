@@ -1,0 +1,9 @@
+[Core]
+Name = Lunch Button
+Module = lunch_button
+
+[Documentation]
+Author = Cornelius Ratsch
+Version = 0.1 (yes, early beta)
+Website = http://www.lunchinator.de
+Description = A big button. That calls for lunch.
