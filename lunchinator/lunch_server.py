@@ -111,7 +111,6 @@ class lunch_server(object):
     '''listening method - should be started in its own thread'''    
     def start_server(self):
         self.initialize()
-        raise "foo"
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service")
         self.running = True
         self.my_master=-1 #the peer i use as master
