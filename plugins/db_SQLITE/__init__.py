@@ -23,12 +23,6 @@ class db_SQLITE(iface_database_plugin):
         self.members={}
         self.db_type="sqlite"
         
-    def activate(self):
-        iface_database_plugin.activate(self)
-        
-    def deactivate(self):
-        iface_database_plugin.deactivate(self)
-        
     def _open(self):
         return sqlite3.connect(self.options["sqlite_db_file"])
         

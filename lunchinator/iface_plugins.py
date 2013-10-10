@@ -1,6 +1,6 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_error, log_exception, convert_string
+from lunchinator import log_warning, log_error, log_exception, log_info, convert_string
 import types
 from copy import deepcopy
 
@@ -289,37 +289,60 @@ class iface_database_plugin(iface_plugin):
     def __init__(self):
         super(iface_database_plugin, self).__init__()
         self.db_type="Unknown"
-    
-    def activate(self):
-        if isinstance(self, IPlugin):
-            print "is instance"
-        else:
-            print "is no instance"
+        self._connection=None
         
+    ''' do not overwrite these methods '''
+    
+    #do NOT overwrite this method -> use _post_open instead
+    def activate(self):        
         iface_plugin.activate(self)
-        try:
-            self._connection = self._open()
-        except:
-            log_error("Problem while opening DB connection in plugin %s"%(self.db_type))
-            raise
+        self._open_connection()
 
-    def deactivate(self):
+    #do NOT overwrite this method -> use _pre_close instead
+    def deactivate(self):        
+        self._close_connection()
+        iface_plugin.deactivate(self)        
+        
+    def _open_connection(self):
         try:
+            self._connection = self._open()  
+            try:
+                self._post_open()
+            except:
+                log_exception("Problem after opening DB connection in plugin %s"%(self.db_type))
+        except:
+            log_exception("Problem while opening DB connection in plugin %s"%(self.db_type))      
+        
+    def _close_connection(self):        
+        try:            
+            self._pre_close()
+        except:
+            log_exception("Problem while closing DB connection in plugin %s"%(self.db_type))
+        try:            
             self._close()
         except:
-            log_error("Problem while closing DB connection in plugin %s"%(self.db_type))
-            raise
-        iface_plugin.deactivate(self)
+            log_exception("Problem while closing DB connection in plugin %s"%(self.db_type))
         
+    def _restart_connection(self,old_setting,new_setting):
+        log_info("Trying to reconnect to database")
+        self._close_connection()
+        self._open_connection()
+            
     def _conn(self):
         return self._connection
-        
+            
     def commit(self):
         if self._conn():
             self._conn().commit()
         #raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
-    '''abstract methods - basic functionality'''
+    '''abstract methods - basic functionality'''    
+    def _post_open(self):
+        pass
+    
+    def _pre_close(self):
+        pass
+    
     def _open(self):
         raise  NotImplementedError("%s does not implement the open method"%self.db_type)
     
