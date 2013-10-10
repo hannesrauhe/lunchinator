@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 import subprocess, sys, ctypes
-from lunchinator import get_server, log_exception, get_settings, convert_string, log_error
+from lunchinator import get_server, log_exception, log_warning, get_settings, convert_string, log_error
 from lunchinator.download_thread import DownloadThread
 from lunchinator.utilities import displayNotification, getValidQtParent
 
@@ -75,7 +75,12 @@ class tdtnotify(iface_gui_plugin):
             thread.start()
           
     def download_pic(self,force=False):
-        self.forceDownload = force
+        self.forceDownload = force        
+        try:
+            getValidQtParent()
+        except:
+            log_warning("TDT Notify does not work without QT")
+            return
         downloadThread = DownloadThread(getValidQtParent(), "http://api.tumblr.com/v2/blog/"+self.options['blog_name']+".tumblr.com/posts/photo?api_key=SyMOX3RGVS4OnK2bGWBcXNUfX34lnzQJY5FRB6uxpFqjEHz2SY")
         downloadThread.success.connect(self.downloadedJSON)
         downloadThread.error.connect(self.errorDownloadingJSON)
@@ -86,7 +91,7 @@ class tdtnotify(iface_gui_plugin):
         pass
         
     def process_event(self,cmd,value,_,__):
-        if cmd=="HELO_TDTNOTIFY_NEW_PIC" or (time.time()-self.last_time) > (60*self.options["polling_time"]):
+        if cmd=="HELO_TDTNOTIFY_NEW_PIC" or (time.time()-self.last_time) > (60*self.options["polling_time"]):            
             self.last_time = time.time()
             if not cmd=="HELO_TDTNOTIFY_NEW_PIC":
                 get_server().call("HELO_TDTNOTIFY_POLL "+str(self.options["polling_time"]))
