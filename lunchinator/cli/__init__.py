@@ -1,7 +1,11 @@
-import shlex, inspect, sys
+import shlex, inspect, sys, re
 from lunchinator import get_server, log_exception
 
 class LunchCLIModule(object):
+    MAX_COL_WIDTH = 60
+    MAX_TOTAL_WIDTH = 100
+    COL_DEL = "  "
+    
     def __init__(self):
         super(LunchCLIModule, self).__init__()
         self.outputTable = []
@@ -26,6 +30,17 @@ class LunchCLIModule(object):
         else:
             print "Unknown command: %s" % cmd
         
+    def cutString(self, string, maxLen):
+        if maxLen >= len(string):
+            return string
+        
+        # if string[maxLen + 1] is whitespace, it is OK
+        index = string[:maxLen + 1].rfind(" ")
+        if index == -1:
+            return string[:maxLen]
+        # include whitespace
+        return string[:index + 1] 
+        
     def flushOutput(self):
         columns = []
         for aRow in self.outputTable:
@@ -33,13 +48,37 @@ class LunchCLIModule(object):
                 for _ in range(len(aRow) - len(columns)):
                     columns.append(0)
             for col, aValue in enumerate(aRow):
-                columns[col] = max((columns[col], len(self.convertToString(aValue))))
+                columns[col] = min(self.MAX_COL_WIDTH, max((columns[col], len(self.convertToString(aValue)))))
+        
+        totalWidth = sum(columns) + len(columns) * len(self.COL_DEL)
+        if totalWidth > self.MAX_TOTAL_WIDTH:
+            ratio = float(self.MAX_TOTAL_WIDTH) / totalWidth
+            newTotal = 0
+            for i in range(len(columns) - 1):
+                columns[i] = columns[i] * ratio
+                newTotal += columns[i]
+            # assign remainint width to last column
+            columns[-1] = self.MAX_TOTAL_WIDTH - newTotal
         
         # last column does not need to be padded
-        columns[-1] = 0
+        # TODO
+        #columns[-1] = 0
         
         for aRow in self.outputTable:
-            print "".join(word.ljust(columns[col] + 1) for col, word in enumerate(aRow))
+            remaining = [len(aVal) for aVal in aRow]
+            totalRemaining = sum(remaining)
+            
+            while totalRemaining > 0:
+                # add new row until nothing remains
+                rowWords = []
+                for col, word in enumerate(aRow):
+                    cutString = self.cutString(word[len(word) - remaining[col]:], columns[col])
+                    remaining[col] -= len(cutString)
+                    totalRemaining -= len(cutString)
+                    if cutString.endswith(" "):
+                        cutString = cutString[:-1]
+                    rowWords.append(cutString.ljust(columns[col]))
+                print self.COL_DEL.join(rowWords)
         
         self.outputTable = []
     
