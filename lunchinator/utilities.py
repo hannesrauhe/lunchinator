@@ -1,7 +1,10 @@
 import subprocess,sys,ctypes
-from lunchinator import log_exception, get_settings, get_server, log_warning
+from lunchinator import log_exception, get_settings, get_server, log_warning,\
+    log_debug
 import os
 from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
+from Image import NONE
+import threading
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -30,15 +33,46 @@ def displayNotification(name,msg,icon):
             _drawAttentionWindows()
     except:
         log_exception("error displaying notification")
-            
+        
+class AttentionGetter(object):
+    _instance = None
+    
+    class AttentionThread(threading.Thread):
+        def __init__(self, audioFile):
+            super(AttentionGetter.AttentionThread, self).__init__()
+            self._audioFile = audioFile
+        
+        def run(self):        
+            myPlatform = getPlatform()
+            if myPlatform == PLATFORM_LINUX:
+                _drawAttentionLinux(self._audioFile)
+            elif myPlatform == PLATFORM_MAC:
+                _drawAttentionMac(self._audioFile)
+            elif myPlatform == PLATFORM_WINDOWS:
+                _drawAttentionWindows()
+    
+    def __init__(self):
+        super(AttentionGetter, self).__init__()
+        self.attentionThread = None
+        
+    @classmethod
+    def getInstance(cls):
+        if cls._instance == None:
+            cls._instance = cls()
+        return cls._instance
+    
+    def drawAttention(self, audioFile):
+        if self.attentionThread != None and self.attentionThread.isAlive():
+            # someone is already drawing attention at the moment
+            log_debug("Drawing attention is already in progress.")
+            return
+        else:
+            log_debug("Starting new attention thread.")
+            self.attentionThread = self.AttentionThread(audioFile)
+            self.attentionThread.start()
+        
 def drawAttention(audioFile):
-    myPlatform = getPlatform()
-    if myPlatform == PLATFORM_LINUX:
-        _drawAttentionLinux(audioFile)
-    elif myPlatform == PLATFORM_MAC:
-        _drawAttentionMac(audioFile)
-    elif myPlatform == PLATFORM_WINDOWS:
-        _drawAttentionWindows()
+    AttentionGetter.getInstance().drawAttention(audioFile)
         
 def _drawAttentionLinux(audioFile):       
     try:
