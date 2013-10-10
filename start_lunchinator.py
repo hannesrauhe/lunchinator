@@ -14,7 +14,7 @@ while os.path.dirname(path) != path:
     
 from optparse import OptionParser
 from lunchinator import log_info, log_warning, log_error, get_settings,\
-    get_server
+    get_server, log_exception
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP
     
 def parse_args():
@@ -124,8 +124,10 @@ if __name__ == "__main__":
             from lunchinator import lunch_cli
             cli = lunch_cli.LunchCommandLineInterface()
             sys.exit(cli.start())
+        except SystemExit:
+            pass
         except:
-            log_error("cli version cannot be started, is readline installed")
+            log_exception("cli version cannot be started, is readline installed")
             sys.exit(-1)
     elif options.noGui:
     #    sys.settrace(trace)
