@@ -1,5 +1,8 @@
 import string #fixed typo was using
-from PyQt4.QtGui import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QLineEdit, QSizePolicy
+from functools import partial
+from PyQt4.QtGui import QWidget, QHBoxLayout, QPushButton, QLineEdit, QSizePolicy, QToolButton, QMenu, QAction
+from PyQt4.QtCore import Qt
+from lunchinator import get_server
 
 class rot13box(QWidget):
     def __init__(self, parent):
@@ -8,25 +11,42 @@ class rot13box(QWidget):
         self.but = None
         self.buffer = None
         
-        layout = QVBoxLayout(self)
-        
         self.entry = QLineEdit(self)
         self.but = QPushButton("ROT13", self)
         if self.buffer is not None:
             self.encodeText(self.buffer)
         
-        layout.addWidget(self.entry)
         
-        butLayout = QHBoxLayout()
-        butLayout.addWidget(self.but)
-        butLayout.addWidget(QWidget(self), 1)
-        butLayout.setSpacing(0)
-        layout.addLayout(butLayout)
+        layout = QHBoxLayout(self)
+        grabButton = QToolButton(parent)
+        grabButton.setText("Msg")
+        grabButton.setMinimumHeight(self.but.sizeHint().height())
+        self.msgMenu = QMenu(grabButton)
+        self.msgMenu.aboutToShow.connect(self.updateMsgMenu)
+        grabButton.setMenu(self.msgMenu)
+        grabButton.setPopupMode(QToolButton.InstantPopup)
+        #grabButton.clicked.connect(self.grabMessage)
+        
+        layout.addWidget(grabButton)
+        layout.addWidget(self.entry)
+        layout.addWidget(self.but)
         
         self.but.clicked.connect(self.enc)
         
         self.setMaximumHeight(self.sizeHint().height())
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        
+    def updateMsgMenu(self):
+        self.msgMenu.clear()
+        get_server().lockMessages()
+        try:
+            for i in range(min(10, len(get_server().getMessages()))):
+                self.msgMenu.addAction(get_server().getMessages()[i][2], partial(self.encodeText, get_server().getMessages()[i][2]))
+        finally:
+            get_server().releaseMessages()
+        
+    def grabMessage(self):
+        self.encodeText(get_server().getMessage(0)[2])
         
     def encodeText(self,text):
         if self.entry is not None:
