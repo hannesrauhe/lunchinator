@@ -48,7 +48,7 @@ class CLIOptionHandling(LunchCLIModule):
     
     def getOption(self, args):
         if len(args) < 2:
-            return self.do_help("option")
+            return self.printHelp("option")
         category = args[0]
         po = self.getPluginObject(category)
         if po == None:
@@ -65,7 +65,7 @@ class CLIOptionHandling(LunchCLIModule):
     
     def setOption(self, args):
         if len(args) < 3:
-            return self.do_help("option")
+            return self.printHelp("option")
         category = args[0]
         po = self.getPluginObject(category)
         if po == None:
@@ -82,7 +82,7 @@ class CLIOptionHandling(LunchCLIModule):
     
     def resetOption(self, args):
         if len(args) < 2:
-            return self.do_help("option")
+            return self.printHelp("option")
         category = args[0]
         po = self.getPluginObject(category)
         if po == None:
@@ -107,7 +107,7 @@ class CLIOptionHandling(LunchCLIModule):
                option reset <category> <option>           - reset the value of an option.
         """
         if len(args) == 0:
-            return self.do_help("option")
+            return self.printHelp("option")
         args = shlex.split(args)
         subcmd = args.pop(0)
         if subcmd == "list":
@@ -119,7 +119,7 @@ class CLIOptionHandling(LunchCLIModule):
         elif subcmd == "reset":
             self.resetOption(args)
         else:
-            return self.do_help("option")
+            return self.printHelp("option")
        
     def completeList(self, _args, argNum, text):
         if argNum == 0:
