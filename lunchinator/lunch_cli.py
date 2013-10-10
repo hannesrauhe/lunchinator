@@ -1,6 +1,6 @@
 import cmd, threading, time, inspect
 from functools import partial
-from lunchinator import get_server, log_error, utilities
+from lunchinator import get_server, log_error, utilities, log_exception
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.cli.cli_message import CLIMessageHandling
 from lunchinator.cli.cli_option import CLIOptionHandling
@@ -20,7 +20,11 @@ if utilities.getPlatform() != utilities.PLATFORM_WINDOWS:
 
 class ServerThread(threading.Thread):
     def run(self):
-        get_server().start_server()
+        try:
+            get_server().start_server()
+        except:
+            log_exception("Exception in Lunch Server")
+            get_server().running = False
         
     def stop(self):
         get_server().running = False
@@ -85,18 +89,33 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
     def start(self):
         self.serverThread = ServerThread()
         self.serverThread.start()
+        
         print "Waiting until the lunch server is started..."
-        while not self.initialized:
-            time.sleep(1)
-        print "Lunch server started."
-        self.cmdloop()
-        print "Waiting until the lunch server is stopped..."
-        self.serverThread.stop()
-        return self.exitCode
+        waited = 0
+        while not self.initialized and waited < 5:
+            time.sleep(0.5)
+            waited = waited + 0.5
+        if not self.initialized:
+            print "Lunch server did not initialize."
+            self.serverThread.stop()
+        else:
+            print "Lunch server started."
+        
+        try:
+            self.cmdloop()
+        finally:
+            if self.initialized:
+                print "Waiting until the lunch server is stopped..."
+                self.serverThread.stop()
+            return self.exitCode
 
     def cmdloop(self, intro=None):
         print
-        print "Welcome to the Lunchinator. Type 'help' for an overview of the available commands."
+        if self.initialized:
+            print "Welcome to the Lunchinator. Type 'help' for an overview of the available commands."
+        else:
+            print "Lunch Server not running. You can still use some commands like sending messages."
+            
         while True:
             try:
                 cmd.Cmd.cmdloop(self, intro=intro)

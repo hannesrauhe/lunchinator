@@ -1,7 +1,6 @@
 import string #fixed typo was using
 from functools import partial
-from PyQt4.QtGui import QWidget, QHBoxLayout, QPushButton, QLineEdit, QSizePolicy, QToolButton, QMenu, QAction
-from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QWidget, QHBoxLayout, QPushButton, QLineEdit, QSizePolicy, QToolButton, QMenu
 from lunchinator import get_server
 
 class rot13box(QWidget):
