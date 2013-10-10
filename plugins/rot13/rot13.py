@@ -18,8 +18,8 @@ class rot13box(QWidget):
         
         layout = QHBoxLayout(self)
         grabButton = QToolButton(parent)
-        grabButton.setText("Msg")
-        grabButton.setMinimumHeight(self.but.sizeHint().height())
+        grabButton.setText("Msg ")
+        #grabButton.setMinimumHeight(self.but.sizeHint().height())
         self.msgMenu = QMenu(grabButton)
         self.msgMenu.aboutToShow.connect(self.updateMsgMenu)
         grabButton.setMenu(self.msgMenu)
