@@ -7,20 +7,29 @@ class CLIPluginHandling(LunchCLIModule):
         super(CLIPluginHandling, self).__init__()
         self.parent = parent
     
-    def getPluginNames(self, listActivated, listDeactivated):
+    def getPluginNames(self, listActivated, listDeactivated, category = None):
         try:
-            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+            plugins = None
+            if category == None:
+                plugins = get_server().plugin_manager.getAllPlugins()
+            else:
+                plugins = get_server().plugin_manager.getPluginsOfCategory(category)
+            
+            for pluginInfo in plugins:
                 if pluginInfo.plugin_object.is_activated and listActivated or\
                         not pluginInfo.plugin_object.is_activated and listDeactivated:
                     yield (pluginInfo.name, pluginInfo.description)
         except:
             log_exception("while collecting option categories")
             
-    def listPlugins(self, _args):
+    def listPlugins(self, args):
         try:
-            for name, desc in sorted(self.getPluginNames(True, False), key=lambda aTuple : aTuple[0]):
-                self.appendOutput(name, "loaded", desc)
-            for name, desc in sorted(self.getPluginNames(False, True), key=lambda aTuple : aTuple[0]):
+            category = None
+            if len(args) > 0:
+                category = args[0]
+            for name, desc in sorted(self.getPluginNames(True, False, category), key=lambda aTuple : aTuple[0]):
+                self.appendOutput(name, "(loaded)", desc)
+            for name, desc in sorted(self.getPluginNames(False, True, category), key=lambda aTuple : aTuple[0]):
                 self.appendOutput(name, "", desc)
             self.flushOutput()
         except:
@@ -28,7 +37,7 @@ class CLIPluginHandling(LunchCLIModule):
             
     def loadPlugin(self, args):
         try:
-            pluginName = args[0].upper()
+            pluginName = args.pop(0).upper()
             pInfo = None
             for pluginInfo in get_server().plugin_manager.getAllPlugins():
                 if pluginInfo.name.upper() == pluginName:
@@ -65,9 +74,9 @@ class CLIPluginHandling(LunchCLIModule):
     def do_plugin(self, args):
         """
         Plugin management
-        Usage: plugin list            - list the available plugins
-               plugin load <plugin>   - get an overview of the options in a category
-               plugin unload <plugin> - print the current value of an option
+        Usage: plugin list [<category>] - list the available plugins
+               plugin load <plugin>     - get an overview of the options in a category
+               plugin unload <plugin>   - print the current value of an option
         """
         if len(args) == 0:
             return self.printHelp("plugin")
@@ -84,7 +93,7 @@ class CLIPluginHandling(LunchCLIModule):
         pass
     
     def completeList(self, _args, _argNum, _text):
-        return None
+        return (aCat for aCat in get_server().plugin_manager.getCategories() if aCat.startswith(_text))
     
     def completePluginNames(self, _args, argNum, text, listActivated, listDeactivated):
         if argNum == 0:
