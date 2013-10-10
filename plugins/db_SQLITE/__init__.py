@@ -29,7 +29,7 @@ class db_SQLITE(iface_database_plugin):
     def _close(self):
         self._conn().close()   
         
-    def _execute(self, query, wildcards, returnResults=True, commit=False):
+    def _execute(self, query, wildcards, returnResults=True, commit=False, returnHeader=False):
         if not self._conn():
             raise Exception("not connected to a database")
         
@@ -42,6 +42,12 @@ class db_SQLITE(iface_database_plugin):
             cursor.execute(query)
         if commit:
             self._conn().commit()
+        header=[]
+        if cursor.description:
+            for d in cursor.description:
+                header.append(d[0])
+        if returnHeader:
+            return header,cursor.fetchall()
         if returnResults:
             return cursor.fetchall()
             

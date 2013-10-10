@@ -349,7 +349,7 @@ class iface_database_plugin(iface_plugin):
     def _close(self):
         raise  NotImplementedError("%s does not implement the close method"%self.db_type)
             
-    def _execute(self, query, wildcards, returnResults=True, commit=False):
+    def _execute(self, query, wildcards, returnResults=True, commit=False, returnHeader=False):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
     def existsTable(self, tableName):
@@ -392,4 +392,7 @@ class iface_database_plugin(iface_plugin):
         
     def query(self, query, *wildcards):
         return self._execute(query, wildcards, returnResults=True, commit=False)
+    
+    def queryWithHeader(self, query, *wildcards):
+        return self._execute(query, wildcards, returnResults=True, commit=False, returnHeader=True)
     
