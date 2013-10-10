@@ -32,7 +32,7 @@ class lunch_server(object):
         self.new_msg = False
         self.my_master = -1    
         self.peer_nr=0 #the number of the peer i contacted to be my master
-        self.mute_time_until=0
+        self.last_lunch_call=0
         self.last_messages = []
         self.members = []
         self.member_timeout = {}
@@ -431,13 +431,13 @@ class lunch_server(object):
         if not msg.startswith("ignore"):
             self.controller.processMessage(msg, addr)
             
-            if "lunch" in msg.lower() and self._is_now_in_time_span(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
+            if "lunch" in msg.lower():# and self._is_now_in_time_span(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
                 timenum = mktime(mtime)
-                if timenum>self.mute_time_until:
-                    self.mute_time_until=timenum+get_settings().get_mute_timeout()
+                if timenum - self.last_lunch_call > get_settings().get_mute_timeout():
+                    self.last_lunch_call = timenum
                     self.controller.processLunchCall(msg, addr)
                 else:
-                    log_debug("messages will not trigger alarm: %s: [%s] %s until %s"%(t,m,msg,strftime("%a, %d %b %Y %H:%M:%S", localtime(self.mute_time_until))))
+                    log_debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)"%(t,m,msg,strftime("%a, %d %b %Y %H:%M:%S", localtime(timenum + get_settings().get_mute_timeout()))))
       
     def _update_member_info(self, ip, newInfo, requestAvatar = True):
         self.lockMembers()
