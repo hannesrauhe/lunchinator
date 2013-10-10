@@ -10,7 +10,7 @@ class CLIMessageHandling(LunchCLIModule):
                send <message> <member1> [<member2> [...]] - Send message to specific members 
         """
         if len(args) == 0:
-            self.do_help("send")
+            self.printHelp("send")
             return False
         args = shlex.split(args)
         message = args.pop(0)

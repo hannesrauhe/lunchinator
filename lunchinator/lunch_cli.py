@@ -1,19 +1,21 @@
 import cmd, threading, time, inspect, new
 from functools import partial
-from lunchinator import get_server, log_error, get_settings
+from lunchinator import get_server, log_error, get_settings, utilities
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.cli.cli_message import CLIMessageHandling
 from lunchinator.cli.cli_option import CLIOptionHandling
 from lunchinator.cli.cli_plugin import CLIPluginHandling
 
 # enable tab completion on most platforms
-import readline
-import rlcompleter
 
-if 'libedit' in readline.__doc__:
-    readline.parse_and_bind("bind ^I rl_complete")
-else:
-    readline.parse_and_bind("tab: complete")
+if utilities.getPlatform() != utilities.PLATFORM_WINDOWS:
+    import readline
+    import rlcompleter
+
+    if 'libedit' in readline.__doc__:
+        readline.parse_and_bind("bind ^I rl_complete")
+    else:
+        readline.parse_and_bind("tab: complete")
 
 class ServerThread(threading.Thread):
     def run(self):

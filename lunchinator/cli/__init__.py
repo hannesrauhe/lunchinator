@@ -1,8 +1,44 @@
-import shlex, inspect
+import shlex, inspect, sys
 from lunchinator import get_server, log_exception
 
 class LunchCLIModule(object):
+    def __init__(self):
+        super(LunchCLIModule, self).__init__()
+        self.outputTable = []
     
+    def appendOutput(self, row):
+        self.outputTable.append(row)
+        
+    def convertToString(self, value):
+        if type(value) in (str, unicode):
+            return value
+        return str(value)
+        
+    def printHelp(self, cmd):
+        """ Emulate do_help from cmd.Cmd """
+        if hasattr(self.__class__, "do_%s" % cmd):
+            method = getattr(self.__class__, "do_%s" % cmd)
+            doc = inspect.getdoc(method)
+            if doc:
+                print doc
+            else:
+                print "No help available for command %s" % cmd
+        else:
+            print "Unknown command: %s" % cmd
+        
+    def flushOutput(self):
+        columns = []
+        for aRow in self.outputTable:
+            if len(aRow) > len(columns):
+                for _ in range(len(aRow) - len(columns)):
+                    columns.append(0)
+            for col, aValue in enumerate(aRow):
+                columns[col] = max((columns[col], len(self.convertToString(aValue))))
+        
+        for aRow in self.outputTable:
+            print "".join(word.ljust(columns[col] + 1) for col, word in enumerate(aRow))
+        
+        self.outputTable = []
     
     def getHostList(self, args):
         hosts = []

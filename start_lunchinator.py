@@ -120,15 +120,15 @@ if __name__ == "__main__":
         recv_nr=get_server().call("HELO_STOP "+msg,client="127.0.0.1")
         print "Sent stop command to local lunchinator"
     elif options.cli:
+        retCode = 1
         try:
             from lunchinator import lunch_cli
             cli = lunch_cli.LunchCommandLineInterface()
-            sys.exit(cli.start())
-        except SystemExit:
-            pass
+            sys.retCode = cli.start()
         except:
             log_exception("cli version cannot be started, is readline installed")
-            sys.exit(-1)
+        finally:
+            sys.exit(retCode)
     elif options.noGui:
     #    sys.settrace(trace)
         get_server().no_updates = options.noUpdates

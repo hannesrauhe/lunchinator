@@ -58,7 +58,7 @@ class CLIPluginHandling(LunchCLIModule):
                plugin unload <plugin> - print the current value of an option
         """
         if len(args) == 0:
-            return self.do_help("plugin")
+            return self.printHelp("plugin")
         args = shlex.split(args)
         subcmd = args.pop(0)
         if subcmd == "list":
@@ -68,5 +68,5 @@ class CLIPluginHandling(LunchCLIModule):
         elif subcmd == "unload":
             self.unloadPlugin(args)
         else:
-            return self.do_help("plugin")
+            return self.printHelp("plugin")
         pass
