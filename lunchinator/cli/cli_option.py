@@ -24,7 +24,7 @@ class CLIOptionHandling(LunchCLIModule):
     def getOptionsOfCategory(self, cat):
         po = self.getPluginObject(cat)
         if po != None:
-            return [(aTuple[0], aTuple[1], po.get_option(aTuple[0]), po.get_option_default_value(aTuple[0])) for aTuple in po.get_option_names()]
+            return ((aTuple[0], aTuple[1], po.get_option(aTuple[0]), po.get_option_default_value(aTuple[0])) for aTuple in po.get_option_names())
         return None
     
     def listOptions(self, args):
@@ -124,7 +124,7 @@ class CLIOptionHandling(LunchCLIModule):
     def completeList(self, _args, argNum, text):
         if argNum == 0:
             text = text.lower()
-            candidates = [aTuple[0].lower().replace(" ", "\\ ") for aTuple in self.getOptionCategories()]
+            candidates = (aTuple[0].lower().replace(" ", "\\ ") for aTuple in self.getOptionCategories())
             return [aValue for aValue in candidates if aValue.startswith(text)]
        
     def completeGet(self, args, argNum, text):
@@ -136,7 +136,7 @@ class CLIOptionHandling(LunchCLIModule):
             cat = args[0]
             candidates = self.getOptionsOfCategory(cat)
             if candidates != None:
-                candidates = [aTuple[0].lower().replace(" ", "\\ ") for aTuple in self.getOptionsOfCategory(cat)]
+                candidates = (aTuple[0].lower().replace(" ", "\\ ") for aTuple in self.getOptionsOfCategory(cat))
                 return [aValue for aValue in candidates if aValue.startswith(text)]
             return None
        
