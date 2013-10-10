@@ -1,9 +1,8 @@
 import subprocess,sys,ctypes
-from lunchinator import log_exception, get_settings, get_server, log_warning,\
+from lunchinator import log_exception, get_server, log_warning,\
     log_debug
 import os
 from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
-from Image import NONE
 import threading
 
 PLATFORM_OTHER = -1
