@@ -7,10 +7,22 @@ class CLIPluginHandling(LunchCLIModule):
         super(CLIPluginHandling, self).__init__()
         self.parent = parent
     
+    def getPluginNames(self, listActivated, listDeactivated):
+        try:
+            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                if pluginInfo.plugin_object.is_activated and listActivated or\
+                        not pluginInfo.plugin_object.is_activated and listDeactivated:
+                    yield (pluginInfo.name, pluginInfo.description)
+        except:
+            log_exception("while collecting option categories")
+            
     def listPlugins(self, _args):
         try:
-            for pluginInfo in sorted(get_server().plugin_manager.getAllPlugins(), key=lambda pInfo : pInfo.name):
-                print "%s%s" % (pluginInfo.name, " (loaded)" if pluginInfo.plugin_object.is_activated else "")
+            for name, desc in sorted(self.getPluginNames(True, False), key=lambda aTuple : aTuple[0]):
+                self.appendOutput(name, "loaded", desc)
+            for name, desc in sorted(self.getPluginNames(False, True), key=lambda aTuple : aTuple[0]):
+                self.appendOutput(name, "", desc)
+            self.flushOutput()
         except:
             log_exception("while printing plugin names")
             
@@ -70,3 +82,37 @@ class CLIPluginHandling(LunchCLIModule):
         else:
             return self.printHelp("plugin")
         pass
+    
+    def completeList(self, _args, _argNum, _text):
+        return None
+    
+    def completePluginNames(self, _args, argNum, text, listActivated, listDeactivated):
+        if argNum == 0:
+            text = text.lower()
+            candidates = (name.lower().replace(" ", "\\ ") for name, _desc in self.getPluginNames(listActivated, listDeactivated))
+            return (aValue for aValue in candidates if aValue.startswith(text))
+    
+    def complete_plugin(self, text, line, begidx, endidx):
+        argNum, text = self.getArgNum(text, line, begidx, endidx)
+        
+        result = None
+        if argNum == 1:
+            # subcommand
+            return [aVal for aVal in ("list", "load", "unload") if aVal.startswith(text)]
+        elif argNum >= 2:
+            # argument to subcommand
+            args = shlex.split(line)[1:]
+            subcmd = args.pop(0)
+            
+            if subcmd == "list":
+                result = self.completeList(args, argNum - 2, text)
+            elif subcmd == "load":
+                result = self.completePluginNames(args, argNum - 2, text, listActivated=False, listDeactivated=True)
+            elif subcmd == "unload":
+                result = self.completePluginNames(args, argNum - 2, text, listActivated=True, listDeactivated=False)
+
+        numWordsToOmit = 0 if len(text.split()) == 0 else len(text.split()) - 1
+        if result != None:
+            return [" ".join(aValue.split()[numWordsToOmit:]) for aValue in result]
+        return None
+    

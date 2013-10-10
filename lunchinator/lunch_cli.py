@@ -1,6 +1,6 @@
-import cmd, threading, time, inspect, new
+import cmd, threading, time, inspect
 from functools import partial
-from lunchinator import get_server, log_error, get_settings, utilities
+from lunchinator import get_server, log_error, utilities
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.cli.cli_message import CLIMessageHandling
 from lunchinator.cli.cli_option import CLIOptionHandling
@@ -47,6 +47,9 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
         
     def printString(self, s):
         print s
+        
+    def emptyline(self):
+        return False
         
     def addModule(self, cliModule):
         for name, value in inspect.getmembers(cliModule, inspect.ismethod):

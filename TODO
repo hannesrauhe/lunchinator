@@ -3,7 +3,6 @@
 - test settings thoroughly
 - add plugin management to cli
 - sort all cli output
-- finalize plugin management (completion, list [loaded | unloaded | prefix])
 - do_update
 
 TODOs added by Hannes:

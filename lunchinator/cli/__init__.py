@@ -6,7 +6,7 @@ class LunchCLIModule(object):
         super(LunchCLIModule, self).__init__()
         self.outputTable = []
     
-    def appendOutput(self, row):
+    def appendOutput(self, *row):
         self.outputTable.append(row)
         
     def convertToString(self, value):
@@ -34,6 +34,9 @@ class LunchCLIModule(object):
                     columns.append(0)
             for col, aValue in enumerate(aRow):
                 columns[col] = max((columns[col], len(self.convertToString(aValue))))
+        
+        # last column does not need to be padded
+        columns[-1] = 0
         
         for aRow in self.outputTable:
             print "".join(word.ljust(columns[col] + 1) for col, word in enumerate(aRow))

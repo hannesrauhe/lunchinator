@@ -1,18 +1,16 @@
-import shlex
+import shlex, sys
 from lunchinator.cli import LunchCLIModule
-from lunchinator import get_server, log_exception, convert_string
+from lunchinator import get_server, convert_string, log_exception
 
 class CLIOptionHandling(LunchCLIModule):
     def getOptionCategories(self):
-        categories=[]        
         try:
             for pluginInfo in get_server().plugin_manager.getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:
                     if pluginInfo.plugin_object.has_options():
-                        categories.append((pluginInfo.name, pluginInfo.description))
+                        yield (pluginInfo.name, pluginInfo.description)
         except:
             log_exception("while collecting option categories")
-        return categories
             
     def getPluginObject(self, cat):
         cat = cat.upper()
@@ -29,8 +27,9 @@ class CLIOptionHandling(LunchCLIModule):
     
     def listOptions(self, args):
         if len(args) == 0:
-            for cat, desc in sorted(self.getOptionCategories(), key=lambda aTuple : aTuple[0]):
-                print "%s - %s" % (cat, desc)
+            for name, desc in sorted(self.getOptionCategories(), key=lambda aTuple : aTuple[0]):
+                self.appendOutput(name, desc)
+            self.flushOutput()
         else:
             # list options in category
             category = args[0]
@@ -42,60 +41,38 @@ class CLIOptionHandling(LunchCLIModule):
             
             for name, desc, value, default in optionNames:
                 if desc == name:
-                    print "%s (value: %s, default: %s)" % (name, value, default)
-                else:
-                    print "%s - %s (value: %s, default: %s)" % (name, desc, value, default)
+                    desc = ""
+                self.appendOutput(name, desc, "value: %s, default: %s" % (value, default))
+            self.flushOutput()
+    
+    def handleOption(self, args, handler, numArgs = 0):
+        if len(args) < 2 + numArgs:
+            return self.printHelp("option")
+        category = args[0]
+        po = self.getPluginObject(category)
+        if po == None:
+            print "Unknown category. The available categories are:"
+            self.listOptions([])
+            return
+        
+        option = args[1].lower()
+        if not po.has_option(option):
+            print "Unknown option. The available options for category %s are:" % category
+            self.listOptions([category])
+            
+        if numArgs > 0:
+            handler(po, option, *args[2:])
+        else:
+            handler(po, option)
     
     def getOption(self, args):
-        if len(args) < 2:
-            return self.printHelp("option")
-        category = args[0]
-        po = self.getPluginObject(category)
-        if po == None:
-            print "Unknown category. The available categories are:"
-            self.listOptions([])
-            return
-        
-        option = args[1].lower()
-        if not po.has_option(option):
-            print "Unknown option. The available options for category %s are:" % category
-            self.listOptions([category])
-        value = po.get_option(option)
-        print value
+        self.handleOption(args, lambda po, option: sys.stdout.write("%s\n" % po.get_option(option)))
     
     def setOption(self, args):
-        if len(args) < 3:
-            return self.printHelp("option")
-        category = args[0]
-        po = self.getPluginObject(category)
-        if po == None:
-            print "Unknown category. The available categories are:"
-            self.listOptions([])
-            return
-        
-        option = args[1].lower()
-        if not po.has_option(option):
-            print "Unknown option. The available options for category %s are:" % category
-            self.listOptions([category])
-            
-        po.set_option(convert_string(option), convert_string(args[2]))
+        self.handleOption(args, lambda po, option, new_v: po.set_option(convert_string(option), convert_string(new_v)), 1)
     
     def resetOption(self, args):
-        if len(args) < 2:
-            return self.printHelp("option")
-        category = args[0]
-        po = self.getPluginObject(category)
-        if po == None:
-            print "Unknown category. The available categories are:"
-            self.listOptions([])
-            return
-        
-        option = args[1].lower()
-        if not po.has_option(option):
-            print "Unknown option. The available options for category %s are:" % category
-            self.listOptions([category])
-            
-        po.reset_option(option)
+        self.handleOption(args, lambda po, option: po.reset_option(option))
     
     def do_option(self, args):
         """
@@ -125,7 +102,7 @@ class CLIOptionHandling(LunchCLIModule):
         if argNum == 0:
             text = text.lower()
             candidates = (aTuple[0].lower().replace(" ", "\\ ") for aTuple in self.getOptionCategories())
-            return [aValue for aValue in candidates if aValue.startswith(text)]
+            return (aValue for aValue in candidates if aValue.startswith(text))
        
     def completeGet(self, args, argNum, text):
         if argNum == 0:
@@ -137,7 +114,7 @@ class CLIOptionHandling(LunchCLIModule):
             candidates = self.getOptionsOfCategory(cat)
             if candidates != None:
                 candidates = (aTuple[0].lower().replace(" ", "\\ ") for aTuple in self.getOptionsOfCategory(cat))
-                return [aValue for aValue in candidates if aValue.startswith(text)]
+                return (aValue for aValue in candidates if aValue.startswith(text))
             return None
        
     def complete_option(self, text, line, begidx, endidx):
@@ -159,7 +136,7 @@ class CLIOptionHandling(LunchCLIModule):
             elif subcmd == "set":
                 result = self.completeGet(args, argNum - 2, text)
             elif subcmd == "reset":
-                return []
+                result = self.completeGet(args, argNum - 2, text)
 
         numWordsToOmit = 0 if len(text.split()) == 0 else len(text.split()) - 1
         if result != None:
