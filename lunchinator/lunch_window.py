@@ -83,8 +83,17 @@ class LunchinatorWindow(QMainWindow):
         menuBar.addMenu(windowMenu)
         
         pluginMenu = QMenu("PlugIns", menuBar)
-        for anAction in pluginActions:
-            pluginMenu.addAction(anAction)
+        
+        if type(pluginActions) == list:
+            for anAction in pluginActions:
+                pluginMenu.addAction(anAction)
+        elif type(pluginActions) == dict:
+            for cat, actionList in sorted(pluginActions.iteritems(), key = lambda aTuple : aTuple[0]):
+                catMenu = QMenu(cat, pluginMenu)
+                for anAction in actionList:
+                    catMenu.addAction(anAction)
+                pluginMenu.addMenu(catMenu)
+            
         menuBar.addMenu(pluginMenu)
             
     def lockDockWidgets(self):

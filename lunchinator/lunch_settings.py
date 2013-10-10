@@ -66,7 +66,8 @@ class lunch_settings(object):
         self._peer_timeout = 604800 #one week so that we don't forget someone too soon
         self._mute_timeout = 30
         self._reset_icon_time = 5
-        self._logging_level = u"WARNING" # TODO reset to ERROR
+        self._logging_level = u"ERROR"
+        self._group_plugins = False
         
         if not os.path.exists(self._main_config_dir):
             os.makedirs(self._main_config_dir)
@@ -113,6 +114,7 @@ class lunch_settings(object):
         self._reset_icon_time = self.read_value_from_config_file(self._reset_icon_time, "general", "reset_icon_time")
         
         self._logging_level = self.read_value_from_config_file(self._logging_level, 'general', 'logging_level')
+        self._group_plugins = self.read_value_from_config_file(self._logging_level, 'general', 'group_plugins')
         
         #not shown in settings-plugin - handled by avatar-plugin
         self._avatar_file =  self.read_value_from_config_file(self._avatar_file,"general","avatar_file")
@@ -320,6 +322,12 @@ class lunch_settings(object):
             setLoggingLevel(logging.INFO)
         elif self._logging_level == u"DEBUG":
             setLoggingLevel(logging.DEBUG)
+        
+    def get_group_plugins(self):
+        return self._group_plugins
+    
+    def set_group_plugins(self, newValue):
+        self._group_plugins = newValue
             
     def get_advanced_gui_enabled(self):
         return self._logging_level == u"DEBUG"

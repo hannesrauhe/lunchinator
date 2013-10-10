@@ -14,7 +14,8 @@ class gui_settings(iface_general_plugin):
                         (u"mute_timeout", u"Mute for x sec after Alarm"),
                         (u"reset_icon_time", u"Reset Lunchinator Icon after x min"),
                         (u"tcp_port", u"TCP Port"),
-                        (u"logging_level", u"Logging Level", (u"CRITICAL", u"ERROR", u"WARNING", u"INFO", u"DEBUG"))]
+                        (u"logging_level", u"Logging Level", (u"CRITICAL", u"ERROR", u"WARNING", u"INFO", u"DEBUG")),
+                        (u"group_plugins", u"Group Plugins by category")]
         self.options = []
         for o in option_names:
             methodname = "get_"+o[0]
