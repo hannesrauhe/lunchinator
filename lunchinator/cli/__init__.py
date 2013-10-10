@@ -2,6 +2,8 @@ import shlex, inspect
 from lunchinator import get_server, log_exception
 
 class LunchCLIModule(object):
+    
+    
     def getHostList(self, args):
         hosts = []
         for member in args:
@@ -19,9 +21,8 @@ class LunchCLIModule(object):
         get_server().lockMembers()
         lunchmembers = None
         try:
-            lunchmemberNames = set([get_server().memberName(ip) for ip in get_server().get_members() if get_server().memberName(ip).startswith(text)])
-            lunchMemberIPs = set([ip for ip in get_server().get_members() if ip.startswith(text)])
-            lunchmembers = list(lunchmemberNames.union(lunchMemberIPs))
+            lunchmemberNames = set((get_server().memberName(ip) for ip in get_server().get_members() if get_server().memberName(ip).startswith(text)))
+            lunchmembers = list(lunchmemberNames.union((ip for ip in get_server().get_members() if ip.startswith(text))))
         finally:
             get_server().releaseMembers()
         return lunchmembers if lunchmembers != None else []
