@@ -1,8 +1,9 @@
-from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex, QString
+from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex, QString, QTimer, QModelIndex
 from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
-import time,datetime
-from lunchinator import log_exception, convert_string, log_error, log_warning,\
-    get_server, get_settings
+import time
+from functools import partial
+from datetime import datetime
+from lunchinator import log_exception, convert_string, get_settings
 
 class TableModelBase(QStandardItemModel):
     SORT_ROLE = Qt.UserRole + 1
@@ -116,6 +117,8 @@ class TableModelBase(QStandardItemModel):
             self.removeRow(index)
 
 class MembersTableModel(TableModelBase):
+    LUNCH_TIME_TIMER_ROLE = TableModelBase.SORT_ROLE + 1
+    
     def __init__(self, dataSource):
         columns = [("IP", self._updateIpItem),
                    ("Name", self._updateNameItem),
@@ -154,25 +157,65 @@ class MembersTableModel(TableModelBase):
         else:
             item.setText(ip)
         
-    def is_now_in_time_span(self,begin,end):
+    def _getTimeDifference(self,begin,end):
+        """ calculates the correlation of now and the specified lunch dates
+        negative value: now is before begin, seconds until begin
+        positive value: now is after begin but before end, seconds until end
+         0: now is after end
+        """
         try:
-            beginList = begin.split(":")
-            endList = end.split(":")
-            return time.localtime()[3]*60+time.localtime()[4] >= int(str(beginList[0]))*60+int(str(beginList[1])) and time.localtime()[3]*60+time.localtime()[4] <= int(str(endList[0]))*60+int(str(endList[1]))
+            now = datetime.now()
+            begin = datetime.strptime(begin, "%H:%M")
+            begin = begin.replace(year = now.year, month = now.month, day = now.day)
+            end = datetime.strptime(end, "%H:%M")
+            end = end.replace(year = now.year, month = now.month, day = now.day)
+            
+            if now < begin:
+                # now is before begin
+                td = begin - now
+                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**3
+                return -1 if millis == 0 else -millis
+            elif now < end:
+                td = end - now
+                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**3
+                return 1 if millis == 0 else millis
+            else:
+                # now is after end
+                return 0
         except:
             log_exception("don't know how to handle time span")
             return False;
         
-    def _updateLunchTimeItem(self, _, infoDict, item):
+    def removeRow(self, row, parent = QModelIndex()):
+        # ensure no timer is active after a row has been removed
+        item = self.item(row, self.lunchTimeColIndex)
+        timer = item.data(self.LUNCH_TIME_TIMER_ROLE)
+        if timer != None:
+            timer.stop()
+            timer.deleteLater()
+        return TableModelBase.removeRow(self, row, parent)
+        
+    def _updateLunchTimeItem(self, ip, infoDict, item):
+        oldTimer = item.data(self.LUNCH_TIME_TIMER_ROLE)
+        if oldTimer != None:
+            oldTimer.stop()
+            oldTimer.deleteLater()
         if self.lunchBeginKey in infoDict and self.lunchEndKey in infoDict:
             item.setText(infoDict[self.lunchBeginKey]+"-"+infoDict[self.lunchEndKey])
-            beginTime = datetime.datetime.strptime(infoDict[self.lunchBeginKey], "%H:%M")
+            beginTime = datetime.strptime(infoDict[self.lunchBeginKey], "%H:%M")
             beginTime = beginTime.replace(year=2000)
             item.setData(QVariant(time.mktime(beginTime.timetuple())), self.SORT_ROLE)
-            if self.is_now_in_time_span(infoDict[self.lunchBeginKey],infoDict[self.lunchEndKey]):
+            timeDifference = self._getTimeDifference(infoDict[self.lunchBeginKey],infoDict[self.lunchEndKey])
+            if timeDifference > 0:
                 item.setData(QColor(0, 255, 0), Qt.DecorationRole)
             else:
                 item.setData(QColor(255, 0, 0), Qt.DecorationRole)
+                
+            if timeDifference != 0:
+                timer = QTimer(item.model())
+                timer.timeout.connect(partial(self._updateLunchTimeItem, ip, infoDict, item))
+                timer.setSingleShot(True)
+                timer.start(abs(timeDifference))
         else:
             item.setData(QVariant(-1), self.SORT_ROLE)
         
