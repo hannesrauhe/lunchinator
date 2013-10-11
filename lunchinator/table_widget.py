@@ -1,19 +1,18 @@
 from PyQt4.QtGui import QTreeView, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy
 from PyQt4.QtCore import Qt, QSize
 from lunchinator import convert_string
-from lunchinator.history_line_edit import HistoryLineEdit
+from lunchinator.history_line_edit import HistoryLineEdit, HistoryTextEdit
 
 class TableWidget(QWidget):
     PREFERRED_WIDTH = 400
     
-    def __init__(self, parent, buttonText, triggeredEvent, sortedColumn = None, ascending = True, placeholderText = ""):
+    def __init__(self, parent, buttonText, triggeredEvent, sortedColumn = None, ascending = True, placeholderText = "", useTextEdit = False):
         super(TableWidget, self).__init__(parent)
         
         self.externalEvent = triggeredEvent
         
         # create HBox in VBox for each table
         # Create message table
-        tableLayout = QVBoxLayout(self)
         tableBottomLayout = QHBoxLayout()
         
         self.table = QTreeView(self)
@@ -23,12 +22,18 @@ class TableWidget(QWidget):
         self.table.setIndentation(0)
         if sortedColumn != None:
             self.table.sortByColumn(sortedColumn, Qt.AscendingOrder if ascending else Qt.DescendingOrder)
-        tableLayout.addWidget(self.table)
         
-        self.entry = HistoryLineEdit(self, placeholderText)
+        if useTextEdit:
+            self.entry = HistoryTextEdit(self)
+        else:
+            self.entry = HistoryLineEdit(self, placeholderText)
         tableBottomLayout.addWidget(self.entry)
         button = QPushButton(buttonText, self)
-        tableBottomLayout.addWidget(button)
+        button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
+        tableBottomLayout.addWidget(button, 0, Qt.AlignBottom)
+        
+        tableLayout = QVBoxLayout(self)
+        tableLayout.addWidget(self.table)
         tableLayout.addLayout(tableBottomLayout)
         
         self.entry.returnPressed.connect(self.eventTriggered)
@@ -54,4 +59,5 @@ if __name__ == '__main__':
     from lunchinator.iface_plugins import iface_gui_plugin
     def foo(text):
         print text
-    iface_gui_plugin.run_standalone(lambda window : TableWidget(window, "Enter", foo))
+    iface_gui_plugin.run_standalone(lambda window : TableWidget(window, "Enter", foo, useTextEdit=True))
+    
