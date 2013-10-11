@@ -138,7 +138,7 @@ if __name__ == "__main__":
         try:
             from PySide.QtCore import QThread
         except:
-            log_error("pyQT4 not found - start lunchinator with --no-gui")
+            log_error("pyside not found - start lunchinator with --no-gui or install pyside")
             sys.exit(-1)
             
         from lunchinator.gui_controller import LunchinatorGuiController
