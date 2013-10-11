@@ -303,20 +303,17 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 self.mainWindow.removePluginWidget(p_name)
     
     @pyqtSlot(unicode, QObject)
-    def sendMessageClicked(self, message, w):
+    def sendMessageClicked(self, message, text):
         if message != None:
             get_server().call_all_members(convert_string(message))
         else:
-            get_server().call_all_members(convert_string(w.text()))
-            w.setText("")
+            get_server().call_all_members(text)
         
     @pyqtSlot(QLineEdit)
-    def addHostClicked(self, w):
-        hostn = unicode(w.text().toUtf8(), 'utf-8')
+    def addHostClicked(self, hostn):
         try:
             ip = socket.gethostbyname(hostn.strip())
             get_server()._append_member(ip, hostn)
-            w.setText("")
         except:
             d = QMessageBox(QMessageBox.Critical, "Error adding host", "Cannot add host: Hostname unknown", QMessageBox.Ok, w)
             d.exec_()

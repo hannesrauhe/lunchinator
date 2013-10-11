@@ -21,9 +21,9 @@ class members_table(iface_gui_plugin):
         self.membersModel.updateTimeouts()
         self.membersProxyModel.setDynamicSortFilter(True)    
         
-    def addHostClicked(self, w):
+    def addHostClicked(self, text):
         if get_server().controller != None:
-            get_server().controller.addHostClicked(w)        
+            get_server().controller.addHostClicked(text)        
     
     def create_widget(self, parent):
         from PyQt4.QtGui import QSortFilterProxyModel

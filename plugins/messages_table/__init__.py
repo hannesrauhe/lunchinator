@@ -21,9 +21,9 @@ class messages_table(iface_gui_plugin):
         self.messagesModel.updateSenders()
         self.messagesProxyModel.setDynamicSortFilter(True)
         
-    def sendMessageClicked(self, w):
+    def sendMessageClicked(self, text):
         if get_server().controller != None:
-            get_server().controller.sendMessageClicked(None, w)
+            get_server().controller.sendMessageClicked(None, text)
         
     def create_widget(self, parent):
         from PyQt4.QtGui import QSortFilterProxyModel
