@@ -3,7 +3,7 @@ from lunchinator import get_server, log_exception, log_info, get_settings,\
     log_error, convert_string, log_warning, log_debug
 import socket,os,time, subprocess
 import platform
-from PySide.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
+from PySide.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
 from PySide.QtCore import QThread, Signal, Slot, QObject, QByteArray, QCoreApplication
 import PySide
 from functools import partial
@@ -322,7 +322,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
             d.exec_()
             
     @Slot(bool)
-    def quitClicked(self,_):
+    @Slot()
+    def quitClicked(self,_ = None):
         self.quit()
 
     @Slot(bool)
@@ -344,7 +345,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             log_error("mainWindow not specified")
             return
         
-        self.reset_new_msgs()        
+        self.reset_new_msgs()
         
         settingsDialog = LunchinatorSettingsDialog(self.mainWindow)
         resp = settingsDialog.exec_()
@@ -399,25 +400,3 @@ class LunchinatorGuiController(QObject, LunchServerController):
         msg = convert_string(msg)
         addr = convert_string(addr)
         processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
-
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    
-    win = QMainWindow()
-    central = QWidget(win)
-    win.setCentralWidget(central)
-    lay = QVBoxLayout(win.centralWidget())
-    lay.addWidget(QLabel("asdf", win.centralWidget()))
-    lay.addWidget(QLineEdit(win.centralWidget()))
-    
-    hlay = QHBoxLayout()
-    hlay.addWidget(QLabel("1", win.centralWidget()))
-    hlay.addWidget(QLabel("2", win.centralWidget()))
-    
-    lay.addLayout(hlay)
-    
-    win.centralWidget().setLayout(lay)
-    
-    win.show()
-    
-    sys.exit(app.exec_())

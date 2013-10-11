@@ -38,7 +38,7 @@ class HistoryLineEdit(QLineEdit):
                 if self.index > 0:
                     return self.handleHistory(self.index - 1)
             elif event.key() == Qt.Key_Return:
-                if self.text().length() > 0:
+                if len(self.text()) > 0:
                     if len(self.history) == 0 or self.getText(1) != self.text():
                         # only append to history if new text is different from last history entry
                         self.appendHistory(self.text())
