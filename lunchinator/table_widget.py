@@ -38,8 +38,9 @@ class TableWidget(QWidget):
         
     def eventTriggered(self):
         text = convert_string(self.entry.text())
-        self.externalEvent(text)
-        self.entry.clear()
+        ret_val = self.externalEvent(text)
+        if ret_val != False:
+            self.entry.clear()
     
     def sizeHint(self):
         sizeHint = QWidget.sizeHint(self)

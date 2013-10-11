@@ -446,6 +446,7 @@ class maintainer_gui(QTabWidget):
         selectedMember = self.get_selected_log_member()
         if selectedMember != None:
             get_server().call(convert_string(lineEdit.text()),client=selectedMember)
+            lineEdit.clear()
         
     def updateMemberInformation(self):
         self.memberInformationTable.clear()
