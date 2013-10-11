@@ -1,13 +1,14 @@
-from PySide.QtCore import QEvent, Qt
+from PySide.QtCore import QEvent, Qt, Signal
 from PySide.QtGui import QLineEdit
-class HistoryLineEdit(QLineEdit):
-    def __init__(self, parent, placeholder):
-        super(HistoryLineEdit, self).__init__(parent)
+from lunchinator.growing_text_edit import GrowingTextEdit
+
+class HistoryBase(object):
+    def __init__(self, keyModifiers = Qt.NoModifier):
+        super(HistoryBase, self).__init__()
         self.history = []
         self.backups = {}
         self.index = 0 # 0 means newest line
-        if hasattr(self, "setPlaceholderText"):
-            self.setPlaceholderText(placeholder)
+        self.keyModifiers = keyModifiers
     
     def getText(self, index):
         if index == 0:
@@ -30,7 +31,7 @@ class HistoryLineEdit(QLineEdit):
         return True
     
     def event(self, event):
-        if (event.type() == QEvent.KeyPress):
+        if event.type() == QEvent.KeyPress and event.modifiers() == self.keyModifiers:
             if (event.key() == Qt.Key_Up):
                 if len(self.history) > self.index:
                     return self.handleHistory(self.index + 1)
@@ -44,4 +45,38 @@ class HistoryLineEdit(QLineEdit):
                         self.appendHistory(self.text())
                 self.index = 0
                 self.backups.clear()
-        return super(HistoryLineEdit, self).event(event)
+        return False
+
+class HistoryLineEdit(QLineEdit, HistoryBase):
+    def __init__(self, parent, placeholder):
+        QLineEdit.__init__(self, parent)
+        HistoryBase.__init__(self)
+        if hasattr(self, "setPlaceholderText"):
+            self.setPlaceholderText(placeholder)
+    
+    def event(self, event):
+        if not HistoryBase.event(self, event):
+            return super(HistoryLineEdit, self).event(event)
+        return True
+
+class HistoryTextEdit(GrowingTextEdit, HistoryBase):
+    returnPressed = Signal()
+    
+    def __init__(self, parent):
+        GrowingTextEdit.__init__(self, parent, 150)
+        HistoryBase.__init__(self, Qt.ControlModifier)
+    
+    def text(self):
+        return self.toPlainText()
+    
+    def setText(self, text):
+        self.setPlainText(text)
+    
+    def event(self, event):
+        retVal = HistoryBase.event(self, event)
+        if (event.type() == QEvent.KeyPress):
+            if event.key() == Qt.Key_Return and event.modifiers() == Qt.ControlModifier:
+                self.returnPressed.emit()
+        if not retVal:
+            return super(HistoryTextEdit, self).event(event)
+        return True
