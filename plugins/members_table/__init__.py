@@ -31,7 +31,7 @@ class members_table(iface_gui_plugin):
         from lunchinator.table_models import MembersTableModel
         from lunchinator.table_widget import TableWidget
         
-        self.membersTable = TableWidget(parent, "Add Host", self.addHostClicked, 2)
+        self.membersTable = TableWidget(parent, "Add Host", self.addHostClicked, sortedColumn=2, placeholderText="Enter hostname")
         
         # initialize members table
         self.membersModel = MembersTableModel(get_server())

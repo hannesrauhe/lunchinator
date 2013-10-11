@@ -1,6 +1,6 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_warning, log_error, log_exception, log_info, convert_string
+from lunchinator import log_error, log_exception, log_info, convert_string
 import types
 from copy import deepcopy
 
@@ -269,7 +269,7 @@ class iface_gui_plugin(iface_plugin):
         window = QMainWindow()
         window.setWindowTitle("Layout Example")
         window.resize(300, 300)
-        window.setCentralWidget(factory.create_widget(window))
+        window.setCentralWidget(factory(window))
         window.show()
     
         sys.exit(app.exec_())

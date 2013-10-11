@@ -4,9 +4,10 @@ from functools import partial
 from lunchinator import get_server, get_settings, convert_string, log_exception,\
     log_debug, getLogLineTime, log_warning
 from lunchinator.table_models import ExtendedMembersModel
-from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeView, QStandardItemModel, QStandardItem, QTabWidget, QLineEdit, QSplitter, QTreeWidget, QTreeWidgetItem, QSortFilterProxyModel, QSizePolicy
-from PyQt4.QtCore import  pyqtSlot, QThread, Qt, QStringList, QVariant, QTimer, QSize
+from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeView, QStandardItemModel, QStandardItem, QTabWidget, QSplitter, QTreeWidget, QTreeWidgetItem, QSortFilterProxyModel, QSizePolicy
+from PyQt4.QtCore import  pyqtSlot, QThread, Qt, QStringList, QVariant, QTimer
 from lunchinator.lunch_datathread_qt import DataReceiverThread
+from lunchinator.history_line_edit import HistoryLineEdit
 
 class maintainer_gui(QTabWidget):
     LOG_REQUEST_TIMEOUT = 10 # 10 seconds until request is invalid
@@ -509,7 +510,7 @@ class maintainer_gui(QTabWidget):
         
         sendMessageLayout = QHBoxLayout()
         sendMessageLayout.setSpacing(10)
-        messageInput = QLineEdit(widget)
+        messageInput = HistoryLineEdit(widget, "Enter a message")
         self.sendMessageButton = QPushButton("Send", widget)
         sendMessageLayout.addWidget(messageInput, 1)
         sendMessageLayout.addWidget(self.sendMessageButton)

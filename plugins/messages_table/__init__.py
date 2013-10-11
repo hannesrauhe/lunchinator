@@ -30,7 +30,7 @@ class messages_table(iface_gui_plugin):
         from PyQt4.QtCore import Qt
         from lunchinator.table_widget import TableWidget
         from lunchinator.table_models import MessagesTableModel
-        self.messagesTable = TableWidget(parent, "Send Message", self.sendMessageClicked)
+        self.messagesTable = TableWidget(parent, "Send Message", self.sendMessageClicked, placeholderText="Enter a message")
         
         # initialize messages table
         self.messagesModel = MessagesTableModel(get_server())

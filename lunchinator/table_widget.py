@@ -1,12 +1,12 @@
-from PyQt4.QtGui import QTreeView, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QSizePolicy
+from PyQt4.QtGui import QTreeView, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy
 from PyQt4.QtCore import Qt, QSize
-from functools import partial
 from lunchinator import convert_string
+from lunchinator.history_line_edit import HistoryLineEdit
 
 class TableWidget(QWidget):
     PREFERRED_WIDTH = 400
     
-    def __init__(self, parent, buttonText, triggeredEvent, sortedColumn = None, ascending = True):
+    def __init__(self, parent, buttonText, triggeredEvent, sortedColumn = None, ascending = True, placeholderText = ""):
         super(TableWidget, self).__init__(parent)
         
         self.externalEvent = triggeredEvent
@@ -25,7 +25,7 @@ class TableWidget(QWidget):
             self.table.sortByColumn(sortedColumn, Qt.AscendingOrder if ascending else Qt.DescendingOrder)
         tableLayout.addWidget(self.table)
         
-        self.entry = QLineEdit(self)
+        self.entry = HistoryLineEdit(self, placeholderText)
         tableBottomLayout.addWidget(self.entry)
         button = QPushButton(buttonText, self)
         tableBottomLayout.addWidget(button)
@@ -48,3 +48,10 @@ class TableWidget(QWidget):
         
     def setModel(self, model):
         self.table.setModel(model)
+        
+        
+if __name__ == '__main__':
+    from lunchinator.iface_plugins import iface_gui_plugin
+    def foo(text):
+        print text
+    iface_gui_plugin.run_standalone(lambda window : TableWidget(window, "Enter", foo))
