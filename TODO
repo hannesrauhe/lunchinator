@@ -7,3 +7,5 @@ TODOs added by Hannes:
 
 - secondary DB connection plugin
 - add readline to dependencies
+- highlight icon on notification
+- tooltips for windows on notification
