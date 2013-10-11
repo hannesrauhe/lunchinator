@@ -18,7 +18,7 @@ class CLIPluginHandling(LunchCLIModule):
             for pluginInfo in plugins:
                 if pluginInfo.plugin_object.is_activated and listActivated or\
                         not pluginInfo.plugin_object.is_activated and listDeactivated:
-                    yield (pluginInfo.name, pluginInfo.description)
+                    yield (pluginInfo.name, pluginInfo.description, pluginInfo.categories)
         except:
             log_exception("while collecting option categories")
             
@@ -27,10 +27,12 @@ class CLIPluginHandling(LunchCLIModule):
             category = None
             if len(args) > 0:
                 category = args[0]
-            for name, desc in sorted(self.getPluginNames(True, False, category), key=lambda aTuple : aTuple[0]):
-                self.appendOutput(name, "(loaded)", desc)
-            for name, desc in sorted(self.getPluginNames(False, True, category), key=lambda aTuple : aTuple[0]):
-                self.appendOutput(name, "", desc)
+            self.appendOutput("Loaded", "Category", "Name", "Description")
+            self.appendSeparator()
+            for name, desc, cats in sorted(self.getPluginNames(True, False, category), key=lambda aTuple : aTuple[0]):
+                self.appendOutput("yes", cats, name, desc)
+            for name, desc, cats in sorted(self.getPluginNames(False, True, category), key=lambda aTuple : aTuple[0]):
+                self.appendOutput("no", cats, name, desc)
             self.flushOutput()
         except:
             log_exception("while printing plugin names")
@@ -98,7 +100,7 @@ class CLIPluginHandling(LunchCLIModule):
     def completePluginNames(self, _args, argNum, text, listActivated, listDeactivated):
         if argNum == 0:
             text = text.lower()
-            candidates = (name.lower().replace(" ", "\\ ") for name, _desc in self.getPluginNames(listActivated, listDeactivated))
+            candidates = (name.lower().replace(" ", "\\ ") for name, _desc, _cats in self.getPluginNames(listActivated, listDeactivated))
             return (aValue for aValue in candidates if aValue.startswith(text))
     
     def complete_plugin(self, text, line, begidx, endidx):

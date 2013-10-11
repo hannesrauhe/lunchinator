@@ -5,19 +5,99 @@ class LunchCLIModule(object):
     MAX_COL_WIDTH = 60
     MAX_TOTAL_WIDTH = 100
     COL_DEL = "  "
+    SEPARATOR = "="
     
     def __init__(self):
         super(LunchCLIModule, self).__init__()
         self.outputTable = []
     
-    def appendOutput(self, *row):
-        self.outputTable.append(row)
-        
-    def convertToString(self, value):
+    def _convertToString(self, value):
         if type(value) in (str, unicode):
             return value
+        if type(value) == list:
+            if len(value) == 1:
+                return value[0]
+            else:
+                return ", ".join(value)
         return str(value)
+    
+    def appendOutput(self, *row):
+        self.outputTable.append([self._convertToString(value) for value in row])
         
+    def appendSeparator(self, sepChar = None):
+        if sepChar == None:
+            sepChar = self.SEPARATOR
+        self.outputTable.append(str(sepChar))
+        
+    def _cutString(self, string, maxLen):
+        if maxLen >= len(string):
+            return string
+        
+        # if string[maxLen + 1] is whitespace, it is OK
+        index = string[:maxLen + 1].rfind(" ")
+        if index == -1:
+            return string[:maxLen]
+        # include whitespace
+        return string[:index + 1] 
+        
+    def flushOutput(self, columnDelimiter = None, maxColumnWidth = None, maxTotalWidth = None):
+        if columnDelimiter == None:
+            columnDelimiter = self.COL_DEL
+        if maxColumnWidth == None:
+            maxColumnWidth = self.MAX_COL_WIDTH
+        if maxTotalWidth == None:
+            maxTotalWidth = self.MAX_TOTAL_WIDTH
+        columns = []
+        for aRow in self.outputTable:
+            if type(aRow) == str:
+                # separator
+                continue
+            if len(aRow) > len(columns):
+                for _ in range(len(aRow) - len(columns)):
+                    columns.append(0)
+            for col, aValue in enumerate(aRow):
+                columns[col] = min(maxColumnWidth, max((columns[col], len(aValue))))
+        
+        totalDelWidth = (len(columns) - 1) * len(columnDelimiter)
+        totalWidth = sum(columns) + totalDelWidth
+        if totalWidth > maxTotalWidth:
+            # TODO implement good resizing algorithm
+            pass
+#             ratio = float(maxTotalWidth - totalDelWidth) / totalWidth
+#             newTotal = 0
+#             for i in range(len(columns) - 1):
+#                 columns[i] = int(round(columns[i] * ratio))
+#                 newTotal += columns[i]
+#             # assign remaining width to last column
+#             columns[-1] = maxTotalWidth - totalDelWidth - newTotal
+#             totalWidth = maxTotalWidth
+        
+        for aRow in self.outputTable:
+            if type(aRow) == str:
+                # separator
+                print aRow * (totalWidth / len(aRow))
+                continue
+            remaining = [len(aVal) for aVal in aRow]
+            totalRemaining = sum(remaining)
+            
+            while totalRemaining > 0:
+                # print new row until nothing remains
+                rowWords = []
+                for col, word in enumerate(aRow):
+                    cutString = self._cutString(word[len(word) - remaining[col]:], columns[col])
+                    remaining[col] -= len(cutString)
+                    totalRemaining -= len(cutString)
+                    if cutString.endswith(" "):
+                        cutString = cutString[:-1]
+                    if col == len(columns):
+                        # last string does not need to be padded
+                        rowWords.append(cutString)
+                    else:
+                        rowWords.append(cutString.ljust(columns[col]))
+                print columnDelimiter.join(rowWords)
+        
+        self.outputTable = []
+    
     def printHelp(self, cmd):
         """ Emulate do_help from cmd.Cmd """
         if hasattr(self.__class__, "do_%s" % cmd):
@@ -29,59 +109,7 @@ class LunchCLIModule(object):
                 print "No help available for command %s" % cmd
         else:
             print "Unknown command: %s" % cmd
-        
-    def cutString(self, string, maxLen):
-        if maxLen >= len(string):
-            return string
-        
-        # if string[maxLen + 1] is whitespace, it is OK
-        index = string[:maxLen + 1].rfind(" ")
-        if index == -1:
-            return string[:maxLen]
-        # include whitespace
-        return string[:index + 1] 
-        
-    def flushOutput(self):
-        columns = []
-        for aRow in self.outputTable:
-            if len(aRow) > len(columns):
-                for _ in range(len(aRow) - len(columns)):
-                    columns.append(0)
-            for col, aValue in enumerate(aRow):
-                columns[col] = min(self.MAX_COL_WIDTH, max((columns[col], len(self.convertToString(aValue)))))
-        
-        totalWidth = sum(columns) + len(columns) * len(self.COL_DEL)
-        if totalWidth > self.MAX_TOTAL_WIDTH:
-            ratio = float(self.MAX_TOTAL_WIDTH) / totalWidth
-            newTotal = 0
-            for i in range(len(columns) - 1):
-                columns[i] = columns[i] * ratio
-                newTotal += columns[i]
-            # assign remainint width to last column
-            columns[-1] = self.MAX_TOTAL_WIDTH - newTotal
-        
-        # last column does not need to be padded
-        # TODO
-        #columns[-1] = 0
-        
-        for aRow in self.outputTable:
-            remaining = [len(aVal) for aVal in aRow]
-            totalRemaining = sum(remaining)
             
-            while totalRemaining > 0:
-                # add new row until nothing remains
-                rowWords = []
-                for col, word in enumerate(aRow):
-                    cutString = self.cutString(word[len(word) - remaining[col]:], columns[col])
-                    remaining[col] -= len(cutString)
-                    totalRemaining -= len(cutString)
-                    if cutString.endswith(" "):
-                        cutString = cutString[:-1]
-                    rowWords.append(cutString.ljust(columns[col]))
-                print self.COL_DEL.join(rowWords)
-        
-        self.outputTable = []
-    
     def getHostList(self, args):
         hosts = []
         for member in args:
