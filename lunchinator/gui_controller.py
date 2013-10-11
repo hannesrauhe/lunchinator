@@ -5,6 +5,7 @@ import socket,os,time, subprocess
 import platform
 from PySide.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
 from PySide.QtCore import QThread, Signal, Slot, QObject, QByteArray, QCoreApplication
+import PySide
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
@@ -40,6 +41,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def __init__(self, noUpdates = False): 
         QObject.__init__(self)
         LunchServerController.__init__(self)
+        
+        log_info("Your PySide version is %s, based on Qt %s" % (PySide.__version__, PySide.QtCore.__version__))
         
         self.exitCode = 0
         self.serverThread = None
@@ -335,7 +338,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.mainWindow.raise_()
             
     @Slot(bool)
-    def openSettingsClicked(self,_):
+    @Slot()
+    def openSettingsClicked(self,_ = None):
         if self.mainWindow == None:
             log_error("mainWindow not specified")
             return
