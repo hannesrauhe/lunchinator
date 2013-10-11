@@ -107,8 +107,8 @@ class iface_plugin(IPlugin):
                 self.convert_and_set_option(o, v, new_v)
         
     def add_option_to_layout(self, parent, grid, i, o, v):
-        from PyQt4.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
-        from PyQt4.QtCore import Qt
+        from PySide.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
+        from PySide.QtCore import Qt
         e = ""
         fillHorizontal = False
         if o[0] in self.option_choice:
@@ -138,7 +138,7 @@ class iface_plugin(IPlugin):
         self.option_widgets[o[0]]=e
         
     def create_options_widget(self, parent):
-        from PyQt4.QtGui import QWidget, QGridLayout
+        from PySide.QtGui import QWidget, QGridLayout
         if not self.options:
             return None
         optionsWidget = QWidget(parent)
@@ -203,7 +203,7 @@ class iface_plugin(IPlugin):
             return self.options[o]
     
     def save_data(self):
-        from PyQt4.QtCore import Qt
+        from PySide.QtCore import Qt
         if not self.option_widgets:
             return
         for o,e in self.option_widgets.iteritems():
@@ -216,7 +216,7 @@ class iface_plugin(IPlugin):
             elif type(v)==types.BooleanType:
                 new_v = e.checkState() == Qt.Checked
             else:
-                new_v = str(e.text().toUtf8())
+                new_v = convert_string(e.text())
             self.set_option(o, new_v, False)
         self.discard_options_widget_data()
         
@@ -262,7 +262,7 @@ class iface_gui_plugin(iface_plugin):
     
     @classmethod
     def run_standalone(cls, factory):
-        from PyQt4.QtGui import QApplication, QMainWindow
+        from PySide.QtGui import QApplication, QMainWindow
         import sys
         
         app = QApplication(sys.argv)

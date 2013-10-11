@@ -36,7 +36,7 @@ class tdtnotify(iface_gui_plugin):
             
     def create_widget(self, parent):
         from lunchinator.resizing_image_label import ResizingImageLabel
-        from PyQt4.QtCore import QSize
+        from PySide.QtCore import QSize
         
         super(tdtnotify, self).create_widget(parent)
         self.imageLabel = ResizingImageLabel(parent, True, QSize(400,400))

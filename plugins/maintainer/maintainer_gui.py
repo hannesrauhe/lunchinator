@@ -4,8 +4,8 @@ from functools import partial
 from lunchinator import get_server, get_settings, convert_string, log_exception,\
     log_debug, getLogLineTime, log_warning
 from lunchinator.table_models import ExtendedMembersModel
-from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeView, QStandardItemModel, QStandardItem, QTabWidget, QSplitter, QTreeWidget, QTreeWidgetItem, QSortFilterProxyModel, QSizePolicy
-from PyQt4.QtCore import  pyqtSlot, QThread, Qt, QStringList, QVariant, QTimer
+from PySide.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeView, QStandardItemModel, QStandardItem, QTabWidget, QSplitter, QTreeWidget, QTreeWidgetItem, QSortFilterProxyModel, QSizePolicy, QItemSelection
+from PySide.QtCore import  Slot, QThread, Qt, QTimer
 from lunchinator.lunch_datathread_qt import DataReceiverThread
 from lunchinator.history_line_edit import HistoryLineEdit
 
@@ -130,7 +130,6 @@ class maintainer_gui(QTabWidget):
         self.requestLogsButton.setEnabled(True)
         self.dropdown_members.setEnabled(True)
     
-    @pyqtSlot(QThread, unicode)
     def cb_log_transfer_success(self, thread, path):
         path = convert_string(path)
         
@@ -180,7 +179,7 @@ class maintainer_gui(QTabWidget):
         if len(logsAdded) > 0 or len(logsRenamed) > 0:
             self.updateLogList(logsAdded, logsRenamed)
     
-    @pyqtSlot(QThread)
+    @Slot(QThread)
     def cb_log_transfer_error(self, _thread):
         if not self.visible:
             return False
@@ -224,7 +223,7 @@ class maintainer_gui(QTabWidget):
         else:
             self.log_area.setText("No Member selected!")
             
-    @pyqtSlot()
+    @Slot()
     def requestLogClicked(self):
         self.requestLogsButton.setEnabled(False)
         self.dropdown_members.setEnabled(False)
@@ -341,11 +340,11 @@ class maintainer_gui(QTabWidget):
             tooltip = u"File:%s\nModification Date: %s" % (logFile, timestamp)
         text = text + "\n%s" % self.formatFileSize(os.path.getsize(logFile))
         if tooltip != None:
-            item.setData(0, Qt.ToolTipRole, QVariant(tooltip)) 
+            item.setData(0, Qt.ToolTipRole, tooltip) 
         item.setData(0, Qt.UserRole, logFile)
-        item.setData(0, Qt.DisplayRole, QVariant(text))
+        item.setData(0, Qt.DisplayRole, text)
     
-    @pyqtSlot()
+    @Slot()
     def clearLogs(self):
         for aLogFile in self.listLogFilesForMember(self.get_selected_log_member()):
             os.remove(aLogFile)
@@ -361,7 +360,7 @@ class maintainer_gui(QTabWidget):
                 logsAdded.append((index, logFile))
             if len(logsAdded) == 0:
                 self.log_tree_view.clear()
-                self.log_tree_view.addTopLevelItem(QTreeWidgetItem(self.log_tree_view, QStringList("No logs available.")))
+                self.log_tree_view.addTopLevelItem(QTreeWidgetItem(self.log_tree_view, ["No logs available."]))
                 self.log_tree_view.setSelectionMode(QTreeWidget.NoSelection)
                 self.logSizeLabel.setText("No logs")
                 self.clearLogsButton.setEnabled(False)
@@ -391,7 +390,7 @@ class maintainer_gui(QTabWidget):
                     oldItem = None
                 
                 if logFile == None:
-                    item.setData(0, Qt.DisplayRole, QVariant("Requesting..."))
+                    item.setData(0, Qt.DisplayRole, "Requesting...")
                     QTimer.singleShot(6000, partial(self.requestTimedOut, item)) 
                 else:
                     self.initializeLogItem(item, logFile)
@@ -432,7 +431,8 @@ class maintainer_gui(QTabWidget):
             fcontent = "Error reading file: %s"%str(e)
         return fcontent
     
-    def displaySelectedLogfile(self):
+    @Slot(QItemSelection, QItemSelection)
+    def displaySelectedLogfile(self, _selected, _deselected):
         self.log_area.setText(self.getSelectedLogContent())
         
     def memberSelectionChanged(self):
@@ -472,10 +472,10 @@ class maintainer_gui(QTabWidget):
         
         self.memberInformationTable.setColumnCount(len(memberInformation))
         headers = sorted(memberInformation.keys())
-        self.memberInformationTable.setHeaderLabels(QStringList(headers))
+        self.memberInformationTable.setHeaderLabels(headers)
         item = QTreeWidgetItem(self.memberInformationTable)
         for col, header in enumerate(headers):
-            item.setData(col, Qt.DisplayRole, QVariant(memberInformation[header]))
+            item.setData(col, Qt.DisplayRole, memberInformation[header])
         for col in range(self.memberInformationTable.columnCount()):
             self.memberInformationTable.resizeColumnToContents(col)
         
@@ -558,7 +558,8 @@ class maintainer_gui(QTabWidget):
         
         self.update_dropdown_members()
         self.memberSelectionChanged()
-        self.log_tree_view.selectionModel().selectionChanged.connect(self.displaySelectedLogfile)
+        m = self.log_tree_view.selectionModel()
+        m.selectionChanged.connect(self.displaySelectedLogfile)
         self.dropdown_members.currentIndexChanged.connect(self.memberSelectionChanged)
         self.update_button.clicked.connect(self.request_update)
         self.requestLogsButton.clicked.connect(self.requestLogClicked)
@@ -577,5 +578,5 @@ class maintainer_wrapper:
     
 if __name__ == "__main__":
     from lunchinator.iface_plugins import iface_gui_plugin
-    iface_gui_plugin.run_standalone(maintainer_gui(None, maintainer_wrapper()))
+    iface_gui_plugin.run_standalone(lambda window : maintainer_gui(window, maintainer_wrapper()))
     

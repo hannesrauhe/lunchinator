@@ -2,6 +2,7 @@
 - test settings thoroughly
 - implement total cli table width
 - examine macEventFilter
+- TableWidget mit TextEdit (und history)
 
 TODOs added by Hannes:
 

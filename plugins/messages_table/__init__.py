@@ -26,8 +26,8 @@ class messages_table(iface_gui_plugin):
             get_server().controller.sendMessageClicked(None, text)
         
     def create_widget(self, parent):
-        from PyQt4.QtGui import QSortFilterProxyModel
-        from PyQt4.QtCore import Qt
+        from PySide.QtGui import QSortFilterProxyModel
+        from PySide.QtCore import Qt
         from lunchinator.table_widget import TableWidget
         from lunchinator.table_models import MessagesTableModel
         self.messagesTable = TableWidget(parent, "Send Message", self.sendMessageClicked, placeholderText="Enter a message")

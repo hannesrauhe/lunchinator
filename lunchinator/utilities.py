@@ -116,7 +116,7 @@ def _drawAttentionWindows():
         log_exception("notify error: eject error (close)")
 
 def getValidQtParent():
-    from PyQt4.QtCore import QObject
+    from PySide.QtCore import QObject
     if isinstance(get_server().controller, QObject):
         return get_server().controller
     raise Exception("Could not find a valid QObject instance")

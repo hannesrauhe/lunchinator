@@ -1,5 +1,5 @@
-from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex, QString, QTimer, QModelIndex
-from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
+from PySide.QtCore import Qt, QSize, Slot, QMutex, QTimer, QModelIndex
+from PySide.QtGui import QStandardItemModel, QStandardItem, QColor
 import time
 from functools import partial
 from datetime import datetime
@@ -13,10 +13,7 @@ class TableModelBase(QStandardItemModel):
         self.columns = columns
         if self.columns != None:
             self.setColumnCount(len(self.columns))
-            stringList = QStringList()
-            for colName, _ in self.columns:
-                stringList.append(colName)
-            self.setHorizontalHeaderLabels(stringList)
+            self.setHorizontalHeaderLabels([colName for colName, _ in self.columns])
         self.keys = []
 
     def callItemInitializer(self, column, key, data, item):
@@ -34,7 +31,7 @@ class TableModelBase(QStandardItemModel):
     
     def updateItem(self, key, data, row, column):
         item = self.item(row, column)
-        if item != None:
+        if item is not None:
             self.callItemInitializer(column, key, data, item)
         else:
             # item not initialized yet
@@ -65,52 +62,44 @@ class TableModelBase(QStandardItemModel):
         for column in range(self.columnCount()):
             self.updateItem(key, data, row, column)
             
-    def _convertDict(self, aDict):
-        newDict = {}
-        for aKey in aDict:
-            newKey = aKey
-            if type(aKey) == QString:
-                newKey = convert_string(aKey)
-            aValue = aDict[aKey]
-            if type(aValue) == QString:
-                aValue = convert_string(aValue)
-            newDict[newKey] = aValue
-        return newDict
+#     def _convertDict(self, aDict):
+#         newDict = {}
+#         for aKey in aDict:
+#             newKey = aKey
+#             if type(aKey) == QString:
+#                 newKey = convert_string(aKey)
+#             aValue = aDict[aKey]
+#             if type(aValue) == QString:
+#                 aValue = convert_string(aValue)
+#             newDict[newKey] = aValue
+#         return newDict
             
-    def _checkDict(self, data):
-        if type(data) == dict:
-            for aKey in data:
-                if type(aKey) == QString:
-                    return self._convertDict(data)
-                if type(data[aKey]) == QString:
-                    return self._convertDict(data)
-        return data
+#     def _checkDict(self, data):
+#         if type(data) == dict:
+#             for aKey in data:
+#                 if type(aKey) == QString:
+#                     return self._convertDict(data)
+#                 if type(data[aKey]) == QString:
+#                     return self._convertDict(data)
+#         return data
                     
     """ ----------------- SLOTS ------------------- """
             
     def externalRowAppended(self, key, data):
-        if type(key) == QString:
-            key = convert_string(key)
-        data = self._checkDict(data)
+        #data = self._checkDict(data)
         self.appendContentRow(key, data)
         
     def externalRowPrepended(self, key, data):
-        if type(key) == QString:
-            key = convert_string(key)
-        data = self._checkDict(data)
+        #data = self._checkDict(data)
         self.prependContentRow(key, data)
     
     def externalRowUpdated(self, key, data):
-        if type(key) == QString:
-            key = convert_string(key)
-        data = self._checkDict(data)
+        #data = self._checkDict(data)
         if key in self.keys:
             index = self.keys.index(key)
             self.updateRow(key, data, index)
     
     def externalRowRemoved(self, key):
-        if type(key) == QString:
-            key = convert_string(key)
         if key in self.keys:
             index = self.keys.index(key)
             del self.keys[index]
@@ -149,7 +138,7 @@ class MembersTableModel(TableModelBase):
         self.itemChanged.connect(self.itemChangedSlot)
 
     def _updateIpItem(self, ip, _, item):
-        item.setData(QVariant(ip), Qt.DisplayRole)
+        item.setData(ip, Qt.DisplayRole)
 
     def _updateNameItem(self, ip, infoDict, item):
         if self.nameKey in infoDict:
@@ -204,7 +193,7 @@ class MembersTableModel(TableModelBase):
             item.setText(infoDict[self.lunchBeginKey]+"-"+infoDict[self.lunchEndKey])
             beginTime = datetime.strptime(infoDict[self.lunchBeginKey], "%H:%M")
             beginTime = beginTime.replace(year=2000)
-            item.setData(QVariant(time.mktime(beginTime.timetuple())), self.SORT_ROLE)
+            item.setData(time.mktime(beginTime.timetuple()), self.SORT_ROLE)
             timeDifference = self._getTimeDifference(infoDict[self.lunchBeginKey],infoDict[self.lunchEndKey])
             if timeDifference > 0:
                 item.setData(QColor(0, 255, 0), Qt.DecorationRole)
@@ -217,13 +206,13 @@ class MembersTableModel(TableModelBase):
                 timer.setSingleShot(True)
                 timer.start(abs(timeDifference))
         else:
-            item.setData(QVariant(-1), self.SORT_ROLE)
+            item.setData(-1, self.SORT_ROLE)
         
     def _updateLastSeenItem(self, ip, _, item):
         intValue = -1
         if ip in self.dataSource.get_member_timeout():
             intValue = int(time.time()-self.dataSource.get_member_timeout()[ip])
-        item.setData(QVariant(intValue), Qt.DisplayRole)
+        item.setData(intValue, Qt.DisplayRole)
     
     def _updateSendToItem(self, ip, _, item):
         checkstate = Qt.Unchecked if ip in self.dataSource.dontSendTo else Qt.Checked
@@ -232,7 +221,7 @@ class MembersTableModel(TableModelBase):
         
     """ --------------------- SLOTS ---------------------- """
     
-    @pyqtSlot()
+    @Slot()
     def updateTimeouts(self):
         self.updateColumn(self.lastSeenColIndex)
 
@@ -255,7 +244,7 @@ class ExtendedMembersModel(TableModelBase):
         self.updateModel(self.dataSource.get_member_info())
     
     """ may be called concurrently """
-    @pyqtSlot(dict)
+    @Slot(dict)
     def updateModel(self, member_info, update = False, prepend = False):
         table_headers = set()
         table_headers.add(u"ip") 
@@ -287,21 +276,21 @@ class ExtendedMembersModel(TableModelBase):
             text = key
         elif headerName in data:
             text = data[headerName]
-        item.setData(QVariant(text), Qt.DisplayRole)
+        item.setData(text, Qt.DisplayRole)
         
     def externalRowAppended(self, key, data):
         key = convert_string(key)
-        data = self._checkDict(data)
+        #data = self._checkDict(data)
         self.updateModel({key: data})
         
     def externalRowPrepended(self, key, data):
         key = convert_string(key)
-        data = self._checkDict(data)
+        #data = self._checkDict(data)
         self.updateModel({key: data}, prepend=True)
     
     def externalRowUpdated(self, key, data):
         key = convert_string(key)
-        data = self._checkDict(data)
+        #data = self._checkDict(data)
         self.updateModel({key: data}, update=True)
 
 class MessagesTableModel(TableModelBase):
@@ -317,20 +306,20 @@ class MessagesTableModel(TableModelBase):
             self.appendContentRow(aMsg[0], [aMsg[1], aMsg[2]])
             
     def _updateTimeItem(self, mTime, _, item):
-        item.setData(QVariant(time.strftime("%d.%m.%Y %H:%M:%S", mTime)), Qt.DisplayRole)
-        item.setData(QVariant(time.mktime(mTime)), self.SORT_ROLE)
+        item.setData(time.strftime("%d.%m.%Y %H:%M:%S", mTime), Qt.DisplayRole)
+        item.setData(time.mktime(mTime), self.SORT_ROLE)
     
     def _updateSenderItem(self, _, m, item):
-        data = QVariant(self.dataSource.memberName(convert_string(m[0])))
+        data = self.dataSource.memberName(convert_string(m[0]))
         item.setData(data, Qt.DisplayRole)
     
     def _updateMessageItem(self, _, m, item):
-        data = QVariant(m[1])
+        data = m[1]
         item.setData(data, Qt.DisplayRole)
     
     """ --------------------- SLOTS ---------------------- """
     
-    @pyqtSlot()
+    @Slot()
     def updateSenders(self):
         self.dataSource.lockMembers()
         try:

@@ -1,5 +1,5 @@
-from PyQt4.QtCore import QEvent, Qt
-from PyQt4.QtGui import QLineEdit
+from PySide.QtCore import QEvent, Qt
+from PySide.QtGui import QLineEdit
 class HistoryLineEdit(QLineEdit):
     def __init__(self, parent, placeholder):
         super(HistoryLineEdit, self).__init__(parent)

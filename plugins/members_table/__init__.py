@@ -26,8 +26,8 @@ class members_table(iface_gui_plugin):
             get_server().controller.addHostClicked(text)        
     
     def create_widget(self, parent):
-        from PyQt4.QtGui import QSortFilterProxyModel
-        from PyQt4.QtCore import QTimer, Qt
+        from PySide.QtGui import QSortFilterProxyModel
+        from PySide.QtCore import QTimer, Qt
         from lunchinator.table_models import MembersTableModel
         from lunchinator.table_widget import TableWidget
         

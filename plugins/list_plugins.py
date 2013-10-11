@@ -12,7 +12,7 @@ class list_plugins(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
-        from PyQt4.QtGui import QTextEdit, QSizePolicy
+        from PySide.QtGui import QTextEdit, QSizePolicy
         textView = QTextEdit(parent)
         textView.setLineWrapMode(QTextEdit.WidgetWidth)
         textView.setReadOnly(True)

@@ -1,5 +1,5 @@
-from PyQt4.QtGui import QTabWidget, QDialog, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QComboBox, QGroupBox
-from PyQt4.QtCore import Qt
+from PySide.QtGui import QTabWidget, QDialog, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QComboBox, QGroupBox
+from PySide.QtCore import Qt
 from lunchinator import get_server, log_exception
 from lunchinator.ComboTabWidget import ComboTabWidget
 

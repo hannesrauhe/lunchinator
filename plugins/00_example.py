@@ -56,8 +56,8 @@ class example_called(iface_called_plugin):
 (see lunch_menu.py for example)'''
 class example_gui(iface_gui_plugin):
     def create_widget(self, parent):
-        import PyQt4
-        return PyQt4.QtGui.QLabel("Somehting that will show up in the lunchinator", parent)
+        import PySide
+        return PySide.QtGui.QLabel("Somehting that will show up in the lunchinator", parent)
     pass
 
 

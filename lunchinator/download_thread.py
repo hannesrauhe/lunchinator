@@ -1,11 +1,11 @@
-from PyQt4.QtCore import QThread, pyqtSignal
+from PySide.QtCore import QThread, Signal
 from lunchinator import log_exception
 import urllib2, contextlib
 from cStringIO import StringIO, OutputType
    
 class DownloadThread(QThread):
-    success = pyqtSignal(QThread, unicode)
-    error = pyqtSignal(QThread, unicode)
+    success = Signal(QThread, unicode)
+    error = Signal(QThread, unicode)
     
     def __init__(self, parent, url, target = None):
         super(DownloadThread, self).__init__(parent)

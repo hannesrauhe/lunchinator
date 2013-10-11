@@ -16,8 +16,8 @@ class lunch_button(iface_gui_plugin):
         get_server().call("lunch")
     
     def create_widget(self, parent):
-        from PyQt4.QtGui import QPushButton, QSizePolicy, QIcon
-        from PyQt4.QtCore import QSize
+        from PySide.QtGui import QPushButton, QSizePolicy, QIcon
+        from PySide.QtCore import QSize
         
         lunchIcon = QIcon(os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg"))
         lunchButton = QPushButton(parent)

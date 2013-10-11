@@ -135,8 +135,8 @@ class twitter_status(iface_called_plugin):
                     self.post_update(reply)
             
     def create_options_widget(self, parent):
-        from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox
-        from PyQt4.QtCore import Qt
+        from PySide.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox
+        from PySide.QtCore import Qt
         widget = QWidget(parent)
         w = super(twitter_status, self).create_options_widget(widget)
         layout = QVBoxLayout(widget)

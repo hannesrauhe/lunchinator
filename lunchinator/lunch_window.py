@@ -1,5 +1,5 @@
-from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplication, QMenu, QKeySequence
-from PyQt4.QtCore import Qt, QSettings, QVariant
+from PySide.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplication, QMenu, QKeySequence
+from PySide.QtCore import Qt, QSettings
 from lunchinator import get_settings, get_server, log_exception, convert_string
 import sys, os
 from StringIO import StringIO
@@ -30,7 +30,7 @@ class LunchinatorWindow(QMainWindow):
         
         savedGeometry = self.settings.value("geometry", None)
         savedState = self.settings.value("state", None)
-        self.locked = self.settings.value("locked", QVariant(False)).toBool()
+        self.locked = self.settings.value("locked", False)
         
         if savedState == None:
             # first run, create initial state
@@ -55,12 +55,12 @@ class LunchinatorWindow(QMainWindow):
             log_exception("while including plugins %s"%str(sys.exc_info()))
         
         if savedGeometry != None:
-            self.restoreGeometry(savedGeometry.toByteArray())
+            self.restoreGeometry(savedGeometry)
         else:
             self.centerOnScreen()
         
         if savedState != None:
-            self.restoreState(savedState.toByteArray())
+            self.restoreState(savedState)
 
         if len(self.pluginNameToDockWidget) == 0:
             # no gui plugins activated, show about plugins
@@ -178,7 +178,7 @@ class LunchinatorWindow(QMainWindow):
             try:
                 self.settings.setValue("geometry", self.saveGeometry())
                 self.settings.setValue("state", self.saveState())
-                self.settings.setValue("locked", QVariant(self.locked))
+                self.settings.setValue("locked", self.locked)
                 self.settings.sync()
             except:
                 log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))

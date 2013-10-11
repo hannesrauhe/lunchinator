@@ -1,5 +1,5 @@
-from PyQt4.QtGui import QImage, QPixmap, QLabel, QSizePolicy
-from PyQt4.QtCore import Qt
+from PySide.QtGui import QImage, QPixmap, QLabel, QSizePolicy
+from PySide.QtCore import Qt
 
 class ResizingImageLabel(QLabel):
     def __init__(self,parent,smooth_scaling,sizeHint = None):

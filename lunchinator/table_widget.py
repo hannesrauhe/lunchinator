@@ -1,5 +1,5 @@
-from PyQt4.QtGui import QTreeView, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy
-from PyQt4.QtCore import Qt, QSize
+from PySide.QtGui import QTreeView, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy
+from PySide.QtCore import Qt, QSize
 from lunchinator import convert_string
 from lunchinator.history_line_edit import HistoryLineEdit
 

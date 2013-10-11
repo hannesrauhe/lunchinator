@@ -1,5 +1,5 @@
-from PyQt4.QtGui import QWidget, QVBoxLayout, QStackedWidget, QComboBox, QGroupBox
-from PyQt4.QtCore import Qt
+from PySide.QtGui import QWidget, QVBoxLayout, QStackedWidget, QComboBox, QGroupBox
+from PySide.QtCore import Qt
 
 class ComboTabWidget(QWidget):
     def __init__(self, parent):

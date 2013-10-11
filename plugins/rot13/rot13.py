@@ -1,6 +1,6 @@
 import string #fixed typo was using
 from functools import partial
-from PyQt4.QtGui import QWidget, QHBoxLayout, QPushButton, QLineEdit, QSizePolicy, QToolButton, QMenu
+from PySide.QtGui import QWidget, QHBoxLayout, QPushButton, QLineEdit, QSizePolicy, QToolButton, QMenu
 from lunchinator import get_server
 
 class rot13box(QWidget):
@@ -60,6 +60,6 @@ class rot13box(QWidget):
             u"NOPQRSTUVWXYZnopqrstuvwxyzABCDEFGHIJKLMabcdefghijklm")
         plain = self.entry.text()
         if plain:
-            self.entry.setText(string.translate(str(plain.toUtf8()), rot13))
+            self.entry.setText(string.translate(plain.encode("utf-8"), rot13))
         
     

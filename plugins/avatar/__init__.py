@@ -21,8 +21,8 @@ class avatar(iface_general_plugin):
         pass    
     
     def _setImage(self, selectedFile, label):
-        from PyQt4.QtGui import QImage, QPixmap
-        from PyQt4.QtCore import Qt
+        from PySide.QtGui import QImage, QPixmap
+        from PySide.QtCore import Qt
         qimg = QImage(selectedFile)
         pixmap = QPixmap.fromImage(qimg).scaled(l_avatar.width,l_avatar.height,Qt.KeepAspectRatio,Qt.SmoothTransformation)
         label.setPixmap(pixmap)
@@ -32,7 +32,7 @@ class avatar(iface_general_plugin):
         return w if w.parentWidget() == None else self.parentWindow(w.parentWidget())
     
     def _chooseFile(self):  
-        from PyQt4.QtGui import QSortFilterProxyModel, QFileDialog
+        from PySide.QtGui import QSortFilterProxyModel, QFileDialog
         class FileFilterProxyModel(QSortFilterProxyModel):
             MIME_TYPES = ["image/png", "image/jpeg", "image/gif"]
             EXTENSIONS = [u"png", u"jpg", u"jpeg", u"jpe", u"gif", u"tif", u"tiff", u"xpm"]
@@ -46,7 +46,7 @@ class avatar(iface_general_plugin):
             def filterAcceptsRow(self, sourceRow, sourceParent):
                 fileModel = self.sourceModel()
                 index0 = fileModel.index(sourceRow, 0, sourceParent)
-                path = str(fileModel.filePath(index0).toUtf8())
+                path = fileModel.filePath(index0)
                 return self.filterAcceptsFile(path)
         dialog = QFileDialog(self.parentWindow(self.label), "Choose Avatar Picture:")
         fileFilter = FileFilterProxyModel()
@@ -64,8 +64,8 @@ class avatar(iface_general_plugin):
                 log_error("Selected invalid file: '%s' is of invalid type" % selectedFile)
     
     def create_options_widget(self, parent):
-        from PyQt4.QtGui import QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton
-        from PyQt4.QtCore import Qt
+        from PySide.QtGui import QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton
+        from PySide.QtCore import Qt
         img_path = get_settings().get_avatar_dir()+get_settings().get_avatar_file()
         
         widget = QWidget(parent)

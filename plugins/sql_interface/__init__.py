@@ -30,7 +30,7 @@ class sql_interface(iface_gui_plugin):
         self.times_called+=1
         
     def sendSqlClicked(self, sql_stat):
-        from PyQt4.QtGui import QMessageBox
+        from PySide.QtGui import QMessageBox
         from lunchinator.table_models import TableModelBase
         try:
             header, res = get_server().getDBConnection().queryWithHeader(sql_stat)
@@ -51,8 +51,8 @@ class sql_interface(iface_gui_plugin):
         return True
         
     def create_widget(self, parent):
-        from PyQt4.QtGui import QSortFilterProxyModel
-        from PyQt4.QtCore import Qt
+        from PySide.QtGui import QSortFilterProxyModel
+        from PySide.QtCore import Qt
         from lunchinator.table_widget import TableWidget
         self.resultTable = TableWidget(parent, "Execute", self.sendSqlClicked)
         

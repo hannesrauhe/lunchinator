@@ -136,13 +136,13 @@ if __name__ == "__main__":
         sys.exit(get_server().exitCode)
     else:    
         try:
-            from PyQt4.QtCore import QThread
+            from PySide.QtCore import QThread
         except:
             log_error("pyQT4 not found - start lunchinator with --no-gui")
             sys.exit(-1)
             
         from lunchinator.gui_controller import LunchinatorGuiController
-        from PyQt4.QtGui import QApplication
+        from PySide.QtGui import QApplication
         
         app = QApplication(sys.argv)
         app.setQuitOnLastWindowClosed(False)

@@ -2,8 +2,8 @@
 import hashlib, shutil
 import os
 from lunchinator import log_exception, log_error, get_settings
-from PyQt4.QtGui import QImage, QPixmap
-from PyQt4.QtCore import Qt
+from PySide.QtGui import QImage, QPixmap
+from PySide.QtCore import Qt
 
 class l_avatar(object):
     width = 128

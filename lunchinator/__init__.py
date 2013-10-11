@@ -60,7 +60,6 @@ def convert_string(string):
         return string
     elif type(string) == str:
         return string.decode('utf-8')
-    return unicode(string.toUtf8(), 'utf-8')
 
 def _get_logger():
     return _lunchinator_logger.get_singleton_logger()

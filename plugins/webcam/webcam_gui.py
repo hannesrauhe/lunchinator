@@ -1,7 +1,7 @@
 import urllib2, sys
 from lunchinator import log_exception
-from PyQt4.QtGui import QImage, QPixmap
-from PyQt4.QtCore import QTimer, QSize
+from PySide.QtGui import QImage, QPixmap
+from PySide.QtCore import QTimer, QSize
 from lunchinator.resizing_image_label import ResizingImageLabel
 
 class UpdatingImage(ResizingImageLabel):

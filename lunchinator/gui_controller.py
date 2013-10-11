@@ -3,8 +3,8 @@ from lunchinator import get_server, log_exception, log_info, get_settings,\
     log_error, convert_string, log_warning, log_debug
 import socket,os,time, subprocess
 import platform
-from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
-from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication
+from PySide.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
+from PySide.QtCore import QThread, Signal, Slot, QObject, QByteArray, QCoreApplication
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
@@ -24,17 +24,17 @@ class LunchServerThread(QThread):
 class LunchinatorGuiController(QObject, LunchServerController):
     _menu = None
     # ---- SIGNALS ----------------
-    _initDone = pyqtSignal()
-    memberAppendedSignal = pyqtSignal(unicode, dict)
-    memberUpdatedSignal = pyqtSignal(unicode, dict)
-    memberRemovedSignal = pyqtSignal(unicode)
-    messagePrependedSignal = pyqtSignal(time.struct_time, list)
-    _sendFile = pyqtSignal(unicode, QByteArray, int, bool)
-    _receiveFile = pyqtSignal(unicode, int, unicode)
-    _processEvent = pyqtSignal(unicode, unicode, unicode)
-    _processMessage = pyqtSignal(unicode, unicode)
-    _processLunchCall = pyqtSignal(unicode, unicode)
-    _updateRequested = pyqtSignal()
+    _initDone = Signal()
+    memberAppendedSignal = Signal(unicode, dict)
+    memberUpdatedSignal = Signal(unicode, dict)
+    memberRemovedSignal = Signal(unicode)
+    messagePrependedSignal = Signal(time.struct_time, list)
+    _sendFile = Signal(unicode, QByteArray, int, bool)
+    _receiveFile = Signal(unicode, int, unicode)
+    _processEvent = Signal(unicode, unicode, unicode)
+    _processMessage = Signal(unicode, unicode)
+    _processLunchCall = Signal(unicode, unicode)
+    _updateRequested = Signal()
     # -----------------------------
     
     def __init__(self, noUpdates = False): 
@@ -273,24 +273,24 @@ class LunchinatorGuiController(QObject, LunchServerController):
                   
     """---------------------- SLOTS ------------------------------"""
     
-    @pyqtSlot()
+    @Slot()
     def initDoneSlot(self):
         pass
     
-    @pyqtSlot()
+    @Slot()
     def updateRequested(self):
         self.quit(EXIT_CODE_UPDATE)
     
-    @pyqtSlot(unicode)
+    @Slot(unicode)
     def plugin_widget_closed(self, p_name):
         # just un-check the menu item, this will cause a callback
         anAction = self.pluginNameToMenuAction[p_name]
         anAction.setChecked(False)
 
-    @pyqtSlot(QAction, unicode, bool)
+    @Slot(QAction, unicode, bool)
     def toggle_plugin(self,w,p_cat,new_state):
         p_cat = convert_string(p_cat)
-        p_name = unicode(w.text().toUtf8(), 'utf-8')
+        p_name = convert_string(w.text())
         if new_state:
             log_debug("Activating plugin '%s' of type '%s'" % (p_name, p_cat))
             po = get_server().plugin_manager.activatePluginByName(p_name,p_cat)
@@ -302,28 +302,29 @@ class LunchinatorGuiController(QObject, LunchServerController):
             if p_cat=="gui" and self.mainWindow != None:
                 self.mainWindow.removePluginWidget(p_name)
     
-    @pyqtSlot(unicode, QObject)
+    @Slot(unicode, QObject)
     def sendMessageClicked(self, message, text):
         if message != None:
             get_server().call_all_members(convert_string(message))
         else:
             get_server().call_all_members(text)
         
-    @pyqtSlot(QLineEdit)
+    @Slot(QLineEdit)
     def addHostClicked(self, hostn):
         try:
             ip = socket.gethostbyname(hostn.strip())
             get_server()._append_member(ip, hostn)
         except:
-            d = QMessageBox(QMessageBox.Critical, "Error adding host", "Cannot add host: Hostname unknown", QMessageBox.Ok, w)
+            d = QMessageBox(QMessageBox.Critical, "Error adding host", "Cannot add host: Hostname unknown", QMessageBox.Ok, self.mainWindow)
             d.exec_()
             
-    @pyqtSlot(bool)
+    @Slot(bool)
     def quitClicked(self,_):
         self.quit()
 
-    @pyqtSlot(bool)
-    def openWindowClicked(self, _):    
+    @Slot(bool)
+    @Slot()
+    def openWindowClicked(self, _ = None):    
         self.reset_new_msgs() 
         
         if self.mainWindow == None:
@@ -333,7 +334,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.mainWindow.activateWindow()
         self.mainWindow.raise_()
             
-    @pyqtSlot(bool)
+    @Slot(bool)
     def openSettingsClicked(self,_):
         if self.mainWindow == None:
             log_error("mainWindow not specified")
@@ -357,7 +358,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         get_server().call("HELO_INFO "+get_server()._build_info_string())        
 
-    @pyqtSlot(unicode, QByteArray, int, bool)
+    @Slot(unicode, QByteArray, int, bool)
     def sendFileSlot(self, addr, fileToSend, other_tcp_port, isData):
         addr = convert_string(addr)
         if isData:
@@ -368,7 +369,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         ds.finished.connect(ds.deleteLater)
         ds.start()
     
-    @pyqtSlot(unicode, int, unicode)
+    @Slot(unicode, int, unicode)
     def receiveFileSlot(self, addr, file_size, file_name):
         addr = convert_string(addr)
         file_name = convert_string(file_name)
@@ -376,20 +377,20 @@ class LunchinatorGuiController(QObject, LunchServerController):
         dr.finished.connect(dr.deleteLater)
         dr.start()
         
-    @pyqtSlot(unicode, unicode, unicode)
+    @Slot(unicode, unicode, unicode)
     def processEventSlot(self, cmd, value, addr):
         cmd = convert_string(cmd)
         value = convert_string(value)
         addr = convert_string(addr)
         processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info))
      
-    @pyqtSlot(unicode, unicode)
+    @Slot(unicode, unicode)
     def processMessageSlot(self, msg, addr):
         msg = convert_string(msg)
         addr = convert_string(addr)
         processPluginCall(addr, lambda p, ip, member_info: p.process_message(msg, ip, member_info))
                     
-    @pyqtSlot(unicode, unicode)
+    @Slot(unicode, unicode)
     def processLunchCallSlot(self, msg, addr):
         msg = convert_string(msg)
         addr = convert_string(addr)
