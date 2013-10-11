@@ -114,7 +114,7 @@ class lunch_settings(object):
         self._reset_icon_time = self.read_value_from_config_file(self._reset_icon_time, "general", "reset_icon_time")
         
         self._logging_level = self.read_value_from_config_file(self._logging_level, 'general', 'logging_level')
-        self._group_plugins = self.read_value_from_config_file(self._logging_level, 'general', 'group_plugins')
+        self._group_plugins = self.read_value_from_config_file(self._group_plugins, 'general', 'group_plugins')
         
         #not shown in settings-plugin - handled by avatar-plugin
         self._avatar_file =  self.read_value_from_config_file(self._avatar_file,"general","avatar_file")
