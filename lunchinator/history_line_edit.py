@@ -1,4 +1,4 @@
-from PyQt4.QtCore import QEvent, Qt, Signal
+from PyQt4.QtCore import QEvent, Qt, pyqtSignal
 from PyQt4.QtGui import QLineEdit
 from lunchinator.growing_text_edit import GrowingTextEdit
 
@@ -60,7 +60,7 @@ class HistoryLineEdit(QLineEdit, HistoryBase):
         return True
 
 class HistoryTextEdit(GrowingTextEdit, HistoryBase):
-    returnPressed = Signal()
+    returnPressed = pyqtSignal()
     
     def __init__(self, parent):
         GrowingTextEdit.__init__(self, parent, 150)

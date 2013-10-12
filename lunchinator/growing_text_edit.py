@@ -1,5 +1,5 @@
-from PySide.QtGui import QTextEdit, QSizePolicy, QWidget
-from PySide.QtCore import QSize
+from PyQt4.QtGui import QTextEdit, QSizePolicy, QWidget
+from PyQt4.QtCore import QSize, pyqtSignal
 
 class GrowingTextEdit(QTextEdit):
     def __init__(self, parent, heightMax = 1000):
