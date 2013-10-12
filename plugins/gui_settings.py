@@ -1,5 +1,5 @@
 from lunchinator.iface_plugins import iface_general_plugin
-from lunchinator import get_settings, log_warning
+from lunchinator import get_server, get_settings, log_warning
     
 class gui_settings(iface_general_plugin):
     def __init__(self):
@@ -15,7 +15,8 @@ class gui_settings(iface_general_plugin):
                         (u"reset_icon_time", u"Reset Lunchinator Icon after x min"),
                         (u"tcp_port", u"TCP Port"),
                         (u"logging_level", u"Logging Level", (u"CRITICAL", u"ERROR", u"WARNING", u"INFO", u"DEBUG")),
-                        (u"group_plugins", u"Group Plugins by category")]
+                        (u"group_plugins", u"Group Plugins by category"),
+                        (u"default_db_connection", u"Default DB Connection", [u'auto']+get_server().getAvailableDBConnections())]
         self.options = []
         for o in option_names:
             methodname = "get_"+o[0]

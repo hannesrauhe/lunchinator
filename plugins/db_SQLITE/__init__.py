@@ -28,6 +28,10 @@ class db_SQLITE(iface_database_plugin):
         
     
     def _post_open(self):
+        if not self.existsTable("members"):
+            self.execute(self.members_schema)
+        if not self.existsTable("messages"):
+            self.execute(self.messages_schema)
         res = self.get_newest_members_data()
         if res:
             for e in res:

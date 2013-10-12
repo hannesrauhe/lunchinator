@@ -8,6 +8,7 @@ class sql_interface(iface_gui_plugin):
         self.sqlResultTable = None
         self.times_called=0
         self.last_key=-1
+        self.options = [((u"db_connection", u"DB Connection", [u'auto']+get_server().getAvailableDBConnections()),"auto")]
     
     def activate(self):
         iface_gui_plugin.activate(self)
@@ -33,7 +34,7 @@ class sql_interface(iface_gui_plugin):
         from PyQt4.QtGui import QMessageBox
         from lunchinator.table_models import TableModelBase
         try:
-            header, res = get_server().getDBConnection().queryWithHeader(sql_stat)
+            header, res = get_server().getDBConnection(self.options['db_connection']).queryWithHeader(sql_stat)
         except Exception as e:
             msgBox = QMessageBox.warning(self.resultTable,"Error in SQL statement",str(e))
             log_error("SQL error:")

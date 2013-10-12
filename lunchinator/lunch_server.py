@@ -32,7 +32,7 @@ class lunch_server(object):
         self.new_msg = False
         self.my_master = -1    
         self.peer_nr=0 #the number of the peer i contacted to be my master
-        self.last_lunch_call=0
+        self.mute_time_until=0
         self.last_messages = []
         self.members = []
         self.member_timeout = {}
@@ -55,7 +55,6 @@ class lunch_server(object):
     def initialize(self, controller = None):
         if self.initialized:
             return
-        self.initialized = True
         if controller != None:
             self.controller = controller
         else:
@@ -91,9 +90,16 @@ class lunch_server(object):
             self.plugin_manager.activatePluginByName("Notify", "called") 
         else:
             log_info("lunchinator initialised without plugins")  
+        self.initialized = True
         
+    def getAvailableDBConnections(self):
+        return [unicode(pluginInfo.name) for pluginInfo in self.plugin_manager.getPluginsOfCategory("db")]
+    
     def getDBConnection(self,db_name=None):
-        if None!=db_name and ""!=db_name:
+        if db_name in [None,"","auto"]:
+            db_name = get_settings().get_default_db_connection()
+            
+        if db_name not in [None,"","auto"]:
             pluginInfo = self.plugin_manager.getPluginByName(db_name, "db")
             if pluginInfo and pluginInfo.plugin_object.is_activated:
                 return pluginInfo.plugin_object
@@ -186,12 +192,6 @@ class lunch_server(object):
         if addr in self.member_info and u'name' in self.member_info[addr]:
             return self.member_info[addr][u'name']
         return addr
-    
-    def ipForMemberName(self, name):
-        for ip, infoDict in self.member_info.iteritems():
-            if u'name' in infoDict and infoDict[u'name'] == name:
-                return ip
-        return None
     
     def messagesCount(self):
         length = 0
@@ -297,9 +297,7 @@ class lunch_server(object):
         for ip, hostn in otherDict.items():
             if noLocal and ip.startswith('127'):
                 continue
-            
-            if not ip in self.members:
-                self._append_member(ip, hostn)
+            self._append_member(ip, hostn)
             
     def _is_now_in_time_span(self,begin,end):
         try:
@@ -433,11 +431,11 @@ class lunch_server(object):
             
             if "lunch" in msg.lower() and self._is_now_in_time_span(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
                 timenum = mktime(mtime)
-                if timenum - self.last_lunch_call > get_settings().get_mute_timeout():
-                    self.last_lunch_call = timenum
+                if timenum>self.mute_time_until:
+                    self.mute_time_until=timenum+get_settings().get_mute_timeout()
                     self.controller.processLunchCall(msg, addr)
                 else:
-                    log_debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)"%(t,m,msg,strftime("%a, %d %b %Y %H:%M:%S", localtime(timenum + get_settings().get_mute_timeout()))))
+                    log_debug("messages will not trigger alarm: %s: [%s] %s until %s"%(t,m,msg,strftime("%a, %d %b %Y %H:%M:%S", localtime(self.mute_time_until))))
       
     def _update_member_info(self, ip, newInfo, requestAvatar = True):
         self.lockMembers()
@@ -492,8 +490,9 @@ class lunch_server(object):
                 
             elif cmd.startswith("HELO_DICT"):
                 #the master send me the list of members - yeah
-                ext_members = json.loads(value)
+                ext_members = json.loads(data.split(" ",1)[1].strip())
                 self._updateMembersDict(ext_members)
+                self._update_member_info(ip, json.loads(value)) 
                 if self.my_master==-1:
                     self.call("HELO_REQUEST_INFO "+self._build_info_string())
                     

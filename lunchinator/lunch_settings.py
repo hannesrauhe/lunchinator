@@ -68,6 +68,7 @@ class lunch_settings(object):
         self._reset_icon_time = 5
         self._logging_level = u"ERROR"
         self._group_plugins = False
+        self._default_db_connection = u"auto"
         
         if not os.path.exists(self._main_config_dir):
             os.makedirs(self._main_config_dir)
@@ -327,7 +328,13 @@ class lunch_settings(object):
         return self._group_plugins
     
     def set_group_plugins(self, newValue):
-        self._group_plugins = newValue
+        self._group_plugins = newValue            
+        
+    def get_default_db_connection(self):
+        return self._default_db_connection
+    
+    def set_default_db_connection(self, newValue):
+        self._default_db_connection = newValue
             
     def get_advanced_gui_enabled(self):
         return self._logging_level == u"DEBUG"
