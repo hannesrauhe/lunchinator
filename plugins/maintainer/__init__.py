@@ -7,13 +7,13 @@ import subprocess
 class maintainer(iface_gui_plugin):
     def __init__(self):
         super(maintainer, self).__init__()
-        self.options = [(("db_connect", "Which db connection to use (leave empty for default)"),"")]
+        self.options = [((u"db_connection", u"DB Connection", [u'auto']+get_server().getAvailableDBConnections()),"auto")]
         self.recorded_reports = []
         self.dbPluginErrorPrinted = False
         self.w = None
         
     def getBugsFromDB(self,mode="open"):
-        stats = get_server().getDBConnection(self.options["db_connect"])
+        stats = get_server().getDBConnection(self.options["db_connection"])
         if stats == None:
             log_error("Maintainer Plugin: Cannot read old bug reports, no DB Connection.")
             return []

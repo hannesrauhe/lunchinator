@@ -66,14 +66,14 @@ class db_SQLITE(iface_database_plugin):
     '''Maintainer'''        
     def getBugsFromDB(self,mode="open"):
         sql_cmd={}
-        sql_cmd["all"]="select seconds_between(to_date('1970-1-1'),rtime) as unix_time,sender,message from messages where mtype='HELO_BUGREPORT_DESCR'"
-        sql_cmd["closed"]="SELECT all_bugs_t.unix_time as unix_time ,sender,all_bugs_t.message as message from \
-                            (select seconds_between(to_date('1970-1-1'),rtime) as unix_time,sender,message from messages where mtype='HELO_BUGREPORT_DESCR') as all_bugs_t,\
-                            (select to_int(left(message,10)) as unix_time,trim(substr(message,11)) as ip from messages where mtype='HELO_BUGREPORT_CLOSE') as close_bugs_t\
-                            where all_bugs_t.unix_time=close_bugs_t.unix_time\
-                            and all_bugs_t.sender=close_bugs_t.ip"
-        sql_cmd["open"]="select * from (%s) except (%s)"%(sql_cmd["all"],sql_cmd["closed"])
-        return self.query(sql_cmd[mode]+" order by unix_time DESC")   
+        sql_cmd["all"]="select rtime,sender,message from messages where mtype='HELO_BUGREPORT_DESCR'"
+#         sql_cmd["closed"]="SELECT all_bugs_t.unix_time as unix_time ,sender,all_bugs_t.message as message from \
+#                     (select seconds_between(to_date('1970-1-1'),rtime) as unix_time,sender,message from messages where mtype='HELO_BUGREPORT_DESCR') as all_bugs_t,\
+#                     (select to_int(left(message,10)) as unix_time,trim(substr(message,11)) as ip from messages where mtype='HELO_BUGREPORT_CLOSE') as close_bugs_t\
+#                     where all_bugs_t.unix_time=close_bugs_t.unix_time\
+#                     and all_bugs_t.sender=close_bugs_t.ip"
+#         sql_cmd["open"]="select * from (%s) except (%s)"%(sql_cmd["all"],sql_cmd["closed"])
+        return self.query(sql_cmd["all"]+" order by rtime DESC")   
     
     
     '''Statistics'''
