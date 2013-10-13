@@ -27,5 +27,5 @@ class DownloadThread(QThread):
                 self.target.write(u.read())
                 self.success.emit(self, self.url)
         except:
-            log_exception("TDT notify error while downloading")
+            log_exception("Error while downloading %s"%self.url)
             self.error.emit(self, self.url)
