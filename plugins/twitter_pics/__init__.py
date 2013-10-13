@@ -5,7 +5,6 @@ from lunchinator.download_thread import DownloadThread
 from lunchinator.utilities import displayNotification, getValidQtParent
 
 import urllib2, tempfile, json, time, twitter, contextlib
-from get_access_token import get_access_token
 
 from PyQt4.QtCore import QThread, pyqtSignal, QTimer
 
