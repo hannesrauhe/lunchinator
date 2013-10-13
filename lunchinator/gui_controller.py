@@ -3,8 +3,8 @@ from lunchinator import get_server, log_exception, log_info, get_settings,\
     log_error, convert_string, log_warning, log_debug
 import socket,os,time, subprocess
 import platform
-from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
-from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication
+from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
+from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication, QTimer
 from PyQt4 import QtCore
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
@@ -44,6 +44,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         log_info("Your PyQt version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
         
+        self.resetIconTimer = None
+        self.isIconHighlighted = True # set to True s.t. first dehighlight can set the default icon
+        
         self.exitCode = 0
         self.serverThread = None
         self.running = True
@@ -71,10 +74,40 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processLunchCall.connect(self.processLunchCallSlot)
         self._updateRequested.connect(self.updateRequested)
         
+        self.messagePrependedSignal.connect(self.highlightIcon)
+        
         self.serverThread = LunchServerThread(self)
         self.serverThread.finished.connect(self.serverFinishedUnexpectedly)
         self.serverThread.finished.connect(self.serverThread.deleteLater)
         self.serverThread.start()
+        
+    def highlightIcon(self):
+        if self.isIconHighlighted:
+            return
+        if self.mainWindow.isActiveWindow():
+            # dont set highlighted if window is in foreground
+            return
+        self.isIconHighlighted = True
+        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunchred.svg")
+        icon = QIcon.fromTheme("lunchinatorred", QIcon(icon_file))
+        self.statusicon.setIcon(icon)
+        
+        if self.resetIconTimer == None:
+            self.resetIconTimer = QTimer(self)
+            self.resetIconTimer.setSingleShot(True)
+            self.resetIconTimer.timeout.connect(self.dehighlightIcon)
+        
+        self.resetIconTimer.start(get_settings().get_reset_icon_time() * 60000)
+        
+    def dehighlightIcon(self):
+        if not self.isIconHighlighted:
+            return
+        self.isIconHighlighted = False
+        if self.resetIconTimer != None and self.resetIconTimer.isActive():
+            self.resetIconTimer.stop()
+        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg")
+        icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
+        self.statusicon.setIcon(icon)
         
     def createTrayIcon(self):
         if platform.linux_distribution()[0] == "Ubuntu":
@@ -100,9 +133,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
                         log_info("icons were not installed because of an error")
         
         # initialize tray icon
-        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg")
-        icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
-        self.statusicon = QSystemTrayIcon(icon, self.mainWindow)
+        self.statusicon = QSystemTrayIcon(self.mainWindow)
+        # dehighlightIcon sets the default icon
+        self.dehighlightIcon()
         contextMenu = self.init_menu(self.mainWindow)
         self.statusicon.activated.connect(self.trayActivated)
         self.statusicon.setContextMenu(contextMenu)
