@@ -5,6 +5,7 @@ import socket,os,time, subprocess
 import platform
 from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication
+from PyQt4 import QtCore
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
@@ -40,6 +41,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def __init__(self, noUpdates = False): 
         QObject.__init__(self)
         LunchServerController.__init__(self)
+        
+        log_info("Your PySide version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
         
         self.exitCode = 0
         self.serverThread = None
@@ -290,7 +293,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     @pyqtSlot(QAction, unicode, bool)
     def toggle_plugin(self,w,p_cat,new_state):
         p_cat = convert_string(p_cat)
-        p_name = unicode(w.text().toUtf8(), 'utf-8')
+        p_name = convert_string(w.text())
         if new_state:
             log_debug("Activating plugin '%s' of type '%s'" % (p_name, p_cat))
             po = get_server().plugin_manager.activatePluginByName(p_name,p_cat)
@@ -319,11 +322,13 @@ class LunchinatorGuiController(QObject, LunchServerController):
             d.exec_()
             
     @pyqtSlot(bool)
-    def quitClicked(self,_):
+    @pyqtSlot()
+    def quitClicked(self,_ = None):
         self.quit()
 
     @pyqtSlot(bool)
-    def openWindowClicked(self, _):    
+    @pyqtSlot()
+    def openWindowClicked(self, _ = None):    
         self.reset_new_msgs() 
         
         if self.mainWindow == None:
@@ -334,12 +339,13 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.mainWindow.raise_()
             
     @pyqtSlot(bool)
-    def openSettingsClicked(self,_):
+    @pyqtSlot()
+    def openSettingsClicked(self,_ = None):
         if self.mainWindow == None:
             log_error("mainWindow not specified")
             return
         
-        self.reset_new_msgs()        
+        self.reset_new_msgs()
         
         settingsDialog = LunchinatorSettingsDialog(self.mainWindow)
         resp = settingsDialog.exec_()
@@ -394,25 +400,3 @@ class LunchinatorGuiController(QObject, LunchServerController):
         msg = convert_string(msg)
         addr = convert_string(addr)
         processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
-
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    
-    win = QMainWindow()
-    central = QWidget(win)
-    win.setCentralWidget(central)
-    lay = QVBoxLayout(win.centralWidget())
-    lay.addWidget(QLabel("asdf", win.centralWidget()))
-    lay.addWidget(QLineEdit(win.centralWidget()))
-    
-    hlay = QHBoxLayout()
-    hlay.addWidget(QLabel("1", win.centralWidget()))
-    hlay.addWidget(QLabel("2", win.centralWidget()))
-    
-    lay.addLayout(hlay)
-    
-    win.centralWidget().setLayout(lay)
-    
-    win.show()
-    
-    sys.exit(app.exec_())

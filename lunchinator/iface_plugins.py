@@ -216,7 +216,7 @@ class iface_plugin(IPlugin):
             elif type(v)==types.BooleanType:
                 new_v = e.checkState() == Qt.Checked
             else:
-                new_v = str(e.text().toUtf8())
+                new_v = convert_string(e.text())
             self.set_option(o, new_v, False)
         self.discard_options_widget_data()
         
