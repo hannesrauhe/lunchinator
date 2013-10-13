@@ -36,4 +36,4 @@ class bug_report_gui(QWidget):
 
 if __name__ == '__main__':
     from lunchinator.iface_plugins import iface_gui_plugin
-    iface_gui_plugin.run_standalone(bug_report_gui(None))
+    iface_gui_plugin.run_standalone(lambda window : bug_report_gui(window))

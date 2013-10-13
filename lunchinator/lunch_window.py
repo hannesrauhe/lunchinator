@@ -1,5 +1,5 @@
 from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplication, QMenu, QKeySequence
-from PyQt4.QtCore import Qt, QSettings, QVariant
+from PyQt4.QtCore import Qt, QSettings, QVariant, QEvent
 from lunchinator import get_settings, get_server, log_exception, convert_string
 import sys, os
 from StringIO import StringIO
@@ -171,6 +171,11 @@ class LunchinatorWindow(QMainWindow):
         if visible:
             self.closed = False
         return QMainWindow.setVisible(self, visible)
+
+    def event(self, event):
+        if event.type() == QEvent.WindowActivate:
+            self.guiHandler.dehighlightIcon()
+        return QMainWindow.event(self, event)
          
     def closeEvent(self, closeEvent):
         if not self.closed:

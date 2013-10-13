@@ -1,11 +1,9 @@
 - avatare auch nach pull-prinzip?
 - test settings thoroughly
 - implement total cli table width
-- examine macEventFilter
+- look for emitted signals inside locking blocks, remove!!
 
 TODOs added by Hannes:
 
 - secondary DB connection plugin
 - add readline to dependencies
-- highlight icon on notification
-- tooltips for windows on notification

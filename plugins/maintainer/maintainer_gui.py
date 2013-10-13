@@ -577,5 +577,5 @@ class maintainer_wrapper:
     
 if __name__ == "__main__":
     from lunchinator.iface_plugins import iface_gui_plugin
-    iface_gui_plugin.run_standalone(maintainer_gui(None, maintainer_wrapper()))
+    iface_gui_plugin.run_standalone(lambda window : maintainer_gui(window, maintainer_wrapper()))
     

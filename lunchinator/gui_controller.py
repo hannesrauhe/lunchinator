@@ -3,8 +3,9 @@ from lunchinator import get_server, log_exception, log_info, get_settings,\
     log_error, convert_string, log_warning, log_debug
 import socket,os,time, subprocess
 import platform
-from PyQt4.QtGui import QMainWindow, QLabel, QLineEdit, QMenu, QWidget, QHBoxLayout, QVBoxLayout, QApplication, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
-from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication
+from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
+from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication, QTimer
+from PyQt4 import QtCore
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
@@ -41,6 +42,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
         QObject.__init__(self)
         LunchServerController.__init__(self)
         
+        log_info("Your PyQt version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
+        
+        self.resetIconTimer = None
+        self.isIconHighlighted = True # set to True s.t. first dehighlight can set the default icon
+        
         self.exitCode = 0
         self.serverThread = None
         self.running = True
@@ -68,10 +74,40 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processLunchCall.connect(self.processLunchCallSlot)
         self._updateRequested.connect(self.updateRequested)
         
+        self.messagePrependedSignal.connect(self.highlightIcon)
+        
         self.serverThread = LunchServerThread(self)
         self.serverThread.finished.connect(self.serverFinishedUnexpectedly)
         self.serverThread.finished.connect(self.serverThread.deleteLater)
         self.serverThread.start()
+        
+    def highlightIcon(self):
+        if self.isIconHighlighted:
+            return
+        if self.mainWindow.isActiveWindow():
+            # dont set highlighted if window is in foreground
+            return
+        self.isIconHighlighted = True
+        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunchred.svg")
+        icon = QIcon.fromTheme("lunchinatorred", QIcon(icon_file))
+        self.statusicon.setIcon(icon)
+        
+        if self.resetIconTimer == None:
+            self.resetIconTimer = QTimer(self)
+            self.resetIconTimer.setSingleShot(True)
+            self.resetIconTimer.timeout.connect(self.dehighlightIcon)
+        
+        self.resetIconTimer.start(get_settings().get_reset_icon_time() * 60000)
+        
+    def dehighlightIcon(self):
+        if not self.isIconHighlighted:
+            return
+        self.isIconHighlighted = False
+        if self.resetIconTimer != None and self.resetIconTimer.isActive():
+            self.resetIconTimer.stop()
+        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg")
+        icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
+        self.statusicon.setIcon(icon)
         
     def createTrayIcon(self):
         if platform.linux_distribution()[0] == "Ubuntu":
@@ -97,9 +133,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
                         log_info("icons were not installed because of an error")
         
         # initialize tray icon
-        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg")
-        icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
-        self.statusicon = QSystemTrayIcon(icon, self.mainWindow)
+        self.statusicon = QSystemTrayIcon(self.mainWindow)
+        # dehighlightIcon sets the default icon
+        self.dehighlightIcon()
         contextMenu = self.init_menu(self.mainWindow)
         self.statusicon.activated.connect(self.trayActivated)
         self.statusicon.setContextMenu(contextMenu)
@@ -290,7 +326,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     @pyqtSlot(QAction, unicode, bool)
     def toggle_plugin(self,w,p_cat,new_state):
         p_cat = convert_string(p_cat)
-        p_name = unicode(w.text().toUtf8(), 'utf-8')
+        p_name = convert_string(w.text())
         if new_state:
             log_debug("Activating plugin '%s' of type '%s'" % (p_name, p_cat))
             po = get_server().plugin_manager.activatePluginByName(p_name,p_cat)
@@ -315,15 +351,17 @@ class LunchinatorGuiController(QObject, LunchServerController):
             ip = socket.gethostbyname(hostn.strip())
             get_server()._append_member(ip, hostn)
         except:
-            d = QMessageBox(QMessageBox.Critical, "Error adding host", "Cannot add host: Hostname unknown", QMessageBox.Ok, w)
+            d = QMessageBox(QMessageBox.Critical, "Error adding host", "Cannot add host: Hostname unknown: %s" % hostn, QMessageBox.Ok, self.mainWindow)
             d.exec_()
             
     @pyqtSlot(bool)
-    def quitClicked(self,_):
+    @pyqtSlot()
+    def quitClicked(self,_ = None):
         self.quit()
 
     @pyqtSlot(bool)
-    def openWindowClicked(self, _):    
+    @pyqtSlot()
+    def openWindowClicked(self, _ = None):    
         self.reset_new_msgs() 
         
         if self.mainWindow == None:
@@ -334,12 +372,13 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.mainWindow.raise_()
             
     @pyqtSlot(bool)
-    def openSettingsClicked(self,_):
+    @pyqtSlot()
+    def openSettingsClicked(self,_ = None):
         if self.mainWindow == None:
             log_error("mainWindow not specified")
             return
         
-        self.reset_new_msgs()        
+        self.reset_new_msgs()
         
         settingsDialog = LunchinatorSettingsDialog(self.mainWindow)
         resp = settingsDialog.exec_()
@@ -394,25 +433,3 @@ class LunchinatorGuiController(QObject, LunchServerController):
         msg = convert_string(msg)
         addr = convert_string(addr)
         processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
-
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    
-    win = QMainWindow()
-    central = QWidget(win)
-    win.setCentralWidget(central)
-    lay = QVBoxLayout(win.centralWidget())
-    lay.addWidget(QLabel("asdf", win.centralWidget()))
-    lay.addWidget(QLineEdit(win.centralWidget()))
-    
-    hlay = QHBoxLayout()
-    hlay.addWidget(QLabel("1", win.centralWidget()))
-    hlay.addWidget(QLabel("2", win.centralWidget()))
-    
-    lay.addLayout(hlay)
-    
-    win.centralWidget().setLayout(lay)
-    
-    win.show()
-    
-    sys.exit(app.exec_())

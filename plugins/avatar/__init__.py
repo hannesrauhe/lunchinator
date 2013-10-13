@@ -46,7 +46,7 @@ class avatar(iface_general_plugin):
             def filterAcceptsRow(self, sourceRow, sourceParent):
                 fileModel = self.sourceModel()
                 index0 = fileModel.index(sourceRow, 0, sourceParent)
-                path = str(fileModel.filePath(index0).toUtf8())
+                path = convert_string(fileModel.filePath(index0))
                 return self.filterAcceptsFile(path)
         dialog = QFileDialog(self.parentWindow(self.label), "Choose Avatar Picture:")
         fileFilter = FileFilterProxyModel()

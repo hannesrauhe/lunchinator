@@ -1,5 +1,5 @@
 import subprocess,sys,ctypes
-from lunchinator import log_exception, get_server, log_warning,\
+from lunchinator import log_exception, get_server, get_settings, log_warning,\
     log_debug
 import os
 from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
@@ -29,7 +29,7 @@ def displayNotification(name,msg,icon):
             fh = open(os.path.devnull,"w")
             subprocess.call(["terminal-notifier", "-title", "Lunchinator: %s" % name, "-message", msg], stdout=fh, stderr=fh)
         elif myPlatform == PLATFORM_WINDOWS:
-            _drawAttentionWindows()
+            get_server().controller.statusicon.showMessage(name,msg)
     except:
         log_exception("error displaying notification")
         
@@ -48,7 +48,7 @@ class AttentionGetter(object):
             elif myPlatform == PLATFORM_MAC:
                 _drawAttentionMac(self._audioFile)
             elif myPlatform == PLATFORM_WINDOWS:
-                _drawAttentionWindows()
+                _drawAttentionWindows(self._audioFile)
     
     def __init__(self):
         super(AttentionGetter, self).__init__()
@@ -105,11 +105,18 @@ def _drawAttentionMac(audioFile):
     except:
         log_exception("notify error: eject error (close)")
 
-def _drawAttentionWindows():    
+def _drawAttentionWindows(audioFile):    
     try:
         ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
     except:
         log_exception("notify error: eject error (open)")
+    try:
+        from PyQt4.QtGui import QSound
+        q = QSound(audioFile)
+        q.play()
+    except:        
+        log_exception("notify error: sound")
+        
     try:
         ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
     except:
