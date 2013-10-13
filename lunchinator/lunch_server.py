@@ -333,17 +333,23 @@ class lunch_server(object):
         memberInfo[u'name'] = hostn
         
         self.lockMembers()
+        didAppend = False
+        didUpdate = False
         try:
             self.member_info[ip] = memberInfo
-            
             if not ip in self.members:
                 self.members.append(ip)
                 if inform:
-                    self._memberAppended(ip)
+                    didAppend = True
             elif inform:
-                self._memberUpdated(ip)
+                didUpdate = True
         finally:
             self.releaseMembers()
+            
+        if didAppend:
+            self._memberAppended(ip)
+        if didUpdate:
+            self._memberUpdated(ip)
             
     def _init_members_from_file(self):
         members = []

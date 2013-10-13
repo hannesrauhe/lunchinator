@@ -42,7 +42,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         QObject.__init__(self)
         LunchServerController.__init__(self)
         
-        log_info("Your PySide version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
+        log_info("Your PyQt version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
         
         self.exitCode = 0
         self.serverThread = None
@@ -318,7 +318,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             ip = socket.gethostbyname(hostn.strip())
             get_server()._append_member(ip, hostn)
         except:
-            d = QMessageBox(QMessageBox.Critical, "Error adding host", "Cannot add host: Hostname unknown", QMessageBox.Ok, w)
+            d = QMessageBox(QMessageBox.Critical, "Error adding host", "Cannot add host: Hostname unknown: %s" % hostn, QMessageBox.Ok, self.mainWindow)
             d.exec_()
             
     @pyqtSlot(bool)
