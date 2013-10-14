@@ -2,6 +2,7 @@
 - test settings thoroughly
 - implement total cli table width
 - look for emitted signals inside locking blocks, remove!!
+- cli: plugin load/unload with multiple arguments
 
 TODOs added by Hannes:
 

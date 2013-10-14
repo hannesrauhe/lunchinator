@@ -40,8 +40,9 @@ class LunchinatorWindow(QMainWindow):
             # check if an old-stype plugins are enabled, if not, display "about plugins"
             foundOldStylePlugin = False
             for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
-                if pluginInfo.name not in ("Messages", "Members") and pluginInfo.plugin_object.is_activated:
+                if pluginInfo.name not in (u"Messages", u"Members") and pluginInfo.plugin_object.is_activated:
                     foundOldStylePlugin = True
+                    break
             
             if not foundOldStylePlugin:
                 self.addPluginWidgetByName(u"About Plugins")

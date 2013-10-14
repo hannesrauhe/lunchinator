@@ -83,6 +83,7 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
                 if hasattr(self.__class__, "help_%s" % cmdName):
                     delattr(self.__class__, "help_%s" % cmdName)
             elif name.startswith("complete_"):
+                cmdName = name[9:]
                 if hasattr(self.__class__, "complete_%s" % cmdName):
                     delattr(self.__class__, "complete_%s" % cmdName)
 
