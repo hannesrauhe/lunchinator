@@ -23,6 +23,9 @@ def parse_args():
     optionParser.add_option("--no-auto-update",
                       default = False, dest = "noUpdates", action = "store_true",
                       help = "Disable automatic updates from Git (override the GUI setting).")
+    optionParser.add_option("--no-plugins",
+                      default = False, dest = "noPlugins", action = "store_true",
+                      help = "Disable plugins completely.")
     optionParser.add_option("--should-auto-update",
                       default = False, dest = "checkAutoUpdate", action = "store_true",
                       help = "Don't start Lunchinator but check if auto update is enabled. Exits with 1 if auto update is enabled.")
@@ -121,6 +124,8 @@ if __name__ == "__main__":
         retCode = 1
         try:
             from lunchinator import lunch_cli
+            get_server().no_updates = options.noUpdates
+            get_server().set_plugins_enabled(not options.noPlugins)
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
         except:
@@ -130,6 +135,7 @@ if __name__ == "__main__":
     elif options.noGui:
     #    sys.settrace(trace)
         get_server().no_updates = options.noUpdates
+        get_server().set_plugins_enabled(not options.noPlugins)
         get_server().start_server()
         sys.exit(get_server().exitCode)
     else:    
@@ -143,6 +149,8 @@ if __name__ == "__main__":
         from lunchinator.gui_controller import LunchinatorGuiController
         from PyQt4.QtGui import QApplication
         
+        get_server().no_updates = options.noUpdates
+        get_server().set_plugins_enabled(not options.noPlugins)
         app = QApplication(sys.argv)
         app.setQuitOnLastWindowClosed(False)
         lanschi = LunchinatorGuiController(options.noUpdates)
