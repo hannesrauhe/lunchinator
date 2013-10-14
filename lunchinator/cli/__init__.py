@@ -131,24 +131,24 @@ class LunchCLIModule(object):
         get_server().lockMembers()
         lunchmembers = None
         try:
-            lunchmemberNames = set((get_server().memberName(ip).replace(" ", "\\ ") for ip in get_server().get_members() if get_server().memberName(ip).replace(" ", "\\ ").startswith(prefix)))
+            lunchmemberNames = set((get_server().memberName(ip).replace(u" ", u"\\ ") for ip in get_server().get_members() if get_server().memberName(ip).replace(u" ", u"\\ ").startswith(prefix)))
             lunchmembers = list(lunchmemberNames.union((ip for ip in get_server().get_members() if ip.startswith(prefix))))
         finally:
             get_server().releaseMembers()
         return lunchmembers if lunchmembers != None else []
     
     def completeHostnames(self, text, line, begidx, endidx):
-        return self.completeCommand(convert_string(text), convert_string(line), begidx, endidx, self._getHostnames)
+        return self.completeCommand(text, line, begidx, endidx, self._getHostnames)
     
     def getArgNum(self, text, line, _begidx, endidx):
         prevArgs = [convert_string(anArg) for anArg in shlex.split(line[:endidx + 1])]
         argNum = len(prevArgs)
         
-        if len(text) > 0 or prevArgs[-1][-1] == ' ':
+        if len(text) > 0 or prevArgs[-1][-1] == u' ':
             # the current word is the completed word
-            return (argNum - 1, prevArgs[-1].replace(" ", "\\ "))
+            return (argNum - 1, prevArgs[-1].replace(u" ", u"\\ "))
         # complete an empty word
-        return (argNum, "")
+        return (argNum, u"")
     
     def completeCommand(self, text, line, begidx, endidx, completions):
         """
@@ -200,5 +200,5 @@ class LunchCLIModule(object):
                     # check if last whitespace is escaped
                     if len(splitText) > 0 and splitText[-1][-1] != '\\':
                         numWordsToOmit = numWordsToOmit - 1
-                    return [" ".join(aValue.split()[numWordsToOmit:]) for aValue in result]
+                    return [u" ".join(aValue.split()[numWordsToOmit:]) for aValue in result]
         return None
