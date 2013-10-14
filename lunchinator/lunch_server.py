@@ -71,14 +71,13 @@ class lunch_server(object):
         self.plugin_manager.app = self
         self.plugin_manager.setConfigParser(get_settings().get_config_file(),get_settings().write_config_to_hd)
         self.plugin_manager.setPluginPlaces(get_settings().get_plugin_dirs())
-        if self.get_plugins_enabled():
-            categoriesFilter = {
-               "general" : iface_general_plugin,
-               "called" : iface_called_plugin,
-               "gui" : iface_gui_plugin,
-               "db" : iface_database_plugin
-               }
-            self.plugin_manager.setCategoriesFilter(categoriesFilter) 
+        categoriesFilter = {
+           "general" : iface_general_plugin,
+           "called" : iface_called_plugin,
+           "gui" : iface_gui_plugin,
+           "db" : iface_database_plugin
+           }
+        self.plugin_manager.setCategoriesFilter(categoriesFilter) 
         
         if self.get_plugins_enabled():
             try:
