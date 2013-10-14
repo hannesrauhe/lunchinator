@@ -37,48 +37,50 @@ class CLIPluginHandling(LunchCLIModule):
         except:
             log_exception("while printing plugin names")
             
-    def loadPlugin(self, args):
-        try:
+    def loadPlugins(self, args):
+        while len(args) > 0:
             pluginName = args.pop(0).upper()
-            pInfo = None
-            for pluginInfo in get_server().plugin_manager.getAllPlugins():
-                if pluginInfo.name.upper() == pluginName:
-                    pInfo = pluginInfo
-            if pInfo == None:
-                print "Unknown plugin. The available plugins are:"
-                self.listPlugins(args)
-            elif pInfo.plugin_object.is_activated:
-                print "Plugin already loaded."
-            else:
-                po = get_server().plugin_manager.activatePluginByName(pInfo.name,pInfo.categories[0])
-                self.parent.addModule(po)
-        except:
-            log_exception("while loading plugin")
+            try:
+                pInfo = None
+                for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                    if pluginInfo.name.upper() == pluginName:
+                        pInfo = pluginInfo
+                if pInfo == None:
+                    print "Unknown plugin. The available plugins are:"
+                    self.listPlugins(args)
+                elif pInfo.plugin_object.is_activated:
+                    print "Plugin already loaded."
+                else:
+                    po = get_server().plugin_manager.activatePluginByName(pInfo.name,pInfo.categories[0])
+                    self.parent.addModule(po)
+            except:
+                log_exception("while loading plugin")
             
-    def unloadPlugin(self, args):
-        try:
-            pluginName = args[0].upper()
-            pInfo = None
-            for pluginInfo in get_server().plugin_manager.getAllPlugins():
-                if pluginInfo.name.upper() == pluginName:
-                    pInfo = pluginInfo
-            if pInfo == None:
-                print "Unknown plugin. The available plugins are:"
-                self.listPlugins(args)
-            elif not pInfo.plugin_object.is_activated:
-                print "Plugin is not loaded."
-            else:
-                get_server().plugin_manager.deactivatePluginByName(pInfo.name,pInfo.categories[0])
-                self.parent.removeModule(pInfo.plugin_object)
-        except:
-            log_exception("while unloading plugin")
+    def unloadPlugins(self, args):
+        while len(args) > 0:
+            pluginName = args.pop(0).upper()
+            try:
+                pInfo = None
+                for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                    if pluginInfo.name.upper() == pluginName:
+                        pInfo = pluginInfo
+                if pInfo == None:
+                    print "Unknown plugin. The available plugins are:"
+                    self.listPlugins(args)
+                elif not pInfo.plugin_object.is_activated:
+                    print "Plugin is not loaded."
+                else:
+                    get_server().plugin_manager.deactivatePluginByName(pInfo.name,pInfo.categories[0])
+                    self.parent.removeModule(pInfo.plugin_object)
+            except:
+                log_exception("while unloading plugin")
     
     def do_plugin(self, args):
         """
         Plugin management
-        Usage: plugin list [<category>] - list the available plugins
-               plugin load <plugin>     - get an overview of the options in a category
-               plugin unload <plugin>   - print the current value of an option
+        Usage: plugin list [<category>]                 - list the available plugins
+               plugin load <plugin> [<plugin2> [...]]   - get an overview of the options in a category
+               plugin unload <plugin> [<plugin2> [...]] - print the current value of an option
         """
         if len(args) == 0:
             return self.printHelp("plugin")
@@ -87,9 +89,9 @@ class CLIPluginHandling(LunchCLIModule):
         if subcmd == "list":
             self.listPlugins(args)
         elif subcmd == "load":
-            self.loadPlugin(args)
+            self.loadPlugins(args)
         elif subcmd == "unload":
-            self.unloadPlugin(args)
+            self.unloadPlugins(args)
         else:
             return self.printHelp("plugin")
         pass
@@ -97,11 +99,10 @@ class CLIPluginHandling(LunchCLIModule):
     def completeList(self, _args, _argNum, _text):
         return (aCat for aCat in get_server().plugin_manager.getCategories() if aCat.startswith(_text))
     
-    def completePluginNames(self, _args, argNum, text, listActivated, listDeactivated):
-        if argNum == 0:
-            text = text.lower()
-            candidates = (name.lower().replace(" ", "\\ ") for name, _desc, _cats in self.getPluginNames(listActivated, listDeactivated))
-            return (aValue for aValue in candidates if aValue.startswith(text))
+    def completePluginNames(self, _args, _argNum, text, listActivated, listDeactivated):
+        text = text.lower()
+        candidates = (name.lower().replace(" ", "\\ ") for name, _desc, _cats in self.getPluginNames(listActivated, listDeactivated))
+        return (aValue for aValue in candidates if aValue.startswith(text))
     
     def complete_plugin(self, text, line, begidx, endidx):
         argNum, text = self.getArgNum(text, line, begidx, endidx)
@@ -122,7 +123,11 @@ class CLIPluginHandling(LunchCLIModule):
             elif subcmd == "unload":
                 result = self.completePluginNames(args, argNum - 2, text, listActivated=True, listDeactivated=False)
 
-        numWordsToOmit = 0 if len(text.split()) == 0 else len(text.split()) - 1
+        splitText = text.split()
+        numWordsToOmit = len(splitText)
+        # check if last whitespace is escaped
+        if len(splitText) > 0 and splitText[-1][-1] != '\\':
+            numWordsToOmit = numWordsToOmit - 1
         if result != None:
             return [" ".join(aValue.split()[numWordsToOmit:]) for aValue in result]
         return None
