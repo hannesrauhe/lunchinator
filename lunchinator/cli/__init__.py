@@ -123,15 +123,18 @@ class LunchCLIModule(object):
                 hosts.append(member)
         return hosts
     
-    def completeHostnames(self, text):
+    def _getHostnames(self, _args, _argNum, prefix):
         get_server().lockMembers()
         lunchmembers = None
         try:
-            lunchmemberNames = set((get_server().memberName(ip) for ip in get_server().get_members() if get_server().memberName(ip).startswith(text)))
-            lunchmembers = list(lunchmemberNames.union((ip for ip in get_server().get_members() if ip.startswith(text))))
+            lunchmemberNames = set((get_server().memberName(ip).replace(" ", "\\ ") for ip in get_server().get_members() if get_server().memberName(ip).replace(" ", "\\ ").startswith(prefix)))
+            lunchmembers = list(lunchmemberNames.union((ip for ip in get_server().get_members() if ip.startswith(prefix))))
         finally:
             get_server().releaseMembers()
         return lunchmembers if lunchmembers != None else []
+    
+    def completeHostnames(self, text, line, begidx, endidx):
+        return self.completeCommand(text, line, begidx, endidx, self._getHostnames)
     
     def getArgNum(self, text, line, _begidx, endidx):
         prevArgs = shlex.split(line[:endidx + 1])
@@ -142,3 +145,56 @@ class LunchCLIModule(object):
             return (argNum - 1, prevArgs[-1].replace(" ", "\\ "))
         # complete an empty word
         return (argNum, "")
+    
+    def completeCommand(self, text, line, begidx, endidx, completions):
+        """
+        Convenience method to complete a command without subcommands.
+        The completions callbacks must return a list or generator of strings and take 3 arguments:
+         - all arguments to the command
+         - The index of the argument we are completing
+         - The prefix to complete
+        """
+        argNum, text = self.getArgNum(text, line, begidx, endidx)
+        args = shlex.split(line)[1:]
+        result = completions(args, argNum - 1, text)
+
+        if result != None:
+            splitText = text.split()
+            numWordsToOmit = len(splitText)
+            # check if last whitespace is escaped
+            if len(splitText) > 0 and splitText[-1][-1] != '\\':
+                numWordsToOmit = numWordsToOmit - 1
+            return [" ".join(aValue.split()[numWordsToOmit:]) for aValue in result]
+    
+    def completeSubcommands(self, text, line, begidx, endidx, subcommands):
+        """
+        Convenience method to complete a command with subcommands.
+        The subcommands argument should be a dictionary of {subcommand: callback} entries.
+        The callbacks must return a list or generator of strings and take 3 arguments:
+         - all arguments to the subcommand
+         - The index of the argument we are completing
+         - The prefix to complete
+        """
+        argNum, text = self.getArgNum(text, line, begidx, endidx)
+        
+        if argNum == 1:
+            # subcommand
+            return [aVal for aVal in subcommands.keys() if aVal.startswith(text)]
+        elif argNum >= 2:
+            result = None
+            
+            # argument to subcommand
+            args = shlex.split(line)[1:]
+            subcmd = args.pop(0)
+            
+            if subcmd in subcommands:
+                result = subcommands[subcmd](args, argNum - 2, text)
+
+                if result != None:
+                    splitText = text.split()
+                    numWordsToOmit = len(splitText)
+                    # check if last whitespace is escaped
+                    if len(splitText) > 0 and splitText[-1][-1] != '\\':
+                        numWordsToOmit = numWordsToOmit - 1
+                    return [" ".join(aValue.split()[numWordsToOmit:]) for aValue in result]
+        return None

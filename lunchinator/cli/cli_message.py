@@ -19,7 +19,7 @@ class CLIMessageHandling(LunchCLIModule):
     def complete_send(self, text, line, begidx, endidx):
         if self.getArgNum(text, line, begidx, endidx)[0] > 1:
             # message is already entered, complete hostnames
-            return self.completeHostnames(text)
+            return self.completeHostnames(text, line, begidx, endidx)
 
     def do_call(self, args):
         """
@@ -30,6 +30,6 @@ class CLIMessageHandling(LunchCLIModule):
         args = shlex.split(args)
         get_server().call("lunch", hosts=self.getHostList(args))
         
-    def complete_call(self, text, _line, _begidx, _endidx):
-        return self.completeHostnames(text)
+    def complete_call(self, text, line, begidx, endidx):
+        return self.completeHostnames(text, line, begidx, endidx)
     

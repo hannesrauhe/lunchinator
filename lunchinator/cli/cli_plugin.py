@@ -1,4 +1,5 @@
 import shlex
+from functools import partial
 from lunchinator.cli import LunchCLIModule
 from lunchinator import get_server, log_exception
 
@@ -105,30 +106,7 @@ class CLIPluginHandling(LunchCLIModule):
         return (aValue for aValue in candidates if aValue.startswith(text))
     
     def complete_plugin(self, text, line, begidx, endidx):
-        argNum, text = self.getArgNum(text, line, begidx, endidx)
-        
-        result = None
-        if argNum == 1:
-            # subcommand
-            return [aVal for aVal in ("list", "load", "unload") if aVal.startswith(text)]
-        elif argNum >= 2:
-            # argument to subcommand
-            args = shlex.split(line)[1:]
-            subcmd = args.pop(0)
-            
-            if subcmd == "list":
-                result = self.completeList(args, argNum - 2, text)
-            elif subcmd == "load":
-                result = self.completePluginNames(args, argNum - 2, text, listActivated=False, listDeactivated=True)
-            elif subcmd == "unload":
-                result = self.completePluginNames(args, argNum - 2, text, listActivated=True, listDeactivated=False)
-
-        splitText = text.split()
-        numWordsToOmit = len(splitText)
-        # check if last whitespace is escaped
-        if len(splitText) > 0 and splitText[-1][-1] != '\\':
-            numWordsToOmit = numWordsToOmit - 1
-        if result != None:
-            return [" ".join(aValue.split()[numWordsToOmit:]) for aValue in result]
-        return None
+        return self.completeSubcommands(text, line, begidx, endidx, {"list": self.completeList,
+                                                                 "load": partial(self.completePluginNames, listActivated=False, listDeactivated=True),
+                                                                 "unload": partial(self.completePluginNames, listActivated=True, listDeactivated=False)})
     

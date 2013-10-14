@@ -118,27 +118,8 @@ class CLIOptionHandling(LunchCLIModule):
             return None
        
     def complete_option(self, text, line, begidx, endidx):
-        argNum, text = self.getArgNum(text, line, begidx, endidx)
-        
-        result = None
-        if argNum == 1:
-            # subcommand
-            return [aVal for aVal in ("list", "get", "set", "reset") if aVal.startswith(text)]
-        elif argNum >= 2:
-            # argument to subcommand
-            args = shlex.split(line)[1:]
-            subcmd = args.pop(0)
-            
-            if subcmd == "list":
-                result = self.completeList(args, argNum - 2, text)
-            elif subcmd == "get":
-                result = self.completeGet(args, argNum - 2, text)
-            elif subcmd == "set":
-                result = self.completeGet(args, argNum - 2, text)
-            elif subcmd == "reset":
-                result = self.completeGet(args, argNum - 2, text)
-
-        numWordsToOmit = 0 if len(text.split()) == 0 else len(text.split()) - 1
-        if result != None:
-            return [" ".join(aValue.split()[numWordsToOmit:]) for aValue in result]
-        return None
+        return self.completeSubcommands(text, line, begidx, endidx, {"list": self.completeList,
+                                                                     "get": self.completeGet,
+                                                                     "set": self.completeGet,
+                                                                     "reset": self.completeGet})
+    
