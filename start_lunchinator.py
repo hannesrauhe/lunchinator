@@ -96,8 +96,6 @@ def handleInterrupt(lanschi, _signal, _frame):
     lanschi.quit()
     
 if __name__ == "__main__":
-    log_info("We are on",platform.system(),platform.release(),platform.version())
-    
     (options, args) = parse_args()
 
     if options.exitWithUpdateCode:
@@ -135,6 +133,7 @@ if __name__ == "__main__":
         get_server().start_server()
         sys.exit(get_server().exitCode)
     else:    
+        log_info("We are on",platform.system(),platform.release(),platform.version())
         try:
             from PyQt4.QtCore import QThread
         except:
