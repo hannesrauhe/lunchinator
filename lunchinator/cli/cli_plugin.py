@@ -1,4 +1,3 @@
-import shlex
 from functools import partial
 from lunchinator.cli import LunchCLIModule
 from lunchinator import get_server, log_exception
@@ -85,7 +84,7 @@ class CLIPluginHandling(LunchCLIModule):
         """
         if len(args) == 0:
             return self.printHelp("plugin")
-        args = shlex.split(args)
+        args = self.getArguments(args)
         subcmd = args.pop(0)
         if subcmd == "list":
             self.listPlugins(args)

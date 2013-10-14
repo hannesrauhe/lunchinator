@@ -1,4 +1,3 @@
-import shlex
 from lunchinator.cli import LunchCLIModule
 from lunchinator import get_server, log_exception
 
@@ -12,7 +11,8 @@ class CLIMessageHandling(LunchCLIModule):
         if len(args) == 0:
             self.printHelp("send")
             return False
-        args = shlex.split(args)
+        
+        args = self.getArguments(args)
         message = args.pop(0)
         get_server().call(message, hosts=self.getHostList(args))
         
@@ -27,7 +27,8 @@ class CLIMessageHandling(LunchCLIModule):
         Usage: call                             - Call all members
                call <member1> [<member2> [...]] - Call specific members 
         """
-        args = shlex.split(args)
+        args = args.decode('utf-8')
+        args = self.getArguments(args)
         get_server().call("lunch", hosts=self.getHostList(args))
         
     def complete_call(self, text, line, begidx, endidx):

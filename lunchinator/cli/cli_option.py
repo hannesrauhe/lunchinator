@@ -1,4 +1,4 @@
-import shlex, sys
+import sys
 from lunchinator.cli import LunchCLIModule
 from lunchinator import get_server, convert_string, log_exception
 
@@ -85,7 +85,7 @@ class CLIOptionHandling(LunchCLIModule):
         """
         if len(args) == 0:
             return self.printHelp("option")
-        args = shlex.split(args)
+        args = self.getArguments(args)
         subcmd = args.pop(0)
         if subcmd == "list":
             self.listOptions(args)

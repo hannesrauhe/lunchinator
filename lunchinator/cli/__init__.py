@@ -1,5 +1,5 @@
 import shlex, inspect, sys, re
-from lunchinator import get_server, log_exception
+from lunchinator import get_server, log_exception, convert_string
 
 class LunchCLIModule(object):
     MAX_COL_WIDTH = 60
@@ -10,6 +10,10 @@ class LunchCLIModule(object):
     def __init__(self):
         super(LunchCLIModule, self).__init__()
         self.outputTable = []
+    
+    @classmethod
+    def getArguments(cls, args):
+        return [convert_string(anArg) for anArg in shlex.split(args)]
     
     def _convertToString(self, value):
         if type(value) in (str, unicode):
@@ -134,10 +138,10 @@ class LunchCLIModule(object):
         return lunchmembers if lunchmembers != None else []
     
     def completeHostnames(self, text, line, begidx, endidx):
-        return self.completeCommand(text, line, begidx, endidx, self._getHostnames)
+        return self.completeCommand(convert_string(text), convert_string(line), begidx, endidx, self._getHostnames)
     
     def getArgNum(self, text, line, _begidx, endidx):
-        prevArgs = shlex.split(line[:endidx + 1])
+        prevArgs = [convert_string(anArg) for anArg in shlex.split(line[:endidx + 1])]
         argNum = len(prevArgs)
         
         if len(text) > 0 or prevArgs[-1][-1] == ' ':
@@ -155,7 +159,7 @@ class LunchCLIModule(object):
          - The prefix to complete
         """
         argNum, text = self.getArgNum(text, line, begidx, endidx)
-        args = shlex.split(line)[1:]
+        args = self.getArguments(line)[1:]
         result = completions(args, argNum - 1, text)
 
         if result != None:
@@ -175,7 +179,7 @@ class LunchCLIModule(object):
          - The index of the argument we are completing
          - The prefix to complete
         """
-        argNum, text = self.getArgNum(text, line, begidx, endidx)
+        argNum, text = self.getArgNum(convert_string(text), line, begidx, endidx)
         
         if argNum == 1:
             # subcommand
@@ -184,7 +188,7 @@ class LunchCLIModule(object):
             result = None
             
             # argument to subcommand
-            args = shlex.split(line)[1:]
+            args = self.getArguments(line)[1:]
             subcmd = args.pop(0)
             
             if subcmd in subcommands:

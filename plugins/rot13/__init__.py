@@ -26,12 +26,12 @@ class rot13(iface_gui_plugin):
         Usage: rot13 <text> [<text2> [...]]
         """
         import string
-        import shlex
+        from lunchinator.cli import LunchCLIModule
         rot13 = string.maketrans( 
             u"ABCDEFGHIJKLMabcdefghijklmNOPQRSTUVWXYZnopqrstuvwxyz", 
             u"NOPQRSTUVWXYZnopqrstuvwxyzABCDEFGHIJKLMabcdefghijklm")
         
-        args = shlex.split(args)
+        args = LunchCLIModule.getArguments(args)
         for aString in args:
             print string.translate(aString, rot13)
         
