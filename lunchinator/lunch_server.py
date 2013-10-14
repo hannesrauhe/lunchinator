@@ -303,7 +303,7 @@ class lunch_server(lunch_default_config):
         if addr in self.members:
             m = self.members[addr]
             
-        print "%s: [%s] %s" % (t,m,msg)
+        print ("%s: [%s]" % (t,m)),msg
         
         self.last_messages.insert(0,[mtime,addr,msg])
         self.new_msg = True
