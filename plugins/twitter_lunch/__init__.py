@@ -11,6 +11,7 @@ class TwitterDownloadThread(Thread):
         self._twitter_api = None
         self._screen_names = []
         self._old_pic_urls = {}
+        self._since_ids = {}
         self._stop_event = event
         self._lock = Lock()
         self._polling_time = 60
@@ -24,6 +25,8 @@ class TwitterDownloadThread(Thread):
             for s in vlist:
                 if not self._old_pic_urls.has_key(s):
                     self._old_pic_urls[s]=""
+                if not self._since_ids.has_key(s):
+                    self._since_ids[s]=0
             
     def authenticate(self,key,secret,at_key,at_secret):
         with self._lock:
@@ -52,19 +55,22 @@ class TwitterDownloadThread(Thread):
                     urls = []
                     for account_name in self._screen_names:
                         try:
-                            tweets = self._twitter_api.GetUserTimeline(screen_name=account_name)
+                            tweets = self._twitter_api.GetUserTimeline(screen_name=account_name,since_id=self._since_ids[account_name])
                             if len(tweets):
+                                self._since_ids[account_name] = tweets[0].GetId()
                                 try:
                                     for media in tweets[0].media:
                                         urls.append((media["media_url"],tweets[0].text))
                                 except:
                                     item = tweets[0].AsDict()
                                     urls = [(url,item['text']) for url in item['text'].split(" ") if url.startswith("http")]   
-                            log_debug("Twitter: from %s extracted URLs: %s"%(str(account_name),str(urls)))  
-                            
-                            #for u in urls:
-                            u = urls[0]
-                            get_server().call("HELO_REMOTE_PIC %s %s:%s"%(u[0],account_name,u[1]))
+                                log_debug("Twitter: from %s extracted URLs: %s"%(str(account_name),str(urls)))  
+                                if len(urls):
+                                    #for u in urls:
+                                    u = urls[0]
+                                    get_server().call("HELO_REMOTE_PIC %s %s:%s"%(u[0],account_name,u[1]))
+                            else:
+                                log_debug(("Twitter: no new tweets from %s since"%str(account_name)),self._since_ids['account_name'])
                         except:
                             log_exception("Twitter: Error while accessing twitter timeline of user ",account_name)
 
