@@ -15,6 +15,8 @@ class TwitterDownloadThread(Thread):
         self._stop_event = event
         self._lock = Lock()
         self._polling_time = 60
+        self._mentions_since_id = 0
+        self._remote_callers = []
         
     def set_polling_time(self,v):
         self._polling_time = v
@@ -37,6 +39,7 @@ class TwitterDownloadThread(Thread):
                                  access_token_key=at_key,
                                  access_token_secret=at_secret,
                                  debugHTTP=False)
+                    self._mentions_since_id = 0
                     return True
                 except:
                     log_exception("Twitter: authentication with twitter failed: check settings")
@@ -70,6 +73,31 @@ class TwitterDownloadThread(Thread):
                 u = urls[0]
                 get_server().call("HELO_REMOTE_PIC %s %s:%s"%(u[0],account_name,u[1]))
                 
+    def _find_remote_calls(self):        
+        if 0 == self._mentions_since_id:
+            #determine the start
+            ments = self._twitter_api.GetMentions(count=1)
+            if len(ments):
+                self._mentions_since_id = ments[0].GetId()
+            else:
+                self._mentions_since_id = 1
+            log_debug("Twitter: Starting with mentions ID",self._mentions_since_id)            
+        
+        ments = self._twitter_api.GetMentions(since_id=self._mentions_since_id)
+        if 0==len(ments):
+            log_debug("Twitter: Nobody mentioned me since",self._mentions_since_id)
+            return
+        self._mentions_since_id = ments[0].GetId()
+        for m in ments:
+            log_debug("Twitter: I was mentioned:",m.GetUser(),m.GetText())
+            s_name = m.GetUser().GetScreenName()
+            if s_name not in self._remote_callers:
+                log_debug("Twitter: I do not know him")
+                continue
+            get_server().call("Remote call by @%s: %s"%(s_name,m.GetText()))
+            
+        
+                
     def run(self):        
         while not self._stop_event.wait(self._polling_time):
             if None==self._twitter_api:
@@ -80,6 +108,8 @@ class TwitterDownloadThread(Thread):
                     self._get_pics_from_account(account_name)
                 except:
                     log_exception("Twitter: Error while accessing twitter timeline of user ",account_name)
+            
+            self._find_remote_calls()
 
 class twitter_lunch(iface_called_plugin):
     def __init__(self):
