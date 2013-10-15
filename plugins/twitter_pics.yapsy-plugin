@@ -1,9 +1,0 @@
-[Core]
-Name = Twitter Pictures
-Module = twitter_pics
-
-[Documentation]
-Author = Hannes Rauhe
-Version = 0.1
-Website = http://www.lunchinator.de
-Description = Displays pictures from a Twitter user's stream

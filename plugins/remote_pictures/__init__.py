@@ -61,7 +61,7 @@ class remote_pictures(iface_gui_plugin):
         else:
             self.textLabel.setText("")
           
-    def download_pic(self,url):
+    def extract_pic(self,url):
         try:
             getValidQtParent()
         except:
@@ -106,4 +106,4 @@ class remote_pictures(iface_gui_plugin):
             url = value.split()[0]
             self.imageText = value[len(url):].strip()
                    
-            self.download_pic(url)
+            self.extract_pic(url)

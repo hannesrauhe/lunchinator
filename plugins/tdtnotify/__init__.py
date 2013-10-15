@@ -26,7 +26,7 @@ class tdtnotify(iface_gui_plugin):
         self.rotate_counter=0
         self.pic_url = ""
         self.localFile = tempfile.NamedTemporaryFile()
-        self.download_pic(True)
+        self.extract_pic(True)
         self.shared_dict["tdtnotify_file"] = self.localFile.name
     
     def deactivate(self):        
@@ -74,7 +74,7 @@ class tdtnotify(iface_gui_plugin):
             thread.finished.connect(thread.deleteLater)
             thread.start()
           
-    def download_pic(self,force=False):
+    def extract_pic(self,force=False):
         self.forceDownload = force        
         try:
             getValidQtParent()
@@ -96,4 +96,4 @@ class tdtnotify(iface_gui_plugin):
             if not cmd=="HELO_TDTNOTIFY_NEW_PIC":
                 get_server().call("HELO_TDTNOTIFY_POLL "+str(self.options["polling_time"]))
                 
-            self.download_pic(value=="force")
+            self.extract_pic(value=="force")
