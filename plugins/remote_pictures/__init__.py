@@ -16,6 +16,7 @@ class remote_pictures(iface_gui_plugin):
         self.imageLabel = None
         self.imageTarget = None
         self.imageText = None
+        self.last_url = "" 
         
     def smoothScalingChanged(self, _setting, newValue):
         self.imageLabel.smooth_scaling = newValue
@@ -67,14 +68,17 @@ class remote_pictures(iface_gui_plugin):
         except:
             log_warning("Remote Pictures does not work without QT")
             return
-        
-        self.imageTarget.seek(0)
-        self.imageTarget.truncate()
-        downloadThread = DownloadThread(getValidQtParent(), url, self.imageTarget)
-        downloadThread.success.connect(self.downloadedPicture)
-        downloadThread.error.connect(self.errorDownloadingPicture)
-        downloadThread.finished.connect(downloadThread.deleteLater)
-        downloadThread.start()
+        if url!=self.last_url:
+            self.last_url = url
+            self.imageTarget.seek(0)
+            self.imageTarget.truncate()
+            downloadThread = DownloadThread(getValidQtParent(), url, self.imageTarget)
+            downloadThread.success.connect(self.downloadedPicture)
+            downloadThread.error.connect(self.errorDownloadingPicture)
+            downloadThread.finished.connect(downloadThread.deleteLater)
+            downloadThread.start()
+        else:
+            log_debug("Remote Pics: Downloaded this url before, won't do it again:",url)
             
     def generateTrustedIPs(self):
         for aPeer in self.options['trusted_peers'].split(";;"):
