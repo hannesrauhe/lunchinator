@@ -160,21 +160,21 @@ class lunch_settings(object):
         self.config_file.write(open(self.main_config_dir+'/settings.cfg','w'))
         
     def getCanUpdate(self, repo):
-        call = ["git","--git-dir="+repo+"/.git","--work-tree="+repo,"diff","--name-only","--exit-code","--quiet"]
+        call = ["git","--no-pager","--git-dir="+repo+"/.git","--work-tree="+repo,"diff","--name-only","--exit-code","--quiet"]
         if subprocess.call(call)!=0:
             return (False, "There are unstaged changes")
         
-        call = ["git","--git-dir="+repo+"/.git","--work-tree="+repo,"diff","--cached","--exit-code","--quiet"]
+        call = ["git","--no-pager","--git-dir="+repo+"/.git","--work-tree="+repo,"diff","--cached","--exit-code","--quiet"]
         if subprocess.call(call)!=0:
             return (False, "There are staged, uncommitted changes")
         
-        call = ["git","--git-dir="+repo+"/.git","--work-tree="+repo,"symbolic-ref","HEAD"]
+        call = ["git","--no-pager","--git-dir="+repo+"/.git","--work-tree="+repo,"symbolic-ref","HEAD"]
         p = subprocess.Popen(call,stdout=subprocess.PIPE)
         branch = p.communicate()[0]
         if "master" not in branch:
             return (False, "The selected branch is not the master branch")
         
-        call = ["git","--git-dir="+repo+"/.git","--work-tree="+repo,"log","origin/master..HEAD","--exit-code","--quiet"]
+        call = ["git","--no-pager","--git-dir="+repo+"/.git","--work-tree="+repo,"log","origin/master..HEAD","--exit-code","--quiet"]
         if subprocess.call(call)!=0:
             return (False, "There are unpushed commits on the master branch")
         
