@@ -61,8 +61,12 @@ class TwitterDownloadThread(Thread):
                                     item = tweets[0].AsDict()
                                     urls = [(url,item['text']) for url in item['text'].split(" ") if url.startswith("http")]   
                             log_debug("Twitter: from %s extracted URLs: %s"%(str(account_name),str(urls)))  
+                            
+                            #for u in urls:
+                            u = urls[0]
+                            get_server().call("HELO_REMOTE_PIC %s %s:%s"%(u,account_name,tweets[0].text))
                         except:
-                            log_exception("Twitter: Error while accessing twitter timeline of user ",account_name)  
+                            log_exception("Twitter: Error while accessing twitter timeline of user ",account_name)
 
 class twitter_lunch(iface_called_plugin):
     def __init__(self):
