@@ -64,7 +64,7 @@ class TwitterDownloadThread(Thread):
                             
                             #for u in urls:
                             u = urls[0]
-                            get_server().call("HELO_REMOTE_PIC %s %s:%s"%(u,account_name,tweets[0].text))
+                            get_server().call("HELO_REMOTE_PIC %s %s:%s"%(u[0],account_name,u[1]))
                         except:
                             log_exception("Twitter: Error while accessing twitter timeline of user ",account_name)
 
