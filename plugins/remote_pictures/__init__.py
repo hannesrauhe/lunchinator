@@ -93,7 +93,7 @@ class remote_pictures(iface_gui_plugin):
             trustPolicy = self.options['trust_policy']
             reject = True
             if trustPolicy == u"Local":
-                if ip == "127.0.0.1" or ip == get_server().own_ip:
+                if ip == u"127.0.0.1" or ip == get_server().own_ip:
                     reject = False
             elif trustPolicy == "Everybody":
                 reject = False

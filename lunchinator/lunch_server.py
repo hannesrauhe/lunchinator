@@ -39,7 +39,7 @@ class lunch_server(object):
         self.member_info = {}
         self.plugin_manager = None
         self.no_updates = False
-        self.own_ip = "0.0.0.0"
+        self.own_ip = ""
         self.messagesLock = Lock()
         self.membersLock = Lock()
         self.shared_dict = {} #for plugins
@@ -112,27 +112,31 @@ class lunch_server(object):
     
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
     
-    
+    def _determineOwnIP(self):  
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      
+        for m in self.members:
+            try:
+                #connect to UDF discard port 9
+                s.connect((m,9))
+                self.own_ip = unicode(s.getsockname()[0])
+                break
+            except:
+                log_debug("While getting own IP, problem to connect to",m)
+                continue
+        log_debug("Found my IP:",self.own_ip)
+        s.close()
+
     '''listening method - should be started in its own thread'''    
     def start_server(self):
         self.initialize()
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service")
         self.running = True
         self.my_master=-1 #the peer i use as master
-        announce_name=0 #how often did I announce my name        
+        announce_name=0 #how often did I announce my name
+        
+        self._determineOwnIP()
             
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        #getting your IP address is hard...:
-        socket.gethostbyname(socket.gethostname()) #may return something like 127.* or 0.*
-        try:
-            if self.own_ip.startswith("127.") or self.own_ip.startswith("0."):
-                self.own_ip = socket.gethostbyname(socket.getfqdn())        
-        except:
-            log_exception("Exception trying to determine own IP")
-        if self.own_ip.startswith("127.") or self.own_ip.startswith("0."):
-            log_warning("IP address could not be determined, so I'm using your hostname, some things might not work correctly (e.g., statistics)")
-            self.own_ip = socket.gethostname()[:15]
-            
         try: 
             s.bind(("", 50000)) 
             s.settimeout(5.0)
@@ -157,6 +161,8 @@ class lunch_server(object):
                         self._incoming_call(daten,ip)
                 except socket.timeout:
                     if len(self.members):
+                        if not len(self.own_ip):
+                            self._determineOwnIP()
                         if self.my_master==-1:
                             self._call_for_dict()
                         else:
