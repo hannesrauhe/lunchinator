@@ -70,7 +70,7 @@ class TwitterDownloadThread(Thread):
                                     u = urls[0]
                                     get_server().call("HELO_REMOTE_PIC %s %s:%s"%(u[0],account_name,u[1]))
                             else:
-                                log_debug(("Twitter: no new tweets from %s since"%str(account_name)),self._since_ids['account_name'])
+                                log_debug(("Twitter: no new tweets from %s since"%str(account_name)),self._since_ids[account_name])
                         except:
                             log_exception("Twitter: Error while accessing twitter timeline of user ",account_name)
 
