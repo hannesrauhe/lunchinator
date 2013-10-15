@@ -29,7 +29,7 @@ class TwitterDownloadThread(Thread):
         with self._lock:
             if len(key) and len(secret) and len(at_key) and len(at_secret):
                 try:
-                    self.twitter_api = twitter.Api(consumer_key=key,
+                    self._twitter_api = twitter.Api(consumer_key=key,
                                  consumer_secret=secret,
                                  access_token_key=at_key,
                                  access_token_secret=at_secret,
@@ -37,18 +37,18 @@ class TwitterDownloadThread(Thread):
                     return True
                 except:
                     log_exception("Twitter: authentication with twitter failed: check settings")
-                    self.twitter_api = None
+                    self._twitter_api = None
                     return False
             else:
                 log_error("Twitter: provide keys and secrets in settings")
-                self.twitter_api = None
+                self._twitter_api = None
                 return False
         
     def run(self):        
         while not self._stop_event.wait(self._polling_time):
             with self._lock:
                 log_debug("Polling Twitter now")
-                if self.twitter_api:
+                if self._twitter_api:
                     urls = []
                     for account_name in self._screen_names:
                         try:
