@@ -11,3 +11,13 @@ TODOs added by Hannes:
 - load db plugins first...
 - plugin that activates on updates
 - print: invalid literal for int() with base 10: 'lambda
+- bug:
+[   INFO] received unknown command from 10.18.205.183: HELO_TDTNOTIFY_POLL with value 30
+[   INFO] Sending file of size 3319 to 10.18.198.58 : 50001
+Traceback (most recent call last):
+  File "/home/hannes/.lunchinator-dist-sap/lunchinator/gui_controller.py", line 417, in sendFileSlot
+    fileToSend = str(fileToSend).decode("utf-8")
+  File "/usr/lib/python2.7/encodings/utf_8.py", line 16, in decode
+    return codecs.utf_8_decode(input, errors, True)
+UnicodeDecodeError: 'utf8' codec can't decode bytes in position 4-6: invalid continuation byte
+
