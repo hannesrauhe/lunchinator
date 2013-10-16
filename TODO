@@ -8,3 +8,5 @@ TODOs added by Hannes:
 - update SQL commands for statistics
 - move statistics to main repo
 - load db plugins first...
+- plugin that activates on updates
+- print: invalid literal for int() with base 10: 'lambda
