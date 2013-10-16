@@ -58,7 +58,7 @@ do
 	RESTART=0
 	UPDATE=0
 	
-	"${LUNCH_DIR}/start_lunchinator.py"
+	"${LUNCH_DIR}/start_lunchinator.py" ${LUNCHINATOR_ARGS}
 	EXIT_CODE=$?
 	if [ "$EXIT_CODE" -eq "$UPDATE_CODE" ]
 	then
