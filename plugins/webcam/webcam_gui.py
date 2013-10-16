@@ -1,8 +1,9 @@
 import urllib2, sys
-from lunchinator import log_exception
+from lunchinator import log_exception, log_error
 from PyQt4.QtGui import QImage, QPixmap
-from PyQt4.QtCore import QTimer, QSize
+from PyQt4.QtCore import QTimer, QSize, QThread, pyqtSlot
 from lunchinator.resizing_image_label import ResizingImageLabel
+from lunchinator.download_thread import DownloadThread
 
 class UpdatingImage(ResizingImageLabel):
     def __init__(self,parent,fallback_pic,pic_url,timeout,no_proxy,smooth_scaling):
@@ -21,21 +22,20 @@ class UpdatingImage(ResizingImageLabel):
         except:
             log_exception("Something went wrong when trying to display the fallback image",self.fallback_pic,sys.exc_info()[0])
             
+    @pyqtSlot(QThread, unicode)
+    def downloadFinished(self, thread, _url):
+        qtimage = QImage()
+        qtimage.loadFromData(thread.getResult())
+        self.setRawPixmap(QPixmap.fromImage(qtimage))
+            
+    @pyqtSlot(QThread, unicode)
+    def errorDownloading(self, _thread, url):
+        log_error("Error downloading webcam image from %s" % url)
+            
     def update(self): 
-        try:
-            response = None
-            if self.no_proxy:
-                proxy_handler = urllib2.ProxyHandler({})
-                opener = urllib2.build_opener(proxy_handler)
-                response=opener.open(self.pic_url)
-            else:
-                response = urllib2.urlopen(self.pic_url)
-            
-            qtimage = QImage()
-            qtimage.loadFromData(response.read())
-            
-            self.setRawPixmap(QPixmap.fromImage(qtimage))
-            return True
-        except:
-            log_exception("Something went wrong when trying to display the webcam image")
-            return False
+        thread = DownloadThread(self, self.pic_url)
+        thread.finished.connect(thread.deleteLater)
+        thread.error.connect(self.errorDownloading)
+        thread.success.connect(self.downloadFinished)
+        thread.start()
+        return True
