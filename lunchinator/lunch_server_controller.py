@@ -23,6 +23,9 @@ class LunchServerController(object):
     def messagePrepended(self, messageTime, senderIP, messageText):
         pass
     
+    def extendMemberInfo(self, _infoDict):
+        pass
+    
     def receiveFile(self, ip, fileSize, fileName):
         dr = DataReceiverThread(ip,fileSize,fileName,get_settings().get_tcp_port())
         dr.start()
@@ -31,16 +34,16 @@ class LunchServerController(object):
         ds = DataSenderThread(ip,fileOrData, otherTCPPort, isData)
         ds.start()
     
-    """ process any non-message event """
     def processEvent(self, cmd, value, addr):
+        """ process any non-message event """
         processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info))
     
-    """ process any message event, including lunch calls """
     def processMessage(self, msg, addr):
+        """ process any message event, including lunch calls """
         processPluginCall(addr, lambda p, ip, member_info: p.process_message(msg, ip, member_info))
                     
-    """ process a lunch call """
     def processLunchCall(self, msg, addr):
+        """ process a lunch call """
         processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
 
     def serverStopped(self, _exit_code):

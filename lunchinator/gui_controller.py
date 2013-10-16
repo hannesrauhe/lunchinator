@@ -220,6 +220,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def receiveFile(self, ip, fileSize, fileName):
         self._receiveFile.emit(ip, fileSize, fileName)
     
+    def extendMemberInfo(self, infoDict):
+        infoDict['pyqt_version'] = QtCore.PYQT_VERSION_STR
+        infoDict['qt_version'] = QtCore.QT_VERSION_STR
+    
     def sendFile(self, ip, fileOrData, otherTCPPort, isData = False):
         if not isData:
             # encode to send as str
