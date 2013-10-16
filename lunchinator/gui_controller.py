@@ -1,4 +1,4 @@
-import sys
+import sys, sip
 from lunchinator import get_server, log_exception, log_info, get_settings,\
     log_error, convert_string, log_warning, log_debug
 import socket,os,time, subprocess
@@ -158,7 +158,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def quit(self, exitCode = 0):
         if self.mainWindow != None:
             self.mainWindow.close()
-        if self.serverThread != None and self.serverThread.isRunning():
+        if self.serverThread != None and not sip.isdeleted(self.serverThread) and self.serverThread.isRunning():
             self.serverThread.finished.disconnect(self.serverFinishedUnexpectedly)
             get_server().running = False
             log_info("Waiting maximal 30s for server to stop...")
@@ -203,6 +203,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def serverStopped(self, exitCode):
         # usually, the emitted signal won't be processed anyway (plug-ins deactivated in quit())
         if exitCode == EXIT_CODE_UPDATE:
+            print "foo"
+            self.serverThread.finished.disconnect(self.serverFinishedUnexpectedly)
             self._updateRequested.emit()
         
     def memberAppended(self, ip, infoDict):
