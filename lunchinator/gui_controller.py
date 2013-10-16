@@ -215,7 +215,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._receiveFile.emit(ip, fileSize, fileName)
     
     def sendFile(self, ip, fileOrData, otherTCPPort, isData = False):
-        if not isData:
+        if not isData and type(fileOrData) == unicode:
             # encode to send as str
             fileOrData = fileOrData.encode('utf-8')
         self._sendFile.emit(ip, QByteArray.fromRawData(fileOrData), otherTCPPort, isData)

@@ -6,7 +6,8 @@ from threading import Lock
 from cStringIO import StringIO
 
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
-from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning
+from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning,\
+    convert_string
 import tarfile
 
 EXIT_CODE_ERROR = 1
@@ -183,7 +184,8 @@ class lunch_server(object):
                         log_warning("seems like you are alone - no lunch-peer found yet")
                     log_debug("Current Members:", self.members)
         except socket.error as e:
-            log_exception("stopping lunchinator because: %s"%(str(e)))
+            #socket error messages may contain special characters, which leads to crashes on old python versions
+            log_error(u"stopping lunchinator because of socket error:", convert_string(str(e)))
         except:
             log_exception("stopping - Critical error: %s"%str(sys.exc_info())) 
         finally: 

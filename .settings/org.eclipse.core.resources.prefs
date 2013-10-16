@@ -1,6 +1,7 @@
 eclipse.preferences.version=1
 encoding//plugins/lunch_menu_structured/__init__.py=utf-8
 encoding//plugins/lunch_menu_structured/lunch_menu_structured_gui.py=utf-8
+encoding//plugins/twitter_lunch/requests/adapters.py=utf-8
 encoding//yapsy/ConfigurablePluginManager.py=utf-8
 encoding//yapsy/IPlugin.py=utf-8
 encoding//yapsy/PluginInfo.py=utf-8

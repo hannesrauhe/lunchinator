@@ -1,5 +1,5 @@
 import socket,sys
-from lunchinator import log_exception
+from lunchinator import log_exception, log_error, convert_string
 
 def _sendFile(con, receiver, path_or_data, tcp_port, sleep, is_data):
     for numAttempts in range(10):
@@ -23,7 +23,8 @@ def _sendFile(con, receiver, path_or_data, tcp_port, sleep, is_data):
     try:
         con.sendall(data)                      
     except socket.error as e:
-        log_exception("Could not send data",e.strerror)
+        #socket error messages may contain special characters, which leads to crashes on old python versions
+        log_error(u"Could not send data:", convert_string(str(e)))
         raise
     
 def sendFile(receiver, path_or_data, tcp_port, sleep, is_data = False):
@@ -50,7 +51,8 @@ def _receiveFile(con, file_path, size):
                 writefile.write(rec)
                 length -= len(rec)
         except socket.error as e:
-            log_exception("Error while receiving the data, Bytes to receive left:",length,"Error:",e.strerror)
+            #socket error messages may contain special characters, which leads to crashes on old python versions
+            log_error(u"Error while receiving the data, Bytes to receive left:",length,u"Error:",convert_string(str(e)))
             raise
 
 def receiveFile(sender, file_path, size, portOrSocket, success, error):
