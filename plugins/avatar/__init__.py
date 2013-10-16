@@ -1,7 +1,7 @@
 from lunchinator.iface_plugins import iface_general_plugin
 from avatar.l_avatar import l_avatar
 import mimetypes
-from lunchinator import get_server, get_settings, log_error, convert_string
+from lunchinator import get_server, get_settings, log_error, convert_string, log_debug
 from functools import partial
 import os
 
@@ -48,20 +48,28 @@ class avatar(iface_general_plugin):
                 index0 = fileModel.index(sourceRow, 0, sourceParent)
                 path = convert_string(fileModel.filePath(index0))
                 return self.filterAcceptsFile(path)
-        dialog = QFileDialog(self.parentWindow(self.label), "Choose Avatar Picture:")
+            
         fileFilter = FileFilterProxyModel()
-        dialog.setProxyModel(fileFilter)
-        dialog.setWindowTitle("Choose Avatar Picture")
-        dialog.setFileMode(QFileDialog.ExistingFile)
-        dialog.setAcceptMode(QFileDialog.AcceptOpen)
-        if dialog.exec_():
-            selectedFiles = dialog.selectedFiles()
-            selectedFile = convert_string(selectedFiles.first())
+#TODO: does not work, I do not know, why
+#        dialog = QFileDialog(self.parentWindow(self.label), "Choose Avatar Picture:")
+#        dialog.setProxyModel(fileFilter)
+#        dialog.setWindowTitle("Choose Avatar Picture")
+#        dialog.setFileMode(QFileDialog.ExistingFile)
+#        dialog.setAcceptMode(QFileDialog.AcceptOpen)
+#        if dialog.exec_():
+#            selectedFiles = dialog.selectedFiles()
+#            selectedFile = convert_string(selectedFiles.first())
+        
+        selectedFile = QFileDialog.getOpenFileName(self.parentWindow(self.label), caption="Choose Avatar Picture:")
+        if selectedFile:
+            selectedFile = convert_string(selectedFile)
             if not os.path.isdir(selectedFile) and fileFilter.filterAcceptsFile(selectedFile):
                 self.selectedFile = selectedFile
                 self._setImage(selectedFile, self.label)
             else:
                 log_error("Selected invalid file: '%s' is of invalid type" % selectedFile)
+        else:
+            log_debug("Avatar: no file selected")
     
     def create_options_widget(self, parent):
         from PyQt4.QtGui import QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton
