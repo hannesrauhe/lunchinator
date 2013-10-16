@@ -89,7 +89,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
             return
         self.isIconHighlighted = True
         icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunchred.svg")
-        icon = QIcon.fromTheme("lunchinatorred", QIcon(icon_file))
+        if hasattr(QIcon, "fromTheme"):
+            icon = QIcon.fromTheme("lunchinatorred", QIcon(icon_file))
+        else:
+            icon = QIcon(icon_file)
         self.statusicon.setIcon(icon)
         
         if self.resetIconTimer == None:
@@ -106,7 +109,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if self.resetIconTimer != None and self.resetIconTimer.isActive():
             self.resetIconTimer.stop()
         icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg")
-        icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
+        if hasattr(QIcon, "fromTheme"):
+            icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
+        else:
+            icon = QIcon(icon_file)
         self.statusicon.setIcon(icon)
         
     def createTrayIcon(self):
