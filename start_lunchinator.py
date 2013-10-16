@@ -15,7 +15,7 @@ while os.path.dirname(path) != path:
 from optparse import OptionParser
 from lunchinator import log_info, log_warning, log_error, get_settings,\
     get_server, log_exception
-from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP
+from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
     
 def parse_args():
     usage = "usage: %prog [options]"
@@ -144,7 +144,7 @@ if __name__ == "__main__":
             from PyQt4.QtCore import QThread
         except:
             log_error("pyQT4 not found - start lunchinator with --no-gui")
-            sys.exit(-1)
+            sys.exit(EXIT_CODE_NO_QT)
             
         from lunchinator.gui_controller import LunchinatorGuiController
         from PyQt4.QtGui import QApplication

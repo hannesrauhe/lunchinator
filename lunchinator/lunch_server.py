@@ -12,6 +12,7 @@ import tarfile
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
 EXIT_CODE_STOP = 3
+EXIT_CODE_NO_QT = 42
         
 class lunch_server(object):
     _instance = None
