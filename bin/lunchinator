@@ -4,6 +4,7 @@ LUNCH_DIR=${LUNCHINATOR_DIR:="$HOME/.lunchinator-dist-sap"}
 LUNCH_GIT=${LUNCHINATOR_GIT:="drgit@luder.dhcp.wdf.sap.corp:/lunchinator.git"}
 LUNCH_PLUGINS_DIR=${LUNCHINATOR_PLUGINS_DIR:="$HOME/.lunchinator/plugins"}
 LUNCH_PLUGINS_GIT=${LUNCHINATOR_PLUGINS_GIT:="drgit@luder.dhcp.wdf.sap.corp:/lunchinator_plugins.git"}
+LUNCH_BRANCH=${LUNCHINATOR_BRANCH:="master"}
 
 if test "$1" = "--reinstall"
 then
@@ -22,15 +23,15 @@ fi
 
 if ! test -f "${LUNCH_DIR}/README"
 then
-  echo "-- Installing main program --"
-  git clone $LUNCH_GIT "$LUNCH_DIR"
+  echo "-- Installing main program: $LUNCH_BRANCH branch --"
+  git clone -b "$LUNCH_BRANCH" "$LUNCH_GIT" "$LUNCH_DIR"
 fi
 
 if ! test -f "${LUNCH_PLUGINS_DIR}/README"
 then
-  echo "-- Installing extra plugins --"
+  echo "-- Installing extra plugins: $LUNCH_BRANCH branch--"
   mkdir -p "$LUNCH_PLUGINS_DIR"
-  git clone $LUNCH_PLUGINS_GIT "$LUNCH_PLUGINS_DIR"
+  git clone -b "$LUNCH_BRANCH" "$LUNCH_PLUGINS_GIT" "$LUNCH_PLUGINS_DIR"
 fi
 
 "${LUNCH_DIR}/start_lunchinator.py" --updateCode
