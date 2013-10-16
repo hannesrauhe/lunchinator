@@ -24,11 +24,11 @@ class LunchServerController(object):
         pass
     
     def receiveFile(self, ip, fileSize, fileName):
-        dr = DataReceiverThread(self,ip,fileSize,fileName,get_settings().get_tcp_port())
+        dr = DataReceiverThread(ip,fileSize,fileName,get_settings().get_tcp_port())
         dr.start()
     
     def sendFile(self, ip, fileOrData, otherTCPPort, isData = False):
-        ds = DataSenderThread(self,ip,fileOrData, otherTCPPort, isData)
+        ds = DataSenderThread(ip,fileOrData, otherTCPPort, isData)
         ds.start()
     
     """ process any non-message event """
