@@ -61,10 +61,12 @@ def updateRepositories():
             log_warning("Cannot update main repository: %s" % reason)
         else:
             log_info("Updating main repository")
-            if get_settings().runGitCommand(["pull"]) != 0:
+            upd_res = get_settings().runGitCommand(["pull"])
+            if upd_res[0] != 0:
                 log_error("git pull did not work (main repository). The Update mechanism therefore does not work.\n\
 If you do not know, what to do now:\n\
-it should be safe to call 'git stash' in the lunchinator directory %s start lunchinator again."%get_settings().get_lunchdir())
+it should be safe to call 'git stash' in the lunchinator directory %s start lunchinator again.\n\
+Error was: %s"%(get_settings().get_lunchdir(),str(upd_res)))
 
         if os.path.exists(get_settings().get_external_plugin_dir()):    
             canUpdate, reason = get_settings().getCanUpdatePlugins()
@@ -73,10 +75,12 @@ it should be safe to call 'git stash' in the lunchinator directory %s start lunc
             else:
                 log_info("Updating plugin repository")
                 #locate plugins repository
-                if get_settings().runGitCommand(["pull"], get_settings().get_external_plugin_dir()) != 0:
+                upd_res = get_settings().runGitCommand(["pull"], get_settings().get_external_plugin_dir())
+                if upd_res[0] != 0:
                     log_error("git pull did not work (plugin repository). The Update mechanism therefore does not work.\n\
 If you do not know, what to do now:\n\
-it should be safe to call 'git stash' in the plugins directory %s/plugins and start lunchinator again."%get_settings().get_main_config_dir())
+it should be safe to call 'git stash' in the plugins directory %s/plugins and start lunchinator again.\n\
+Error was: %s"%(get_settings().get_main_config_dir(),str(upd_res)))
     else:
         msg = "local update"
         get_server().set_plugins_enabled(False)
