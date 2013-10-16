@@ -5,3 +5,6 @@ TODOs added by Hannes:
 
 - secondary DB connection plugin
 - add readline to dependencies
+- update SQL commands for statistics
+- move statistics to main repo
+- load db plugins first...
