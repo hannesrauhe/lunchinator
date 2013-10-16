@@ -1,12 +1,14 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_warning, log_error, log_exception
+from lunchinator import log_error, log_exception, log_info, convert_string
 import types
+from copy import deepcopy
 
 class iface_plugin(IPlugin):    
     def __init__(self):
         self.options = None
         self.option_names = None
+        self.option_defaults = {}
         self.option_callbacks = {}
         self.option_widgets = {}
         self.option_choice = {}
@@ -16,7 +18,7 @@ class iface_plugin(IPlugin):
     
     def activate(self):
         """
-        Call the parent class's acivation method
+        Call the parent class's activation method
         """
         IPlugin.activate(self)
         
@@ -46,6 +48,8 @@ class iface_plugin(IPlugin):
                     dict_options[o] = v
                     self.option_names.append((o,o))
             self.options = dict_options
+            
+        self.option_defaults = deepcopy(self.options)
         self.read_options_from_file()
         return
 
@@ -54,160 +58,198 @@ class iface_plugin(IPlugin):
         Just call the parent class's method
         """
         IPlugin.deactivate(self)
-        
+    
+    def get_option_names(self):
+        if self.option_names == None:
+            return [(aKey, aKey) for aKey in self.options.keys()]
+        return self.option_names
+    
+    def get_option_description(self, key):
+        if self.option_names != None:
+            for aKey, desc in self.option_names:
+                if key == aKey:
+                    return desc
+        return None
+    
+    def has_options(self):
+        return self.options != None and len(self.options) > 0
+    
+    def convert_and_set_option(self, o, v, new_v):
+        try:
+            if o in self.option_choice:
+                finalValue = None
+                for aValue in self.option_choice[o]:
+                    if new_v.upper() == aValue.upper():
+                        finalValue = aValue
+                        break
+                if finalValue != None:
+                    self.options[o] = finalValue
+            elif type(v)==types.IntType:
+                self.options[o] = int(new_v)
+            elif type(v)==types.BooleanType:
+                if new_v.strip().upper() in ["TRUE", "YES", "1"]:
+                    self.options[o] = True
+                else:
+                    self.options[o] = False
+            elif type(v) in (types.StringType, types.UnicodeType):
+                self.options[o] = convert_string(new_v)
+            else:
+                log_error("type of value",o,v,"not supported, using default")
+        except:
+            log_exception("could not convert value of",o,"from config to type",type(v),"(",new_v,") using default")
+    
     def read_options_from_file(self):
         if not self.options:
             return
         for o,v in self.options.iteritems():
             if self.hasConfigOption(o):
                 new_v = self.getConfigOption(o)
-                try:
-                    if o in self.option_choice:
-                        self.options[o] = new_v
-                        if not new_v in self.option_choice[0]:
-                            #illegal value - use first
-                            self.options[o] = self.option_choice[0][0]
-                        else:
-                            self.options[o] = new_v
-                    elif type(v)==types.IntType:
-                        self.options[o] = int(new_v)
-                    elif type(v)==types.BooleanType:
-                        if new_v.strip().upper() in ["TRUE", "YES", "1"]:
-                            self.options[o] = True
-                        else:
-                            self.options[o] = False
-                    elif type(v)==types.StringType:
-                        self.options[o] = new_v
-                    else:
-                        log_error("type of value",o,v,"not supported, using default")
-                except:
-                    log_error("could not convert value of",o,"from config to type",type(v),"(",new_v,") using default")
+                self.convert_and_set_option(o, v, new_v)
         
-    def add_option_to_widget(self, t, i, o, v):
-        import gtk
+    def add_option_to_layout(self, parent, grid, i, o, v):
+        from PyQt4.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
+        from PyQt4.QtCore import Qt
         e = ""
+        fillHorizontal = False
         if o[0] in self.option_choice:
-            e = gtk.combo_box_new_text()
+            e = QComboBox(parent)
             for aString in self.option_choice[o[0]]:
-                e.append_text(aString)
-            activeIndex = 0
+                e.addItem(aString)
+            currentIndex = 0
             if v in self.option_choice[o[0]]:
-                activeIndex = self.option_choice[o[0]].index(v)
-            e.set_active(activeIndex)
+                currentIndex = self.option_choice[o[0]].index(v)
+            e.setCurrentIndex(currentIndex)
         elif type(v)==types.IntType:
-            adjustment = gtk.Adjustment(value=v, lower=0, upper=1000000, step_incr=1, page_incr=0, page_size=0)
-            e = gtk.SpinButton(adjustment)
+            e = QSpinBox(parent)
+            e.setMinimum(0)
+            e.setMaximum(1000000)
+            e.setSingleStep(1)
+            e.setValue(v)
         elif type(v)==types.BooleanType:
-            e = gtk.CheckButton()
-            e.set_active(v)
+            e = QCheckBox(parent)
+            e.setCheckState(Qt.Checked if v else Qt.Unchecked)
+            fillHorizontal = True
         else:
-            e = gtk.Entry()
-            e.set_text(v)
-        rAlign = gtk.Alignment(1, 0.5, 0, 0)
-        rAlign.add(gtk.Label(o[1]))
-        t.attach(rAlign,0,1,i,i+1)
-        t.attach(e,1,2,i,i+1)
+            e = QLineEdit(v, parent)
+            fillHorizontal = True
+            
+        grid.addWidget(QLabel(o[1]), i, 0, Qt.AlignRight)
+        grid.addWidget(e, i, 1, Qt.AlignLeft if fillHorizontal is False else Qt.Alignment(0))
         self.option_widgets[o[0]]=e
         
-    def create_options_widget(self):
-        import gtk
+    def create_options_widget(self, parent):
+        from PyQt4.QtGui import QWidget, QGridLayout
         if not self.options:
             return None
-        t = gtk.Table(len(self.options),2,False)
-        t.set_col_spacing(0, 5)
+        optionsWidget = QWidget(parent)
+        t = QGridLayout(optionsWidget)
         i=0
         
         if self.option_names == None:
             # add options sorted by dictionary order
             for o,v in self.options.iteritems():
-                self.add_option_to_widget(t, i, (o,o), v)
+                self.add_option_to_layout(optionsWidget, t, i, (o,o), v)
                 i+=1
         else:
             # add options sorted by specified order
             for o in self.option_names:
-                self.add_option_to_widget(t, i, o, self.options[o[0]])
+                self.add_option_to_layout(optionsWidget, t, i, o, self.options[o[0]])
                 i+=1
                 
-        return t
+        t.setColumnStretch(1, 1)
+        row = t.rowCount()
+        t.addWidget(QWidget(optionsWidget), row, 0)
+        t.setRowStretch(row, 1)
+        return optionsWidget
     
-    def save_data(self, set_value):
+    def has_option(self, o):
+        return o in self.options
+    
+    def set_option(self, o, new_v, convert = True):
+        """
+        Set option o to the new value new_v.
+        If you are sure that new_v has the correct type, you can set convert = False.
+        """
+        if o not in self.options:
+            return
+        v = self.options[o]
+        if new_v!=v:
+            self.options[o]=new_v
+            if convert:
+                self.convert_and_set_option(o, v, new_v)
+                self.set_option_value(o, self.options[o])
+            else:
+                self.set_option_value(o, new_v)
+            if o in self.option_callbacks:
+                self.option_callbacks[o](o, new_v)
+                
+    def reset_option(self, o):
+        """
+        Reset an option to its default value.
+        """
+        if o in self.options:
+            self.set_option(o, self.option_defaults[o], False)
+            
+    def get_option_default_value(self, o):
+        """
+        Returns the default value of an option.
+        """
+        if o in self.option_defaults:
+            return self.option_defaults[o]
+        return None
+                
+    def get_option(self, o):
+        if o in self.options:
+            return self.options[o]
+    
+    def save_data(self):
+        from PyQt4.QtCore import Qt
         if not self.option_widgets:
             return
         for o,e in self.option_widgets.iteritems():
             v = self.options[o]
             new_v = v
             if o in self.option_choice:
-                new_v = self.option_choice[o][e.get_active()]
+                new_v = self.option_choice[o][e.currentIndex()]
             elif type(v)==types.IntType:
-                new_v = e.get_value_as_int()
+                new_v = e.value()
             elif type(v)==types.BooleanType:
-                new_v = e.get_active()
+                new_v = e.checkState() == Qt.Checked
             else:
-                new_v = e.get_text()
-            if new_v!=v:
-                self.options[o]=new_v
-                set_value(o, new_v)
-                if o in self.option_callbacks:
-                    self.option_callbacks[o](o, new_v)
+                new_v = convert_string(e.text())
+            self.set_option(o, new_v, False)
         self.discard_options_widget_data()
         
+    def set_option_value(self, o, new_v):
+        self.setConfigOption(o,str(new_v))
+        
     def save_options_widget_data(self):
-        self.save_data(lambda o, new_v: self.setConfigOption(o,str(new_v)))
+        self.save_data()
         self.discard_options_widget_data()
     
     def discard_options_widget_data(self):
         self.option_widgets = {}
         
-class iface_general_plugin(iface_plugin):    
-    def activate(self):
-        """
-        Call the parent class's acivation method
-        """
-        iface_plugin.activate(self)
-        return
+class iface_general_plugin(iface_plugin): 
+    pass
 
-
-    def deactivate(self):
-        """
-        Just call the parent class's method
-        """
-        iface_plugin.deactivate(self)
-
+class iface_called_plugin(iface_plugin): 
+    def process_message(self,msg,ip,member_info):
+        pass
+        
+    def process_lunch_call(self,msg,ip,member_info):
+        pass
+        
+    def process_event(self,cmd,value,ip,member_info):
+        pass 
+        
 class iface_gui_plugin(iface_plugin):
     def __init__(self):
         super(iface_gui_plugin, self).__init__()
         self.sortOrder = -1
         self.visible = False
-    
-    def activate(self):
-        """
-        Call the parent class's acivation method
-        """
-        iface_plugin.activate(self)
-        return
-
-
-    def deactivate(self):
-        """
-        Just call the parent class's method
-        """
-        iface_plugin.deactivate(self)
         
-        
-    def read_options_from_file(self):
-        super(iface_gui_plugin, self).read_options_from_file()
-        
-        if self.hasConfigOption("sort_order"):
-            new_v = self.getConfigOption("sort_order")
-            try:
-                self.sortOrder = int(new_v)
-            except:
-                log_warning("could not read sort order configuration")
-        
-    def save_sort_order(self):
-        self.setConfigOption("sort_order",str(self.sortOrder))
-        
-    def create_widget(self):
+    def create_widget(self, _parent):
         self.visible = True
         return None
     
@@ -217,6 +259,20 @@ class iface_gui_plugin(iface_plugin):
     
     def add_menu(self,menu):
         pass    
+    
+    @classmethod
+    def run_standalone(cls, factory):
+        from PyQt4.QtGui import QApplication, QMainWindow
+        import sys
+        
+        app = QApplication(sys.argv)
+        window = QMainWindow()
+        window.setWindowTitle("Layout Example")
+        window.resize(300, 300)
+        window.setCentralWidget(factory(window))
+        window.show()
+    
+        sys.exit(app.exec_())
         
     def process_message(self,msg,ip,member_info):
         pass
@@ -227,26 +283,116 @@ class iface_gui_plugin(iface_plugin):
     def process_event(self,cmd,value,ip,member_info):
         pass
 
-class iface_called_plugin(iface_plugin):    
-    def activate(self):
-        """
-        Call the parent class's acivation method
-        """
+class iface_database_plugin(iface_plugin):
+    #connection_names = {}
+    
+    def __init__(self):
+        super(iface_database_plugin, self).__init__()
+        self.db_type="Unknown"
+        self._connection=None
+        
+    ''' do not overwrite these methods '''
+    
+    #do NOT overwrite this method -> use _post_open instead
+    def activate(self):        
         iface_plugin.activate(self)
-        return
+        self._open_connection()
 
-
-    def deactivate(self):
-        """
-        Just call the parent class's method
-        """
-        iface_plugin.deactivate(self)
+    #do NOT overwrite this method -> use _pre_close instead
+    def deactivate(self):        
+        self._close_connection()
+        iface_plugin.deactivate(self)        
         
-    def process_message(self,msg,ip,member_info):
-        pass
+    def _open_connection(self):
+        try:
+            self._connection = self._open()  
+            try:
+                self._post_open()
+            except:
+                log_exception("Problem after opening DB connection in plugin %s"%(self.db_type))
+        except:
+            log_exception("Problem while opening DB connection in plugin %s"%(self.db_type))      
         
-    def process_lunch_call(self,msg,ip,member_info):
-        pass
+    def _close_connection(self):        
+        try:            
+            self._pre_close()
+        except:
+            log_exception("Problem while closing DB connection in plugin %s"%(self.db_type))
+        try:            
+            self._close()
+        except:
+            log_exception("Problem while closing DB connection in plugin %s"%(self.db_type))
         
-    def process_event(self,cmd,value,ip,member_info):
+    def _restart_connection(self,old_setting,new_setting):
+        log_info("Trying to reconnect to database")
+        self._close_connection()
+        self._open_connection()
+            
+    def _conn(self):
+        return self._connection
+            
+    def commit(self):
+        if self._conn():
+            self._conn().commit()
+        #raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    '''abstract methods - basic functionality'''    
+    def _post_open(self):
         pass
+    
+    def _pre_close(self):
+        pass
+    
+    def _open(self):
+        raise  NotImplementedError("%s does not implement the open method"%self.db_type)
+    
+    def _close(self):
+        raise  NotImplementedError("%s does not implement the close method"%self.db_type)
+            
+    def _execute(self, query, wildcards, returnResults=True, commit=False, returnHeader=False):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    def existsTable(self, tableName):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    def insert_values(self, table, *values):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+            
+            
+    '''message statistics plugin methods''' 
+    def insert_call(self,mtype,msg,sender):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    def get_calls(self):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    def insert_members(self,ip,name,avatar,lunch_begin,lunch_end):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+        
+    def get_newest_members_data(self):    
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    '''lunch statistics plugin methods'''    
+    def lastUpdateForLunchDay(self, date, tableName):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+        
+    def insertLunchPart(self, date, textAndAdditivesList, update, table):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+    
+    '''maintenance plugin methods'''    
+    def getBugsFromDB(self,mode="open"):
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
+        
+    '''convenience calls'''    
+    def execute(self, query, *wildcards):
+        return self._execute(query, wildcards, returnResults=False, commit=True)
+        
+    def executeNoCommit(self, query, *wildcards):
+        return self._execute(query, wildcards, returnResults=False, commit=False)
+        
+    def query(self, query, *wildcards):
+        return self._execute(query, wildcards, returnResults=True, commit=False)
+    
+    def queryWithHeader(self, query, *wildcards):
+        return self._execute(query, wildcards, returnResults=True, commit=False, returnHeader=True)
+    

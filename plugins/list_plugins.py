@@ -1,5 +1,4 @@
-from lunchinator.iface_plugins import *
-import gtk,gobject,urllib2,sys
+from lunchinator.iface_plugins import iface_gui_plugin, PluginManagerSingleton
     
 class list_plugins(iface_gui_plugin):
     def __init__(self):
@@ -12,16 +11,12 @@ class list_plugins(iface_gui_plugin):
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
     
-    def create_widget(self):
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        textview = gtk.TextView()
-        textview.set_size_request(400,200)
-        textview.set_wrap_mode(gtk.WRAP_WORD)
-        textbuffer = textview.get_buffer()
-        sw.add(textview)
-        sw.show()
-        textview.show()
+    def create_widget(self, parent):
+        from PyQt4.QtGui import QTextEdit, QSizePolicy
+        textView = QTextEdit(parent)
+        textView.setLineWrapMode(QTextEdit.WidgetWidth)
+        textView.setReadOnly(True)
+        
         txt = ""
         manager = PluginManagerSingleton.get()
         for pluginInfo in manager.getAllPlugins():    
@@ -34,8 +29,9 @@ class list_plugins(iface_gui_plugin):
             txt+=pluginInfo.description +" "
 #            txt+=pluginInfo.details + " "
             txt+="\n\n"
-        textbuffer.set_text(txt)
-        return sw
+        textView.setPlainText(txt)
+        textView.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        return textView
     
     def add_menu(self,menu):
         pass

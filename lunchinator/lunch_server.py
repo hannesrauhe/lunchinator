@@ -1,15 +1,18 @@
 #!/usr/bin/python
-from lunch_datathread import *
-from iface_plugins import *
-from time import strftime, localtime, time, mktime, gmtime
-import socket,subprocess,sys,os,ctypes,getpass,json
+from iface_plugins import iface_called_plugin, iface_database_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
+from time import strftime, localtime, time, mktime
+import socket,sys,os,json,codecs,contextlib
+from threading import Lock
+from cStringIO import StringIO
 
-from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
-from lunchinator import log_debug, log_info, log_critical, get_settings
+from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning
+import tarfile
 
+EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
 EXIT_CODE_STOP = 3
+EXIT_CODE_NO_QT = 42
         
 class lunch_server(object):
     _instance = None
@@ -19,42 +22,298 @@ class lunch_server(object):
         if cls._instance == None:
             cls._instance = cls()
         return cls._instance
-    
-    #TODO: if started with plugins: make sure they are deactivated when destroying lunchinator (destructor anyone?)
+        
     def __init__(self):
+        super(lunch_server, self).__init__()
+        self.controller = None
+        self.initialized = False
+        self._load_plugins = True
         self.running = False
         self.update_request = False
         self.new_msg = False
         self.my_master = -1    
         self.peer_nr=0 #the number of the peer i contacted to be my master
-        self.mute_time_until=0
+        self.last_lunch_call=0
         self.last_messages = []
-        self.members = {}
+        self.members = []
         self.member_timeout = {}
         self.member_info = {}
         self.plugin_manager = None
         self.no_updates = False
-        self.with_plugins = True
+        self.own_ip = ""
+        self.messagesLock = Lock()
+        self.membersLock = Lock()
+        self.shared_dict = {} #for plugins
+        self.dontSendTo = set()
+        self.unknown_cmd = []
         
         self.exitCode = 0  
-        self.read_config()
+        
+        
+    """ -------------------------- CALLED FROM MAIN THREAD -------------------------------- """
+        
+    """Initialize Lunch Server with a specific controller"""
+    def initialize(self, controller = None):
+        if self.initialized:
+            return
+        self.initialized = True
+        if controller != None:
+            self.controller = controller
+        else:
+            from lunchinator.lunch_server_controller import LunchServerController
+            self.controller = LunchServerController()
+        
+        self._read_config()
         
         PluginManagerSingleton.setBehaviour([
             ConfigurablePluginManager,
         ])
         self.plugin_manager = PluginManagerSingleton.get()
         self.plugin_manager.app = self
-        self.plugin_manager.setConfigParser(get_settings().config_file,get_settings().write_config_to_hd)
-        self.plugin_manager.setPluginPlaces(get_settings().plugin_dirs)
-        self.plugin_manager.setCategoriesFilter({
+        self.plugin_manager.setConfigParser(get_settings().get_config_file(),get_settings().write_config_to_hd)
+        self.plugin_manager.setPluginPlaces(get_settings().get_plugin_dirs())
+        categoriesFilter = {
            "general" : iface_general_plugin,
            "called" : iface_called_plugin,
-           "gui" : iface_gui_plugin
-           }) 
-        self.init_done = threading.Event()
-        self.shared_dict = {} #for plugins
+           "gui" : iface_gui_plugin,
+           "db" : iface_database_plugin
+           }
+        self.plugin_manager.setCategoriesFilter(categoriesFilter) 
         
-    def is_now_in_time_span(self,begin,end):
+        if self.get_plugins_enabled():
+            try:
+                self.plugin_manager.collectPlugins()
+            except:
+                log_exception("problem when loading plugin")
+            
+            #always load these plugins
+            self.plugin_manager.activatePluginByName("General Settings", "general") 
+            self.plugin_manager.activatePluginByName("Notify", "called") 
+        else:
+            log_info("lunchinator initialised without plugins")  
+
+    def getAvailableDBConnections(self):
+        return [unicode(pluginInfo.name) for pluginInfo in self.plugin_manager.getPluginsOfCategory("db")]
+    
+    def getDBConnection(self,db_name=None):
+        if db_name in [None,"","auto"]:
+            db_name = get_settings().get_default_db_connection()
+            
+        if db_name not in [None,"","auto"]:
+            pluginInfo = self.plugin_manager.getPluginByName(db_name, "db")
+            if pluginInfo and pluginInfo.plugin_object.is_activated:
+                return pluginInfo.plugin_object
+            log_error("No DB connection for %s available, falling back to default"%db_name)
+        
+        for pluginInfo in self.plugin_manager.getPluginsOfCategory("db"):
+            if pluginInfo.plugin_object.is_activated:
+                return pluginInfo.plugin_object
+        log_error("No DB Connection available - activate a db plugin and check settings")
+        return None
+    
+    """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
+    
+    def _determineOwnIP(self):  
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      
+        for m in self.members:
+            try:
+                #connect to UDF discard port 9
+                s.connect((m,9))
+                self.own_ip = unicode(s.getsockname()[0])
+                break
+            except:
+                log_debug("While getting own IP, problem to connect to",m)
+                continue
+        log_debug("Found my IP:",self.own_ip)
+        s.close()
+
+    '''listening method - should be started in its own thread'''    
+    def start_server(self):
+        self.initialize()
+        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service")
+        self.running = True
+        self.my_master=-1 #the peer i use as master
+        announce_name=0 #how often did I announce my name
+        
+        self._determineOwnIP()
+            
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try: 
+            s.bind(("", 50000)) 
+            s.settimeout(5.0)
+            self.controller.initDone()
+            while self.running:
+                if self.new_msg and (time()-mktime(self.getMessage(0)[0]))>(get_settings().get_reset_icon_time()*60):
+                    self.new_msg=False
+                try:
+                    daten, addr = s.recvfrom(1024)
+                    daten = daten.decode('utf-8')
+                    ip = unicode(addr[0])
+                    if not ip.startswith("127."):
+                        self.member_timeout[ip]=time()
+                        if not ip in self.members:
+                            self._append_member(ip, ip)
+                        
+                    if daten.startswith("HELO"):
+                        #simple infrastructure protocol messages starting with HELO''' 
+                        self._incoming_event(daten, ip)                            
+                    else:  
+                        #simple message                          
+                        self._incoming_call(daten,ip)
+                except socket.timeout:
+                    if len(self.members):
+                        if not len(self.own_ip):
+                            self._determineOwnIP()
+                        if self.my_master==-1:
+                            self._call_for_dict()
+                        else:
+                            if announce_name==10:
+                                #it's time to announce my name again and switch the master
+                                self.call("HELO "+get_settings().get_user_name())
+                                announce_name=0
+                                self._remove_inactive_members()
+                                self._call_for_dict()
+                            else:
+                                #just wait for the next time when i have to announce my name
+                                announce_name+=1
+                        if self.my_master==-1:
+                            log_info("no master found yet")
+                    else:
+                        #TODO: broadcast at this point
+                        log_warning("seems like you are alone - no lunch-peer found yet")
+                    log_debug("Current Members:", self.members)
+        except socket.error as e:
+            log_exception("stopping lunchinator because: %s"%(str(e)))
+        except:
+            log_exception("stopping - Critical error: %s"%str(sys.exc_info())) 
+        finally: 
+            try:
+                self.call("HELO_LEAVE bye")
+                s.close()  
+            except:
+                log_warning("Wasn't able to send the leave call and close the socket...")
+            self._finish()
+            
+    def memberName(self, addr):
+        if addr in self.member_info and u'name' in self.member_info[addr]:
+            return self.member_info[addr][u'name']
+        return addr
+    
+    def ipForMemberName(self, name):
+        for ip, infoDict in self.member_info.iteritems():
+            if u'name' in infoDict and infoDict[u'name'] == name:
+                return ip
+        return None
+    
+    def messagesCount(self):
+        length = 0
+        self.messagesLock.acquire()
+        try:
+            length = len(self.last_messages)
+        finally:
+            self.messagesLock.release()
+        return length
+    
+    def getMessage(self, index):
+        message = None
+        self.messagesLock.acquire()
+        try:
+            message = self.last_messages[index]
+        finally:
+            self.messagesLock.release()
+        return message
+    
+    def lockMessages(self):
+        self.messagesLock.acquire()
+        
+    def releaseMessages(self):
+        self.messagesLock.release()
+        
+    def lockMembers(self):
+        self.membersLock.acquire()
+        
+    def releaseMembers(self):
+        self.membersLock.release()
+            
+    def getMessages(self):  
+        return self.last_messages
+    
+    def get_members(self):  
+        return self.members
+
+    def get_member_timeout(self):  
+        return self.member_timeout    
+    
+    def get_plugins_enabled(self):
+        return self._load_plugins
+    def set_plugins_enabled(self, enable):
+        self._load_plugins = enable
+    
+    def get_member_info(self):  
+        return self.member_info    
+    
+    def getOwnIP(self):
+        return self.own_ip
+        
+    def call(self,msg,client='',hosts=[]):
+        self.initialize()
+        
+        target = None
+        if client:
+            # send to client regardless of the dontSendTo state
+            target = [client.strip()]
+        elif 0==len(hosts):
+            target = set(self.members) - self.dontSendTo
+        else:
+            # send to all specified hosts regardless of the dontSendTo state
+            target = set(hosts)
+        
+        if 0==len(target):
+            log_error("Cannot send message, no peers connected, no peer found in members file")
+
+        i = 0
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
+        try:      
+            for ip in target:
+                try:
+                    log_debug("Sending", msg, "to", ip.strip())
+                    s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
+                    i+=1
+                except:
+                    # only warning message; happens sometimes if the host is not reachable
+                    log_warning("Message could not be delivered to %s: %s" % (ip, str(sys.exc_info()[0])))
+                    continue
+        finally:
+            s.close() 
+        return i
+        
+    '''short for the call function above for backward compatibility'''
+    def call_all_members(self,msg):        
+        self.call(msg)   
+            
+    """ ---------------------- PRIVATE -------------------------------- """
+    
+    def _finish(self):
+        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service")
+        self._write_members_to_file()
+        self._write_messages_to_file()
+        self.controller.serverStopped(self.exitCode)
+        
+    def _read_config(self):              
+        if len(self.members)==0:
+            self._init_members_from_file()
+        if len(self.last_messages)==0:
+            self.last_messages=self._init_messages_from_file()
+    
+    def _updateMembersDict(self, otherDict, noLocal = True):
+        for ip, hostn in otherDict.items():
+            if noLocal and ip.startswith('127'):
+                continue
+            
+            if not ip in self.members:
+                self._append_member(ip, hostn)
+            
+    def _is_now_in_time_span(self,begin,end):
         try:
             begin_hour,_,begin_min = begin.partition(":")
             end_hour,_,end_min = end.partition(":")
@@ -63,124 +322,156 @@ class lunch_server(object):
             log_exception("don't know how to handle time span %s"%(str(sys.exc_info())))
             return False;
         
-    def call(self,msg,client='',hosts={}):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        i=0
-        if client:
-            log_debug("Sending message %s to %s"%(msg,client))
-            try:
-                s.sendto(msg, (client.strip(), 50000)) 
-                i+=1
-            except:
-                log_exception("Exception while sending msg %s to %s: %s"%(msg,client, str(sys.exc_info()[0])))
-        elif 0==len(hosts):
-            members = self.members
-            if 0==len(members):
-                members = self.init_members_from_file()            
-            if 0==len(members):
-                log_error("Cannot send message, no peers connected, no peer found in members file")
-                return 0
-            log_debug("Sending message %s to %s"%(msg,str(members)))
-            for ip,name in members.items():
-                try:
-                    s.sendto(msg, (ip.strip(), 50000))
-                    i+=1
-                except:
-                    log_exception("Exception while sending msg %s to %s: %s"%(msg,client, str(sys.exc_info()[0])))
-                    continue        
-        else:
-            log_debug("Sending message %s to %s",msg,str(hosts))
-            for ip,name in hosts.items():
-                try:
-                    s.sendto(msg, (ip.strip(), 50000))
-                    i+=1
-                except:
-                    log_exception("Exception while sending msg %s to %s: %s"%(msg,client, str(sys.exc_info()[0])))
-                    continue
+    def _memberAppended(self, ip):
+        self.controller.memberAppended(ip, self.member_info[ip])
+    
+    def _memberUpdated(self, ip):
+        self.controller.memberUpdated(ip, self.member_info[ip])
+    
+    def _memberRemoved(self, ip):
+        self.controller.memberRemoved(ip)
         
-        s.close() 
-        return i
+    def _append_member(self, ip, hostn, inform = True):
+        # insert name into info dict
+        memberInfo = {}
+        if ip in self.member_info:
+            memberInfo = self.member_info[ip]
+        memberInfo[u'name'] = hostn
         
-    '''short for the call function above for backward compatibility'''
-    def call_all_members(self,msg):        
-        self.call(msg,hosts=self.members)   
-        
-        
-    '''will be called every ten seconds'''
-    def read_config(self):              
-        if len(self.members)==0:
-            self.members=self.init_members_from_file()
-        if len(self.last_messages)==0:
-            self.last_messages=self.init_messages_from_file()
+        self.lockMembers()
+        didAppend = False
+        didUpdate = False
+        try:
+            self.member_info[ip] = memberInfo
+            if not ip in self.members:
+                self.members.append(ip)
+                if inform:
+                    didAppend = True
+            elif inform:
+                didUpdate = True
+        finally:
+            self.releaseMembers()
             
+        if didAppend:
+            self._memberAppended(ip)
+        if didUpdate:
+            self._memberUpdated(ip)
             
-    def init_members_from_file(self):
-        members = {}
-        if os.path.exists(get_settings().members_file):
-            f = open(get_settings().members_file,'r')    
-            for hostn in f.readlines():
-                try:
-                    members[socket.gethostbyname(hostn.strip())]=hostn.strip()
-                except:
-                    log_warning("cannot find host specified in members_file by %s with name %s"%(get_settings().members_file,hostn))
-            f.close()
+    def _init_members_from_file(self):
+        members = []
+        if os.path.exists(get_settings().get_members_file()):
+            with codecs.open(get_settings().get_members_file(),'r','utf-8') as f:    
+                for hostn in f.readlines():
+                    hostn = hostn.strip()
+                    if len(hostn) == 0:
+                        continue
+                    try:
+                        ip = unicode(socket.gethostbyname(hostn))
+                        self._append_member(ip, hostn, False)
+                    except:
+                        log_warning("cannot find host specified in members_file by %s with name %s"%(get_settings().get_members_file(),hostn))
         return members
     
-    def write_members_to_file(self):
+    def _write_members_to_file(self):
         try:
             if len(self.members)>1:
-                f = open(get_settings().members_file,'w')
-                f.truncate()
-                for m in self.members.keys():
-                    f.write(m+"\n")
-                f.close();
+                with codecs.open(get_settings().get_members_file(),'w','utf-8') as f:
+                    f.truncate()
+                    for m in self.members:
+                        f.write(m+"\n")
         except:
-            log_exception("Could not write members to %s"%(get_settings().members_file))
+            log_exception("Could not write members to %s"%(get_settings().get_members_file()))
             
-    def init_messages_from_file(self):
+    def _init_messages_from_file(self):
         messages = []
-        if os.path.exists(get_settings().messages_file):
+        if os.path.exists(get_settings().get_messages_file()):
             try:
-                f = open(get_settings().messages_file,'r')    
-                tmp_msg = json.load(f)
-                for m in tmp_msg:
-                    messages.append([localtime(m[0]),m[1],m[2]])
-                f.close()
+                with codecs.open(get_settings().get_messages_file(),'r','utf-8') as f:    
+                    tmp_msg = json.load(f)
+                    for m in tmp_msg:
+                        messages.append([localtime(m[0]),m[1],m[2]])
             except:
-                log_exception("Could not read messages file %s,but it seems to exist"%(get_settings().messages_file))
+                log_exception("Could not read messages file %s,but it seems to exist"%(get_settings().get_messages_file()))
         return messages
     
-    def write_messages_to_file(self):
+    def _write_messages_to_file(self):
         try:
-            if len(self.last_messages)>0:
-                f = open(get_settings().messages_file,'w')
-                f.truncate()
-                try:
+            if self.messagesCount()>0:
+                with codecs.open(get_settings().get_messages_file(),'w','utf-8') as f:
+                    f.truncate()
                     msg = []
-                    for m in self.last_messages:
-                        msg.append([mktime(m[0]),m[1],m[2]])
+                    self.messagesLock.acquire()
+                    try:
+                        for m in self.last_messages:
+                            msg.append([mktime(m[0]),m[1],m[2]])
+                    finally:
+                        self.messagesLock.release()
                     json.dump(msg,f)
-                finally:
-                    f.close();
         except:
-            log_exception("Could not write messages to %s: %s"%(get_settings().messages_file, sys.exc_info()[0]))    
+            log_exception("Could not write messages to %s: %s"%(get_settings().get_messages_file(), sys.exc_info()[0]))    
     
-    def build_info_string(self):
-        info_d = {"avatar": get_settings().avatar_file,
-                   "name": get_settings().user_name,
-                   "next_lunch_begin":get_settings().default_lunch_begin,
-                   "next_lunch_end":get_settings().default_lunch_end,
-                   "version":get_settings().version_short,
-                   "version_commit_count":get_settings().commit_count,
-                   "version_commit_count_plugins":get_settings().commit_count_plugins}
-        if get_settings().next_lunch_begin:
-            info_d["next_lunch_begin"] = get_settings().next_lunch_begin
-        if get_settings().next_lunch_end:
-            info_d["next_lunch_end"] = get_settings().next_lunch_end
+    def _build_info_string(self):
+        info_d = {u"avatar": get_settings().get_avatar_file(),
+                   u"name": get_settings().get_user_name(),
+                   u"next_lunch_begin":get_settings().get_default_lunch_begin(),
+                   u"next_lunch_end":get_settings().get_default_lunch_end(),
+                   u"version":get_settings().get_version_short(),
+                   u"version_commit_count":get_settings().get_commit_count(),
+                   u"version_commit_count_plugins":get_settings().get_commit_count_plugins()}
+        if get_settings().get_next_lunch_begin():
+            info_d[u"next_lunch_begin"] = get_settings().get_next_lunch_begin()
+        if get_settings().get_next_lunch_end():
+            info_d[u"next_lunch_end"] = get_settings().get_next_lunch_end()
         return json.dumps(info_d)      
         
-    def incoming_event(self,data,addr):   
-        if addr[0].startswith("127."):
+    def _createMembersDict(self):
+        membersDict = {}
+        for ip in self.members:
+            if ip in self.member_info and u'name' in self.member_info[ip]:
+                membersDict[ip] = self.member_info[ip][u'name']
+            else:
+                membersDict[ip] = ip
+        return membersDict
+        
+    def _incoming_call(self,msg,addr):
+        mtime = localtime()
+        
+        t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
+        m = self.memberName(addr)
+            
+        log_info("%s: [%s] %s" % (t,m,msg))
+        
+        self._insertMessage(mtime,addr,msg)
+        self.controller.messagePrepended(mtime,addr,msg)
+        self.new_msg = True
+        self._write_messages_to_file()
+        
+        if not msg.startswith("ignore"):
+            self.controller.processMessage(msg, addr)
+            
+            if "lunch" in msg.lower() and self._is_now_in_time_span(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
+                timenum = mktime(mtime)
+                if timenum - self.last_lunch_call > get_settings().get_mute_timeout():
+                    self.last_lunch_call = timenum
+                    self.controller.processLunchCall(msg, addr)
+                else:
+                    log_debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)"%(t,m,msg,strftime("%a, %d %b %Y %H:%M:%S", localtime(timenum + get_settings().get_mute_timeout()))))
+      
+    def _update_member_info(self, ip, newInfo, requestAvatar = True):
+        self.lockMembers()
+        try:
+            self.member_info[ip] = newInfo
+        finally:
+            self.releaseMembers()
+        self._memberUpdated(ip)
+        if requestAvatar:
+            #Request avatar if not there yet
+            if self.member_info[ip].has_key("avatar"):
+                if not os.path.exists(get_settings().get_avatar_dir()+"/"+self.member_info[ip]["avatar"]):
+                    self.call("HELO_REQUEST_AVATAR "+str(get_settings().get_tcp_port()),client=ip)     
+      
+    def _incoming_event(self,data,ip):   
+        if ip.startswith("127."):
             #stop command is only allowed from localhost :-)
             if data.startswith("HELO_STOP"):
                 log_info("Got Stop Command from localhost: %s"%data)
@@ -188,7 +479,7 @@ class lunch_server(object):
                 self.exitCode = EXIT_CODE_STOP #run_forever script will stop
             elif data.startswith("HELO_UPDATE"):
                 self.update_request = True
-                if get_settings().auto_update and not self.no_updates:
+                if get_settings().get_auto_update_enabled() and not self.no_updates:
                     log_info("local update")
                     self.running = False
                     
@@ -204,286 +495,152 @@ class lunch_server(object):
             if cmd.startswith("HELO_UPDATE"):
                 t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
                 self.update_request = True
-                if get_settings().auto_update and not self.no_updates:
-                    log_info("%s: [%s] update"%(t,addr[0]))
+                if get_settings().get_auto_update_enabled() and not self.no_updates:
+                    log_info("%s: [%s] update"%(t,ip))
                     self.running = False
                     
                     #new update-script:
                     self.exitCode = EXIT_CODE_UPDATE
                 else:
-                    log_info("%s: %s issued an update but updates are disabled"%( t,addr[0]))
+                    log_info("%s: %s issued an update but updates are disabled"%( t,ip))
                 
             elif cmd.startswith("HELO_REQUEST_DICT"):
-                self.member_info[addr[0]] = json.loads(value)
-                self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
-                #Request avatar if not there yet
-                if self.member_info[addr[0]].has_key("avatar"):
-                    if not os.path.exists(get_settings().avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
-                        self.call("HELO_REQUEST_AVATAR "+str(get_settings().tcp_port),client=addr[0])                        
+                self._update_member_info(ip, json.loads(value))
+                self.call("HELO_DICT "+json.dumps(self._createMembersDict()),client=ip)                   
                 
             elif cmd.startswith("HELO_DICT"):
                 #the master send me the list of members - yeah
-                ext_members = json.loads(data.split(" ",1)[1].strip())
-                self.members.update(ext_members)
-                self.members = dict((k, v) for k, v in self.members.items() if not k.startswith("127"))
+                ext_members = json.loads(value)
+                self._updateMembersDict(ext_members)
                 if self.my_master==-1:
-                    self.call("HELO_REQUEST_INFO "+self.build_info_string())
+                    self.call("HELO_REQUEST_INFO "+self._build_info_string())
                     
-                self.my_master = addr[0]                                    
-                if not os.path.exists(get_settings().members_file):
-                    self.write_members_to_file()
+                self.my_master = ip   
                  
             elif cmd.startswith("HELO_REQUEST_INFO"):
-                self.member_info[addr[0]] = json.loads(value)  
-                self.call("HELO_INFO "+self.build_info_string(),client=addr[0])
+                # TODO @Hannes: why aren't we requesting the avatar here?
+                # @cornelius because at this point the info about the members avatar is usually not there yet
+                self._update_member_info(ip, json.loads(value), requestAvatar=False)
+                self.call("HELO_INFO "+self._build_info_string(),client=ip)
                          
             elif cmd.startswith("HELO_INFO"):
                 #someone sends his info
-                self.member_info[addr[0]] = json.loads(value)        
-                #Request avatar if not there yet
-                if self.member_info[addr[0]].has_key("avatar"):
-                    if not os.path.exists(get_settings().avatar_dir+"/"+self.member_info[addr[0]]["avatar"]):
-                        self.call("HELO_REQUEST_AVATAR "+str(get_settings().tcp_port),client=addr[0])  
-                if self.member_info[addr[0]].has_key("name"):         
-                    self.members[addr[0]] = self.member_info[addr[0]]["name"]
+                self._update_member_info(ip, json.loads(value)) 
                                     
             elif cmd.startswith("HELO_LEAVE"):
                 #the sender tells me, that he is going
-                if addr[0] in self.members:
-                    del self.members[addr[0]]                                       
-                    self.write_members_to_file()
-                self.call("HELO_DICT "+json.dumps(self.members),client=addr[0])
+                if ip in self.members:
+                    self.lockMembers()
+                    try:
+                        self.members.remove(ip)
+                    finally:
+                        self.releaseMembers()
+                    self._memberRemoved(ip)
+                self.call("HELO_DICT "+json.dumps(self._createMembersDict()),client=ip)
                
             elif cmd.startswith("HELO_AVATAR"):
-                #someone want's to send me his pic via TCP
+                #someone wants to send me his pic via TCP
                 file_size=int(value.strip())
                 file_name=""
-                if self.member_info[addr[0]].has_key("avatar"):
-                    file_name=get_settings().avatar_dir+os.sep+self.member_info[addr[0]]["avatar"]
+                if self.member_info[ip].has_key("avatar"):
+                    file_name=get_settings().get_avatar_dir()+os.sep+self.member_info[ip]["avatar"]
                 else:
-                    log_error("%s tried to send his avatar, but I don't know where to safe it"%(addr[0]))
+                    log_error("%s tried to send his avatar, but I don't know where to safe it"%(ip))
                 
                 if len(file_name):
-                    log_info("Receiving file of size %d on port %d"%(file_size,get_settings().tcp_port))
-                    dr = DataReceiverThread(addr[0],file_size,file_name,get_settings().tcp_port)
-                    dr.start()
+                    log_info("Receiving file of size %d on port %d"%(file_size,get_settings().get_tcp_port()))
+                    self.controller.receiveFile(ip,file_size,file_name)
                 
             elif cmd.startswith("HELO_REQUEST_AVATAR"):
                 #someone wants my pic 
-                other_tcp_port = get_settings().tcp_port
+                other_tcp_port = get_settings().get_tcp_port()
                 
                 try:                    
                     other_tcp_port=int(value.strip())
                 except:
-                    log_exception("%s requested avatar, I could not parse the port from value %s, using standard %d"%(str(addr[0]),str(value),other_tcp_port))
+                    log_exception("%s requested avatar, I could not parse the port from value %s, using standard %d"%(str(ip),str(value),other_tcp_port))
                     
-                fileToSend = get_settings().avatar_dir+"/"+get_settings().avatar_file
+                fileToSend = get_settings().get_avatar_dir()+"/"+get_settings().get_avatar_file()
                 if os.path.exists(fileToSend):
                     fileSize = os.path.getsize(fileToSend)
-                    log_info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
-                    self.call("HELO_AVATAR "+str(fileSize), addr[0])
-                    ds = DataSenderThread(addr[0],fileToSend, other_tcp_port)
-                    ds.start()
+                    log_info("Sending file of size %d to %s : %d"%(fileSize,str(ip),other_tcp_port))
+                    self.call("HELO_AVATAR "+str(fileSize), ip)
+                    self.controller.sendFile(ip,fileToSend, other_tcp_port)
                 else:
                     log_error("Want to send file %s, but cannot find it"%(fileToSend))   
                 
             elif cmd.startswith("HELO_REQUEST_LOGFILE"):
                 #someone wants my logfile 
-                other_tcp_port = get_settings().tcp_port
-                log_num=0
+                other_tcp_port = get_settings().get_tcp_port()
                 try:                
-                    (oport, onum) = value.split(" ",1)    
+                    (oport, _) = value.split(" ",1)    
                     other_tcp_port=int(oport.strip())
-                    log_num = int(onum.strip())
                 except:
-                    log_exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0"%(str(addr[0]),str(value),other_tcp_port))
+                    log_exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0"%(str(ip),str(value),other_tcp_port))
                 
-                fileToSend = "%s.%d"%(get_settings().log_file,log_num) if log_num>0 else get_settings().log_file
-                if os.path.exists(fileToSend):
-                    fileSize = os.path.getsize(fileToSend)
-                    log_info("Sending file of size %d to %s : %d"%(fileSize,str(addr[0]),other_tcp_port))
-                    self.call("HELO_LOGFILE "+str(fileSize), addr[0])
-                    ds = DataSenderThread(addr[0],fileToSend, other_tcp_port)
-                    ds.start()
-                else:
-                    log_error("Want to send file %s, but cannot find it"%(fileToSend))   
+                fileToSend = StringIO()
+                with contextlib.closing(tarfile.open(mode='w:gz', fileobj=fileToSend)) as tarWriter:
+                    if os.path.exists(get_settings().get_log_file()):
+                        tarWriter.add(get_settings().get_log_file(), arcname="0.log")
+                    logIndex = 1
+                    while os.path.exists("%s.%d" % (get_settings().get_log_file(), logIndex)):
+                        tarWriter.add("%s.%d" % (get_settings().get_log_file(), logIndex), arcname="%d.log" % logIndex)
+                        logIndex = logIndex + 1
+                
+                fileSize = fileToSend.tell()
+                log_info("Sending file of size %d to %s : %d"%(fileSize,str(ip),other_tcp_port))
+                self.call("HELO_LOGFILE_TGZ %d %d" %(fileSize, other_tcp_port), ip)
+                self.controller.sendFile(ip,fileToSend.getvalue(), other_tcp_port, True)
             elif "HELO"==cmd:
                 #someone tells me his name
-                if addr[0] not in self.members:   
-                    self.members[addr[0]]=value           
-                    self.write_members_to_file()
-                    self.call("HELO_INFO "+self.build_info_string(),client=addr[0])
-                else:                    
-                    self.members[addr[0]]=value
-                
-                if addr[0] in self.member_info:                    
-                    self.member_info[addr[0]]['name']=value
-                else:
-                    self.member_info[addr[0]]={'name':value}
-                    
-            else:
-                log_info("received unknown command from %s: %s with value %s"%(addr[0],cmd,value))        
-                
-            member_info = {}
-            if self.member_info.has_key(addr[0]):
-                member_info = self.member_info[addr[0]]
-            for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
-                if pluginInfo.plugin_object.is_activated:
-                    try:
-                        pluginInfo.plugin_object.process_event(cmd,value,addr[0],member_info)
-                    except:
-                        log_exception("plugin error in %s while processing event message %s"%(pluginInfo.name, str(sys.exc_info())))
+                didKnowMember = ip in self.members
+                self._append_member(ip, value) 
+                if not didKnowMember:
+                    self.call("HELO_INFO "+self._build_info_string(),client=ip)
+            elif cmd not in self.unknown_cmd:
+                #Report unknown commands once
+                self.unknown_cmd.append(cmd)
+                log_info("received unknown command from %s: %s with value %s"%(ip,cmd,value))        
+            
+            self.controller.processEvent(cmd,value,ip)
         except:
             log_exception("Unexpected error while handling HELO call: %s"%(str(sys.exc_info())))
             log_critical("The data received was: %s"%data)
-        
     
-    def incoming_call(self,msg,addr):
-        mtime = localtime()
-        
-        t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
-        m = addr
-        if addr in self.members:
-            m = self.members[addr]
-            
-        log_info("%s: [%s] %s" % (t,m,msg))
-        
-        self.last_messages.insert(0,[mtime,addr,msg])
-        self.new_msg = True
-        self.write_messages_to_file()        
-        
-        if not msg.startswith("ignore"):
-            member_info = {}
-            if self.member_info.has_key(addr):
-                member_info = self.member_info[addr]         
-                                
-            for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
-                if pluginInfo.plugin_object.is_activated:
-                    try:
-                        pluginInfo.plugin_object.process_message(msg,addr,member_info)
-                    except:
-                        log_exception("plugin error in %s while processing message %s"%(pluginInfo.name, str(sys.exc_info())))
-                        
-            
-            if "lunch" in msg.lower() and self.is_now_in_time_span(get_settings().alarm_begin_time, get_settings().alarm_end_time):
-                timenum = mktime(mtime)
-                if timenum>self.mute_time_until:
-                    self.mute_time_until=timenum+get_settings().mute_timeout
-                    for pluginInfo in self.plugin_manager.getPluginsOfCategory("called")+self.plugin_manager.getPluginsOfCategory("gui"):
-                        if pluginInfo.plugin_object.is_activated:
-                            try:
-                                pluginInfo.plugin_object.process_lunch_call(msg,addr,member_info)
-                            except:
-                                log_exception("plugin error in %s while processing lunch call %s"%(pluginInfo.name, str(sys.exc_info())))
-                else:
-                    log_debug("messages will not trigger alarm: %s: [%s] %s until %s"%(t,m,msg,strftime("%a, %d %b %Y %H:%M:%S", localtime(self.mute_time_until))))
-      
-                    
-    def remove_inactive_members(self):
+    def _insertMessage(self, mtime,addr,msg):
+        self.messagesLock.acquire()
         try:
-            for ip in self.members.keys():
+            self.last_messages.insert(0,[mtime,addr,msg])
+        finally:
+            self.messagesLock.release()
+                    
+    def _remove_inactive_members(self):
+        try:
+            indicesToRemove = []
+            for memberIndex, ip in enumerate(self.members):
                 if ip in self.member_timeout:
-                    if time()-self.member_timeout[ip]>get_settings().peer_timeout:
-                        del self.members[ip]
+                    if time()-self.member_timeout[ip]>get_settings().get_peer_timeout():
+                        indicesToRemove.append(memberIndex)
                 else:
-                    del self.members[ip]
+                    indicesToRemove.append(memberIndex)
+                    
+            log_debug("Removing inactive members: %s (%s)" %([self.members[i] for i in indicesToRemove], indicesToRemove))
+            for memberIndex in reversed(indicesToRemove):
+                self._memberRemoved(self.members[memberIndex])
+            self.lockMembers()
+            try:
+                for memberIndex in reversed(indicesToRemove):
+                    del self.members[memberIndex]
+            finally:
+                self.releaseMembers()
         except:
             log_exception("Something went wrong while trying to clean up the members-table")
             
     '''ask for the dictionary and send over own information'''
-    def call_for_dict(self):
+    def _call_for_dict(self):
         try:
-            if len(self.members.keys())>self.peer_nr:
-                self.call("HELO_REQUEST_DICT "+self.build_info_string(),client=self.members.keys()[self.peer_nr])
+            if len(self.members)>self.peer_nr:
+                self.call("HELO_REQUEST_DICT "+self._build_info_string(),client=self.members[self.peer_nr])
             self.peer_nr=(self.peer_nr+1) % len(self.members)
         except:
             log_exception("Something went wrong while trying to send a call to the new master")
-            
-    '''listening method - should be started in its own thread'''    
-    def start_server(self):
-        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service")
-        self.running = True
-        self.my_master=-1 #the peer i use as master
-        announce_name=0 #how often did I announce my name        
-        
-        if self.with_plugins:
-            try:
-                self.plugin_manager.collectPlugins()
-            except:
-                log_exception("problem when loading plugin: %s"%(str(sys.exc_info())))
-            
-            #always load these plugins
-            self.plugin_manager.activatePluginByName("General Settings", "general") 
-            self.plugin_manager.activatePluginByName("Notify", "called") 
-        else:
-            log_info("lunchinator initialised without plugins")  
-            
-            
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try: 
-            s.bind(("", 50000)) 
-            s.settimeout(5.0)
-            self.init_done.set()
-            while self.running:
-                if self.new_msg and (time()-mktime(self.last_messages[0][0]))>(get_settings().reset_icon_time*60):
-                    self.new_msg=False
-                try:
-                    daten, addr = s.recvfrom(1024) 
-                    
-                    if not addr[0].startswith("127."):
-                        self.member_timeout[addr[0]]=time()
-                        if not self.members.has_key(addr[0]):
-                            self.members[addr[0]]=addr[0]
-                        
-                    if daten.startswith("HELO"):
-                        #simple infrastructure protocol messages starting with HELO''' 
-                        self.incoming_event(daten, addr)                            
-                    else:  
-                        #simple message                          
-                        self.incoming_call(daten,addr[0])
-                except socket.timeout:
-                    self.read_config()
-                    if self.my_master==-1:
-                        self.call_for_dict()
-                    else:
-                        if announce_name==10:
-                            #it's time to announce my name again and switch the master
-                            self.call("HELO "+get_settings().get_user_name(),hosts=self.members)
-                            announce_name=0
-                            self.remove_inactive_members()
-                            self.call_for_dict()
-                        else:
-                            #just wait for the next time when i have to announce my name
-                            announce_name+=1
-                    if self.my_master==-1:
-                        log_info("no master found yet")
-                    log_debug(str(self.members.keys()))
-        except socket.error as e:
-            log_exception("stopping lunchinator because: %s"%(str(e)))
-        except:
-            log_exception("stopping - Critical error: %s"%str(sys.exc_info())) 
-        finally: 
-            try:
-                self.call("HELO_LEAVE bye")
-                s.close()  
-            except:
-                log_warning("Wasn't able to send the leave call and close the socket...")
-            log_info("Lunchinator stopped")                  
-            log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service")
-#            self.write_config_to_hd()
-            for pluginInfo in self.plugin_manager.getAllPlugins():
-                if pluginInfo.plugin_object.is_activated:
-                    pluginInfo.plugin_object.deactivate()
-            os._exit(self.exitCode)
-            
-    def get_last_msgs(self):  
-        return self.last_messages
-    
-    def get_members(self):  
-        return self.members
-
-    def get_member_timeout(self):  
-        return self.member_timeout    
-    
-    def get_member_info(self):  
-        return self.member_info    

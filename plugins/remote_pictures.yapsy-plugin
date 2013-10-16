@@ -1,0 +1,9 @@
+[Core]
+Name = Remote Pictures
+Module = remote_pictures
+
+[Documentation]
+Author = Cornelius Ratsch
+Version = 0.1
+Website = http://www.lunchinator.de
+Description = Displays pictures others send to you.

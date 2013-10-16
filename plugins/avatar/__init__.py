@@ -1,11 +1,15 @@
 from lunchinator.iface_plugins import iface_general_plugin
-import gtk
-from l_avatar import l_avatar
-from lunchinator import get_server, get_settings
+from avatar.l_avatar import l_avatar
+import mimetypes
+from lunchinator import get_server, get_settings, log_error, convert_string, log_debug
+from functools import partial
+import os
 
 class avatar(iface_general_plugin):
     def __init__(self):
         super(avatar, self).__init__()
+        self.label = None
+        self.selectedFile = None
         
     def activate(self):
         iface_general_plugin.activate(self)
@@ -16,42 +20,81 @@ class avatar(iface_general_plugin):
     def add_menu(self,menu):
         pass    
     
-    def _chooseFile(self,gtkimg):        
-        dialog = gtk.FileChooserDialog(title="Choose Avatar Picture",action=gtk.FILE_CHOOSER_ACTION_OPEN,
-                            buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK))
-        
-        fi = gtk.FileFilter()
-        fi.set_name("Images")
-        fi.add_mime_type("image/png")
-        fi.add_mime_type("image/jpeg")
-        fi.add_mime_type("image/gif")
-        fi.add_pattern("*.png")
-        fi.add_pattern("*.jpg")
-        fi.add_pattern("*.gif")
-        fi.add_pattern("*.tif")
-        fi.add_pattern("*.xpm")
-        dialog.add_filter(fi)
-        
-        response = dialog.run()
-        if response == gtk.RESPONSE_OK:
-            l = l_avatar()
-            gtkimg.set_from_file( l.use_as_avatar( get_server(), dialog.get_filename() ) )
-        dialog.destroy()
+    def _setImage(self, selectedFile, label):
+        from PyQt4.QtGui import QImage, QPixmap
+        from PyQt4.QtCore import Qt
+        qimg = QImage(selectedFile)
+        pixmap = QPixmap.fromImage(qimg).scaled(l_avatar.width,l_avatar.height,Qt.KeepAspectRatio,Qt.SmoothTransformation)
+        label.setPixmap(pixmap)
+        label.setToolTip(selectedFile)
     
-    def create_options_widget(self):
-        import gtk
+    def parentWindow(self, w):
+        return w if w.parentWidget() == None else self.parentWindow(w.parentWidget())
+    
+    def _chooseFile(self):  
+        from PyQt4.QtGui import QSortFilterProxyModel, QFileDialog
+        class FileFilterProxyModel(QSortFilterProxyModel):
+            MIME_TYPES = ["image/png", "image/jpeg", "image/gif"]
+            EXTENSIONS = [u"png", u"jpg", u"jpeg", u"jpe", u"gif", u"tif", u"tiff", u"xpm"]
+                
+            def filterAcceptsFile(self, path):
+                if os.path.isdir(path):
+                    return True
+                mimeType = mimetypes.guess_type(path)
+                return mimeType in self.MIME_TYPES or path.split(".")[-1].lower() in self.EXTENSIONS
+                
+            def filterAcceptsRow(self, sourceRow, sourceParent):
+                fileModel = self.sourceModel()
+                index0 = fileModel.index(sourceRow, 0, sourceParent)
+                path = convert_string(fileModel.filePath(index0))
+                return self.filterAcceptsFile(path)
+            
+        fileFilter = FileFilterProxyModel()
+#TODO: does not work, I do not know, why
+#        dialog = QFileDialog(self.parentWindow(self.label), "Choose Avatar Picture:")
+#        dialog.setProxyModel(fileFilter)
+#        dialog.setWindowTitle("Choose Avatar Picture")
+#        dialog.setFileMode(QFileDialog.ExistingFile)
+#        dialog.setAcceptMode(QFileDialog.AcceptOpen)
+#        if dialog.exec_():
+#            selectedFiles = dialog.selectedFiles()
+#            selectedFile = convert_string(selectedFiles.first())
         
+        selectedFile = QFileDialog.getOpenFileName(self.parentWindow(self.label), caption="Choose Avatar Picture:")
+        if selectedFile:
+            selectedFile = convert_string(selectedFile)
+            if not os.path.isdir(selectedFile) and fileFilter.filterAcceptsFile(selectedFile):
+                self.selectedFile = selectedFile
+                self._setImage(selectedFile, self.label)
+            else:
+                log_error("Selected invalid file: '%s' is of invalid type" % selectedFile)
+        else:
+            log_debug("Avatar: no file selected")
+    
+    def create_options_widget(self, parent):
+        from PyQt4.QtGui import QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton
+        from PyQt4.QtCore import Qt
         img_path = get_settings().get_avatar_dir()+get_settings().get_avatar_file()
         
-        t = gtk.VBox()
-        gtkimage = gtk.Image() 
-        gtkimage.set_from_file(img_path)
-        gtkimage.set_tooltip_text(img_path)
-                
-        b = gtk.Button("Choose Picture")
-        b.connect_object("clicked", self._chooseFile, gtkimage)
+        widget = QWidget(parent)
+        layout = QVBoxLayout(widget)
         
-        t.pack_start(b,False,False,10)
-        t.pack_start(gtkimage,True,True,10)
-        t.show_all()
-        return t
+        self.label = QLabel(widget)
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(self.label, 0, Qt.AlignCenter)
+        layout.addLayout(hlayout)
+        
+        self._setImage(img_path, self.label)
+                
+        b = QPushButton("Choose Picture", widget)
+        b.clicked.connect(self._chooseFile)
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(b,0, Qt.AlignCenter)
+        layout.addLayout(hlayout)
+        layout.addWidget(QWidget(widget), 1)
+        return widget
+
+    def save_options_widget_data(self):
+        if self.selectedFile != None:
+            l = l_avatar()
+            l.use_as_avatar(self.selectedFile)

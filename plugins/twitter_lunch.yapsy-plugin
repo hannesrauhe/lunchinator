@@ -1,0 +1,9 @@
+[Core]
+Name = Twitter
+Module = twitter_lunch
+
+[Documentation]
+Author = Hannes Rauhe
+Version = 0.1
+Website = http://www.lunchinator.de
+Description = Connects to a twitter account, enables remote calls from twitter, forwards lunch calls to twitter and can extract pictures from twitter streams 

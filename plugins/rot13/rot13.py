@@ -1,74 +1,65 @@
-import gtk
 import string #fixed typo was using
+from functools import partial
+from PyQt4.QtGui import QWidget, QHBoxLayout, QPushButton, QLineEdit, QSizePolicy, QToolButton, QMenu
+from lunchinator import get_server
 
-class rot13box(object):
-    def __init__(self):
+class rot13box(QWidget):
+    def __init__(self, parent):
+        super(rot13box, self).__init__(parent)
         self.entry = None
         self.but = None
-        self.add_widget = None
         self.buffer = None
         
-    def encodeText(self,text):
-        if self.entry is not None:
-            self.entry.set_text(text)
-            self.enc(self.entry)
-        else:
-            self.buffer = text
-        
-    def enc(self,w):        
-        rot13 = string.maketrans( 
-            "ABCDEFGHIJKLMabcdefghijklmNOPQRSTUVWXYZnopqrstuvwxyz", 
-            "NOPQRSTUVWXYZnopqrstuvwxyzABCDEFGHIJKLMabcdefghijklm")
-        plain = w.get_text()
-        if plain:
-            w.set_text(string.translate(plain, rot13))
-        if self.add_widget:
-            self.add_widget.show()
-        
-    def create_widget(self,additional_widget=None):
-        self.entry = gtk.Entry()  
-        self.but = gtk.Button("ROT13")
+        self.entry = QLineEdit(self)
+        self.but = QPushButton("ROT13", self)
         if self.buffer is not None:
             self.encodeText(self.buffer)
         
-        memtVBox = gtk.VBox()
-        memtVBox.pack_start(self.entry, False, True, 10)
-        memtVBox.pack_start(self.but, False, False, 10)
-        if additional_widget:
-            self.add_widget = additional_widget
-            memtVBox.pack_start(self.add_widget, False, False, 10)
-        self.entry.show()
-        self.but.show()
-        memtVBox.show()
-        self.but.connect_object("clicked", self.enc, self.entry)
-        return memtVBox
+        
+        layout = QHBoxLayout(self)
+        grabButton = QToolButton(parent)
+        grabButton.setText("Msg ")
+        #grabButton.setMinimumHeight(self.but.sizeHint().height())
+        self.msgMenu = QMenu(grabButton)
+        self.msgMenu.aboutToShow.connect(self.updateMsgMenu)
+        grabButton.setMenu(self.msgMenu)
+        grabButton.setPopupMode(QToolButton.InstantPopup)
+        #grabButton.clicked.connect(self.grabMessage)
+        
+        layout.addWidget(grabButton)
+        layout.addWidget(self.entry)
+        layout.addWidget(self.but)
+        
+        self.but.clicked.connect(self.enc)
+        
+        self.setMaximumHeight(self.sizeHint().height())
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        
+    def updateMsgMenu(self):
+        self.msgMenu.clear()
+        get_server().lockMessages()
+        try:
+            for i in range(min(10, len(get_server().getMessages()))):
+                self.msgMenu.addAction(get_server().getMessages()[i][2], partial(self.encodeText, get_server().getMessages()[i][2]))
+        finally:
+            get_server().releaseMessages()
+        
+    def grabMessage(self):
+        self.encodeText(get_server().getMessage(0)[2])
+        
+    def encodeText(self,text):
+        if self.entry is not None:
+            self.entry.setText(text)
+            self.enc()
+        else:
+            self.buffer = text
+        
+    def enc(self):        
+        rot13 = string.maketrans( 
+            u"ABCDEFGHIJKLMabcdefghijklmNOPQRSTUVWXYZnopqrstuvwxyz", 
+            u"NOPQRSTUVWXYZnopqrstuvwxyzABCDEFGHIJKLMabcdefghijklm")
+        plain = self.entry.text()
+        if plain:
+            self.entry.setText(string.translate(str(plain.toUtf8()), rot13))
+        
     
-#standalone
-
-def main():
-    # enter the main loop
-    gtk.main()
-    return 0
-
-def WindowDeleteEvent(widget, event):
-    # return false so that window will be destroyed
-    return False
-
-def WindowDestroy(widget, *data):
-    # exit main loop
-    gtk.main_quit()
-    
-if __name__ == "__main__":
-    # create the top level window
-    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-    window.set_title("Layout Example")
-    window.set_default_size(300, 300)
-    window.connect("delete-event", WindowDeleteEvent)
-    window.connect("destroy", WindowDestroy)
-    
-    window.add(rot13box().create_widget())
-    
-    # show all the widgets
-    window.show_all()
-    
-    main()

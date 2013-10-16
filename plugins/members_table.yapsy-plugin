@@ -1,0 +1,9 @@
+[Core]
+Name = Members
+Module = members_table
+
+[Documentation]
+Author = Hannes Rauhe, Cornelius Ratsch
+Version = 0.1
+Website = http://www.lunchinator.de
+Description = Displays all lunch members

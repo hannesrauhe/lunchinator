@@ -4,8 +4,14 @@
 #it sends a message to the members saved in the members-file, 
 #no guarantees that you reach everyone in the peer group
 
-import sys
-import __preamble
+import sys,os
+path = os.path.abspath(sys.argv[0])
+while os.path.dirname(path) != path:
+    if os.path.exists(os.path.join(path, 'lunchinator', '__init__.py')):
+        sys.path.insert(0, path)
+        break
+    path = os.path.dirname(path)
+    
 from lunchinator import get_server
 
 if __name__ == "__main__":
@@ -18,7 +24,7 @@ if __name__ == "__main__":
         print cli,":",
     print msg
     
-    get_server().with_plugins = False
+    get_server().set_plugins_enabled(False)
     recv_nr=get_server().call(msg,client=cli)
     print "sent to",recv_nr,"clients"
     

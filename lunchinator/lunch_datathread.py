@@ -1,94 +1,84 @@
-import threading,socket,sys,time
-from lunchinator import log_exception, log_error
+import socket,sys
+from lunchinator import log_exception
 
-class DataSenderThread(threading.Thread):
+def _sendFile(con, receiver, path_or_data, tcp_port, sleep, is_data):
+    for numAttempts in range(10):
+        sleep(500)
+        try:
+            con.connect((receiver, tcp_port)) 
+            break           
+        except Exception as e:
+            numAttempts = numAttempts + 1
+            if numAttempts == 10:
+                log_exception("Could not initiate connection to",receiver,"on Port",tcp_port)
+                return
+        
+    data = None
+    if is_data:
+        data = path_or_data
+    else:
+        # no utf-8, might be binary file
+        with open(path_or_data, 'rb') as sendfile:           
+            data = sendfile.read()
+    try:
+        con.sendall(data)                      
+    except socket.error as e:
+        log_exception("Could not send data",e.strerror)
+        raise
     
-    def __init__(self, receiver, file_path, tcp_port, callback_success=None, callback_error=None): 
-        threading.Thread.__init__(self) 
-        self.con = None
-        self.receiver = receiver
-        self.file_path = file_path
-        self.tcp_port = tcp_port
-        self.callback_error = callback_error
-        self.callback_success = callback_success
-        
-    def _sendFile(self):
-        try:
-            self.con.connect((self.receiver, self.tcp_port))            
-        except socket.error as e:
-            log_exception("Could not initiate connection to",self.receiver,"on Port",self.tcp_port,e.strerror)
-            raise
-        
-        sendfile = open(self.file_path, 'rb')           
-        data = sendfile.read()
-        
-        try:
-            self.con.sendall(data)                      
-        except socket.error as e:
-            log_exception("Could not send data",e.strerror)
-            raise
-        
- 
-    def run(self):
-        time.sleep(5)
-        self.con = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            self._sendFile()       
-        except:
-            log_exception("An error occured while trying to send file",self.file_path, sys.exc_info()[0])   
-             
-        if self.con:
-            self.con.close()     
-        
-    def stop_server(self):
-        pass
+def sendFile(receiver, path_or_data, tcp_port, sleep, is_data = False):
+    #sleep(5)
+    con = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        _sendFile(con, receiver, path_or_data, tcp_port, sleep, is_data)       
+    except:
+        if is_data:
+            log_exception("An error occured while trying to send binary data")
+        else:
+            log_exception("An error occured while trying to send file",path_or_data)   
+         
+    if con:
+        con.close()     
     
-class DataReceiverThread(threading.Thread):    
-    def __init__(self, sender, size, file_path,tcp_port,callback_success=None,callback_error=None): 
-        threading.Thread.__init__(self) 
-        self.con = None
-        self.sender = sender
-        self.size = size
-        self.file_path = file_path
-        self.tcp_port = tcp_port
-        self.callback_success = callback_success
-        self.callback_error = callback_error
-        
-    def _receiveFile(self):
-        writefile = open(self.file_path, 'wb')
-        length = self.size
+def _receiveFile(con, file_path, size):
+    # no utf-8, can be binary data as well
+    with open(file_path, 'wb') as writefile:
+        length = size
         try:
             while length:
-                rec = self.con.recv(min(1024, length))
+                rec = con.recv(min(1024, length))
                 writefile.write(rec)
                 length -= len(rec)
         except socket.error as e:
             log_exception("Error while receiving the data, Bytes to receive left:",length,"Error:",e.strerror)
             raise
- 
-    def run(self):
+
+def receiveFile(sender, file_path, size, portOrSocket, success, error):
+    s = None
+    bind = True
+    if type(portOrSocket) == int:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try: 
-            s.bind(("", self.tcp_port)) 
+    else:
+        s = portOrSocket
+        bind = False
+    
+    con = None
+    try: 
+        if bind:
+            s.bind(("", portOrSocket)) 
             s.settimeout(30.0)
             s.listen(1)
-            self.con, addr = s.accept()
-            self.con.settimeout(5.0)
-            if addr[0]==self.sender:
-                self._receiveFile()
-            else:
-                raise Exception("Sender is not allowed to send file:",addr[0],", expected:",self.sender)
-            if self.callback_success!=None:
-                self.callback_success()
-        except:
-            log_exception("I caught something unexpected when trying to receive file",self.file_path, sys.exc_info()[0])
-            if self.callback_error!=None:
-                self.callback_error()
-        
-        if self.con:    
-            self.con.close()
-        s.close()
-                
-        
-    def stop_server(self):
-        pass
+        con, addr = s.accept()
+        con.settimeout(5.0)
+        if addr[0]==sender:
+            _receiveFile(con, file_path, size)
+        else:
+            raise Exception("Sender is not allowed to send file:",addr[0],", expected:",sender)
+        success(file_path)
+    except:
+        log_exception("I caught something unexpected when trying to receive file",file_path, sys.exc_info()[0])
+        error()
+    
+    if con:    
+        con.close()
+    s.close()

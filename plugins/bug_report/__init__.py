@@ -1,11 +1,8 @@
 from lunchinator.iface_plugins import *
 
-from bug_report_gui import *
-
 class bug_report(iface_gui_plugin):
     def __init__(self):
         super(bug_report, self).__init__()
-        self.w = bug_report_gui()
         
     def activate(self):
         iface_gui_plugin.activate(self)
@@ -13,8 +10,9 @@ class bug_report(iface_gui_plugin):
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
     
-    def create_widget(self):
-        return self.w.create_widget()
+    def create_widget(self, parent):
+        from bug_report.bug_report_gui import bug_report_gui
+        return bug_report_gui(parent)
             
     def add_menu(self,menu):
         pass

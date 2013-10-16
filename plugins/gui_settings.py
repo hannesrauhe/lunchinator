@@ -1,21 +1,22 @@
-from lunchinator.iface_plugins import *
-from lunchinator import get_server, get_settings, setLoggingLevel
-import logging
+from lunchinator.iface_plugins import iface_general_plugin
+from lunchinator import get_server, get_settings, log_warning
     
 class gui_settings(iface_general_plugin):
     def __init__(self):
         super(gui_settings, self).__init__()
-        option_names = [('user_name', 'User Name'),
-                        ('audio_file', 'Lunch Call Audio File'),
-                        ('auto_update', "Automatic Update"),
-                        ("default_lunch_begin", 'Free for Lunch from'),
-                        ("default_lunch_end", 'Free for Lunch until'),
-                        ("alarm_begin_time", "No Alarm before"),
-                        ("alarm_end_time", "No Alarm after"),
-                        ("mute_timeout", "Mute for x sec after Alarm"),
-                        ("reset_icon_time", "Reset Lunchinator Icon after x min"),
-                        ("tcp_port", "TCP Port"),
-                        ("logging_level", "Logging Level", ("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"))]
+        option_names = [(u'user_name', u'User Name'),
+                        (u'audio_file', u'Lunch Call Audio File'),
+                        (u'auto_update', u"Automatic Update"),
+                        (u"default_lunch_begin", u'Free for Lunch from'),
+                        (u"default_lunch_end", u'Free for Lunch until'),
+                        (u"alarm_begin_time", u"No Alarm before"),
+                        (u"alarm_end_time", u"No Alarm after"),
+                        (u"mute_timeout", u"Mute for x sec after Alarm"),
+                        (u"reset_icon_time", u"Reset Lunchinator Icon after x min"),
+                        (u"tcp_port", u"TCP Port"),
+                        (u"logging_level", u"Logging Level", (u"CRITICAL", u"ERROR", u"WARNING", u"INFO", u"DEBUG")),
+                        (u"group_plugins", u"Group Plugins by category"),
+                        (u"default_db_connection", u"Default DB Connection", [u'auto']+get_server().getAvailableDBConnections())]
         self.options = []
         for o in option_names:
             methodname = "get_"+o[0]
@@ -25,22 +26,17 @@ class gui_settings(iface_general_plugin):
             else:
                 log_warning("settings has no attribute called '%s'" % o)
                 
-    def set_settings(self):
-        for o in self.option_names:
-            methodname = "set_"+o[0]
-            if hasattr(get_settings(), methodname): 
-                _member = getattr(get_settings(), methodname)
-                _member(self.options[o[0]])
-            else:
-                log_warning("settings has no setter for '%s'" % o)
-    
     def save_options_widget_data(self):
+        self.save_data()
+        
+    def set_option_value(self, o, new_v):
         # override category as "general"
-        self.save_data(lambda o, new_v: get_settings().config_file.set('general', o, str(new_v)))
-        self.set_settings()
+        get_settings().get_config_file().set('general', o, unicode(new_v))
         
-    def read_options_from_file(self):
-        super(gui_settings, self).read_options_from_file()
-        self.set_settings()
-        
+        methodname = "set_"+o
+        if hasattr(get_settings(), methodname): 
+            _member = getattr(get_settings(), methodname)
+            _member(self.options[o])
+        else:
+            log_warning("settings has no setter for '%s'" % o)
         

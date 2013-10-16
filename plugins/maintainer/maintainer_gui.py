@@ -1,61 +1,212 @@
-import gtk,time,gobject
-from lunchinator import get_server, get_settings
-import os
+import time,codecs,os,tarfile,shutil,copy,sip,contextlib
+from datetime import datetime
+from functools import partial
+from lunchinator import get_server, get_settings, convert_string, log_exception,\
+    log_debug, getLogLineTime, log_warning
+from lunchinator.table_models import ExtendedMembersModel
+from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QTextEdit, QTreeView, QStandardItemModel, QStandardItem, QTabWidget, QSplitter, QTreeWidget, QTreeWidgetItem, QSortFilterProxyModel, QSizePolicy
+from PyQt4.QtCore import  pyqtSlot, QThread, Qt, QStringList, QVariant, QTimer
+from lunchinator.lunch_datathread_qt import DataReceiverThread
+from lunchinator.history_line_edit import HistoryLineEdit
 
-class maintainer_gui(object):
-    def __init__(self,mt):
+class maintainer_gui(QTabWidget):
+    LOG_REQUEST_TIMEOUT = 10 # 10 seconds until request is invalid
+    def __init__(self,parent,mt):
+        super(maintainer_gui, self).__init__(parent)
         self.entry = None
         self.but = None
         self.info_table = None
         self.mt = mt
-        self.shown_logfile = get_settings().log_file
         self.dropdown_members = None
         self.dropdown_members_dict = None
         self.dropdown_members_model = None
-        self.visible = False      
-           
+        self.visible = False
+        self.sendMessageButton = None
+        self.update_button = None
+        self.requestLogsButton = None
+        self.logRequests = {}
         
-    def cb_log_transfer_success(self):
-        if not self.visible:
-            return False
+        reports_widget = self.create_reports_widget(self)
+        logs_widget = self.create_members_widget(self)
+        info_table_widget = self.create_info_table_widget(self)
         
-        fcontent = ""
-        try:
-            fhandler = open(self.shown_logfile,"r")
-            fcontent = fhandler.read()
-            fhandler.close()
-        except Exception as e:
-            fcontent = "File not ready: %s"%str(e)
-        self.log_area.get_buffer().set_text(fcontent)
+        self.addTab(reports_widget, "Bug Reports")        
+        self.addTab(logs_widget, "Members")        
+        self.addTab(info_table_widget, "Info")
+        
+        self.setCurrentIndex(0)
+        self.visible = True
+        
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
+        
+    def listLogfiles(self, basePath, sort = None):
+        if sort is None:
+            sort = lambda aFile : -self.getLogNumber(aFile)
+        logList = [basePath + os.sep + aFile for aFile in os.listdir(basePath) if aFile.endswith(".log") and not os.path.isdir(basePath + os.sep + aFile)]
+        return sorted(logList, key = sort)
     
-    def cb_log_transfer_error(self):
+    def getNumLogsToKeep(self, oldLogFiles, newLogFiles, logOffset):
+        oldestNew = None
+        for aLogFile in newLogFiles:
+            oldestNew, _ = self.getLogDates(aLogFile)
+            if oldestNew != None:
+                break
+        
+        if oldestNew == None:
+            # new new log file contains timestamps (they are probably all empty)
+            return len(oldLogFiles)
+        
+        numToKeep = 0
+        while numToKeep < len(oldLogFiles) - logOffset:
+            curTime, _ = self.getLogDates(oldLogFiles[numToKeep])
+            if curTime == None or curTime < oldestNew:
+                # keep empty log files
+                numToKeep = numToKeep + 1
+            else:
+                break
+        return numToKeep
+        
+    def getLogDates(self, aLogFile):
+        with codecs.open(aLogFile, 'rb', 'utf-8') as logContent:
+            logLines = logContent.readlines()
+            firstDate = None
+            for aLine in logLines:
+                firstDate = getLogLineTime(aLine)
+                if firstDate != None:
+                    break
+                
+            lastDate = None
+            for aLine in reversed(logLines):
+                lastDate = getLogLineTime(aLine)
+                if lastDate != None:
+                    break
+        
+            return firstDate, lastDate
+        
+    def getLogNumber(self, aLogFile):
+        aLogFile = os.path.basename(aLogFile)
+        try:
+            return int(aLogFile[:aLogFile.rfind(".")])
+        except:
+            return -1
+        
+    def shiftLogFiles(self, oldLogFiles, numToKeep, shift, logOffset):
+        renamedLogfiles = []
+        for index, aFile in enumerate(oldLogFiles):
+            logNum = self.getLogNumber(aFile)
+            if logNum < logOffset:
+                # don't touch up-to-date logs
+                break
+            if index < numToKeep:
+                newName = "%s%s%d.log" % (os.path.dirname(aFile), os.sep, logNum + shift)
+                renamedLogfiles.append((len(oldLogFiles) - index - 1, aFile, newName))
+                os.rename(aFile, newName)
+            else:
+                os.remove(aFile)
+        return renamedLogfiles
+    
+    def handleNewLogFiles(self, basePath, tmpPath, logOffset = 0):
+        oldLogFiles = self.listLogfiles(basePath)
+        newLogFiles = self.listLogfiles(tmpPath)
+        
+        #check how many log files are actually new
+        numToKeep = self.getNumLogsToKeep(oldLogFiles, newLogFiles, logOffset)
+        
+        #rename / remove old log files to make room for the new ones
+        numNew = len(newLogFiles) - (len(oldLogFiles) - logOffset - numToKeep)
+        renamedLogfiles = self.shiftLogFiles(oldLogFiles, numToKeep, numNew, logOffset)
+        
+        # move new log files
+        addedLogfiles = []
+        for index, aLogFile in enumerate(reversed(newLogFiles)):
+            shutil.move(aLogFile, basePath)
+            if index < numNew:
+                addedLogfiles.append((index + logOffset, "%s%s%s" % (basePath, os.sep, os.path.basename(aLogFile))))
+        shutil.rmtree(tmpPath, True)
+        
+        return numNew, addedLogfiles, renamedLogfiles
+    
+    def requestFinished(self):
+        self.requestLogsButton.setEnabled(True)
+        self.dropdown_members.setEnabled(True)
+    
+    @pyqtSlot(QThread, unicode)
+    def cb_log_transfer_success(self, thread, path):
+        path = convert_string(path)
+        
+        basePath = os.path.dirname(path)
+        tmpPath = basePath + os.sep + "tmp"
+        if not os.path.exists(tmpPath):
+            os.makedirs(tmpPath)
+
+        logsAdded = []   
+        if path.endswith(".tgz"):
+            #extract received log files
+            with contextlib.closing(tarfile.open(path, 'r:gz')) as tarContent:
+                tarContent.extractall(tmpPath)
+            _, logsAdded, logsRenamed = self.handleNewLogFiles(basePath, tmpPath)
+            self.requestFinished()
+        else:
+            # log comes from old version
+            logNum = 0
+            if thread.sender in self.logRequests:
+                logNum, requestTime = self.logRequests[thread.sender]
+                now = datetime.now()
+                td = now - requestTime
+                tdSeconds = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
+                if tdSeconds > self.LOG_REQUEST_TIMEOUT:
+                    # request timed out or was finished already
+                    logNum = 0
+            
+            shutil.move(path, "%s%s%d.log" % (tmpPath, os.sep, logNum))
+            
+            numNew, logsAdded, logsRenamed = self.handleNewLogFiles(basePath, tmpPath, logNum)
+            if numNew > 0 and logNum < 9:
+                # there might be more new ones
+                self.logRequests[thread.sender] = (logNum + 1, datetime.now())
+                log_debug("log seems to be new, another!!!")
+                logsAdded.append((logNum + 1, None))
+                self.request_log(thread.sender, logNum + 1)
+            elif thread.sender in self.logRequests:
+                # request finished
+                del self.logRequests[thread.sender]
+                self.requestFinished()
+            else:
+                self.requestFinished()
+            
         if not self.visible:
             return False
-        self.log_area.get_buffer().set_text("Error while getting log")
         
-    def update_reports(self,w=None):
+        if len(logsAdded) > 0 or len(logsRenamed) > 0:
+            self.updateLogList(logsAdded, logsRenamed)
+    
+    @pyqtSlot(QThread)
+    def cb_log_transfer_error(self, _thread):
+        if not self.visible:
+            return False
+        self.log_area.setText("Error while getting log")
+        self.requestFinished()
+        
+    def update_reports(self):
         mode="open"
         self.bug_reports = self.mt.getBugsFromDB(mode)
         
-    def display_report(self,w):
-        if self.dropdown_reports.get_active()>=0:
-            self.entry.get_buffer().set_text(str(self.bug_reports[self.dropdown_reports.get_active()][2]))
+    def display_report(self):
+        if self.dropdown_reports.currentIndex()>=0:
+            self.entry.setText(str(self.bug_reports[self.dropdown_reports.currentIndex()][2]))
             
-    def close_report(self,w):
-        rep_nr = self.dropdown_reports.get_active()
+    def close_report(self):
+        rep_nr = self.dropdown_reports.currentIndex()
         if rep_nr>=0:
             get_server().call("HELO_BUGREPORT_CLOSE %s %s"%(self.bug_reports[rep_nr][0],self.bug_reports[rep_nr][1]))        
             del self.bug_reports[rep_nr]
-            self.dropdown_reports.remove_text(rep_nr)
-#            self.dropdown_reports = gtk.combo_box_new_text()
-#            for r in self.bug_reports:
-#                self.dropdown_reports.append_text("%s - %s"%(time.strftime("%a, %d %b %Y %H:%M:%S",time.localtime(r[0])),r[1]))
-            self.dropdown_reports.set_active(0)
-            self.display_report(self.dropdown_reports)
+            self.dropdown_reports.removeItem(rep_nr)
+            self.dropdown_reports.setCurrentIndex(0)
+            self.display_report()
 
     def get_selected_log_member(self):
-        member = self.dropdown_members.get_active_text()
-        if member == None:
+        member = str(self.dropdown_members.currentText())
+        if member == None or len(member) == 0:
             return None
         
         if "(" in member:
@@ -64,228 +215,367 @@ class maintainer_gui(object):
             
         return member
     
-    def request_log(self,w):
-        member = self.get_selected_log_member()
+    def request_log(self, member = None, logNum = 0):
+        if member is None:
+            member = self.get_selected_log_member()
         if member != None:
-            self.log_area.get_buffer().set_text("Requesting log from "+member)
-            get_server().call("HELO_REQUEST_LOGFILE %d %s"%(get_settings().tcp_port,int(self.numberchooser.get_value())),member)
-            #no number_str here:
-            self.shown_logfile = "%s/logs/%s.log%s"%(get_settings().main_config_dir,member,"")
+            log_debug("Requesting log %d from %s" % (logNum, member))
+            get_server().call("HELO_REQUEST_LOGFILE %s %d"%(DataReceiverThread.getOpenPort(category="log%s"%member), logNum), member)
         else:
-            self.log_area.get_buffer().set_text("No Member selected!")
+            self.log_area.setText("No Member selected!")
             
-    def request_update(self,w):
+    @pyqtSlot()
+    def requestLogClicked(self):
+        self.requestLogsButton.setEnabled(False)
+        self.dropdown_members.setEnabled(False)
+        self.updateLogList([(0, None)])
+        self.request_log()
+            
+    def request_update(self):
         member = self.get_selected_log_member()
         if member != None:
             get_server().call("HELO_UPDATE from GUI",member)
             
-    def create_reports_widget(self):
-        self.entry = gtk.TextView()
-        self.entry.set_size_request(400,200)
-        self.entry.set_wrap_mode(gtk.WRAP_WORD)
-        self.entry.set_editable(False)
-        scrollWindow = gtk.ScrolledWindow()
-        scrollWindow.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        scrollWindow.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
-        scrollWindow.add(self.entry)
+    def create_reports_widget(self, parent):
+        widget = QWidget(parent)
+        layout = QVBoxLayout(widget)
+        
+        self.entry = QTextEdit(widget)
         
         self.update_reports()
-        self.dropdown_reports = gtk.combo_box_new_text()
+        self.dropdown_reports = QComboBox(widget)
         for r in self.bug_reports:
-            self.dropdown_reports.append_text("%s - %s"%(time.strftime("%a, %d %b %Y %H:%M:%S",time.localtime(r[0])),r[1]))
-        self.dropdown_reports.set_active(0)
-        self.display_report(self.dropdown_reports)
-        self.close_report_btn = gtk.Button("Close Bug")
+            self.dropdown_reports.addItem("%s - %s"%(time.strftime("%a, %d %b %Y %H:%M:%S",time.localtime(r[0])),r[1]))
+        self.dropdown_reports.setCurrentIndex(0)
+        self.display_report()
+        self.close_report_btn = QPushButton("Close Bug", widget)
         
-        memtVBox = gtk.VBox()        
-        memtHBox = gtk.HBox()
-        memtHBox.pack_start(self.dropdown_reports, False, False,5)
-        memtHBox.pack_start(self.close_report_btn, False, False,5)
-        memtVBox.pack_start(memtHBox, False, False,5)
-        descAlign = gtk.Alignment(0, 0, 0, 0)
-        descAlign.add(gtk.Label("Description:"))
-        memtVBox.pack_start(descAlign, False, True,0)
-        memtVBox.pack_start(scrollWindow, True, True, 0)
+        topLayout = QHBoxLayout()
+        topLayout.addWidget(self.dropdown_reports)
+        topLayout.addWidget(self.close_report_btn)
+        topLayout.addWidget(QWidget(widget), 1)
+        layout.addLayout(topLayout)
+
+        layout.addWidget(QLabel("Description:", widget))
         
-        self.dropdown_reports.connect_object("changed", self.display_report,self.dropdown_reports)
-        self.close_report_btn.connect_object("clicked", self.close_report,self.dropdown_reports)
+        self.entry.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.entry.setReadOnly(True)
+        layout.addWidget(self.entry)
+                
+        self.dropdown_reports.currentIndexChanged.connect(self.display_report)
+        self.close_report_btn.clicked.connect(self.close_report)
         
-        return memtVBox
+        return widget
     
-    def create_info_table_widget(self):
-        self.info_table = InfoTable()
-        return self.info_table.scrollTree
+    def create_info_table_widget(self, parent):
+        self.info_table = QTreeView(parent)
+        self.info_table.setSortingEnabled(True)
+        self.info_table.setHeaderHidden(False)
+        self.info_table.setAlternatingRowColors(True)
+        self.info_table.setIndentation(0)
+        
+        self.info_table_model = ExtendedMembersModel(get_server())
+        proxyModel = QSortFilterProxyModel(self.info_table)
+        proxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
+        proxyModel.setDynamicSortFilter(True)
+        proxyModel.setSourceModel(self.info_table_model)
+        
+        self.info_table.setModel(proxyModel)
+        return self.info_table
     
     def get_dropdown_member_text(self, m_ip, m_name):
         if m_ip == m_name:
             return m_ip
         else:
-            return "%s (%s)" % (m_name, m_ip)
+            return "%s (%s)" % (m_name.strip(), m_ip.strip())
     
     def update_dropdown_members(self):
+        self.updateMemberInformation()
         if self.dropdown_members_model == None:
             return
-        for m_ip,m_name in get_server().get_members().items():
+        for m_ip in get_server().get_members():
+            m_name = get_server().memberName(m_ip)
             if not m_ip in self.dropdown_members_dict:
                 # is new ip, append to the end
-                self.dropdown_members_dict[m_ip] = (len(self.dropdown_members_model), m_name)
-                row = [self.get_dropdown_member_text(m_ip, m_name),]
-                self.dropdown_members_model.append(row)
+                self.dropdown_members_dict[m_ip] = (self.dropdown_members_model.rowCount(), m_name)
+                self.dropdown_members_model.appendRow(QStandardItem(self.get_dropdown_member_text(m_ip, m_name)))
             else:
                 #is already present, check if new information is available
                 info = self.dropdown_members_dict[m_ip]
                 if m_name != info[1]:
                     #name has changed
-                    anIter = self.dropdown_members_model.iter_nth_child(None, info[0])
-                    self.dropdown_members_model.set_value(anIter, 0, self.get_dropdown_member_text(m_ip, m_name))
+                    anItem = self.dropdown_members_model.item(info[0], column=0)
+                    anItem.setText(self.get_dropdown_member_text(m_ip, m_name))
                     self.dropdown_members_dict[m_ip] = (info[0], m_name)
-                    
-    def create_logs_widget(self):
-        self.log_area = gtk.TextView()
-        self.log_area.set_size_request(400,200)
-        self.log_area.set_wrap_mode(gtk.WRAP_WORD)
-        self.log_area.set_editable(False)
-        scrollWindow = gtk.ScrolledWindow()
-        scrollWindow.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        scrollWindow.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
-        scrollWindow.add(self.log_area)
+                
+    def listLogFilesForMember(self, member):
+        logDir = "%s/logs/%s" % (get_settings().get_main_config_dir(), member)
+        if not os.path.exists(logDir):
+            return []
+        return self.listLogfiles(logDir)
+
+    def numLogFilesForMember(self, member):
+        return len(self.listLogFilesForMember(member))
+            
+    def requestTimedOut(self, item):
+        if not sip.isdeleted(item) and item != None and item.data(0, Qt.UserRole) == None:
+            self.log_tree_view.takeTopLevelItem(self.log_tree_view.indexFromItem(item).row())
+            self.requestFinished()
+             
+    def formatFileSize(self, num):
+        for x in ['Bytes','KB','MB','GB','TB']:
+            if num < 1024.0:
+                return "%3.1f %s" % (num, x)
+            num /= 1024.0
+             
+    def initializeLogItem(self, item, logFile):
+        firstDate, lastDate = self.getLogDates(logFile)
+        text = None
+        tooltip = None
+        if firstDate != None:
+            text = firstDate.strftime("%Y-%m-%d %H:%M:%S")
+            tooltip = u"File: %s\nFirst entry: %s\nLast entry: %s" % (logFile, firstDate.strftime("%Y-%m-%d %H:%M:%S"), lastDate.strftime("%Y-%m-%d %H:%M:%S"))
+        else:
+            timestamp = datetime.fromtimestamp(os.path.getmtime(logFile)).strftime("%Y-%m-%d %H:%M:%S")
+            text = u"%s" % os.path.basename(logFile)
+            tooltip = u"File:%s\nModification Date: %s" % (logFile, timestamp)
+        text = text + "\n%s" % self.formatFileSize(os.path.getsize(logFile))
+        if tooltip != None:
+            item.setData(0, Qt.ToolTipRole, QVariant(tooltip)) 
+        item.setData(0, Qt.UserRole, logFile)
+        item.setData(0, Qt.DisplayRole, QVariant(text))
+    
+    @pyqtSlot()
+    def clearLogs(self):
+        for aLogFile in self.listLogFilesForMember(self.get_selected_log_member()):
+            os.remove(aLogFile)
+        self.updateLogList()
+       
+    def updateLogList(self, logsAdded = None, logsRenamed = None):
+        selectedMember = self.get_selected_log_member()
+
+        if logsAdded == None:
+            self.log_tree_view.clear()
+            logsAdded = []
+            for index, logFile in enumerate(reversed(self.listLogFilesForMember(selectedMember))):
+                logsAdded.append((index, logFile))
+            if len(logsAdded) == 0:
+                self.log_tree_view.clear()
+                self.log_tree_view.addTopLevelItem(QTreeWidgetItem(self.log_tree_view, QStringList("No logs available.")))
+                self.log_tree_view.setSelectionMode(QTreeWidget.NoSelection)
+                self.logSizeLabel.setText("No logs")
+                self.clearLogsButton.setEnabled(False)
+                return
+            
+        if logsRenamed != None:
+            for index, oldName, newName in logsRenamed:
+                # index + 1 because of the "requesting" item
+                item = self.log_tree_view.topLevelItem(index + 1)
+                if item != None:
+                    itemLogFile = convert_string(item.data(0, Qt.UserRole).toString())
+                    if itemLogFile != oldName:
+                        log_warning("index does not correspond to item in list:\n\t%s\n\t%s" % (itemLogFile, oldName))
+                    self.initializeLogItem(item, newName)
+            
+        if len(logsAdded) == 0:
+            self.log_tree_view.takeTopLevelItem(0)
+        else:
+            for index, logFile in logsAdded:
+                oldItem = self.log_tree_view.topLevelItem(index)
+                item = None
+                if oldItem != None and oldItem.data(0, Qt.UserRole) == None:
+                    # requested item has been received
+                    item = oldItem
+                else:
+                    item = QTreeWidgetItem()
+                    oldItem = None
+                
+                if logFile == None:
+                    item.setData(0, Qt.DisplayRole, QVariant("Requesting..."))
+                    QTimer.singleShot(6000, partial(self.requestTimedOut, item)) 
+                else:
+                    self.initializeLogItem(item, logFile)
+                
+                if oldItem is None:
+                    # else, the old item is being modified
+                    self.log_tree_view.insertTopLevelItem(index, item)
+                self.log_tree_view.setSelectionMode(QTreeWidget.SingleSelection)
+        
+        totalSize = 0
+        for aLogFile in self.listLogFilesForMember(selectedMember):
+            totalSize += os.path.getsize(aLogFile)
+        
+        self.logSizeLabel.setText("%s consumed" % self.formatFileSize(totalSize))
+        self.clearLogsButton.setEnabled(True)
+        #self.displaySelectedLogfile()
+    
+    def getSelectedLogContent(self):
+        member = self.get_selected_log_member()
+        if member is None:
+            return "No Log selected."
+        selection = self.log_tree_view.selectedIndexes()
+        if len(selection) is 0:
+            return "No Log selected."
+        
+        logPath = convert_string(selection[0].data(Qt.UserRole).toString())
+        if logPath == None:
+            return "ERROR: path is None"
+        if not os.path.exists(logPath):
+            return "File not found: " + logPath
+        
+        fcontent = ""
+        try:
+            with codecs.open(logPath,"r",'utf8') as fhandler:
+                fcontent = fhandler.read()
+        except Exception as e:
+            log_exception("Error reading file")
+            fcontent = "Error reading file: %s"%str(e)
+        return fcontent
+    
+    def displaySelectedLogfile(self):
+        self.log_area.setText(self.getSelectedLogContent())
+        
+    def memberSelectionChanged(self):
+        self.updateLogList()
+        isMemberSelected = self.get_selected_log_member() != None
+        self.sendMessageButton.setEnabled(isMemberSelected)
+        self.update_button.setEnabled(isMemberSelected)
+        self.requestLogsButton.setEnabled(isMemberSelected)
+        self.updateMemberInformation()
+        
+    def sendMessageToMember(self, lineEdit):
+        selectedMember = self.get_selected_log_member()
+        if selectedMember != None:
+            get_server().call(convert_string(lineEdit.text()),client=selectedMember)
+            lineEdit.clear()
+        
+    def updateMemberInformation(self):
+        self.memberInformationTable.clear()
+        
+        if self.get_selected_log_member() == None:
+            self.memberInformationTable.setColumnCount(0)
+            self.memberInformationTable.setHeaderLabel("No member selected.")
+            return
+
+        get_server().lockMembers()
+        memberInformation = None
+        try:
+            if self.get_selected_log_member() in get_server().get_member_info():
+                memberInformation = copy.deepcopy(get_server().get_member_info()[self.get_selected_log_member()])
+        finally:
+            get_server().releaseMembers()
+            
+        if memberInformation == None:
+            self.memberInformationTable.setColumnCount(0)
+            self.memberInformationTable.setHeaderLabel("No member information available.")
+            return
+        
+        self.memberInformationTable.setColumnCount(len(memberInformation))
+        headers = sorted(memberInformation.keys())
+        self.memberInformationTable.setHeaderLabels(QStringList(headers))
+        item = QTreeWidgetItem(self.memberInformationTable)
+        for col, header in enumerate(headers):
+            item.setData(col, Qt.DisplayRole, QVariant(memberInformation[header]))
+        for col in range(self.memberInformationTable.columnCount()):
+            self.memberInformationTable.resizeColumnToContents(col)
+        
+    def create_members_widget(self, parent):
+        widget = QWidget(parent)
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(0)
         
         self.dropdown_members_dict = {}
-        self.dropdown_members_model = gtk.ListStore(str)
-        self.dropdown_members = gtk.ComboBox(self.dropdown_members_model)
-        cell = gtk.CellRendererText()
-        self.dropdown_members.pack_start(cell, True)
-        self.dropdown_members.add_attribute(cell, 'text', 0)
+        self.dropdown_members_model = QStandardItemModel()
+        self.dropdown_members_model.appendRow(QStandardItem(""))
+        self.dropdown_members = QComboBox(widget)
+        self.dropdown_members.setModel(self.dropdown_members_model)
+        
+        self.update_button = QPushButton("Send Update Command", widget)
+
+        topLayout = QHBoxLayout()
+        topLayout.setSpacing(10)
+        topLayout.addWidget(self.dropdown_members, 1)
+        topLayout.addWidget(self.update_button)
+        self.requestLogsButton = QPushButton("Request Logfiles", widget)
+        topLayout.addWidget(self.requestLogsButton)
+        layout.addLayout(topLayout)
+
+        layout.addWidget(QLabel("Member Information:", widget))
+        self.memberInformationTable = QTreeWidget(widget)
+        self.memberInformationTable.setMaximumHeight(65)
+        self.memberInformationTable.setSelectionMode(QTreeWidget.NoSelection)
+        layout.addWidget(self.memberInformationTable, 0)
+                
+        layout.addWidget(QLabel("Send Message:", widget))
+        
+        sendMessageLayout = QHBoxLayout()
+        sendMessageLayout.setSpacing(10)
+        messageInput = HistoryLineEdit(widget, "Enter a message")
+        self.sendMessageButton = QPushButton("Send", widget)
+        sendMessageLayout.addWidget(messageInput, 1)
+        sendMessageLayout.addWidget(self.sendMessageButton)
+        layout.addLayout(sendMessageLayout)
+        
+        layout.addWidget(QLabel("Log files:", widget))
+        logSplitter = QSplitter(Qt.Horizontal, widget)
+        
+        logListWidget = QWidget(widget)
+        logListLayout = QVBoxLayout(logListWidget)
+        logListLayout.setContentsMargins(0, 0, 0, 0)
+        
+        self.log_tree_view = QTreeWidget(logSplitter)
+        self.log_tree_view.setAlternatingRowColors(True)
+        self.log_tree_view.setColumnCount(1)
+        self.log_tree_view.setHeaderHidden(True)
+        self.log_tree_view.setItemsExpandable(False)
+        self.log_tree_view.setIndentation(0)
+        
+        logListLayout.addWidget(self.log_tree_view, 1)
+        
+        logListBottomLayout = QHBoxLayout()
+        self.logSizeLabel = QLabel(logListWidget)
+        logListBottomLayout.addWidget(self.logSizeLabel, 1)
+        
+        self.clearLogsButton = QPushButton("Clear", logListWidget)
+        self.clearLogsButton.setEnabled(False)
+        self.clearLogsButton.clicked.connect(self.clearLogs)
+        logListBottomLayout.addWidget(self.clearLogsButton, 0)
+        
+        logListLayout.addLayout(logListBottomLayout)
+        
+        logSplitter.addWidget(logListWidget)
+        
+        self.log_area = QTextEdit(logListWidget)
+        self.log_area.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.log_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.log_area.setReadOnly(True)
+        logSplitter.addWidget(self.log_area)
+        
+        logSplitter.setStretchFactor(0, 0)
+        logSplitter.setStretchFactor(1, 1)
+        
+        layout.addWidget(logSplitter, 1)
+        
         self.update_dropdown_members()
-            
-        self.numberchooser = gtk.SpinButton(gtk.Adjustment(value=0, lower=0, upper=10, step_incr=1, page_incr=0, page_size=0))
-        self.update_button = gtk.Button("Send Update Command")
+        self.memberSelectionChanged()
+        self.log_tree_view.selectionModel().selectionChanged.connect(self.displaySelectedLogfile)
+        self.dropdown_members.currentIndexChanged.connect(self.memberSelectionChanged)
+        self.update_button.clicked.connect(self.request_update)
+        self.requestLogsButton.clicked.connect(self.requestLogClicked)
+        self.sendMessageButton.clicked.connect(partial(self.sendMessageToMember, messageInput))
+        messageInput.returnPressed.connect(partial(self.sendMessageToMember, messageInput))
         
-        memHBox = gtk.HBox()
-        memHBox.pack_start(self.dropdown_members, False, False, 5)
-        memHBox.pack_start(self.numberchooser, False, False, 5)
-        memHBox.pack_start(self.update_button, False, False, 5)
-        
-        memtVBox = gtk.VBox()    
-        memtVBox.pack_start(memHBox, False, False, 5)
-        memtVBox.pack_start(scrollWindow, True, True, 10)
-        memtVBox.show_all()
-        
-        self.dropdown_members.connect_object("changed", self.request_log,self.dropdown_members)
-        self.numberchooser.connect_object("changed", self.request_log,self.dropdown_members)
-        self.update_button.connect_object("clicked", self.request_update,self.update_button)
-        
-        #gobject.timeout_add(2000, self.show_logfile) 
-        return memtVBox
-    
-    def create_widget(self):
-        reports_widget = self.create_reports_widget()
-        logs_widget = self.create_logs_widget()
-        info_table_widget = self.create_info_table_widget()
-        
-        nb = gtk.Notebook()
-        nb.set_tab_pos(gtk.POS_LEFT)
-        nb.append_page(reports_widget, gtk.Label("Bug Reports"))
-        nb.append_page(logs_widget, gtk.Label("Logs"))
-        nb.append_page(info_table_widget, gtk.Label("Info"))
-        nb.show_all()
-        nb.set_current_page(0)
-        self.visible = True
-        
-        return nb
+        return widget
     
     def destroy_widget(self):
         self.visible = False
     
-    def updateInfoTable(self):
-        if self.info_table != None:
-            self.info_table.update_model()
-
-class InfoTable(object):
-    def __init__(self):
-        self.listStore = None
-        self.listStoreNumColumns = 0
-        self.treeView = gtk.TreeView()
-        self.scrollTree = gtk.ScrolledWindow()
-        self.scrollTree.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        self.scrollTree.set_border_width(5)
-        self.scrollTree.add_with_viewport(self.treeView)  
-        self.scrollTree.set_size_request(400, 350)   
-        self.treeView.show()
-        self.scrollTree.show()   
-        self.update_model()
-    
-    def update_model(self):
-        if len(get_server().member_info) == 0:
-            return
-        
-        table_data = {"ip":[""]*len(get_server().member_info)}
-        index = 0
-        for ip,infodict in get_server().member_info.iteritems():
-            table_data["ip"][index] = ip
-            for k,v in infodict.iteritems():
-                if not table_data.has_key(k):
-                    table_data[k]=[""]*len(get_server().member_info)
-                if False:#k=="avatar" and os.path.isfile(get_settings().avatar_dir+"/"+v):
-                    # TODO add avatar image
-                    table_data[k][index]="avatars/%s"%v
-                else:
-                    table_data[k][index]=v
-            index+=1
-        
-        if self.listStore == None or self.listStoreNumColumns != len(table_data):
-            # columns added/removed
-            self.listStore = gtk.ListStore(*[str]*len(table_data))
-            self.treeView.set_model(self.listStore)
-            self.listStoreNumColumns = len(table_data)
-            
-            rendererText = gtk.CellRendererText()
-            
-            for aColumn in self.treeView.get_columns():
-                self.treeView.remove_column(aColumn)
-            
-            for num, th in enumerate(table_data.iterkeys()):
-                column = gtk.TreeViewColumn(th, rendererText, text=num)
-                column.set_sort_column_id(num)
-                self.treeView.append_column(column)
-        else:
-            self.listStore.clear()
-        
-            
-        for i in range(0,len(get_server().member_info)):
-            row = []
-            for k in table_data.iterkeys():
-                row.append(table_data[k][i])
-            self.listStore.append(row)
-    
-def main():
-    # enter the main loop
-    gtk.main()
-    return 0
-
-def WindowDeleteEvent(_, __):
-    # return false so that window will be destroyed
-    return False
-
-def WindowDestroy(_, *__):
-    # exit main loop
-    gtk.main_quit()
-    
 class maintainer_wrapper:
     reports = []
+    def getBugsFromDB(self, _):
+        return []
     
 if __name__ == "__main__":
+    from lunchinator.iface_plugins import iface_gui_plugin
+    iface_gui_plugin.run_standalone(lambda window : maintainer_gui(window, maintainer_wrapper()))
     
-    # create the top level window
-    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-    window.set_title("Layout Example")
-    window.set_default_size(300, 300)
-    window.connect("delete-event", WindowDeleteEvent)
-    window.connect("destroy", WindowDestroy)
-    
-    window.add(maintainer_gui(maintainer_wrapper()).create_widget())
-    
-    # show all the widgets
-    window.show_all()
-    
-    main()
