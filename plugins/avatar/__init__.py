@@ -50,7 +50,7 @@ class avatar(iface_general_plugin):
                 return self.filterAcceptsFile(path)
             
         fileFilter = FileFilterProxyModel()
-#TODO: does not work, I do not know, why
+#TODO: does not work due to a PyQt bug in some versions
 #        dialog = QFileDialog(self.parentWindow(self.label), "Choose Avatar Picture:")
 #        dialog.setProxyModel(fileFilter)
 #        dialog.setWindowTitle("Choose Avatar Picture")
