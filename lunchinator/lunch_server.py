@@ -8,6 +8,7 @@ from cStringIO import StringIO
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning
 import tarfile
+import platform
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -411,17 +412,28 @@ class lunch_server(object):
             log_exception("Could not write messages to %s: %s"%(get_settings().get_messages_file(), sys.exc_info()[0]))    
     
     def _build_info_string(self):
+        from lunchinator.utilities import getPlatform, PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS
         info_d = {u"avatar": get_settings().get_avatar_file(),
                    u"name": get_settings().get_user_name(),
                    u"next_lunch_begin":get_settings().get_default_lunch_begin(),
                    u"next_lunch_end":get_settings().get_default_lunch_end(),
                    u"version":get_settings().get_version_short(),
                    u"version_commit_count":get_settings().get_commit_count(),
-                   u"version_commit_count_plugins":get_settings().get_commit_count_plugins()}
+                   u"version_commit_count_plugins":get_settings().get_commit_count_plugins(),
+                   u"platform": sys.platform}
+        
+        if getPlatform() == PLATFORM_LINUX:
+            info_d[u"os"] = u" ".join(platform.linux_distribution())
+        elif getPlatform() == PLATFORM_WINDOWS:
+            info_d[u"os"] = u" ".join(platform.win32_ver())
+        elif getPlatform() == PLATFORM_MAC:
+            info_d[u"os"] = u" ".join(platform.mac_ver())
+            
         if get_settings().get_next_lunch_begin():
             info_d[u"next_lunch_begin"] = get_settings().get_next_lunch_begin()
         if get_settings().get_next_lunch_end():
             info_d[u"next_lunch_end"] = get_settings().get_next_lunch_end()
+        self.controller.extendMemberInfo(info_d)
         return json.dumps(info_d)      
         
     def _createMembersDict(self):

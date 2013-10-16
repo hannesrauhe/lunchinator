@@ -89,7 +89,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
             return
         self.isIconHighlighted = True
         icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunchred.svg")
-        icon = QIcon.fromTheme("lunchinatorred", QIcon(icon_file))
+        if hasattr(QIcon, "fromTheme"):
+            icon = QIcon.fromTheme("lunchinatorred", QIcon(icon_file))
+        else:
+            icon = QIcon(icon_file)
         self.statusicon.setIcon(icon)
         
         if self.resetIconTimer == None:
@@ -106,7 +109,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if self.resetIconTimer != None and self.resetIconTimer.isActive():
             self.resetIconTimer.stop()
         icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg")
-        icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
+        if hasattr(QIcon, "fromTheme"):
+            icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
+        else:
+            icon = QIcon(icon_file)
         self.statusicon.setIcon(icon)
         
     def createTrayIcon(self):
@@ -213,6 +219,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     def receiveFile(self, ip, fileSize, fileName):
         self._receiveFile.emit(ip, fileSize, fileName)
+    
+    def extendMemberInfo(self, infoDict):
+        infoDict['pyqt_version'] = QtCore.PYQT_VERSION_STR
+        infoDict['qt_version'] = QtCore.QT_VERSION_STR
     
     def sendFile(self, ip, fileOrData, otherTCPPort, isData = False):
         if not isData:

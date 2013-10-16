@@ -1,4 +1,4 @@
-import urllib2, sys
+import sys
 from lunchinator import log_exception, log_error
 from PyQt4.QtGui import QImage, QPixmap
 from PyQt4.QtCore import QTimer, QSize, QThread, pyqtSlot
