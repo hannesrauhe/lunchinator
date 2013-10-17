@@ -74,6 +74,9 @@ class lunch_settings(object):
             os.makedirs(self._main_config_dir)
         if not os.path.exists(self._avatar_dir):
             os.makedirs(self._avatar_dir)
+            
+        self._config_file = ConfigParser.SafeConfigParser()
+        self.read_config_from_hd()
         
         try:
             _, self._version, __ = self.runGitCommand(["log", "-1"], self._lunchdir, quiet=False)
@@ -95,15 +98,13 @@ class lunch_settings(object):
         except:
             log_exception("git rev-list could not be executed correctly - commit count information not available")
             
-        self._config_file = ConfigParser.SafeConfigParser()
-        self.read_config_from_hd()
-            
     def read_config_from_hd(self): 
         self._config_file.read(self._main_config_dir+'/settings.cfg')
         
         self._user_name = self.read_value_from_config_file(self._user_name,"general","user_name")
         self._tcp_port = self.read_value_from_config_file(self._tcp_port,"general","tcp_port")
         
+        self._audio_file = self.read_value_from_config_file(self._audio_file,"general","audio_file")
         self._auto_update = self.read_value_from_config_file(self._auto_update,"general","auto_update")
         self._default_lunch_begin = self.read_value_from_config_file(self._default_lunch_begin,"general","default_lunch_begin")
         self._default_lunch_end = self.read_value_from_config_file(self._default_lunch_end,"general","default_lunch_end")
@@ -118,25 +119,7 @@ class lunch_settings(object):
         self._group_plugins = self.read_value_from_config_file(self._group_plugins, 'general', 'group_plugins')
         
         #not shown in settings-plugin - handled by avatar-plugin
-        self._avatar_file =  self.read_value_from_config_file(self._avatar_file,"general","avatar_file")
-                     
-        if os.path.exists(self._main_config_dir+"/username.cfg"):
-            with codecs.open(self._main_config_dir+"/username.cfg",'r','utf-8') as f:
-                self.set_user_name(f.readline().strip())
-                
-        if os.path.exists(self._main_config_dir+"/avatar.cfg"):
-            with codecs.open(self._main_config_dir+"/avatar.cfg",'r','utf-8') as f:
-                self.set_avatar_file(f.readline().strip())
-                
-        if os.path.exists(self._main_config_dir+"/sound.cfg"):
-            with codecs.open(self._main_config_dir+"/sound.cfg",'r','utf-8') as f:
-                audio_file = f.readline().strip()
-                if os.path.exists(self._main_config_dir+"/sounds/"+audio_file):
-                    self._audio_file = self._main_config_dir+"/sounds/"+audio_file
-                elif os.path.exists(self._lunchdir+"/sounds/"+audio_file):
-                    self._audio_file = self._lunchdir+"/sounds/"+audio_file
-                else:
-                    log_warning("configured audio file %s does not exist in sounds folder, using old one: %s",audio_file,self._audio_file)  
+        self._avatar_file =  self.read_value_from_config_file(self._avatar_file,"general","avatar_file")                 
         
         if self._user_name=="":
             self._user_name = getpass.getuser().decode()  
@@ -236,11 +219,9 @@ class lunch_settings(object):
     #the rest is read from/written to the config file          
     def get_user_name(self):
         return self._user_name    
-    def set_user_name(self,name,force_write=False):
+    def set_user_name(self,name):
         self._user_name = convert_string(name)
         self._config_file.set('general', 'user_name', self._user_name)
-        if force_write:
-            self.write_config_to_hd()
     
     def get_auto_update(self):
         return self._auto_update
@@ -250,22 +231,30 @@ class lunch_settings(object):
     def get_audio_file(self):
         return self._audio_file 
     def set_audio_file(self, new_value):
-        self._audio_file = convert_string(new_value)
+        audio_file=''
+        if os.path.exists(new_value):
+            audio_file = new_value
+        elif os.path.exists(self._main_config_dir+"/sounds/"+new_value):
+            audio_file= self._main_config_dir+"/sounds/"+new_value
+        elif os.path.exists(self._lunchdir+"/sounds/"+new_value):
+            audio_file = self._lunchdir+"/sounds/"+new_value
+        else:
+            log_error("configured audio file %s does not exist in sounds folder, using old one: %s"%(new_value,self._audio_file))
+            return 
+        self._audio_file = convert_string(audio_file)
       
     def get_avatar_dir(self):
         return self._avatar_dir
                  
     def get_avatar_file(self):
         return self.get_avatar()
-    def set_avatar_file(self,file_name,force_write=False):  
+    def set_avatar_file(self,file_name):  
         if not os.path.exists(self._avatar_dir+"/"+file_name):
             log_error("avatar does not exist: %s",file_name)
             return
         self._avatar_file = convert_string(file_name)
         self._config_file.set('general', 'avatar_file', str(file_name))
-        if force_write:
-            self.write_config_to_hd()
-    
+        
     def get_avatar(self):
         return self._avatar_file
     
