@@ -6,7 +6,9 @@ from datetime import datetime
 from lunchinator import log_exception, convert_string, get_settings
 
 class TableModelBase(QStandardItemModel):
-    SORT_ROLE = Qt.UserRole + 1
+    KEY_ROLE = Qt.UserRole + 1
+    SORT_ROLE = Qt.UserRole + 2
+    
     def __init__(self, dataSource, columns):
         super(TableModelBase, self).__init__()
         self.dataSource = dataSource
@@ -19,6 +21,9 @@ class TableModelBase(QStandardItemModel):
             self.setHorizontalHeaderLabels(stringList)
         self.keys = []
 
+    def hasKey(self, key):
+        return key in self.keys
+
     def callItemInitializer(self, column, key, data, item):
         item.setData(None, self.SORT_ROLE)
         self.columns[column][1](key, data, item)
@@ -29,6 +34,7 @@ class TableModelBase(QStandardItemModel):
         self.callItemInitializer(column, key, data, item)
         if item.data(self.SORT_ROLE) == None:
             item.setData(item.data(Qt.DisplayRole), self.SORT_ROLE)
+        item.setData(key, self.KEY_ROLE)
         item.setData(QSize(0, 20), Qt.SizeHintRole)
         return item
     

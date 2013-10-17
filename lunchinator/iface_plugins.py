@@ -271,6 +271,8 @@ class iface_gui_plugin(iface_plugin):
         window.resize(300, 300)
         window.setCentralWidget(factory(window))
         window.show()
+        window.activateWindow()
+        window.raise_()
     
         sys.exit(app.exec_())
         
