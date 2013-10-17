@@ -48,6 +48,7 @@ class lunch_server(object):
         self.shared_dict = {} #for plugins
         self.dontSendTo = set()
         self.unknown_cmd = []
+        self._peer_group = {}
         
         self.exitCode = 0  
         
@@ -151,17 +152,20 @@ class lunch_server(object):
                     daten, addr = s.recvfrom(1024)
                     daten = daten.decode('utf-8')
                     ip = unicode(addr[0])
-                    if not ip.startswith("127."):
-                        self.member_timeout[ip]=time()
-                        if not ip in self.members:
-                            self._append_member(ip, ip)
-                        
-                    if daten.startswith("HELO"):
-                        #simple infrastructure protocol messages starting with HELO''' 
-                        self._incoming_event(daten, ip)                            
-                    else:  
-                        #simple message                          
-                        self._incoming_call(daten,ip)
+                    if self._check_group(daten,ip):
+                        if not ip.startswith("127."):
+                            self.member_timeout[ip]=time()
+                            if not ip in self.members:
+                                self._append_member(ip, ip)
+                            
+                        if daten.startswith("HELO"):
+                            #simple infrastructure protocol messages starting with HELO''' 
+                            self._incoming_event(daten, ip)                            
+                        else:  
+                            #simple message                          
+                            self._incoming_call(daten,ip)
+                    else:
+                        log_debug("Dropped a message from",ip,daten)
                 except socket.timeout:
                     if len(self.members):
                         if not len(self.own_ip):
@@ -183,7 +187,7 @@ class lunch_server(object):
                     else:
                         #TODO: broadcast at this point
                         log_warning("seems like you are alone - no lunch-peer found yet")
-                    log_debug("Current Members:", self.members)
+                    #log_debug("Current Members:", self.members)
         except socket.error as e:
             #socket error messages may contain special characters, which leads to crashes on old python versions
             log_error(u"stopping lunchinator because of socket error:", convert_string(str(e)))
@@ -360,6 +364,20 @@ class lunch_server(object):
         if didUpdate:
             self._memberUpdated(ip)
             
+    
+    def _remove_member(self, ip):
+        didRemove = False        
+        self.lockMembers()
+        try:
+            if ip in self.member_info:
+                del self.member_info[ip]
+                didRemove=True
+        finally:
+            self.releaseMembers()
+            
+        if didRemove:
+            self._memberRemoved(ip)
+            
     def _init_members_from_file(self):
         members = []
         if os.path.exists(get_settings().get_members_file()):
@@ -446,6 +464,47 @@ class lunch_server(object):
             else:
                 membersDict[ip] = ip
         return membersDict
+    
+    '''checks message for group commands, return false if peer is not in group'''
+    def _check_group(self,data,addr):
+        if addr.startswith("127."):
+            return True        
+        own_group = get_settings().get_group()
+        
+        if len(own_group)==0:
+            #accept anything as long as i do not have a group
+            return True
+        
+        (cmd, value) = data.split(" ",1)
+        if cmd.startswith("HELO_GROUP"):
+            self._peer_group[addr] = value
+            if value!=own_group:
+                self._remove_member(addr)
+                return False
+            else:
+                return True
+        
+        if cmd.startswith("HELO_REQUEST_GROUP"):
+            self._peer_group[addr] = value
+            self.call("HELO_GROUP %s"%str(own_group), client=addr)
+            if value!=own_group:
+                self._remove_member(addr)
+                return False
+            else:
+                return True
+            
+        if not self._peer_group.has_key(addr):
+            #not accepting messages if member has no group - policy?
+            self.call("HELO_REQUEST_GROUP %s"%str(own_group), client=addr)
+            self._remove_member(addr)
+            return False
+        
+        if self._peer_group[addr] == own_group:
+            return True
+        
+        return False
+            
+        
         
     def _incoming_call(self,msg,addr):
         mtime = localtime()
