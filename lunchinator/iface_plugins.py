@@ -263,8 +263,10 @@ class iface_gui_plugin(iface_plugin):
     @classmethod
     def run_standalone(cls, factory):
         from PyQt4.QtGui import QApplication, QMainWindow
-        import sys
-        
+        from lunchinator import setLoggingLevel
+        import sys, logging
+    
+        setLoggingLevel(logging.DEBUG)    
         app = QApplication(sys.argv)
         window = QMainWindow()
         window.setWindowTitle("Layout Example")

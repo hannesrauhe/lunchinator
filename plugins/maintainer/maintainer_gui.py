@@ -42,8 +42,11 @@ class maintainer_gui(QTabWidget):
     
 class maintainer_wrapper:
     reports = []
+    options = {u"github_token":""}
     def getBugsFromDB(self, _):
         return []
+    def set_option(self, option, newValue, _convert = True):
+        print "set %s to '%s' (%s)" % (option, newValue, type(newValue))
     
 if __name__ == "__main__":
     from lunchinator.iface_plugins import iface_gui_plugin
