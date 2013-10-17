@@ -240,8 +240,11 @@ class lunch_settings(object):
             audio_file = self._lunchdir+"/sounds/"+new_value
         else:
             log_error("configured audio file %s does not exist in sounds folder, using old one: %s"%(new_value,self._audio_file))
-            return 
+            self._config_file.set('general', 'audio_file', str(audio_file))
+            new_value = self._audio_file
+            return
         self._audio_file = convert_string(audio_file)
+        self._config_file.set('general', 'audio_file', str(audio_file))
       
     def get_avatar_dir(self):
         return self._avatar_dir
