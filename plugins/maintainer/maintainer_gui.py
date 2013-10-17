@@ -20,6 +20,9 @@ class maintainer_gui(QTabWidget):
         self.visible = True
         
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
+        
+    def update_dropdown_members(self):
+        pass
     
     def create_info_table_widget(self, parent):
         self.info_table = QTreeView(parent)
