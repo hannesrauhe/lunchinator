@@ -135,7 +135,7 @@ class lunch_server(object):
             s_broad = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            s_broad.sendto('HELO_REQUEST_GROUP '+get_settings().get_group(), ('255.255.255.255', 0))
+            s_broad.sendto('HELO_REQUEST_GROUP '+get_settings().get_group(), ('255.255.255.255', 50000))
             s_broad.close()
         except:
             log_exception("Problem while broadcasting")
