@@ -129,7 +129,17 @@ class lunch_server(object):
                 continue
         log_debug("Found my IP:",self.own_ip)
         s.close()
-
+		
+    def _broadcast(self):
+        try:
+            s_broad = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            s_broad.sendto('HELO_REQUEST_GROUP '+get_settings().get_group(), ('255.255.255.255', 0))
+            s_broad.close()
+        except:
+            log_exception("Problem while broadcasting")
+			
     '''listening method - should be started in its own thread'''    
     def start_server(self):
         self.initialize()
@@ -186,7 +196,8 @@ class lunch_server(object):
                             log_info("no master found yet")
                     else:
                         #TODO: broadcast at this point
-                        log_warning("seems like you are alone - no lunch-peer found yet")
+                        log_warning("seems like you are alone - broadcasting for others")
+                        self._broadcast()
                     #log_debug("Current Members:", self.members)
         except socket.error as e:
             #socket error messages may contain special characters, which leads to crashes on old python versions
