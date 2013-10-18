@@ -4,6 +4,7 @@ from PyQt4.QtGui import QTreeView, QTabWidget, QSortFilterProxyModel, QSizePolic
 from PyQt4.QtCore import Qt
 from maintainer.bug_reports_widget import BugReportsWidget
 from maintainer.members_widget import MembersWidget
+import os
 
 class maintainer_gui(QTabWidget):
     LOG_REQUEST_TIMEOUT = 10 # 10 seconds until request is invalid
@@ -43,13 +44,21 @@ class maintainer_gui(QTabWidget):
     def destroy_widget(self):
         self.visible = False
     
-class maintainer_wrapper:
+class maintainer_wrapper(object):
     reports = []
     options = {u"github_token":""}
+    def __init__(self):
+        tokenPath = os.path.join(os.path.expanduser("~"), ".github_token")
+        if os.path.exists(tokenPath):
+            with open(tokenPath) as tokenFile:
+                token = tokenFile.readline()
+                self.options[u"github_token"] = token
+        
     def getBugsFromDB(self, _):
         return []
-    def set_option(self, option, newValue, _convert = True):
-        print "set %s to '%s' (%s)" % (option, newValue, type(newValue))
+    
+    def set_option(self, option, newValue, convert = True):
+        print "set %s to '%s' (%s), convert: %s" % (option, newValue, type(newValue), convert)
     
 if __name__ == "__main__":
     from lunchinator.iface_plugins import iface_gui_plugin

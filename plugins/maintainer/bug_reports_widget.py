@@ -52,12 +52,13 @@ class BugReportsWidget(QWidget):
 
     def createTokenFromLogin(self):
         # obtain a token
-        loginDialog = LoginDialog(self)
+        loginDialog = LoginDialog(self, description="Please enter your GitHub login information. The login information is NOT stored as plain text.", loginText="E-Mail:")
+        loginDialog.setMinimumWidth(300)
         retValue = loginDialog.exec_()
         if retValue == LoginDialog.Accepted:
             log_debug("Logging into GitHub using username/password")
             self.github = Github(login_or_token=loginDialog.getUsername(), password=loginDialog.getPassword())
-            newToken = self.github.get_user().get_authorization(0).token
+            newToken = self.github.get_user().get_authorizations()[0].token
             if newToken:
                 self.mt.set_option(u"github_token", newToken, convert=False)
             self.logInOutButton.setText("Log off from GitHub")
