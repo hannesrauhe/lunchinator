@@ -51,7 +51,7 @@ class LoginDialog(QDialog):
         
     def slotAcceptLogin(self):
         self._username = convert_string(self.editUserName.text())
-        self._password = convert_string(self.editUserName.text())
+        self._password = convert_string(self.editPassword.text())
         self.setResult(QDialog.Accepted)
         self.setVisible(False)
         

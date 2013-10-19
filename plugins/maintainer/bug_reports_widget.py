@@ -1,11 +1,10 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QMessageBox
-from PyQt4.QtCore import pyqtSlot, QThread, Qt, QVariant
+from PyQt4.QtCore import pyqtSlot, QThread, Qt, QVariant, pyqtSignal
 from lunchinator import log_error, log_warning, log_debug, log_exception
-from lunchinator.download_thread import DownloadThread
 from lunchinator.table_models import TableModelBase
 from lunchinator.login_dialog import LoginDialog
-import json, httplib, urllib
-from datetime import datetime
+import json, httplib, inspect
+from functools import partial
 from maintainer.github import Github
 from maintainer.github import GithubException
         
@@ -13,6 +12,7 @@ class BugReportsWidget(QWidget):
     def __init__(self, parent, mt):
         super(BugReportsWidget, self).__init__(parent)
         self.mt = mt
+        self.lunchinatorRepo = None
         self.github = None
         
         layout = QVBoxLayout(self)
@@ -22,13 +22,13 @@ class BugReportsWidget(QWidget):
         self.issues = {}
         self.issuesComboModel = IssuesComboModel()
         
-        self.update_reports()
         self.dropdown_reports = QComboBox(self)
         self.dropdown_reports.setModel(self.issuesComboModel)
         self.display_report()
         self.close_report_btn = QPushButton("Close Bug", self)
         
         self.logInOutButton = QPushButton("Log in to GitHub", self)
+        self.logInOutButton.setEnabled(False)
         
         topLayout = QHBoxLayout()
         topLayout.addWidget(self.dropdown_reports)
@@ -48,69 +48,37 @@ class BugReportsWidget(QWidget):
         self.close_report_btn.clicked.connect(self.close_report)
         self.logInOutButton.clicked.connect(self.logInOrOut)
         
-        self.logIn(force=False)
-
-    def createTokenFromLogin(self):
+        self.logIn(force=False, updateReports=True)
+            
+    def tokenFetchSuccess(self, newToken):
+        if newToken:
+            self.mt.set_option(u"github_token", newToken, convert=False)
+    
+    def loginError(self):
+        self.github = None
+    
+    def createTokenFromLogin(self, nextCall = None):
         # obtain a token
-        loginDialog = LoginDialog(self, description="Please enter your GitHub login information. The login information is NOT stored as plain text.", loginText="E-Mail:")
+        loginDialog = LoginDialog(self, description="Please enter your GitHub login information. The login information is NOT stored as plain text.")
         loginDialog.setMinimumWidth(300)
         retValue = loginDialog.exec_()
         if retValue == LoginDialog.Accepted:
             log_debug("Logging into GitHub using username/password")
             self.github = Github(login_or_token=loginDialog.getUsername(), password=loginDialog.getPassword())
-            newToken = self.github.get_user().get_authorizations()[0].token
-            if newToken:
-                self.mt.set_option(u"github_token", newToken, convert=False)
-            self.logInOutButton.setText("Log off from GitHub")
+            successCall = SyncCall(self.tokenFetchSuccess, successCall=nextCall, errorCall=nextCall)
+            errorCall = SyncCall(self.loginError, successCall=nextCall, errorCall=nextCall) 
+            self.asyncGithubCall(self.fetchOAuthToken, successCall=successCall, errorCall=errorCall)
 
-    def logIn(self, force=True):
+    def tokenLoginFailed(self, errorMessage, nextCall):
+        self.github = None
+        # token is probably wrong. Try to re-login with username/password
+        QMessageBox.critical(self, "Error", errorMessage, buttons=QMessageBox.Ok, defaultButton=QMessageBox.Ok)
         errorMessage = None
-        try:
-            if self.mt.options[u"github_token"]:
-                try:
-                    # try to login using OAuth token
-                    log_debug("Logging into GitHub using OAuth Token")
-                    self.github = Github(login_or_token=self.mt.options[u"github_token"])
-                    # ensure login is performed
-                    self.github.get_users()[0]
-                    self.logInOutButton.setText("Log off from GitHub")
-                    return True
-                except GithubException as e:
-                    if force:
-                        # token is probably wrong. Try to re-login with username/password
-                        if u'message' in e.data:
-                            errorMessage = "Could not log in to GitHub using OAuth token: %s" % (e.data[u'message'])
-                        else:
-                            errorMessage = "Could not log in to GitHub using OAuth token: %s" % unicode(e)
-                        log_warning(errorMessage)
-                        QMessageBox.critical(self, "Error", errorMessage, buttons=QMessageBox.Ok, defaultButton=QMessageBox.Ok)
-                        errorMessage = None
-                        self.createTokenFromLogin()
-                        return True
-                    else:
-                        # we don*t have to login.
-                        raise
-            elif force:
-                self.createTokenFromLogin()
-            return True
-        except GithubException as e:
-            if u'message' in e.data:
-                errorMessage = "Could not log in to GitHub: %s" % (e.data[u'message'])
-            else:
-                errorMessage = "Could not log in to GitHub: %s" % unicode(e)
-            self.github = None
-            self.logInOutButton.setText("Log in to GitHub")
-            log_warning(errorMessage)
-        except:
-            errorMessage = "Exception during login to GitHub"
-            log_exception("Exception during login to GitHub")
-            self.github = None
-            self.logInOutButton.setText("Log in to GitHub")
-            
-        if force and errorMessage != None:
-            QMessageBox.critical(self, "Error", errorMessage, buttons=QMessageBox.Ok, defaultButton=QMessageBox.Ok)
-        return False
-    
+        self.createTokenFromLogin(nextCall)
+
+    def asyncGithubCall(self, call, successCall = None, errorCall = None):
+        AsyncCall.createCall(self, call, successCall, errorCall).start()
+        
     def logOut(self):
         # TODO is there a better way?
         self.github = None
@@ -122,30 +90,44 @@ class BugReportsWidget(QWidget):
             self.logOut()
         else:
             self.logIn()
+         
+    def loginFinished(self, _, nextCall = None):
+        """ called when the login process is finished, successful or not """
+        self.logInOutButton.setEnabled(True)
+        if not self.github:
+            self.logInOutButton.setText("Log in to GitHub")
+        else:
+            self.logInOutButton.setText("Log off from GitHub")
+        if nextCall != None:
+            nextCall()
 
-    @pyqtSlot(QThread, unicode)
-    def downloadedIssues(self, thread, _):
-        j = json.loads(thread.getResult())
+    def logIn(self, force=True, updateReports=False):
+        self.logInOutButton.setEnabled(False)
         
-        for issueDict in j:
-            issue = Issue(issueDict)
-            self.issues[issue.id] = issue
-            if not self.issuesComboModel.hasKey(issue.id):
-                self.issuesComboModel.externalRowAppended(issue.id, issue)
+        finalCall = self.loginFinished
+        
+        if updateReports:
+            finalCall = AsyncCall.createCall(self, self.update_reports, successCall=finalCall, errorCall=finalCall)
+        
+        # initialize lunchinator repository before finishing
+        finalCall = AsyncCall.createCall(self, self.initializeLunchinatorRepo, errorCall=finalCall, successCall=finalCall)
+        
+        if self.mt.options[u"github_token"]:
+            # log in with token
+            log_debug("Logging into GitHub using OAuth Token")
+            self.github = Github(login_or_token=self.mt.options[u"github_token"])
+            if force:
+                errorCall = partial(self.tokenLoginFailed, finalCall)
             else:
-                self.issuesComboModel.externalRowUpdated(issue.id, issue)
-        
-    @pyqtSlot(QThread, unicode)
-    def errorDownloadingIssues(self, _thread, _url):
-        log_error("Error fetching issues from github.")
-
-    def update_reports(self):
-        thread = DownloadThread(self, "https://api.github.com/repos/hannesrauhe/lunchinator/issues?state=open")
-        thread.finished.connect(thread.deleteLater)
-        thread.error.connect(self.errorDownloadingIssues)
-        thread.success.connect(self.downloadedIssues)
-        thread.start()
-        
+                errorCall = SyncCall(self.loginError, successCall=finalCall, errorCall=finalCall)
+            self.asyncGithubCall(self.forceLogin, successCall=finalCall, errorCall=errorCall)
+        elif force:
+            # log in with username/password
+            self.createTokenFromLogin(finalCall)  
+        else:
+            # cannot log in
+            finalCall()  
+            
     def selectedIssue(self):
         issueID = self.dropdown_reports.itemData(self.dropdown_reports.currentIndex(), IssuesComboModel.KEY_ROLE).toInt()[0]
         if not issueID in self.issues:
@@ -155,7 +137,7 @@ class BugReportsWidget(QWidget):
         
     def display_report(self):
         if self.dropdown_reports.currentIndex()>=0:
-            self.entry.setText(self.selectedIssue().description)
+            self.entry.setText(self.selectedIssue().body)
             
     def close_report(self):
         #params = urllib.urlencode({'@number': 12524, '@type': 'issue', '@action': 'show'})
@@ -173,28 +155,42 @@ class BugReportsWidget(QWidget):
         conn.close()
         issue = self.selectedIssue()
         # TODO implement
-
-
-class Issue(object):
-    Open = 1
-    Closed = 2
-    ISO_8601_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+        
+    ################ ASYNCHRONOUS #####################
     
-    def __init__(self, jsonDict):
-        self.id = jsonDict[u"number"]
-        self.title = jsonDict[u"title"]
-        self.description = jsonDict[u"body"]
-        self.issueUrl = jsonDict[u"html_url"]
-        self.closeDate = None
-        if jsonDict[u"state"] == u"closed":
-            self.state = self.Closed
-            self.closeDate = datetime.strptime(jsonDict[u"closed_at"], self.ISO_8601_FORMAT)
+    def initializeLunchinatorRepo(self, _ = None):
+        repoUser = self.mt.options[u"repo_user"]
+        repoName = self.mt.options[u"repo_name"]
+        if repoUser and repoName:
+            if self.github:
+                # initialize repo from my own account
+                log_debug("Initializing Lunchinator repository %s/%s using GitHub user %s" % (repoUser, repoName, self.github.get_user().login))
+                self.lunchinatorRepo = self.github.get_repo("%s/%s" % (repoUser, repoName))
+            else:
+                log_debug("Initializing Lunchinator repository %s/%s being logged off" % (repoUser, repoName))
+                self.lunchinatorRepo = Github().get_user(repoUser).get_repo(repoName)
         else:
-            self.state = self.Open
-        self.creationDate = datetime.strptime(jsonDict[u"created_at"], self.ISO_8601_FORMAT)
-        self.updateDate = datetime.strptime(jsonDict[u"updated_at"], self.ISO_8601_FORMAT)
-        self.comments = jsonDict[u"comments"]
-        self.commentsUrl = jsonDict[u"comments_url"]
+            log_warning("No Lunchinator GitHub repository specified.")
+            
+    def update_reports(self, _ = None):
+        if self.lunchinatorRepo != None:
+            log_debug("updating bug reports")
+            reports = self.lunchinatorRepo.get_issues(state="open")
+            for issue in reports:
+                self.issues[issue.number] = issue
+                if not self.issuesComboModel.hasKey(issue.number):
+                    self.issuesComboModel.externalRowAppended(issue.number, issue)
+                else:
+                    self.issuesComboModel.externalRowUpdated(issue.number, issue)
+        else:
+            log_warning("Cannot update bug reports, no repository")
+            
+    def fetchOAuthToken(self):
+        return self.github.get_user().get_authorizations()[0].token
+
+    def forceLogin(self):
+        self.github.get_users()[0]
+
 
 class IssuesComboModel(TableModelBase):
     def __init__(self):
@@ -203,3 +199,120 @@ class IssuesComboModel(TableModelBase):
         
     def updateIssueItem(self, _issueID, issue, item):
         item.setData(QVariant(issue.title), Qt.DisplayRole)
+    
+def getArgSpec(aCallable):
+    if inspect.isfunction(aCallable):
+        argSpec = inspect.getargspec(aCallable)
+        numArgs = len(argSpec.args)
+    elif inspect.ismethod(aCallable):
+        argSpec = inspect.getargspec(aCallable)
+        numArgs = len(argSpec.args) - 1
+    else:
+        argSpec = inspect.getargspec(aCallable.__call__)
+        numArgs = len(argSpec.args) - 1
+    return (argSpec, numArgs)
+    
+def takesOneArgument(aCallable):
+    argSpec, numArgs = getArgSpec(aCallable)
+    
+    minArgs = numArgs
+    if argSpec.defaults != None:
+        minArgs -= len(argSpec.defaults)
+    if minArgs > 1 or (numArgs < 1 and argSpec.varargs == None):
+        return False
+    return True
+
+def assertTakesOneArgument(aCallable):
+    if not takesOneArgument(aCallable):
+        argSpec, _ = getArgSpec(aCallable)
+        raise Exception("Not callable with exactly one argument: %s" % str(argSpec))  
+
+class SyncCall(object):
+    def __init__(self, call, successCall, errorCall):
+        super(SyncCall, self).__init__()
+        
+        if successCall != None:
+            if type(successCall) in (str, unicode):
+                successCall = partial(log_warning, successCall)
+        if errorCall != None:
+            if type(errorCall) in (str, unicode):
+                errorCall = partial(log_warning, errorCall)
+                        
+        assertTakesOneArgument(successCall)
+        assertTakesOneArgument(errorCall)
+        self._call = call
+        self._success = successCall
+        self._error = errorCall
+        
+    def __call__(self, prevResult = None):
+        try:
+            if takesOneArgument(self._call):
+                result = self._call(prevResult)
+            else:
+                result = self._call()
+                
+            if self._success != None:
+                self._success(result)
+            return
+        except GithubException as e:
+            if u'message' in e.data:
+                errorMessage = u"GitHub Error: %s" % (e.data[u'message'])
+            else:
+                errorMessage = u"GitHub Error: %s" % unicode(e)
+            log_warning(errorMessage)
+        except:
+            errorMessage = u"Exception during asynchronous call"
+            log_exception(errorMessage)
+        if self._error != None:
+            self._error(errorMessage)
+        
+class AsyncCall(QThread):
+    success = pyqtSignal(object)
+    error = pyqtSignal(unicode)
+    
+    @classmethod
+    def createCall(cls, parent, callAsync, successCall = None, errorCall = None):
+        assert callAsync != None
+        call = cls(parent, callAsync)
+        if successCall != None:
+            if type(successCall) in (str, unicode):
+                call.success.connect(partial(log_warning, successCall))
+            else:
+                call.success.connect(successCall)
+
+        if errorCall != None:
+            if type(errorCall) in (str, unicode):
+                call.error.connect(partial(log_warning, errorCall))
+            else:
+                call.error.connect(errorCall)
+        call.finished.connect(call.deleteLater)
+        return call
+    
+    def __init__(self, parent, call):
+        super(AsyncCall, self).__init__(parent)
+        self._call = call
+
+    def __call__(self, prevResult = None):
+        self._prevResult = prevResult
+        self.start()
+
+    def run(self):
+        try:
+            if takesOneArgument(self._call):
+                result = self._call(self._prevResult)
+            else:
+                result = self._call()
+                
+            self.success.emit(result)
+            return
+        except GithubException as e:
+            if u'message' in e.data:
+                errorMessage = u"GitHub Error: %s" % (e.data[u'message'])
+            else:
+                errorMessage = u"GitHub Error: %s" % unicode(e)
+            log_warning(errorMessage)
+        except:
+            errorMessage = u"Exception during asynchronous call"
+            log_exception(errorMessage)
+        self.error.emit(errorMessage)
+        

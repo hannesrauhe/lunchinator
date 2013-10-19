@@ -46,7 +46,7 @@ class maintainer_gui(QTabWidget):
     
 class maintainer_wrapper(object):
     reports = []
-    options = {u"github_token":""}
+    options = {u"github_token":"", u"repo_user":u"hannesrauhe", u"repo_name":u"lunchinator"}
     def __init__(self):
         tokenPath = os.path.join(os.path.expanduser("~"), ".github_token")
         if os.path.exists(tokenPath):

@@ -8,7 +8,9 @@ class maintainer(iface_gui_plugin):
     def __init__(self):
         super(maintainer, self).__init__()
         self.options = [((u"db_connection", u"DB Connection", [u'auto']+get_server().getAvailableDBConnections()),"auto"),
-                        ((u"github_token", u"GitHub OAuth Token"), "")]
+                        ((u"github_token", u"GitHub OAuth Token"), ""),
+                        ((u"repo_name", "GitHub Repository Name"), ""),
+                        ((u"repo_user", "GitHub Repository User Name"), "")]
         self.recorded_reports = []
         self.dbPluginErrorPrinted = False
         self.w = None
