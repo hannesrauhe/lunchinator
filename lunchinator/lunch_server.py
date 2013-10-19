@@ -483,23 +483,26 @@ class lunch_server(object):
             #accept anything as long as i do not have a group
             return True
         
-        (cmd, value) = data.split(" ",1)
-        if cmd.startswith("HELO_GROUP"):
-            self._peer_group[addr] = value
-            if value!=own_group:
-                self._remove_member(addr)
-                return False
-            else:
-                return True
-        
-        if cmd.startswith("HELO_REQUEST_GROUP"):
-            self._peer_group[addr] = value
-            self.call("HELO_GROUP %s"%str(own_group), client=addr)
-            if value!=own_group:
-                self._remove_member(addr)
-                return False
-            else:
-                return True
+        try:
+            (cmd, value) = data.split(" ",1)
+            if cmd.startswith("HELO_GROUP"):
+                self._peer_group[addr] = value
+                if value!=own_group:
+                    self._remove_member(addr)
+                    return False
+                else:
+                    return True
+            
+            if cmd.startswith("HELO_REQUEST_GROUP"):
+                self._peer_group[addr] = value
+                self.call("HELO_GROUP %s"%str(own_group), client=addr)
+                if value!=own_group:
+                    self._remove_member(addr)
+                    return False
+                else:
+                    return True
+        except:
+            pass
             
         if not self._peer_group.has_key(addr):
             #not accepting messages if member has no group - policy?
@@ -511,8 +514,6 @@ class lunch_server(object):
             return True
         
         return False
-            
-        
         
     def _incoming_call(self,msg,addr):
         mtime = localtime()
