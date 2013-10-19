@@ -98,6 +98,15 @@ class CallBase(object):
 
 class SyncCall(CallBase):
     def __init__(self, call, successCall = None, errorCall = None, mutex = None):
+        """
+        Creates a synchronous call object
+        
+        :param call: The callable to be called, must be callable with zero or one argument.
+                     If callable with one argument, the argument passed to __call__ will be forwarded to the callable.
+        :param successCall: If call() does not raise an exception, successCall is called with the result of call().
+        :param errorCall: If call() raises an exception, errorCall is called with an error message as the only argument.
+        :param mutex: A QMutex object that will be locked during call().
+        """
         super(SyncCall, self).__init__(call, successCall, errorCall, mutex)
         
     def __call__(self, prevResult = None):
@@ -108,6 +117,16 @@ class AsyncCall(QThread, CallBase):
     error = pyqtSignal(unicode)
     
     def __init__(self, parent, call, successCall = None, errorCall = None, mutex = None):
+        """
+        Creates an asynchronous call object
+        
+        :param parent: The parent object for QThread.
+        :param call: The callable to be called, must be callable with zero or one argument.
+                     If callable with one argument, the argument passed to __call__ will be forwarded to the callable.
+        :param successCall: If call() does not raise an exception, successCall is called with the result of call().
+        :param errorCall: If call() raises an exception, errorCall is called with an error message as the only argument.
+        :param mutex: A QMutex object that will be locked during call().
+        """
         QThread.__init__(self, parent)
         CallBase.__init__(self, call, successCall, errorCall, mutex)
         self._prevResult = None
