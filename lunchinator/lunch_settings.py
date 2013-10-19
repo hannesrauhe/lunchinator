@@ -56,6 +56,7 @@ class lunch_settings(object):
         self._next_lunch_end = None
         self._audio_file = unicode(self._lunchdir+os.path.sep+"sounds"+os.path.sep+"sonar.wav")
         self._user_name = u""
+        self._group = u""
         self._avatar_file = u""    
         self._tcp_port = 50001
         self._auto_update = True   
@@ -222,6 +223,11 @@ class lunch_settings(object):
     def set_user_name(self,name):
         self._user_name = convert_string(name)
         self._config_file.set('general', 'user_name', self._user_name)
+       
+    def get_group(self):
+        return self._group
+    def set_group(self,value):
+        self._group = value
     
     def get_auto_update(self):
         return self._auto_update
