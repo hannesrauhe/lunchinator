@@ -15,6 +15,9 @@ class members_table(iface_gui_plugin):
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
+        
+    def do_members(self):
+        print get_server().get_members()
 
     def updateTimeoutsInMembersTables(self):
         self.membersProxyModel.setDynamicSortFilter(False)

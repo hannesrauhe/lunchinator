@@ -103,6 +103,7 @@ class lunch_settings(object):
         self._config_file.read(self._main_config_dir+'/settings.cfg')
         
         self._user_name = self.read_value_from_config_file(self._user_name,"general","user_name")
+        self._group = self.read_value_from_config_file(self._group,"general","group")
         self._tcp_port = self.read_value_from_config_file(self._tcp_port,"general","tcp_port")
         
         self._audio_file = self.read_value_from_config_file(self._audio_file,"general","audio_file")

@@ -246,9 +246,12 @@ class lunch_server(object):
         
     def releaseMembers(self):
         self.membersLock.release()
-            
+                    
     def getMessages(self):  
         return self.last_messages
+            
+    def get_groups(self):  
+        return self._peer_group
     
     def get_members(self):  
         return self.members
