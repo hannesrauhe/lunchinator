@@ -75,7 +75,7 @@ def receiveFile(sender, file_path, size, portOrSocket, success, error):
         if addr[0]==sender:
             _receiveFile(con, file_path, size)
         else:
-            raise Exception("Sender is not allowed to send file:",addr[0],", expected:",sender)
+            log_error("Sender is not allowed to send file:",addr[0],", expected:",sender)
         success(file_path)
     except:
         log_exception("I caught something unexpected when trying to receive file",file_path, sys.exc_info()[0])
