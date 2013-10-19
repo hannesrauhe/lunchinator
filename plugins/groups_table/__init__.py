@@ -1,7 +1,6 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import log_exception, log_error, get_settings, get_server
 import urllib2,sys
-from lunchinator.table_models import TableModelBase
                 
 class groups_table(iface_gui_plugin):
     def __init__(self):
