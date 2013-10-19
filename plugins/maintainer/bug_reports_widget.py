@@ -1,12 +1,12 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QMessageBox
-from PyQt4.QtCore import pyqtSlot, QThread, Qt, QVariant, pyqtSignal
-from lunchinator import log_error, log_warning, log_debug, log_exception
+from PyQt4.QtCore import pyqtSlot, Qt, QVariant
+from lunchinator import log_error, log_warning, log_debug
 from lunchinator.table_models import TableModelBase
 from lunchinator.login_dialog import LoginDialog
-import json, httplib, inspect
+import json, httplib
 from functools import partial
 from maintainer.github import Github
-from maintainer.github import GithubException
+from maintainer.callables import SyncCall, AsyncCall
         
 class BugReportsWidget(QWidget):
     def __init__(self, parent, mt):
@@ -77,7 +77,7 @@ class BugReportsWidget(QWidget):
         self.createTokenFromLogin(nextCall)
 
     def asyncGithubCall(self, call, successCall = None, errorCall = None):
-        AsyncCall.createCall(self, call, successCall, errorCall).start()
+        AsyncCall(self, call, successCall, errorCall).start()
         
     def logOut(self):
         # TODO is there a better way?
@@ -107,10 +107,10 @@ class BugReportsWidget(QWidget):
         finalCall = self.loginFinished
         
         if updateReports:
-            finalCall = AsyncCall.createCall(self, self.update_reports, successCall=finalCall, errorCall=finalCall)
+            finalCall = AsyncCall(self, self.update_reports, successCall=finalCall, errorCall=finalCall)
         
         # initialize lunchinator repository before finishing
-        finalCall = AsyncCall.createCall(self, self.initializeLunchinatorRepo, errorCall=finalCall, successCall=finalCall)
+        finalCall = AsyncCall(self, self.initializeLunchinatorRepo, errorCall=finalCall, successCall=finalCall)
         
         if self.mt.options[u"github_token"]:
             # log in with token
@@ -200,119 +200,3 @@ class IssuesComboModel(TableModelBase):
     def updateIssueItem(self, _issueID, issue, item):
         item.setData(QVariant(issue.title), Qt.DisplayRole)
     
-def getArgSpec(aCallable):
-    if inspect.isfunction(aCallable):
-        argSpec = inspect.getargspec(aCallable)
-        numArgs = len(argSpec.args)
-    elif inspect.ismethod(aCallable):
-        argSpec = inspect.getargspec(aCallable)
-        numArgs = len(argSpec.args) - 1
-    else:
-        argSpec = inspect.getargspec(aCallable.__call__)
-        numArgs = len(argSpec.args) - 1
-    return (argSpec, numArgs)
-    
-def takesOneArgument(aCallable):
-    argSpec, numArgs = getArgSpec(aCallable)
-    
-    minArgs = numArgs
-    if argSpec.defaults != None:
-        minArgs -= len(argSpec.defaults)
-    if minArgs > 1 or (numArgs < 1 and argSpec.varargs == None):
-        return False
-    return True
-
-def assertTakesOneArgument(aCallable):
-    if not takesOneArgument(aCallable):
-        argSpec, _ = getArgSpec(aCallable)
-        raise Exception("Not callable with exactly one argument: %s" % str(argSpec))  
-
-class SyncCall(object):
-    def __init__(self, call, successCall, errorCall):
-        super(SyncCall, self).__init__()
-        
-        if successCall != None:
-            if type(successCall) in (str, unicode):
-                successCall = partial(log_warning, successCall)
-        if errorCall != None:
-            if type(errorCall) in (str, unicode):
-                errorCall = partial(log_warning, errorCall)
-                        
-        assertTakesOneArgument(successCall)
-        assertTakesOneArgument(errorCall)
-        self._call = call
-        self._success = successCall
-        self._error = errorCall
-        
-    def __call__(self, prevResult = None):
-        try:
-            if takesOneArgument(self._call):
-                result = self._call(prevResult)
-            else:
-                result = self._call()
-                
-            if self._success != None:
-                self._success(result)
-            return
-        except GithubException as e:
-            if u'message' in e.data:
-                errorMessage = u"GitHub Error: %s" % (e.data[u'message'])
-            else:
-                errorMessage = u"GitHub Error: %s" % unicode(e)
-            log_warning(errorMessage)
-        except:
-            errorMessage = u"Exception during asynchronous call"
-            log_exception(errorMessage)
-        if self._error != None:
-            self._error(errorMessage)
-        
-class AsyncCall(QThread):
-    success = pyqtSignal(object)
-    error = pyqtSignal(unicode)
-    
-    @classmethod
-    def createCall(cls, parent, callAsync, successCall = None, errorCall = None):
-        assert callAsync != None
-        call = cls(parent, callAsync)
-        if successCall != None:
-            if type(successCall) in (str, unicode):
-                call.success.connect(partial(log_warning, successCall))
-            else:
-                call.success.connect(successCall)
-
-        if errorCall != None:
-            if type(errorCall) in (str, unicode):
-                call.error.connect(partial(log_warning, errorCall))
-            else:
-                call.error.connect(errorCall)
-        call.finished.connect(call.deleteLater)
-        return call
-    
-    def __init__(self, parent, call):
-        super(AsyncCall, self).__init__(parent)
-        self._call = call
-
-    def __call__(self, prevResult = None):
-        self._prevResult = prevResult
-        self.start()
-
-    def run(self):
-        try:
-            if takesOneArgument(self._call):
-                result = self._call(self._prevResult)
-            else:
-                result = self._call()
-                
-            self.success.emit(result)
-            return
-        except GithubException as e:
-            if u'message' in e.data:
-                errorMessage = u"GitHub Error: %s" % (e.data[u'message'])
-            else:
-                errorMessage = u"GitHub Error: %s" % unicode(e)
-            log_warning(errorMessage)
-        except:
-            errorMessage = u"Exception during asynchronous call"
-            log_exception(errorMessage)
-        self.error.emit(errorMessage)
-        
