@@ -25,7 +25,7 @@ class Notify(iface_called_plugin):
         elif os.path.exists(get_settings().get_lunchdir()+"/sounds/"+new_value):
             audio_file = get_settings().get_lunchdir()+"/sounds/"+new_value
         else:
-            log_error("configured audio file %s does not exist in sounds folder, using old one: %s"%(new_value,"unknown"))
+            log_error("configured audio file %s does not exist in sounds folder, using old one"%new_value)
             #returning false just resets the value
             return False
         self.set_option(setting, audio_file)

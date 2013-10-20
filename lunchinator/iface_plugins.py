@@ -182,8 +182,9 @@ class iface_plugin(IPlugin):
                 self.set_option_value(o, new_v)
             if o in self.option_callbacks:
                 if self.option_callbacks[o](o, new_v)==False:
-                    log_info("Setting %s was not saved, because callback returned False, setting back to %s"%(o,str(v)))
+                    log_info("Setting %s was not saved, because callback returned False, setting back to %s \n(There should be an erro message above)"%(o,str(v)))
                     self.set_option_value(o, v)
+                    self.options[o] = v
                 
     def reset_option(self, o):
         """
