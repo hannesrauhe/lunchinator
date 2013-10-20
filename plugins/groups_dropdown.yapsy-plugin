@@ -1,6 +1,6 @@
 [Core]
 Name = Groups
-Module = groups_table
+Module = groups_dropdown
 
 [Documentation]
 Author = Hannes Rauhe, Cornelius Ratsch

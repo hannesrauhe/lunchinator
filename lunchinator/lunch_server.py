@@ -47,7 +47,7 @@ class lunch_server(object):
         self.membersLock = Lock()
         self.shared_dict = {} #for plugins
         self.dontSendTo = set()
-        self.unknown_cmd = []
+        self.unknown_cmd = [u"HELO_GROUP",u"HELO_REQUEST_GROUP"]
         self._peer_group = {}
         
         self.exitCode = 0  
@@ -485,25 +485,28 @@ class lunch_server(object):
         
         try:
             (cmd, value) = data.split(" ",1)
-            if cmd.startswith("HELO_GROUP"):
-                self._peer_group[addr] = value
-                if value!=own_group:
-                    self._remove_member(addr)
-                    return False
-                else:
-                    return True
-            
-            if cmd.startswith("HELO_REQUEST_GROUP"):
-                self._peer_group[addr] = value
-                self.call("HELO_GROUP %s"%str(own_group), client=addr)
-                if value!=own_group:
-                    self._remove_member(addr)
-                    return False
-                else:
-                    return True
         except:
-            pass
+            (cmd, value) = "",data
             
+        if cmd.startswith("HELO_GROUP"):
+            self._peer_group[addr] = value
+            self.controller.groupAppended(value, self._peer_group)
+            if value!=own_group:
+                self._remove_member(addr)
+                return False
+            else:
+                return True
+        
+        if cmd.startswith("HELO_REQUEST_GROUP"):
+            self._peer_group[addr] = value
+            self.controller.groupAppended(value, self._peer_group)
+            self.call("HELO_GROUP %s"%str(own_group), client=addr)
+            if value!=own_group:
+                self._remove_member(addr)
+                return False
+            else:
+                return True
+                
         if not self._peer_group.has_key(addr):
             #not accepting messages if member has no group - policy?
             self.call("HELO_REQUEST_GROUP %s"%str(own_group), client=addr)

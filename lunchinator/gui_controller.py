@@ -30,6 +30,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     memberUpdatedSignal = pyqtSignal(unicode, dict)
     memberRemovedSignal = pyqtSignal(unicode)
     messagePrependedSignal = pyqtSignal(time.struct_time, list)
+    groupAppendedSignal = pyqtSignal(unicode, dict)
     _sendFile = pyqtSignal(unicode, QByteArray, int, bool)
     _receiveFile = pyqtSignal(unicode, int, unicode)
     _processEvent = pyqtSignal(unicode, unicode, unicode)
@@ -218,6 +219,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     def messagePrepended(self, messageTime, senderIP, messageText):
         self.messagePrependedSignal.emit(messageTime, [senderIP, messageText])
+        
+    def groupAppended(self, group, peer_groups):
+        self.groupAppendedSignal.emit(group, peer_groups)
     
     def receiveFile(self, ip, fileSize, fileName):
         self._receiveFile.emit(ip, fileSize, fileName)

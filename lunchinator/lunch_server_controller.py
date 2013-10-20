@@ -18,6 +18,9 @@ class LunchServerController(object):
         pass
     
     def memberRemoved(self, ip):
+        pass    
+        
+    def groupAppended(self, group, peer_groups):
         pass
     
     def messagePrepended(self, messageTime, senderIP, messageText):
