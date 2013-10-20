@@ -10,7 +10,7 @@ class maintainer(iface_gui_plugin):
         self.options = [((u"db_connection", u"DB Connection", [u'auto']+get_server().getAvailableDBConnections()),"auto"),
                         ((u"github_token", u"GitHub OAuth Token"), ""),
                         ((u"repo_name", "GitHub Repository Name"), ""),
-                        ((u"repo_user", "GitHub Repository User Name"), "")]
+                        ((u"repo_user", "GitHub Repository Owner"), "")]
         self.recorded_reports = []
         self.dbPluginErrorPrinted = False
         self.w = None
