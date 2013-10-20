@@ -54,7 +54,6 @@ class lunch_settings(object):
         ''' not in files'''    
         self._next_lunch_begin = None
         self._next_lunch_end = None
-        self._audio_file = unicode(self._lunchdir+os.path.sep+"sounds"+os.path.sep+"sonar.wav")
         self._user_name = u""
         self._group = u""
         self._avatar_file = u""    
@@ -106,7 +105,6 @@ class lunch_settings(object):
         self._group = self.read_value_from_config_file(self._group,"general","group")
         self._tcp_port = self.read_value_from_config_file(self._tcp_port,"general","tcp_port")
         
-        self._audio_file = self.read_value_from_config_file(self._audio_file,"general","audio_file")
         self._auto_update = self.read_value_from_config_file(self._auto_update,"general","auto_update")
         self._default_lunch_begin = self.read_value_from_config_file(self._default_lunch_begin,"general","default_lunch_begin")
         self._default_lunch_end = self.read_value_from_config_file(self._default_lunch_end,"general","default_lunch_end")
@@ -234,24 +232,6 @@ class lunch_settings(object):
         return self._auto_update
     def set_auto_update(self, new_value):
         self._auto_update = new_value
-    
-    def get_audio_file(self):
-        return self._audio_file 
-    def set_audio_file(self, new_value):
-        audio_file=''
-        if os.path.exists(new_value):
-            audio_file = new_value
-        elif os.path.exists(self._main_config_dir+"/sounds/"+new_value):
-            audio_file= self._main_config_dir+"/sounds/"+new_value
-        elif os.path.exists(self._lunchdir+"/sounds/"+new_value):
-            audio_file = self._lunchdir+"/sounds/"+new_value
-        else:
-            log_error("configured audio file %s does not exist in sounds folder, using old one: %s"%(new_value,self._audio_file))
-            self._config_file.set('general', 'audio_file', str(audio_file))
-            new_value = self._audio_file
-            return
-        self._audio_file = convert_string(audio_file)
-        self._config_file.set('general', 'audio_file', str(audio_file))
       
     def get_avatar_dir(self):
         return self._avatar_dir

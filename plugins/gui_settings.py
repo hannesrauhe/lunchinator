@@ -6,7 +6,6 @@ class gui_settings(iface_general_plugin):
         super(gui_settings, self).__init__()
         option_names = [(u'user_name', u'User Name'),
                         (u'group', u'Group Name'),
-                        (u'audio_file', u'Lunch Call Audio File'),
                         (u'auto_update', u"Automatic Update"),
                         (u"default_lunch_begin", u'Free for Lunch from'),
                         (u"default_lunch_end", u'Free for Lunch until'),

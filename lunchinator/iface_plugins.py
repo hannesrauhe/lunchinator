@@ -1,6 +1,6 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_error, log_exception, log_info, convert_string
+from lunchinator import log_error, log_exception, log_info, log_debug, convert_string
 import types
 from copy import deepcopy
 
@@ -181,7 +181,9 @@ class iface_plugin(IPlugin):
             else:
                 self.set_option_value(o, new_v)
             if o in self.option_callbacks:
-                self.option_callbacks[o](o, new_v)
+                if self.option_callbacks[o](o, new_v)==False:
+                    log_info("Setting %s was not saved, because callback returned False, setting back to %s"%(o,str(v)))
+                    self.set_option_value(o, v)
                 
     def reset_option(self, o):
         """
