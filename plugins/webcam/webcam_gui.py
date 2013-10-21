@@ -33,7 +33,7 @@ class UpdatingImage(ResizingImageLabel):
         log_error("Error downloading webcam image from %s" % url)
             
     def update(self): 
-        thread = DownloadThread(self, self.pic_url)
+        thread = DownloadThread(self, self.pic_url, no_proxy = self.no_proxy)
         thread.finished.connect(thread.deleteLater)
         thread.error.connect(self.errorDownloading)
         thread.success.connect(self.downloadFinished)
