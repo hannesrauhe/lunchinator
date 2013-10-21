@@ -1,5 +1,5 @@
-from lunchinator import log_exception, log_warning
-import inspect
+from lunchinator import log_exception, log_warning, log_debug
+import inspect, sys
 from functools import partial
 from PyQt4.QtCore import QThread, pyqtSignal
 from maintainer.github import GithubException
@@ -17,6 +17,9 @@ def getArgSpec(aCallable):
     return (argSpec, numArgs)
     
 def takesOneArgument(aCallable):
+    if type(aCallable) == partial:
+        log_debug("Warning: Cannot determine number of possible arguments for partial object.")
+        return True
     argSpec, numArgs = getArgSpec(aCallable)
     
     minArgs = numArgs
@@ -27,6 +30,9 @@ def takesOneArgument(aCallable):
     return True
 
 def assertTakesOneArgument(aCallable):
+    if type(aCallable) == partial:
+        log_debug("Warning: Cannot determine number of possible arguments for partial object.")
+        return
     if not takesOneArgument(aCallable):
         argSpec, _ = getArgSpec(aCallable)
         raise Exception("Not callable with exactly one argument: %s" % str(argSpec))  
@@ -35,20 +41,22 @@ class CallBase(object):
     def __init__(self, call, successCall, errorCall, mutex):
         super(CallBase, self).__init__()
         
+        self._success = None
+        self._error = None
+        
         if successCall != None:
             if type(successCall) in (str, unicode):
                 successCall = partial(log_warning, successCall)
+            assertTakesOneArgument(successCall)
+            self.setSuccessCall(successCall)
         if errorCall != None:
             if type(errorCall) in (str, unicode):
-                errorCall = partial(log_warning, errorCall)
-                        
-        assertTakesOneArgument(successCall)
-        assertTakesOneArgument(errorCall)
+                errorCall = partial(log_warning, errorCall)            
+            assertTakesOneArgument(errorCall)
+            self.setErrorCall(errorCall)
         
         self._call = call
         self._mutex = mutex
-        self.setSuccessCall(successCall)
-        self.setErrorCall(errorCall)
         
     def setSuccessCall(self, successCall):
         self._success = successCall
@@ -84,7 +92,11 @@ class CallBase(object):
                 errorMessage = u"GitHub Error: %s" % unicode(e)
             log_warning(errorMessage)
         except:
-            errorMessage = u"Exception during asynchronous call"
+            exc_info = sys.exc_info()
+            typeName = u"Unknown Exception"
+            if exc_info[0] != None:
+                typeName = unicode(exc_info[0].__name__)
+            errorMessage = u"%s: %s" % (typeName, unicode(exc_info[1]))
             log_exception(errorMessage)
         self.callError(errorMessage)
             
@@ -150,3 +162,5 @@ class AsyncCall(QThread, CallBase):
     def run(self):
         self.processCall(self._prevResult)
         
+if __name__ == '__main__':
+    getArgSpec(partial(partial(int, base=2)))
