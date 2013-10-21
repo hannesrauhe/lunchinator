@@ -9,6 +9,7 @@ class TwitterDownloadThread(Thread):
     def __init__(self, event):
         super(TwitterDownloadThread, self).__init__()
         self._twitter_api = None
+        self._own_screen_name = ""
         self._screen_names = []
         self._old_pic_urls = {}
         self._since_ids = {}
@@ -29,6 +30,27 @@ class TwitterDownloadThread(Thread):
                     self._old_pic_urls[s]=""
                 if not self._since_ids.has_key(s):
                     self._since_ids[s]=0
+                    
+    def get_screen_names(self):
+        return self._screen_names
+                    
+    def add_screen_name(self,s):
+        with self._lock:
+            if not s in self._screen_names:
+                self._screen_names.append(s)
+                if not self._old_pic_urls.has_key(s):
+                    self._old_pic_urls[s]=""
+                if not self._since_ids.has_key(s):
+                    self._since_ids[s]=0
+                    
+    def get_remote_callers(self):
+        return self._remote_callers
+                    
+    def add_remote_caller(self,value):
+        remote_caller = value[1:] if value[0]=="@" else value
+        with self._lock:
+            if not remote_caller in self._remote_callers:
+                self._remote_callers.append(remote_caller)
             
     def authenticate(self,key,secret,at_key,at_secret):
         with self._lock:
@@ -40,11 +62,17 @@ class TwitterDownloadThread(Thread):
                                  access_token_secret=at_secret,
                                  debugHTTP=False)
                     self._mentions_since_id = 0
-                    return True
                 except:
                     log_exception("Twitter: authentication with twitter failed: check settings")
                     self._twitter_api = None
                     return False
+                try:
+                    self._own_screen_name = self._twitter_api.VerifyCredentials().GetScreenName()
+                except:
+                    log_exception("Twitter: was not able to find my screen_name")
+                    self._twitter_api = None
+                    return False
+                    
             else:
                 log_error("Twitter: provide keys and secrets in settings")
                 self._twitter_api = None
@@ -73,29 +101,30 @@ class TwitterDownloadThread(Thread):
                 u = urls[0]
                 get_server().call("HELO_REMOTE_PIC %s %s:%s"%(u[0],account_name,u[1]))
                 
-    def _find_remote_calls(self):        
-        if 0 == self._mentions_since_id:
-            #determine the start
-            ments = self._twitter_api.GetMentions(count=1)
-            if len(ments):
-                self._mentions_since_id = ments[0].GetId()
-            else:
-                self._mentions_since_id = 1
-            log_debug("Twitter: Starting with mentions ID",self._mentions_since_id)            
-        
-        ments = self._twitter_api.GetMentions(since_id=self._mentions_since_id)
-        if 0==len(ments):
-            log_debug("Twitter: Nobody mentioned me since",self._mentions_since_id)
-            return
-        self._mentions_since_id = ments[0].GetId()
-        for m in ments:
-            log_debug("Twitter: I was mentioned:",m.GetUser(),m.GetText())
-            s_name = m.GetUser().GetScreenName()
-            if s_name not in self._remote_callers:
-                log_debug("Twitter: I do not know him")
-                continue
-            get_server().call("Remote call by @%s: %s"%(s_name,m.GetText()))
+    def _find_remote_calls(self):
+        get_server().call("HELO_TWITTER_REMOTE %s"%self._own_screen_name)          
+        with self._lock:        
+            if 0 == self._mentions_since_id:
+                #determine the start
+                ments = self._twitter_api.GetMentions(count=1)
+                if len(ments):
+                    self._mentions_since_id = ments[0].GetId()
+                else:
+                    self._mentions_since_id = 1
+                log_debug("Twitter: Starting with mentions ID",self._mentions_since_id)            
             
+            ments = self._twitter_api.GetMentions(since_id=self._mentions_since_id)
+            if 0==len(ments):
+                log_debug("Twitter: Nobody mentioned me since",self._mentions_since_id)
+                return
+            self._mentions_since_id = ments[0].GetId()
+            for m in ments:
+                log_debug("Twitter: I was mentioned:",m.GetUser(),m.GetText())
+                s_name = m.GetUser().GetScreenName()
+                if s_name not in self._remote_callers:
+                    log_debug("Twitter: I do not know him")
+                    continue
+                get_server().call("Remote call by @%s: %s"%(s_name,m.GetText()))            
         
                 
     def run(self):        
@@ -138,6 +167,7 @@ class twitter_lunch(iface_called_plugin):
         self.stopEvent.set()
         #TODO: join thread
         iface_called_plugin.deactivate(self)
+        #TODO: write back screen_names
         
     def authenticate(self,oldv=None,newv=None):
         self.dthread.authenticate(self.options["key"],self.options["secret"],self.options["at_key"],self.options["at_secret"])
@@ -153,7 +183,12 @@ class twitter_lunch(iface_called_plugin):
         pass
         
     def process_event(self,cmd,value,_,__):
-        pass
+        if cmd=="HELO_REQUEST_TWITTER_PIC":
+            self.dthread.add_screen_name(value)
+            log_debug("Now following these streams for pics:",str(self.dthread.get_screen_names()))
+        elif cmd=="HELO_TWITTER_USER":
+            self.dthread.add_remote_caller(value)
+            log_debug("Now accepting remote calls from:",str(self.dthread.get_remote_callers()))            
 
     def process_message(self,msg,addr,member_info):
         pass        

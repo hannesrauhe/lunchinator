@@ -34,6 +34,7 @@ class twitter_status(iface_called_plugin):
             screen_name = value[1:] if value[0]=="@" else value
             self.remote_account=screen_name
             self.remote_member=member_info['name'] if member_info and member_info.has_key("name") else ip
+            get_server().call("HELO_TWITTER_USER %s"%self.options["twitter_account"])
             
     def create_options_widget(self, parent):
         from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox
@@ -45,7 +46,7 @@ class twitter_status(iface_called_plugin):
             if len(self.remote_account)==0:
                 msg = "Nobody in your network has configured a remote account - remote calls not possible"
             else:
-                msg = "Mention %s in a tweet to trigger a remote call from %s"%(self.remote_account,self.remote_member)
+                msg = "Mention @%s in a tweet to trigger a remote call from %s"%(self.remote_account,self.remote_member)
         else:
             msg = "Fill in your twitter account to allow remote lunch calls from it"
         
