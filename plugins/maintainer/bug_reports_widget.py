@@ -3,7 +3,7 @@ from PyQt4.QtCore import pyqtSlot, Qt, QVariant
 from lunchinator import log_error, log_warning, log_debug
 from lunchinator.table_models import TableModelBase
 from lunchinator.login_dialog import LoginDialog
-import json, httplib
+import webbrowser
 from functools import partial
 from maintainer.github import Github
 from maintainer.callables import SyncCall, AsyncCall
@@ -25,16 +25,19 @@ class BugReportsWidget(QWidget):
         self.dropdown_reports = QComboBox(self)
         self.dropdown_reports.setModel(self.issuesComboModel)
         self.display_report()
-        self.close_report_btn = QPushButton("Close Bug", self)
+        self.details_btn = QPushButton("Details", self)
+        self.details_btn.setEnabled(False)
+        self.close_report_btn = QPushButton("Close", self)
         self.close_report_btn.setEnabled(False)
         
         self.logInOutButton = QPushButton("Log in to GitHub", self)
         self.logInOutButton.setEnabled(False)
         
         topLayout = QHBoxLayout()
-        topLayout.addWidget(self.dropdown_reports)
+        topLayout.addWidget(self.dropdown_reports, 1)
+        topLayout.addWidget(self.details_btn)
         topLayout.addWidget(self.close_report_btn)
-        topLayout.addWidget(QWidget(self), 1)
+        topLayout.addSpacing(20)
         topLayout.addWidget(self.logInOutButton)
         
         layout.addLayout(topLayout)
@@ -47,6 +50,7 @@ class BugReportsWidget(QWidget):
                 
         self.dropdown_reports.currentIndexChanged.connect(self.display_report)
         self.close_report_btn.clicked.connect(self.close_report)
+        self.details_btn.clicked.connect(self.displayReportDetails)
         self.logInOutButton.clicked.connect(self.logInOrOut)
         
         self.logIn(force=False, updateReports=True)
@@ -164,7 +168,8 @@ class BugReportsWidget(QWidget):
             log_debug("Removing issue %s", removedKey)
             self.issuesComboModel.externalRowRemoved(removedKey)
            
-        self.close_report_btn.setEnabled(self.issuesComboModel.rowCount() > 0)   
+        self.close_report_btn.setEnabled(self.issuesComboModel.rowCount() > 0)
+        self.details_btn.setEnabled(self.issuesComboModel.rowCount() > 0)
     
     def closeReportFailed(self, message):
         QMessageBox.critical(self, "Error closing report", "Could not close report: %s" % message, buttons=QMessageBox.Ok, defaultButton=QMessageBox.Ok)
@@ -178,6 +183,14 @@ class BugReportsWidget(QWidget):
             displayError = SyncCall(self.closeReportFailed)
             closeReport = AsyncCall(self, self.async_closeReport, successCall=updateReports, errorCall=displayError)
             closeReport(selectedIssue)
+            
+    def displayReportDetails(self):
+        selectedIssue = self.selectedIssue()
+        if selectedIssue == None:
+            return
+        url = selectedIssue.html_url
+        if url != None:
+            webbrowser.open(url, new=2)
             
     ################ ASYNCHRONOUS #####################
     
