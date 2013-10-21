@@ -3,7 +3,7 @@ from PyQt4.QtCore import pyqtSlot, Qt, QVariant
 from lunchinator import log_error, log_warning, log_debug
 from lunchinator.table_models import TableModelBase
 from lunchinator.login_dialog import LoginDialog
-import json, httplib
+import webbrowser
 from functools import partial
 from maintainer.github import Github
 from maintainer.callables import SyncCall, AsyncCall
@@ -25,15 +25,19 @@ class BugReportsWidget(QWidget):
         self.dropdown_reports = QComboBox(self)
         self.dropdown_reports.setModel(self.issuesComboModel)
         self.display_report()
-        self.close_report_btn = QPushButton("Close Bug", self)
+        self.details_btn = QPushButton("Details", self)
+        self.details_btn.setEnabled(False)
+        self.close_report_btn = QPushButton("Close", self)
+        self.close_report_btn.setEnabled(False)
         
         self.logInOutButton = QPushButton("Log in to GitHub", self)
         self.logInOutButton.setEnabled(False)
         
         topLayout = QHBoxLayout()
-        topLayout.addWidget(self.dropdown_reports)
+        topLayout.addWidget(self.dropdown_reports, 1)
+        topLayout.addWidget(self.details_btn)
         topLayout.addWidget(self.close_report_btn)
-        topLayout.addWidget(QWidget(self), 1)
+        topLayout.addSpacing(20)
         topLayout.addWidget(self.logInOutButton)
         
         layout.addLayout(topLayout)
@@ -46,6 +50,7 @@ class BugReportsWidget(QWidget):
                 
         self.dropdown_reports.currentIndexChanged.connect(self.display_report)
         self.close_report_btn.clicked.connect(self.close_report)
+        self.details_btn.clicked.connect(self.displayReportDetails)
         self.logInOutButton.clicked.connect(self.logInOrOut)
         
         self.logIn(force=False, updateReports=True)
@@ -84,6 +89,10 @@ class BugReportsWidget(QWidget):
         self.github = None
         self.logInOutButton.setText("Log in to GitHub")
         
+        updateReportsDropdown = SyncCall(self.updateReportsDropdown)    
+        updateReports = AsyncCall(self, self.update_reports, successCall=updateReportsDropdown, errorCall=updateReportsDropdown)
+        updateReports()
+        
     @pyqtSlot()
     def logInOrOut(self):
         if self.github:
@@ -105,12 +114,17 @@ class BugReportsWidget(QWidget):
         self.logInOutButton.setEnabled(False)
         
         finalCall = self.loginFinished
-        
+
+        # always update reports on successful login
+        updateReportsDropdown = SyncCall(self.updateReportsDropdown, successCall=finalCall, errorCall=finalCall)    
+        finalSuccessCall = AsyncCall(self, self.update_reports, successCall=updateReportsDropdown, errorCall=updateReportsDropdown)
         if updateReports:
-            finalCall = AsyncCall(self, self.update_reports, successCall=finalCall, errorCall=finalCall)
+            finalErrorCall = finalSuccessCall
+        else:
+            finalErrorCall = finalCall  
         
         # initialize lunchinator repository before finishing
-        finalCall = AsyncCall(self, self.initializeLunchinatorRepo, errorCall=finalCall, successCall=finalCall)
+        finalCall = AsyncCall(self, self.initializeLunchinatorRepo, errorCall=finalErrorCall, successCall=finalSuccessCall)
         
         if self.mt.options[u"github_token"]:
             # log in with token
@@ -139,24 +153,49 @@ class BugReportsWidget(QWidget):
         if self.dropdown_reports.currentIndex()>=0:
             self.entry.setText(self.selectedIssue().body)
             
+    def updateReportsDropdown(self, reports):
+        newKeys = set()
+        for issue in reports:
+            newKeys.add(issue.number)
+            self.issues[issue.number] = issue
+            if not self.issuesComboModel.hasKey(issue.number):
+                self.issuesComboModel.externalRowAppended(issue.number, issue)
+            else:
+                self.issuesComboModel.externalRowUpdated(issue.number, issue)
+                
+        oldKeys = set(self.issuesComboModel.keys)
+        for removedKey in oldKeys - newKeys:
+            log_debug("Removing issue %s", removedKey)
+            self.issuesComboModel.externalRowRemoved(removedKey)
+           
+        self.close_report_btn.setEnabled(self.issuesComboModel.rowCount() > 0)
+        self.details_btn.setEnabled(self.issuesComboModel.rowCount() > 0)
+    
+    def closeReportFailed(self, message):
+        QMessageBox.critical(self, "Error closing report", "Could not close report: %s" % message, buttons=QMessageBox.Ok, defaultButton=QMessageBox.Ok)
+    
     def close_report(self):
-        #params = urllib.urlencode({'@number': 12524, '@type': 'issue', '@action': 'show'})
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        conn = httplib.HTTPConnection("api.github.com")
-        body = json.dumps({u"title":u"TestIssue",
-                           u"body":u"Test Body"})
-        conn.request("POST", "", body, headers)
-        response = conn.getresponse()
-        print response.status, response.reason
-        
-        data = response.read()
-        print data
-        
-        conn.close()
-        issue = self.selectedIssue()
-        # TODO implement
-        
+        selectedIssue = self.selectedIssue()
+        if selectedIssue == None:
+            return
+        if QMessageBox.question(self, "Confirmation", "Are you sure you want to close the issue \"%s\"?" % selectedIssue.title, buttons=QMessageBox.Yes | QMessageBox.No, defaultButton=QMessageBox.No) == QMessageBox.Yes:
+            updateReports = AsyncCall(self, self.update_reports)
+            displayError = SyncCall(self.closeReportFailed)
+            closeReport = AsyncCall(self, self.async_closeReport, successCall=updateReports, errorCall=displayError)
+            closeReport(selectedIssue)
+            
+    def displayReportDetails(self):
+        selectedIssue = self.selectedIssue()
+        if selectedIssue == None:
+            return
+        url = selectedIssue.html_url
+        if url != None:
+            webbrowser.open(url, new=2)
+            
     ################ ASYNCHRONOUS #####################
+    
+    def async_closeReport(self, issue):
+        issue.edit(state='closed')
     
     def initializeLunchinatorRepo(self, _ = None):
         repoUser = self.mt.options[u"repo_user"]
@@ -175,15 +214,10 @@ class BugReportsWidget(QWidget):
     def update_reports(self, _ = None):
         if self.lunchinatorRepo != None:
             log_debug("updating bug reports")
-            reports = self.lunchinatorRepo.get_issues(state="open")
-            for issue in reports:
-                self.issues[issue.number] = issue
-                if not self.issuesComboModel.hasKey(issue.number):
-                    self.issuesComboModel.externalRowAppended(issue.number, issue)
-                else:
-                    self.issuesComboModel.externalRowUpdated(issue.number, issue)
+            return self.lunchinatorRepo.get_issues(state="open")
         else:
             log_warning("Cannot update bug reports, no repository")
+            return []
             
     def fetchOAuthToken(self):
         return self.github.get_user().get_authorizations()[0].token
