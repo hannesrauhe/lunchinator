@@ -45,7 +45,7 @@ class twitter_status(iface_called_plugin):
             if len(self.remote_account)==0:
                 msg = "Nobody in your network has configured a remote account - remote calls not possible"
             else:
-                msg = "Mention %s in a tweet to trigger a remote call from %s"%(self.remote_account,self.remote_member)
+                msg = "Mention @%s in a tweet to trigger a remote call from %s"%(self.remote_account,self.remote_member)
         else:
             msg = "Fill in your twitter account to allow remote lunch calls from it"
         
