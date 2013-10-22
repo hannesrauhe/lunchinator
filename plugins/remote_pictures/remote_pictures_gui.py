@@ -37,5 +37,5 @@ class UpdatingImage(ResizingImageLabel):
             self.setRawPixmap(QPixmap.fromImage(qtimage))
             return True
         except:
-            log_exception("Something went wrong when trying to display the webcam image")
+            log_exception("Something went wrong when trying to display the remote picture")
             return False

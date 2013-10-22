@@ -87,51 +87,57 @@ class TwitterDownloadThread(Thread):
 
     def _get_pics_from_account(self,account_name):
         with self._lock:
-            urls = []
-            tweets = self._twitter_api.GetUserTimeline(screen_name=account_name,since_id=self._since_ids[account_name])
-            if 0==len(tweets):
-                log_debug(("Twitter: no new tweets from %s since"%str(account_name)),self._since_ids[account_name])
-                return
-            
-            self._since_ids[account_name] = tweets[0].GetId()
-            
             try:
-                for media in tweets[0].media:
-                    urls.append((media["media_url"],tweets[0].text))
-            except:
-                item = tweets[0].AsDict()
-                urls = [(url,item['text']) for url in item['text'].split(" ") if url.startswith("http")]  
-                 
-            log_debug("Twitter: from %s extracted URLs: %s"%(str(account_name),str(urls)))  
-            if len(urls):
-            #for u in urls:
-                self.announce_pic(account_name, urls[0])
-                self._old_pic_urls[account_name]=urls[0]
+                urls = []
+                tweets = self._twitter_api.GetUserTimeline(screen_name=account_name,since_id=self._since_ids[account_name])
+                if 0==len(tweets):
+                    log_debug(("Twitter: no new tweets from %s since"%str(account_name)),self._since_ids[account_name])
+                    return
+                
+                self._since_ids[account_name] = tweets[0].GetId()
+                
+                try:
+                    for media in tweets[0].media:
+                        urls.append((media["media_url"],tweets[0].text))
+                except:
+                    item = tweets[0].AsDict()
+                    urls = [(url,item['text']) for url in item['text'].split(" ") if url.startswith("http")]  
+                     
+                log_debug("Twitter: from %s extracted URLs: %s"%(str(account_name),str(urls)))  
+                if len(urls):
+                #for u in urls:
+                    self.announce_pic(account_name, urls[0])
+                    self._old_pic_urls[account_name]=urls[0]
+            except twitter.TwitterError as t:
+                log_error("Twitter: Error while trying to retrieve pics",str(t))
                 
     def _find_remote_calls(self):
         get_server().call("HELO_TWITTER_REMOTE %s"%self._own_screen_name)          
-        with self._lock:        
-            if 0 == self._mentions_since_id:
-                #determine the start
-                ments = self._twitter_api.GetMentions(count=1)
-                if len(ments):
-                    self._mentions_since_id = ments[0].GetId()
-                else:
-                    self._mentions_since_id = 1
-                log_debug("Twitter: Starting with mentions ID",self._mentions_since_id)            
-            
-            ments = self._twitter_api.GetMentions(since_id=self._mentions_since_id)
-            if 0==len(ments):
-                log_debug("Twitter: Nobody mentioned me since",self._mentions_since_id)
-                return
-            self._mentions_since_id = ments[0].GetId()
-            for m in ments:
-                log_debug("Twitter: I was mentioned:",m.GetUser(),m.GetText())
-                s_name = m.GetUser().GetScreenName()
-                if s_name not in self._remote_callers:
-                    log_debug("Twitter: I do not know him")
-                    continue
-                get_server().call("Remote call by @%s: %s"%(s_name,m.GetText()))            
+        with self._lock:      
+            try:  
+                if 0 == self._mentions_since_id:
+                    #determine the start
+                    ments = self._twitter_api.GetMentions(count=1)
+                    if len(ments):
+                        self._mentions_since_id = ments[0].GetId()
+                    else:
+                        self._mentions_since_id = 1
+                    log_debug("Twitter: Starting with mentions ID",self._mentions_since_id)            
+                
+                ments = self._twitter_api.GetMentions(since_id=self._mentions_since_id)
+                if 0==len(ments):
+                    log_debug("Twitter: Nobody mentioned me since",self._mentions_since_id)
+                    return
+                self._mentions_since_id = ments[0].GetId()
+                for m in ments:
+                    log_debug("Twitter: I was mentioned:",m.GetUser(),m.GetText())
+                    s_name = m.GetUser().GetScreenName()
+                    if s_name not in self._remote_callers:
+                        log_debug("Twitter: I do not know him")
+                        continue
+                    get_server().call("Remote call by @%s: %s"%(s_name,m.GetText()))   
+            except twitter.TwitterError as t:
+                log_error("Twitter: Error while trying to retrieve mentions",str(t))   
         
                 
     def run(self):        
