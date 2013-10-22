@@ -1,15 +1,6 @@
 eclipse.preferences.version=1
 encoding//plugins/lunch_menu_structured/__init__.py=utf-8
 encoding//plugins/lunch_menu_structured/lunch_menu_structured_gui.py=utf-8
-encoding//plugins/maintainer/github/AuthenticatedUser.py=utf-8
-encoding//plugins/maintainer/github/Authorization.py=utf-8
-encoding//plugins/maintainer/github/AuthorizationApplication.py=utf-8
-encoding//plugins/maintainer/github/GithubException.py=utf-8
-encoding//plugins/maintainer/github/GithubObject.py=utf-8
-encoding//plugins/maintainer/github/MainClass.py=utf-8
-encoding//plugins/maintainer/github/PaginatedList.py=utf-8
-encoding//plugins/maintainer/github/Requester.py=utf-8
-encoding//plugins/maintainer/github/__init__.py=utf-8
 encoding//plugins/twitter_lunch/requests/adapters.py=utf-8
 encoding//yapsy/ConfigurablePluginManager.py=utf-8
 encoding//yapsy/IPlugin.py=utf-8

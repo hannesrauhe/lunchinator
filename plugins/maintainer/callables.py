@@ -2,7 +2,6 @@ from lunchinator import log_exception, log_warning, log_debug
 import inspect, sys
 from functools import partial
 from PyQt4.QtCore import QThread, pyqtSignal
-from maintainer.github import GithubException
 
 def getArgSpec(aCallable):
     if inspect.isfunction(aCallable):
@@ -85,12 +84,6 @@ class CallBase(object):
                 
             self.callSuccess(result)
             return
-        except GithubException as e:
-            if u'message' in e.data:
-                errorMessage = u"GitHub Error: %s" % (e.data[u'message'])
-            else:
-                errorMessage = u"GitHub Error: %s" % unicode(e)
-            log_warning(errorMessage)
         except:
             exc_info = sys.exc_info()
             typeName = u"Unknown Exception"
