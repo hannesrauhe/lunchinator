@@ -1,4 +1,4 @@
-from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit
+from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QMessageBox
 from PyQt4.QtCore import pyqtSlot, QThread, Qt, QVariant
 from lunchinator import log_error, log_debug, log_warning
 from lunchinator.download_thread import DownloadThread
@@ -41,6 +41,7 @@ class BugReportsWidget(QWidget):
         self.mt = mt
         
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
         
         self.entry = QTextEdit(self)
         
@@ -53,10 +54,12 @@ class BugReportsWidget(QWidget):
         self.display_report()
         self.details_btn = QPushButton("Details", self)
         self.details_btn.setEnabled(False)
+        create_report_btn = QPushButton("New Bug Report", self)
         
         topLayout = QHBoxLayout()
         topLayout.addWidget(self.dropdown_reports, 1)
         topLayout.addWidget(self.details_btn)
+        topLayout.addWidget(create_report_btn)
         layout.addLayout(topLayout)
 
         layout.addWidget(QLabel("Description:", self))
@@ -67,6 +70,10 @@ class BugReportsWidget(QWidget):
                 
         self.dropdown_reports.currentIndexChanged.connect(self.display_report)
         self.details_btn.clicked.connect(self.displayReportDetails)
+        create_report_btn.clicked.connect(self.createBugReport)
+
+    def repoChanged(self):
+        self.update_reports()
 
     def displayReportDetails(self):
         selectedIssue = self.selectedIssue()
@@ -105,6 +112,17 @@ class BugReportsWidget(QWidget):
             thread.start()
         else:
             log_warning("No Lunchinator GitHub repository specified.")
+            
+    def createBugReport(self):
+        repoUser = self.mt.options[u"repo_user"]
+        repoName = self.mt.options[u"repo_name"]
+        if repoUser and repoName:
+            url = "https://github.com/%s/%s/issues/new" % (repoUser, repoName)
+            if url != None:
+                webbrowser.open(url, new=2)
+        else:
+            log_warning("No Lunchinator GitHub repository specified.")
+            QMessageBox.critical(self, "No Repository", "No Lunchinator GitHub repository specified.", buttons=QMessageBox.Ok, defaultButton=QMessageBox.Ok)
         
     def selectedIssue(self):
         issueID = self.dropdown_reports.itemData(self.dropdown_reports.currentIndex(), IssuesComboModel.KEY_ROLE).toInt()[0]

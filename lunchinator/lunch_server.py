@@ -451,11 +451,11 @@ class lunch_server(object):
                    u"platform": sys.platform}
         
         if getPlatform() == PLATFORM_LINUX:
-            info_d[u"os"] = u" ".join(platform.linux_distribution())
+            info_d[u"os"] = u" ".join(aString if type(aString) in (str, unicode) else "[%s]" % " ".join(aString) for aString in platform.mac_ver())
         elif getPlatform() == PLATFORM_WINDOWS:
-            info_d[u"os"] = u" ".join(platform.win32_ver())
+            info_d[u"os"] = u" ".join(aString if type(aString) in (str, unicode) else "[%s]" % " ".join(aString) for aString in platform.mac_ver())
         elif getPlatform() == PLATFORM_MAC:
-            info_d[u"os"] = u" ".join(platform.mac_ver())
+            info_d[u"os"] = u" ".join(aString if type(aString) in (str, unicode) else "[%s]" % " ".join(aString) for aString in platform.mac_ver())
             
         if get_settings().get_next_lunch_begin():
             info_d[u"next_lunch_begin"] = get_settings().get_next_lunch_begin()

@@ -7,25 +7,9 @@ import subprocess
 class maintainer(iface_gui_plugin):
     def __init__(self):
         super(maintainer, self).__init__()
-        self.options = [((u"db_connection", u"DB Connection", [u'auto']+get_server().getAvailableDBConnections()),"auto"),
-                        ((u"github_token", u"GitHub OAuth Token"), ""),
-                        ((u"repo_name", "GitHub Repository Name"), ""),
-                        ((u"repo_user", "GitHub Repository Owner"), "")]
         self.recorded_reports = []
         self.dbPluginErrorPrinted = False
         self.w = None
-        
-    def getBugsFromDB(self,mode="open"):
-        stats = get_server().getDBConnection(self.options["db_connection"])
-        if stats == None:
-            log_error("Maintainer Plugin: Cannot read old bug reports, no DB Connection.")
-            return []
-        else:
-            try:
-                return stats.getBugsFromDB(mode)
-            except:
-                log_exception("Could not get bug reports from database")
-                return []
         
     def activate(self):
         iface_gui_plugin.activate(self)  
@@ -36,7 +20,7 @@ class maintainer(iface_gui_plugin):
     def create_widget(self, parent):
         from maintainer.maintainer_gui import maintainer_gui
         iface_gui_plugin.create_widget(self, parent)
-        self.w = maintainer_gui(parent, self)
+        self.w = maintainer_gui(parent)
         
         get_server().controller.memberAppendedSignal.connect(self.w.info_table_model.externalRowAppended)
         get_server().controller.memberUpdatedSignal.connect(self.w.info_table_model.externalRowUpdated)
