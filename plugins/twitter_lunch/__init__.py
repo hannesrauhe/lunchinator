@@ -18,6 +18,10 @@ class TwitterDownloadThread(Thread):
         self._polling_time = 60
         self._mentions_since_id = 0
         self._remote_callers = []
+            
+    def announce_pic(self,account_name,url_text_tuple):
+        if len(url_text_tuple[0]):
+            get_server().call("HELO_REMOTE_PIC %s %s: %s"%(url_text_tuple[0],account_name,url_text_tuple[1]))   
         
     def set_polling_time(self,v):
         self._polling_time = v
@@ -27,7 +31,7 @@ class TwitterDownloadThread(Thread):
             self._screen_names = vlist
             for s in vlist:
                 if not self._old_pic_urls.has_key(s):
-                    self._old_pic_urls[s]=""
+                    self._old_pic_urls[s]=("","")
                 if not self._since_ids.has_key(s):
                     self._since_ids[s]=0
                     
@@ -39,7 +43,7 @@ class TwitterDownloadThread(Thread):
             if not s in self._screen_names:
                 self._screen_names.append(s)
                 if not self._old_pic_urls.has_key(s):
-                    self._old_pic_urls[s]=""
+                    self._old_pic_urls[s]=("","")
                 if not self._since_ids.has_key(s):
                     self._since_ids[s]=0
                     
@@ -51,6 +55,9 @@ class TwitterDownloadThread(Thread):
         with self._lock:
             if not remote_caller in self._remote_callers:
                 self._remote_callers.append(remote_caller)
+                
+    def get_old_pic_urls(self):
+        return self._old_pic_urls
             
     def authenticate(self,key,secret,at_key,at_secret):
         with self._lock:
@@ -98,8 +105,8 @@ class TwitterDownloadThread(Thread):
             log_debug("Twitter: from %s extracted URLs: %s"%(str(account_name),str(urls)))  
             if len(urls):
             #for u in urls:
-                u = urls[0]
-                get_server().call("HELO_REMOTE_PIC %s %s:%s"%(u[0],account_name,u[1]))
+                self.announce_pic(account_name, urls[0])
+                self._old_pic_urls[account_name]=urls[0]
                 
     def _find_remote_calls(self):
         get_server().call("HELO_TWITTER_REMOTE %s"%self._own_screen_name)          
@@ -138,7 +145,8 @@ class TwitterDownloadThread(Thread):
                 except:
                     log_exception("Twitter: Error while accessing twitter timeline of user ",account_name)
             
-            self._find_remote_calls()
+            self._find_remote_calls()        
+        
 
 class twitter_lunch(iface_called_plugin):
     def __init__(self):
@@ -183,9 +191,16 @@ class twitter_lunch(iface_called_plugin):
         pass
         
     def process_event(self,cmd,value,_,__):
-        if cmd=="HELO_REQUEST_TWITTER_PIC":
-            self.dthread.add_screen_name(value)
-            log_debug("Now following these streams for pics:",str(self.dthread.get_screen_names()))
+        if cmd.startswith("HELO_REQUEST_PIC"):
+            if cmd=="HELO_REQUEST_PIC_TWITTER":
+                self.dthread.add_screen_name(value)
+                log_debug("Now following these streams for pics:",str(self.dthread.get_screen_names()))
+            if self.dthread.get_old_pic_urls().has_key(value):
+                self.dthread.announce_pic(value, self.dthread.get_old_pic_urls()[value])
+            else:
+                for account_name,u in self.dthread.get_old_pic_urls().iteritems():
+                    self.dthread.announce_pic(account_name, u)            
+            
         elif cmd=="HELO_TWITTER_USER":
             self.dthread.add_remote_caller(value)
             log_debug("Now accepting remote calls from:",str(self.dthread.get_remote_callers()))            
