@@ -20,24 +20,36 @@ class groups_dropdown(iface_gui_plugin):
     def add_group(self):
         from PyQt4.QtGui import QStandardItem, QStandardItemModel
         self.dropdown_groups_model = QStandardItemModel()
-        values = [get_settings().get_group()]+get_server().get_groups().values()
+        values = [get_settings().get_group()]+list(get_server().get_groups())
         for group in set(values):
             self.dropdown_groups_model.appendRow(QStandardItem(group))        
         self.dropdown_groups.setModel(self.dropdown_groups_model)
         log_debug("Group added to dropdown")
+        
+    def change_group(self,w):
+        pass
     
     def create_widget(self, parent):
-        from PyQt4.QtGui import QComboBox, QStandardItemModel, QStandardItem, QWidget, QVBoxLayout, QLabel, QSizePolicy
+        from PyQt4.QtGui import QComboBox, QStandardItemModel, QStandardItem, QWidget, QHBoxLayout, QLabel, QSizePolicy, QPushButton
         from PyQt4.QtCore import QTimer, Qt
 
         iface_gui_plugin.create_widget(self, parent)        
         
         widget = QWidget(parent)
         self.dropdown_groups = QComboBox(widget)
+        self.but = QPushButton("Change Group", widget)
         self.add_group()
         
+        layout = QHBoxLayout(widget)
+        layout.addWidget(self.dropdown_groups)
+        layout.addWidget(self.but)
+        
+        self.but.clicked.connect(self.change_group)
+        
         get_server().controller.groupAppendedSignal.connect(self.add_group)
-        #widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)        
+        
+        widget.setMaximumHeight(widget.sizeHint().height())
+        widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)        
         return widget
     
     def add_menu(self,menu):
