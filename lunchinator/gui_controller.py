@@ -4,7 +4,7 @@ from lunchinator import get_server, log_exception, log_info, get_settings,\
 import socket,os,time, subprocess
 import platform
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
-from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QByteArray, QCoreApplication, QTimer
+from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplication, QTimer
 from PyQt4 import QtCore
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
@@ -31,8 +31,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     memberRemovedSignal = pyqtSignal(unicode)
     messagePrependedSignal = pyqtSignal(time.struct_time, list)
     groupAppendedSignal = pyqtSignal(unicode, dict)
-    _sendFile = pyqtSignal(unicode, QByteArray, int, bool)
-    _receiveFile = pyqtSignal(unicode, int, unicode)
+    _sendFile = pyqtSignal(unicode, bytearray, int, bool)
+    _receiveFile = pyqtSignal(unicode, int, unicode, int)
     _processEvent = pyqtSignal(unicode, unicode, unicode)
     _processMessage = pyqtSignal(unicode, unicode)
     _processLunchCall = pyqtSignal(unicode, unicode)
@@ -204,7 +204,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def serverStopped(self, exitCode):
         # usually, the emitted signal won't be processed anyway (plug-ins deactivated in quit())
         if exitCode == EXIT_CODE_UPDATE:
-            print "foo"
             self.serverThread.finished.disconnect(self.serverFinishedUnexpectedly)
             self._updateRequested.emit()
         
@@ -222,19 +221,23 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
     def groupAppended(self, group, peer_groups):
         self.groupAppendedSignal.emit(group, peer_groups)
-    
-    def receiveFile(self, ip, fileSize, fileName):
-        self._receiveFile.emit(ip, fileSize, fileName)
-    
+
     def extendMemberInfo(self, infoDict):
         infoDict['pyqt_version'] = QtCore.PYQT_VERSION_STR
         infoDict['qt_version'] = QtCore.QT_VERSION_STR
+            
+    def getOpenTCPPort(self, senderIP):
+        assert senderIP != None
+        return DataReceiverThread.getOpenPort(category = "avatar%s" % senderIP)
+    
+    def receiveFile(self, ip, fileSize, fileName, tcp_port):
+        self._receiveFile.emit(ip, fileSize, fileName, tcp_port)
     
     def sendFile(self, ip, fileOrData, otherTCPPort, isData = False):
         if not isData and type(fileOrData) == unicode:
             # encode to send as str
             fileOrData = fileOrData.encode('utf-8')
-        self._sendFile.emit(ip, QByteArray.fromRawData(fileOrData), otherTCPPort, isData)
+        self._sendFile.emit(ip, bytearray(fileOrData), otherTCPPort, isData)
 
     """ process any non-message event """    
     def processEvent(self, cmd, hostName, senderIP):
@@ -412,7 +415,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         get_server().call("HELO_INFO "+get_server()._build_info_string())        
 
-    @pyqtSlot(unicode, QByteArray, int, bool)
+    @pyqtSlot(unicode, bytearray, int, bool)
     def sendFileSlot(self, addr, fileToSend, other_tcp_port, isData):
         addr = convert_string(addr)
         if isData:
@@ -422,12 +425,20 @@ class LunchinatorGuiController(QObject, LunchServerController):
         ds = DataSenderThread(self,addr,fileToSend, other_tcp_port, isData)
         ds.finished.connect(ds.deleteLater)
         ds.start()
+        
+    def successfullyReceivedFile(self, _thread, filePath):
+        log_info("successfully received file %s" % filePath)
+        
+    def errorOnTransfer(self, _thread):
+        log_error("Error receiving file")
     
-    @pyqtSlot(unicode, int, unicode)
-    def receiveFileSlot(self, addr, file_size, file_name):
+    @pyqtSlot(unicode, int, unicode, int)
+    def receiveFileSlot(self, addr, file_size, file_name, tcp_port):
         addr = convert_string(addr)
         file_name = convert_string(file_name)
-        dr = DataReceiverThread(self,addr,file_size,file_name,get_settings().get_tcp_port())
+        dr = DataReceiverThread(self,addr,file_size,file_name,tcp_port,category="avatar%s" % addr)
+        dr.successfullyTransferred.connect(self.successfullyReceivedFile)
+        dr.errorOnTransfer.connect(self.errorOnTransfer)
         dr.finished.connect(dr.deleteLater)
         dr.start()
         

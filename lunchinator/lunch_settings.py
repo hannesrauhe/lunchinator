@@ -238,7 +238,7 @@ class lunch_settings(object):
                  
     def get_avatar_file(self):
         return self.get_avatar()
-    def set_avatar_file(self,file_name):  
+    def set_avatar_file(self,file_name,_something):  
         if not os.path.exists(self._avatar_dir+"/"+file_name):
             log_error("avatar does not exist: %s",file_name)
             return

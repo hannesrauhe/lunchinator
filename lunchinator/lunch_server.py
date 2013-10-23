@@ -553,7 +553,7 @@ class lunch_server(object):
             #Request avatar if not there yet
             if self.member_info[ip].has_key("avatar"):
                 if not os.path.exists(get_settings().get_avatar_dir()+"/"+self.member_info[ip]["avatar"]):
-                    self.call("HELO_REQUEST_AVATAR "+str(get_settings().get_tcp_port()),client=ip)     
+                    self.call("HELO_REQUEST_AVATAR "+str(self.controller.getOpenTCPPort(ip)),client=ip)     
       
     def _incoming_event(self,data,ip):   
         if ip.startswith("127."):
@@ -625,7 +625,11 @@ class lunch_server(object):
                
             elif cmd.startswith("HELO_AVATAR"):
                 #someone wants to send me his pic via TCP
-                file_size=int(value.strip())
+                values = value.split()
+                file_size=int(values[0].strip())
+                tcp_port = 0 # 0 means we must guess the port
+                if len(values) > 1:
+                    tcp_port = int(values[1].strip())
                 file_name=""
                 if self.member_info[ip].has_key("avatar"):
                     file_name=get_settings().get_avatar_dir()+os.sep+self.member_info[ip]["avatar"]
@@ -633,8 +637,7 @@ class lunch_server(object):
                     log_error("%s tried to send his avatar, but I don't know where to safe it"%(ip))
                 
                 if len(file_name):
-                    log_info("Receiving file of size %d on port %d"%(file_size,get_settings().get_tcp_port()))
-                    self.controller.receiveFile(ip,file_size,file_name)
+                    self.controller.receiveFile(ip,file_size,file_name,tcp_port)
                 
             elif cmd.startswith("HELO_REQUEST_AVATAR"):
                 #someone wants my pic 
@@ -649,7 +652,9 @@ class lunch_server(object):
                 if os.path.exists(fileToSend):
                     fileSize = os.path.getsize(fileToSend)
                     log_info("Sending file of size %d to %s : %d"%(fileSize,str(ip),other_tcp_port))
-                    self.call("HELO_AVATAR "+str(fileSize), ip)
+                    self.call("HELO_AVATAR %s" % fileSize, ip)
+                    # TODO in a future release, send TCP port
+                    #self.call("HELO_AVATAR %s %s" % (fileSize, other_tcp_port), ip)
                     self.controller.sendFile(ip,fileToSend, other_tcp_port)
                 else:
                     log_error("Want to send file %s, but cannot find it"%(fileToSend))   
@@ -726,6 +731,7 @@ class lunch_server(object):
         try:
             if len(self.members)>self.peer_nr:
                 self.call("HELO_REQUEST_DICT "+self._build_info_string(),client=self.members[self.peer_nr])
-            self.peer_nr=(self.peer_nr+1) % len(self.members)
+            if len(self.members) > 0:
+                self.peer_nr=(self.peer_nr+1) % len(self.members)
         except:
             log_exception("Something went wrong while trying to send a call to the new master")

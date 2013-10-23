@@ -34,6 +34,17 @@ class DataReceiverThread(DataThreadBase):
     inactiveSocketsMutex = QMutex()
     
     def __init__(self, parent, sender, size, file_path, portOrSocket, category = None): 
+        """
+        Create a new data receiver thread.
+        :param parent Parent QObject
+        :param sender IP of the sender (string)
+        :param size Size in Bytes of the file to receive (int)
+        :param file_path Path to store the received file (string)
+        :param portOrSocket The TCP port to receive the file from or alternatively an opened socket object.
+               You can pass 0 if you opened the port via DataReceiverThread.getOpenPort and don't know the port. (int / socket)
+        :param category If the port was opened by DataReceiverThread.getOpenPort, the category that was specified (string)
+        """
+        # TODO accept file object as alternative to file path
         super(DataReceiverThread, self).__init__(parent, file_path, portOrSocket)
         self.sender = sender
         self.size = size

@@ -1,5 +1,5 @@
 """Base class for Lunch Server Controller classes"""
-from lunchinator import get_server, get_settings
+from lunchinator import get_server, get_settings, log_info
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
 from lunchinator.iface_plugins import iface_called_plugin
 from lunchinator.utilities import processPluginCall
@@ -29,7 +29,14 @@ class LunchServerController(object):
     def extendMemberInfo(self, _infoDict):
         pass
     
-    def receiveFile(self, ip, fileSize, fileName):
+    def getOpenTCPPort(self, _senderIP):
+        # TODO really get open port
+        return get_settings().get_tcp_port()
+    
+    def receiveFile(self, ip, fileSize, fileName, tcp_port):
+        if tcp_port == 0:
+            tcp_port = get_settings().get_tcp_port()
+        log_info("Receiving file of size %d on port %d"%(fileSize,tcp_port))
         dr = DataReceiverThread(ip,fileSize,fileName,get_settings().get_tcp_port())
         dr.start()
     
