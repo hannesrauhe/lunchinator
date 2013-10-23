@@ -47,8 +47,8 @@ class lunch_server(object):
         self.membersLock = Lock()
         self.shared_dict = {} #for plugins
         self.dontSendTo = set()
-        self.unknown_cmd = []
-        self._peer_group = {}
+        self.unknown_cmd = ["HELO_REQUEST_INFO","HELO_INFO"]
+        self._peer_groups = set()
         
         self.exitCode = 0  
         
@@ -230,7 +230,7 @@ class lunch_server(object):
         return self.last_messages
             
     def get_groups(self):  
-        return self._peer_group
+        return self._peer_groups
     
     def get_members(self):  
         return self._members
@@ -463,46 +463,21 @@ class lunch_server(object):
             return True        
         own_group = get_settings().get_group()
         
+        try:
+            (cmd, value) = data.split(" ",1)
+            if cmd.startswith("HELO_INFO"):
+                self._update_peer_info(addr, json.loads(value), requestAvatar=False)
+            elif cmd.startswith("HELO_REQUEST_INFO"):
+                self._update_peer_info(addr, json.loads(value), requestAvatar=False)
+                self.call("HELO_INFO "+self._build_info_string(), client=addr)
+        except:
+            log_exception("was not able to parse Info from",data,addr)
+        
         if len(own_group)==0:
             #accept anything as long as i do not have a group
             return True
-        
-        try:
-            (cmd, value) = data.split(" ",1)
-        except:
-            (cmd, value) = "",data
             
-        if cmd.startswith("HELO_INFO"):
-            self._peer_group[addr] = value
-            self.controller.groupAppended(value, self._peer_group)
-            if value!=own_group:
-                self._remove_member(addr)
-                return False
-            else:
-                self._update_member_info(addr, json.loads(value), requestAvatar=False)
-                return True
-        
-        if cmd.startswith("HELO_REQUEST_INFO"):
-            self._peer_group[addr] = value
-            self.controller.groupAppended(value, self._peer_group)
-            self.call("HELO_INFO "+self._build_info_string(), client=addr)
-            if value!=own_group:
-                self._remove_member(addr)
-                return False
-            else:
-                self._update_member_info(addr, json.loads(value), requestAvatar=False)
-                return True
-                
-        if not self._peer_group.has_key(addr):
-            #not accepting messages if member has no group - policy?
-            self.call("HELO_REQUEST_INFO "+self._build_info_string(), client=addr)
-            self._remove_member(addr)
-            return False
-        
-        if self._peer_group[addr] == own_group:
-            return True
-        
-        return False
+        return self._peer_info.has_key(addr) and self._peer_info[addr].has_key("group") and self._peer_info[addr]["group"] == own_group
         
     def _incoming_call(self,msg,addr):
         mtime = localtime()
@@ -528,13 +503,30 @@ class lunch_server(object):
                 else:
                     log_debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)"%(t,m,msg,strftime("%a, %d %b %Y %H:%M:%S", localtime(timenum + get_settings().get_mute_timeout()))))
       
-    def _update_member_info(self, ip, newInfo, requestAvatar = True):
+    def _update_peer_info(self, ip, newInfo, requestAvatar = True):            
+        peer_group = newInfo["group"] if newInfo.has_key("group") else ""     
+        peer_name = newInfo["name"] if newInfo.has_key("name") else ip
+        own_group = get_settings().get_group()       
+        
+        group_unchanged = self._peer_info.has_key(ip) and self._peer_info[ip].has_key("group") and self._peer_info[ip]==peer_group
         self.lockMembers()
         try:
             self._peer_info[ip] = newInfo
         finally:
             self.releaseMembers()
-        self._memberUpdated(ip)
+        
+        if group_unchanged:
+            if peer_group==own_group:
+                self._memberUpdated(ip)
+        else:
+            if peer_group in self._peer_groups:
+                self._peer_groups.append(peer_group)
+                self.controller.groupAppended(peer_group, self._peer_groups)
+            if peer_group==own_group:
+                self._append_member(ip, peer_name)
+            else:
+                self._remove_member(ip)
+            
         if requestAvatar:
             #Request avatar if not there yet
             if self._peer_info[ip].has_key("avatar"):
@@ -578,7 +570,7 @@ class lunch_server(object):
                     log_info("%s: %s issued an update but updates are disabled"%( t,ip))
                 
             elif cmd.startswith("HELO_REQUEST_DICT"):
-                self._update_member_info(ip, json.loads(value))
+                self._update_peer_info(ip, json.loads(value))
                 self.call("HELO_DICT "+json.dumps(self._createMembersDict()),client=ip)                   
                 
             elif cmd.startswith("HELO_DICT"):
