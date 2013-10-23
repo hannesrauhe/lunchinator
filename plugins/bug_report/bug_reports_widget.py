@@ -112,7 +112,6 @@ class BugReportsWidget(QWidget):
         
         oldKeys = set(self.issuesComboModel.keys)
         for removedKey in oldKeys - newKeys:
-            log_debug("Removing issue %s", removedKey)
             self.issuesComboModel.externalRowRemoved(removedKey)
         self.details_btn.setEnabled(self.issuesComboModel.rowCount() > 0)
         
