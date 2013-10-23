@@ -93,52 +93,7 @@ class lunch_server(object):
             self.plugin_manager.activatePluginByName("General Settings", "general") 
             self.plugin_manager.activatePluginByName("Notify", "called") 
         else:
-            log_info("lunchinator initialised without plugins")  
-
-    def getAvailableDBConnections(self):
-        return [unicode(pluginInfo.name) for pluginInfo in self.plugin_manager.getPluginsOfCategory("db")]
-    
-    def getDBConnection(self,db_name=None):
-        if db_name in [None,"","auto"]:
-            db_name = get_settings().get_default_db_connection()
-            
-        if db_name not in [None,"","auto"]:
-            pluginInfo = self.plugin_manager.getPluginByName(db_name, "db")
-            if pluginInfo and pluginInfo.plugin_object.is_activated:
-                return pluginInfo.plugin_object
-            log_error("No DB connection for %s available, falling back to default"%db_name)
-        
-        for pluginInfo in self.plugin_manager.getPluginsOfCategory("db"):
-            if pluginInfo.plugin_object.is_activated:
-                return pluginInfo.plugin_object
-        log_error("No DB Connection available - activate a db plugin and check settings")
-        return None
-    
-    """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
-    
-    def _determineOwnIP(self):  
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      
-        for m in self.members:
-            try:
-                #connect to UDF discard port 9
-                s.connect((m,9))
-                self.own_ip = unicode(s.getsockname()[0])
-                break
-            except:
-                log_debug("While getting own IP, problem to connect to",m)
-                continue
-        log_debug("Found my IP:",self.own_ip)
-        s.close()
-    
-    def _broadcast(self):
-        try:
-            s_broad = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            s_broad.sendto('HELO_REQUEST_GROUP '+get_settings().get_group(), ('255.255.255.255', 50000))
-            s_broad.close()
-        except:
-            log_exception("Problem while broadcasting")
+            log_info("lunchinator initialised without plugins")
 
     '''listening method - should be started in its own thread'''    
     def start_server(self):
@@ -146,7 +101,7 @@ class lunch_server(object):
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service")
         self.running = True
         self.my_master=-1 #the peer i use as master
-        announce_name=0 #how often did I announce my name
+        announce_name=-1 #how often did I announce my name
         
         self._determineOwnIP()
             
@@ -180,6 +135,9 @@ class lunch_server(object):
                     if len(self.members)>1:
                         if not len(self.own_ip):
                             self._determineOwnIP()
+                        if announce_name==-1:
+                            #first start
+                            self.call("HELO_REQUEST_INFO "+self._build_info_string())
                         if announce_name==10:
                             #it's time to announce my name again and switch the master
                             self.call("HELO "+get_settings().get_user_name())
@@ -204,7 +162,28 @@ class lunch_server(object):
                 s.close()  
             except:
                 log_warning("Wasn't able to send the leave call and close the socket...")
-            self._finish()
+            self._finish()            
+            
+    
+    """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
+    def getAvailableDBConnections(self):
+        return [unicode(pluginInfo.name) for pluginInfo in self.plugin_manager.getPluginsOfCategory("db")]
+    
+    def getDBConnection(self,db_name=None):
+        if db_name in [None,"","auto"]:
+            db_name = get_settings().get_default_db_connection()
+            
+        if db_name not in [None,"","auto"]:
+            pluginInfo = self.plugin_manager.getPluginByName(db_name, "db")
+            if pluginInfo and pluginInfo.plugin_object.is_activated:
+                return pluginInfo.plugin_object
+            log_error("No DB connection for %s available, falling back to default"%db_name)
+        
+        for pluginInfo in self.plugin_manager.getPluginsOfCategory("db"):
+            if pluginInfo.plugin_object.is_activated:
+                return pluginInfo.plugin_object
+        log_error("No DB Connection available - activate a db plugin and check settings")
+        return None
             
     def memberName(self, addr):
         if addr in self.member_info and u'name' in self.member_info[addr]:
@@ -735,3 +714,27 @@ class lunch_server(object):
                 self.peer_nr=(self.peer_nr+1) % len(self.members)
         except:
             log_exception("Something went wrong while trying to send a call to the new master")
+    
+    def _determineOwnIP(self):  
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      
+        for m in self.members:
+            try:
+                #connect to UDF discard port 9
+                s.connect((m,9))
+                self.own_ip = unicode(s.getsockname()[0])
+                break
+            except:
+                log_debug("While getting own IP, problem to connect to",m)
+                continue
+        log_debug("Found my IP:",self.own_ip)
+        s.close()
+    
+    def _broadcast(self):
+        try:
+            s_broad = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            s_broad.sendto('HELO_REQUEST_GROUP '+get_settings().get_group(), ('255.255.255.255', 50000))
+            s_broad.close()
+        except:
+            log_exception("Problem while broadcasting")
