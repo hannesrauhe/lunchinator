@@ -57,7 +57,7 @@ class LunchServerController(object):
         processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
 
     def serverStopped(self, _exit_code):
+        get_settings().write_config_to_hd()
         for pluginInfo in get_server().plugin_manager.getAllPlugins():
             if pluginInfo.plugin_object.is_activated:
                 pluginInfo.plugin_object.deactivate()
-        get_settings().write_config_to_hd()
