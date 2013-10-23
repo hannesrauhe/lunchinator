@@ -155,7 +155,7 @@ class MembersTableModel(TableModelBase):
         self.lunchEndKey = u"next_lunch_end"
         
         # Called before server is running, no need to lock here
-        infoDicts = self.dataSource.get_member_info()
+        infoDicts = self.dataSource.get_peer_info()
         for ip in self.dataSource.get_members():
             infoDict = None
             if ip in infoDicts:
@@ -268,7 +268,7 @@ class ExtendedMembersModel(TableModelBase):
         super(ExtendedMembersModel, self).__init__(dataSource, None)
         self.headerNames = []
         self.mutex = QMutex()
-        self.updateModel(self.dataSource.get_member_info())
+        self.updateModel(self.dataSource.get_peer_info())
     
     """ may be called concurrently """
     @pyqtSlot(dict)

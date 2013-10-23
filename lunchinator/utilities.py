@@ -129,8 +129,8 @@ def getValidQtParent():
     
 def processPluginCall(ip, call):
     member_info = {}
-    if get_server().member_info.has_key(ip):
-        member_info = get_server().member_info[ip]
+    if get_server().get_peer_info().has_key(ip):
+        member_info = get_server().get_peer_info()[ip]
     # called also contains gui plugins
     for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("called")+get_server().plugin_manager.getPluginsOfCategory("gui"):
         if not (isinstance(pluginInfo.plugin_object, iface_called_plugin) or  isinstance(pluginInfo.plugin_object, iface_gui_plugin)):
