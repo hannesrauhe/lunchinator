@@ -129,7 +129,7 @@ class lunch_server(object):
                 continue
         log_debug("Found my IP:",self.own_ip)
         s.close()
-		
+    
     def _broadcast(self):
         try:
             s_broad = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -139,7 +139,7 @@ class lunch_server(object):
             s_broad.close()
         except:
             log_exception("Problem while broadcasting")
-			
+
     '''listening method - should be started in its own thread'''    
     def start_server(self):
         self.initialize()
