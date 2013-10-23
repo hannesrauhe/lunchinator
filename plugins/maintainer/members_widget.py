@@ -286,7 +286,9 @@ class MembersWidget(QWidget):
         self.updateMemberInformation()
         if self.dropdown_members_model == None:
             return
-        for m_ip in get_server().get_members():
+        
+        members = set(get_server().get_members())
+        for m_ip in members:
             m_name = get_server().memberName(m_ip)
             if not m_ip in self.dropdown_members_dict:
                 # is new ip, append to the end
@@ -300,6 +302,12 @@ class MembersWidget(QWidget):
                     anItem = self.dropdown_members_model.item(info[0], column=0)
                     anItem.setText(self.get_dropdown_member_text(m_ip, m_name))
                     self.dropdown_members_dict[m_ip] = (info[0], m_name)
+                    
+        removedMembers = set(self.dropdown_members_dict.keys()) - members
+        for removedMember in removedMembers:
+            info = self.dropdown_members_dict[removedMember]
+            self.dropdown_members_model.removeRow(info[0])
+            del self.dropdown_members_dict[removedMember]
                 
     def listLogFilesForMember(self, member):
         logDir = "%s/logs/%s" % (get_settings().get_main_config_dir(), member)

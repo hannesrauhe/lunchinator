@@ -356,6 +356,9 @@ class lunch_server(object):
         didRemove = False        
         self.lockMembers()
         try:
+            if ip in self.members:
+                self.members.remove(ip)
+                didRemove = True
             if ip in self.member_info:
                 del self.member_info[ip]
                 didRemove=True
