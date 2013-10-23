@@ -127,10 +127,15 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
             except KeyboardInterrupt:
                 print "^C"
     
+    def notifyUpdates(self):
+        super(LunchCommandLineInterface, self).notifyUpdates()
+        print "There are updates available for you. Please exit to fetch the updates."
+        self.prompt = "(update available)> "
+    
     def serverStopped(self, exit_code):
         super(LunchCommandLineInterface, self).serverStopped(exit_code)
         if exit_code == EXIT_CODE_UPDATE:
-            print "There are update available for you. Please exit to fetch the update."
+            self.notifyUpdates()
         elif not self.cleanExit:
             print "Lunch server stopped. You can still use some commands like sending messages, but you have to restart for full functionality."
     

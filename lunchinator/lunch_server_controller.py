@@ -55,6 +55,9 @@ class LunchServerController(object):
     def processLunchCall(self, msg, addr):
         """ process a lunch call """
         processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
+    
+    def notifyUpdates(self):
+        pass
 
     def serverStopped(self, _exit_code):
         get_settings().write_config_to_hd()
