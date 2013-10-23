@@ -55,6 +55,10 @@ class TableModelBase(QStandardItemModel):
             row.append(self.createItem(key, data, column))
         return row
 
+    def insertContentRow(self, key, data, index):
+        self.keys.insert(index, key)
+        self.insertRow(index, self.createRow(key, data))
+        
     def appendContentRow(self, key, data):
         self.keys.append(key)
         self.appendRow(self.createRow(key, data))
@@ -94,6 +98,12 @@ class TableModelBase(QStandardItemModel):
                     
     """ ----------------- SLOTS ------------------- """
             
+    def externalRowInserted(self, key, data, index):
+        if type(key) == QString:
+            key = convert_string(key)
+        data = self._checkDict(data)
+        self.insertContentRow(key, data, index)
+        
     def externalRowAppended(self, key, data):
         if type(key) == QString:
             key = convert_string(key)

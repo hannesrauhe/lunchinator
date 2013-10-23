@@ -101,12 +101,12 @@ class BugReportsWidget(QWidget):
         j = json.loads(thread.getResult())
         
         newKeys = set()
-        for issueDict in j:
+        for i, issueDict in enumerate(j):
             issue = Issue(issueDict)
             newKeys.add(issue.id)
             self.issues[issue.id] = issue
             if not self.issuesComboModel.hasKey(issue.id):
-                self.issuesComboModel.externalRowAppended(issue.id, issue)
+                self.issuesComboModel.externalRowInserted(issue.id, issue, i)
             else:
                 self.issuesComboModel.externalRowUpdated(issue.id, issue)
         

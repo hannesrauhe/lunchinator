@@ -44,6 +44,7 @@ class bug_report_gui(QWidget):
         return QSize(self.PREFERRED_WIDTH, self.PREFERRED_HEIGHT)
 
 if __name__ == '__main__':
+    import os
     class maintainer_wrapper(object):
         reports = []
         options = {u"github_token":"", u"repo_user":u"hannesrauhe", u"repo_name":u"lunchinator"}
