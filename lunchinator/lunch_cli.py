@@ -127,6 +127,7 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
                 print "^C"
     
     def serverStopped(self, exit_code):
+        super(LunchCommandLineInterface, self).serverStopped(exit_code)
         if exit_code == EXIT_CODE_UPDATE:
             print "There are update available for you. Please exit to fetch the update."
         elif not self.cleanExit:

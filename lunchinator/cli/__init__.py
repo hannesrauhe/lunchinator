@@ -179,7 +179,7 @@ class LunchCLIModule(object):
          - The index of the argument we are completing
          - The prefix to complete
         """
-        argNum, text = self.getArgNum(convert_string(text), line, begidx, endidx)
+        argNum, text = self.getArgNum(text, line, begidx, endidx)
         
         if argNum == 1:
             # subcommand
