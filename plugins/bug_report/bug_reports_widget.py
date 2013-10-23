@@ -48,17 +48,19 @@ class BugReportsWidget(QWidget):
         self.issues = {}
         self.issuesComboModel = IssuesComboModel()
         
-        self.update_reports()
         self.dropdown_reports = QComboBox(self)
         self.dropdown_reports.setModel(self.issuesComboModel)
         self.display_report()
         self.details_btn = QPushButton("Details", self)
         self.details_btn.setEnabled(False)
-        create_report_btn = QPushButton("New Bug Report", self)
+        self.refresh_btn = QPushButton("Refresh", self)
+        create_report_btn = QPushButton("New", self)
         
         topLayout = QHBoxLayout()
         topLayout.addWidget(self.dropdown_reports, 1)
         topLayout.addWidget(self.details_btn)
+        topLayout.addWidget(self.refresh_btn)
+        topLayout.addSpacing(20)
         topLayout.addWidget(create_report_btn)
         layout.addLayout(topLayout)
 
@@ -70,7 +72,10 @@ class BugReportsWidget(QWidget):
                 
         self.dropdown_reports.currentIndexChanged.connect(self.display_report)
         self.details_btn.clicked.connect(self.displayReportDetails)
+        self.refresh_btn.clicked.connect(self.update_reports)
         create_report_btn.clicked.connect(self.createBugReport)
+        
+        self.update_reports()
 
     def repoChanged(self):
         self.update_reports()
@@ -82,25 +87,42 @@ class BugReportsWidget(QWidget):
         url = selectedIssue.issueUrl
         if url != None:
             webbrowser.open(url, new=2)
+            
+    def isRepoSpecified(self):
+        repoUser = self.mt.options[u"repo_user"]
+        repoName = self.mt.options[u"repo_name"]
+        if repoUser and repoName:
+            return True
+        return False
 
     @pyqtSlot(QThread, unicode)
     def downloadedIssues(self, thread, _):
+        self.refresh_btn.setEnabled(self.isRepoSpecified())
         j = json.loads(thread.getResult())
         
+        newKeys = set()
         for issueDict in j:
             issue = Issue(issueDict)
+            newKeys.add(issue.id)
             self.issues[issue.id] = issue
             if not self.issuesComboModel.hasKey(issue.id):
                 self.issuesComboModel.externalRowAppended(issue.id, issue)
             else:
                 self.issuesComboModel.externalRowUpdated(issue.id, issue)
+        
+        oldKeys = set(self.issuesComboModel.keys)
+        for removedKey in oldKeys - newKeys:
+            log_debug("Removing issue %s", removedKey)
+            self.issuesComboModel.externalRowRemoved(removedKey)
         self.details_btn.setEnabled(self.issuesComboModel.rowCount() > 0)
         
     @pyqtSlot(QThread, unicode)
     def errorDownloadingIssues(self, _thread, _url):
+        self.refresh_btn.setEnabled(self.isRepoSpecified())
         log_error("Error fetching issues from github.")
 
     def update_reports(self):
+        self.refresh_btn.setEnabled(False)
         repoUser = self.mt.options[u"repo_user"]
         repoName = self.mt.options[u"repo_name"]
         if repoUser and repoName:
