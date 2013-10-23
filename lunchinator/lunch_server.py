@@ -546,6 +546,7 @@ class lunch_server(object):
                 self.exitCode = EXIT_CODE_STOP #run_forever script will stop
             elif data.startswith("HELO_UPDATE"):
                 self.update_request = True
+                self.controller.notifyUpdates()
                 if get_settings().get_auto_update_enabled() and not self.no_updates:
                     log_info("local update")
                     self.running = False
@@ -562,6 +563,7 @@ class lunch_server(object):
             if cmd.startswith("HELO_UPDATE"):
                 t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
                 self.update_request = True
+                self.controller.notifyUpdates()
                 if get_settings().get_auto_update_enabled() and not self.no_updates:
                     log_info("%s: [%s] update"%(t,ip))
                     self.running = False

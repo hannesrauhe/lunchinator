@@ -128,7 +128,7 @@ if __name__ == "__main__":
         retCode = 1
         try:
             from lunchinator import lunch_cli
-            get_server().no_updates = options.noUpdates
+            get_server().no_updates = True
             get_server().set_plugins_enabled(not options.noPlugins)
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
