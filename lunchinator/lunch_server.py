@@ -524,8 +524,8 @@ class lunch_server(object):
             if peer_group==own_group:
                 self._memberUpdated(ip)
         else:
-            if peer_group in self._peer_groups:
-                self._peer_groups.append(peer_group)
+            if peer_group not in self._peer_groups:
+                self._peer_groups.add(peer_group)
                 self.controller.groupAppended(peer_group, self._peer_groups)
             if peer_group==own_group:
                 self._append_member(ip, peer_name)
@@ -700,7 +700,7 @@ class lunch_server(object):
             finally:
                 self.releaseMembers()
         except:
-            log_exception("Something went wrong while trying to clean up the _members-table")
+            log_exception("Something went wrong while trying to clean up the _members-list")
             
     '''ask for the dictionary and send over own information'''
     def _call_for_dict(self):

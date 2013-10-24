@@ -30,7 +30,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     memberUpdatedSignal = pyqtSignal(unicode, dict)
     memberRemovedSignal = pyqtSignal(unicode)
     messagePrependedSignal = pyqtSignal(time.struct_time, list)
-    groupAppendedSignal = pyqtSignal(unicode, dict)
+    groupAppendedSignal = pyqtSignal(unicode, set)
     _sendFile = pyqtSignal(unicode, bytearray, int, bool)
     _receiveFile = pyqtSignal(unicode, int, unicode, int)
     _processEvent = pyqtSignal(unicode, unicode, unicode)
