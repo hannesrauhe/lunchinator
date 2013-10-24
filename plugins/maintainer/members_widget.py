@@ -461,8 +461,8 @@ class MembersWidget(QWidget):
         get_server().lockMembers()
         memberInformation = None
         try:
-            if self.get_selected_log_member() in get_server().get_member_info():
-                memberInformation = copy.deepcopy(get_server().get_member_info()[self.get_selected_log_member()])
+            if self.get_selected_log_member() in get_server().get_peer_info():
+                memberInformation = copy.deepcopy(get_server().get_peer_info()[self.get_selected_log_member()])
         finally:
             get_server().releaseMembers()
             
