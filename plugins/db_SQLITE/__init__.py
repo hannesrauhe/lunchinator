@@ -1,7 +1,46 @@
 from lunchinator.iface_plugins import iface_database_plugin
-import sys,sqlite3,threading,datetime
+import sys,sqlite3,threading,Queue,datetime
 from lunchinator import get_server, get_settings, log_debug
 
+class MultiThreadSQLite(threading.Thread):
+    def __init__(self, db):
+        super(MultiThreadSQLite, self).__init__()
+        self.db=db
+        self.description=None
+        self.last_res=None
+        self.reqs=Queue.Queue()
+        self.start()
+    def run(self):
+        cnx = sqlite3.connect(self.db) 
+        cursor = cnx.cursor()
+        while True:
+            req, arg, res = self.reqs.get()
+            if req=='--commit--': 
+                cnx.commit()
+            else:
+                if req=='--close--': break
+                cursor.execute(req, arg)
+                self.description = cursor.description
+                if res:
+                    for rec in cursor:
+                        res.put(rec)
+                    res.put('--no more--')
+        cnx.close()
+    def execute(self, req, arg=None):
+        self.last_res = Queue.Queue()
+        self.reqs.put((req, arg or tuple(), self.last_res))
+    def fetch(self):
+        while True:
+            rec=self.last_res.get()
+            if rec=='--no more--': break
+            yield rec
+    def fetchall(self):
+        return list(self.fetch())
+    def close(self):
+        self.execute('--close--')
+    def commit(self):
+        self.execute('--commit--')
+        
 class db_SQLITE(iface_database_plugin):    
     VERSION_TABLE = "DB_VERSION"
     DATABASE_VERSION_EMPTY = 0
@@ -24,7 +63,7 @@ class db_SQLITE(iface_database_plugin):
         self.db_type="sqlite"
         
     def _open(self):
-        return sqlite3.connect(self.options["sqlite_db_file"])        
+        return MultiThreadSQLite(self.options["sqlite_db_file"])
     
     def _post_open(self):
         if not self.existsTable("members"):
@@ -43,7 +82,7 @@ class db_SQLITE(iface_database_plugin):
         if not self._conn():
             raise Exception("not connected to a database")
         
-        cursor = self._conn().cursor()
+        cursor = self._conn()#.cursor()
         if wildcards:
             log_debug(query, wildcards)
             cursor.execute(query, wildcards)
