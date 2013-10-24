@@ -1,41 +1,56 @@
-import urllib2, sys
+import urllib2, sys, shutil
 from lunchinator import log_exception
-from PyQt4.QtGui import QImage, QPixmap
-from PyQt4.QtCore import QTimer, QSize
+from PyQt4.QtGui import QImage, QPixmap, QStackedWidget, QIcon, QListView, QStandardItemModel, QStandardItem
+from PyQt4.QtCore import QTimer, QSize, Qt, QVariant
 from lunchinator.resizing_image_label import ResizingImageLabel
+import tempfile
 
-class UpdatingImage(ResizingImageLabel):
-    def __init__(self,parent,fallback_pic,pic_url,timeout,no_proxy,smooth_scaling):
-        super(UpdatingImage, self).__init__(parent, smooth_scaling, QSize(640, 480))
+class RemotePicturesGui(QStackedWidget):
+    def __init__(self,parent):
+        super(RemotePicturesGui, self).__init__(parent)
         
-        self.fallback_pic = fallback_pic
-        self.pic_url = pic_url
-        self.timeout = int(timeout)*1000
-        self.no_proxy = no_proxy
-        try:     
-            self.setImage(self.fallback_pic)
-            updateImageTimer = QTimer(self)
-            updateImageTimer.setInterval(self.timeout)
-            updateImageTimer.timeout.connect(self.update)
-            updateImageTimer.start(self.timeout)
-        except:
-            log_exception("Something went wrong when trying to display the fallback image",self.fallback_pic,sys.exc_info()[0])
+        self.categoryPictures = {}
+        
+        self.categoryModel = CategoriesModel()
+        
+        self.categoryView = QListView(self)
+        self.categoryView.setModel(self.categoryModel)
+        self.categoryView.setViewMode(QListView.IconMode);
+        self.categoryView.setIconSize(QSize(200,200));
+        self.categoryView.setResizeMode(QListView.Adjust);
+        
+        self.addPicture("/home/corny/Bilder/No..jpg", "anUrl", "Category 1")
+        #self.categoryModel.addCategory("Category 2", "/home/corny/Bilder/Okay.png")
+        
+        self.addWidget(self.categoryView)
+        
+    def addPicture(self, path, url, category):
+        if not category in self.categoryPictures:
+            self._addCategory(category, path)
+        self.categoryPictures[category].append(url)
             
-    def update(self): 
-        try:
-            response = None
-            if self.no_proxy:
-                proxy_handler = urllib2.ProxyHandler({})
-                opener = urllib2.build_opener(proxy_handler)
-                response=opener.open(self.pic_url)
-            else:
-                response = urllib2.urlopen(self.pic_url)
-            
-            qtimage = QImage()
-            qtimage.loadFromData(response.read())
-            
-            self.setRawPixmap(QPixmap.fromImage(qtimage))
-            return True
-        except:
-            log_exception("Something went wrong when trying to display the remote picture")
-            return False
+    def _addCategory(self, category, firstImagePath):
+        # cache category image
+        tmpFile = tempfile.NamedTemporaryFile(delete=False)
+        with open(firstImagePath, 'rb') as inFile:
+            shutil.copyfileobj(inFile, tmpFile)
+        self.categoryModel.addCategory(category, tmpFile.name)
+        tmpFile.close()
+        self.categoryPictures[category] = []
+
+class CategoriesModel(QStandardItemModel):
+    SORT_ROLE = Qt.UserRole + 1
+    
+    def __init__(self):
+        super(CategoriesModel, self).__init__()
+        self.setColumnCount(1)
+        
+    def addCategory(self, cat, firstImage):
+        item = QStandardItem()
+        item.setData(QVariant(cat), Qt.DisplayRole)
+        item.setData(QVariant(QIcon(firstImage)), Qt.DecorationRole)
+        self.appendRow([item])
+
+if __name__ == '__main__':
+    from lunchinator.iface_plugins import iface_gui_plugin
+    iface_gui_plugin.run_standalone(lambda window : RemotePicturesGui(window))
