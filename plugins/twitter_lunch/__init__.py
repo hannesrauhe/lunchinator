@@ -1,7 +1,8 @@
 from lunchinator.iface_plugins import iface_called_plugin
 import subprocess, sys, ctypes
 from lunchinator import get_server, log_exception, log_warning, get_settings, convert_string, log_error, log_info, log_debug
-import urllib2, tempfile, json, time, twitter, contextlib
+import urllib2, tempfile, json, time, twitter, contextlib, csv
+from cStringIO import StringIO
 
 from threading import Thread,Event,Lock
 
@@ -20,8 +21,12 @@ class TwitterDownloadThread(Thread):
         self._remote_callers = []
             
     def announce_pic(self,account_name,url_text_tuple):
+        
         if len(url_text_tuple[0]):
-            get_server().call("HELO_REMOTE_PIC %s %s: %s"%(url_text_tuple[0],account_name,url_text_tuple[1]))   
+            with contextlib.closing(StringIO()) as strOut:
+                writer = csv.writer(strOut, delimiter = ' ', quotechar = '"')
+                writer.writerow([url_text_tuple[0], url_text_tuple[1], account_name])
+                get_server().call('HELO_REMOTE_PIC %s' % strOut.getvalue())
         
     def set_polling_time(self,v):
         self._polling_time = v
