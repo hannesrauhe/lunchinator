@@ -21,22 +21,13 @@ class TwitterDownloadThread(Thread):
         
     def set_polling_time(self,v):
         self._polling_time = v
-            
-    def set_screen_names(self,vlist):
-        with self._lock:
-            self._screen_names = vlist
-            for s in vlist:
-                if not self._old_pic_urls.has_key(s):
-                    self._old_pic_urls[s]=""
-                if not self._since_ids.has_key(s):
-                    self._since_ids[s]=0
                     
     def get_screen_names(self):
         return self._screen_names
                     
     def add_screen_name(self,s):
         with self._lock:
-            if not s in self._screen_names:
+            if not s.toUpper() in [x.toUpper() for x in self._screen_names]:
                 self._screen_names.append(s)
                 if not self._old_pic_urls.has_key(s):
                     self._old_pic_urls[s]=""
@@ -164,10 +155,10 @@ class twitter_lunch(iface_called_plugin):
     
     def deactivate(self):
         log_info("Stopping Twitter Thread")
+        self.set_option("twitter_pics",";;".join(self.dthread.get_screen_names()))
         self.stopEvent.set()
         #TODO: join thread
         iface_called_plugin.deactivate(self)
-        #TODO: write back screen_names
         
     def authenticate(self,oldv=None,newv=None):
         self.dthread.authenticate(self.options["key"],self.options["secret"],self.options["at_key"],self.options["at_secret"])
@@ -176,8 +167,8 @@ class twitter_lunch(iface_called_plugin):
         self.dthread.set_polling_time(self.options["polling_time"])
         
     def set_twitter_pics(self,oldv=None,newv=None):
-        screen_names = [self.options["twitter_pics"]]
-        self.dthread.set_screen_names(screen_names)
+        for sname in self.options["twitter_pics"].split(";;"):
+            self.dthread.add_screen_names(s_name)
             
     def process_lunch_call(self,msg,ip,member_info):
         pass
