@@ -42,7 +42,6 @@ class remote_pictures(iface_gui_plugin):
         self.textLabel = QLabel(widget)
         self.textLabel.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.textLabel, 0, Qt.AlignCenter)
-        get_server().call("HELO_REQUEST_PIC all")
         return widget
 
     def process_message(self,msg,addr,member_info):

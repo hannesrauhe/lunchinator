@@ -27,7 +27,7 @@ class groups_dropdown(iface_gui_plugin):
         log_debug("Group added to dropdown")
         
     def change_group(self,w):
-        pass
+        get_server().changeGroup(unicode(self.dropdown_groups.currentText()))
     
     def create_widget(self, parent):
         from PyQt4.QtGui import QComboBox, QStandardItemModel, QStandardItem, QWidget, QHBoxLayout, QLabel, QSizePolicy, QPushButton
@@ -37,6 +37,7 @@ class groups_dropdown(iface_gui_plugin):
         
         widget = QWidget(parent)
         self.dropdown_groups = QComboBox(widget)
+        self.dropdown_groups.setEditable(True)
         self.but = QPushButton("Change Group", widget)
         self.add_group()
         

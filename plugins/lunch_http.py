@@ -1,8 +1,12 @@
 from lunchinator.iface_plugins import iface_called_plugin
 import SimpleHTTPServer, SocketServer, os, codecs
-from lunchinator import get_server, get_settings, log_info, log_exception
+from lunchinator import get_server, get_settings, log_info, log_exception, log_debug
 from threading import Thread
 
+class ExtendedHTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+    def log_message(self, format, *args):
+        return
+    
 class http_server_thread(Thread):    
     def __init__(self, port,html_dir):
         super(http_server_thread, self).__init__()
@@ -13,8 +17,7 @@ class http_server_thread(Thread):
     def run(self):
         os.chdir(self.html_dir)
         SocketServer.ThreadingTCPServer.allow_reuse_address = True
-        Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
-        self.server = SocketServer.TCPServer(("", self.port), Handler)
+        self.server = SocketServer.TCPServer(("", self.port), ExtendedHTTPHandler)
 
         self.server.serve_forever()
         
@@ -57,18 +60,18 @@ class lunch_http(iface_called_plugin):
                 
     def write_info_html(self):
         try:
-            if len(get_server().get_member_info())==0:
+            if len(get_server().get_peer_info())==0:
                 with codecs.open(self.options["html_dir"]+"/index.html","w",'utf-8') as indexhtml:
                     indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' >no peers\n")
                     return
             
-            table_data = {"ip":[""]*len(get_server().get_member_info())}
+            table_data = {"ip":[""]*len(get_server().get_peer_info())}
             index = 0
-            for ip,infodict in get_server().get_member_info().iteritems():
+            for ip,infodict in get_server().get_peer_info().iteritems():
                 table_data["ip"][index] = ip
                 for k,v in infodict.iteritems():
                     if not table_data.has_key(k):
-                        table_data[k]=[""]*len(get_server().get_member_info())
+                        table_data[k]=[""]*len(get_server().get_peer_info())
                     if k=="avatar" and os.path.isfile(get_settings().get_avatar_dir()+"/"+v):
                         table_data[k][index]="<img width='200' src=\"avatars/%s\" />"%v
                     else:
@@ -81,7 +84,7 @@ class lunch_http(iface_called_plugin):
                 for th in table_data.iterkeys():
                     indexhtml.write("<th>%s</th>"%th) 
                 indexhtml.write("</tr>") 
-                for i in range(0,len(get_server().get_member_info())):
+                for i in range(0,len(get_server().get_peer_info())):
                     indexhtml.write("<tr>") 
                     for k in table_data.iterkeys():
                         indexhtml.write("<td>%s</td>"%table_data[k][i]) 

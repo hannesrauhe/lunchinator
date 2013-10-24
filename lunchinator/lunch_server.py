@@ -166,6 +166,11 @@ class lunch_server(object):
             
     
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
+    def changeGroup(self,newgroup):
+        get_settings().set_group(newgroup)
+        self.call("HELO_LEAVE Changing Group")
+        self.call("HELO_REQUEST_INFO "+self._build_info_string())
+        
     def getAvailableDBConnections(self):
         return [unicode(pluginInfo.name) for pluginInfo in self.plugin_manager.getPluginsOfCategory("db")]
     
@@ -524,6 +529,7 @@ class lunch_server(object):
                 self.controller.groupAppended(peer_group, self._peer_groups)
             if peer_group==own_group:
                 self._append_member(ip, peer_name)
+                self._memberUpdated(ip)
             else:
                 self._remove_member(ip)
             
