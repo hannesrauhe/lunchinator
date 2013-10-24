@@ -1,10 +1,10 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import log_exception, get_settings, log_error, convert_string,\
     log_warning, get_server, log_debug
-import urllib2,sys,tempfile
+import urllib2,sys,tempfile,csv,contextlib
 from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator.download_thread import DownloadThread
-from cStringIO import StringIO
+from StringIO import StringIO
 from IN import IP_ADD_MEMBERSHIP
     
 class remote_pictures(iface_gui_plugin):
@@ -107,7 +107,20 @@ class remote_pictures(iface_gui_plugin):
             else:
                 log_debug("Accepting remote picture from %s (%s)" % (ip, get_server().memberName(ip)))
             
-            url = value.split()[0]
-            self.imageText = value[len(url):].strip()
+            with contextlib.closing(StringIO(value.encode('utf-8'))) as strIn:
+                reader = csv.reader(strIn, delimiter = ' ', quotechar = '"')
+                valueList = [aValue.decode('utf-8') for aValue in reader.next()]
+                url = valueList[0]
+                desc = None
+                cat = None
+                if len(valueList) > 1:
+                    desc = valueList[1]
+                if len(valueList) > 2:
+                    cat = valueList[2]
+            
+            if cat:
+                self.imageText = u"%s: %s" % (cat, desc)
+            else:
+                self.imageText = desc
                    
             self.extract_pic(url)
