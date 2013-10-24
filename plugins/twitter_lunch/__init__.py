@@ -19,6 +19,7 @@ class TwitterDownloadThread(Thread):
         self._polling_time = 60
         self._mentions_since_id = 0
         self._remote_callers = []
+        self._friends = []
             
     def announce_pic(self,account_name,url_text_tuple):
         
@@ -49,8 +50,16 @@ class TwitterDownloadThread(Thread):
     def add_remote_caller(self,value):
         remote_caller = value[1:] if value[0]=="@" else value
         with self._lock:
-            if not remote_caller in self._remote_callers:
+            if not remote_caller.upper() in [x.upper() for x in self._remote_callers]:
                 self._remote_callers.append(remote_caller)
+        if not remote_caller.upper() in [x.upper() for x in self._friends]:
+            try:
+                self._twitter_api.CreateFriendship(screen_name=remote_caller)
+                self._friends.append(unicode(remote_caller))
+                log_debug("Twitter: now following",remote_caller)
+            except:
+                log_exception("Twitter: cannot follow",remote_caller)
+                
                 
     def get_old_pic_urls(self):
         return self._old_pic_urls
@@ -74,12 +83,27 @@ class TwitterDownloadThread(Thread):
                 except:
                     log_exception("Twitter: was not able to find my screen_name")
                     self._twitter_api = None
-                    return False
+                    return False                
+                try:
+                    self._friends = [x.GetScreenName() for x in self._twitter_api.GetFriends()]
+                    log_debug("Twitter: my Friends",self._friends)
+                except:
+                    log_exception("Twitter: was not able to fetch my friends")
                     
             else:
                 log_error("Twitter: provide keys and secrets in settings")
                 self._twitter_api = None
                 return False
+            
+    def post(self,message):
+        if not self._twitter_api:
+            log_error("Twitter: cannot post - not authenticated")
+            return False
+        
+        try:
+            self._twitter_api.PostUpdate(message[0:140])
+        except:
+            log_exception("Twitter: was not able to post ",message)
 
     def _get_pics_from_account(self,account_name):
         with self._lock:
@@ -130,8 +154,10 @@ class TwitterDownloadThread(Thread):
                     s_name = m.GetUser().GetScreenName()
                     if s_name not in self._remote_callers:
                         log_debug("Twitter: I do not know him")
+                        self._twitter_api.PostUpdate(u"@"+s_name+u" Sorry, I do not know you", m.GetId())
                         continue
-                    get_server().call("Remote call by @%s: %s"%(s_name,m.GetText()))   
+                    get_server().call("Remote call by @%s: %s"%(s_name,m.GetText()))
+                    self._twitter_api.PostUpdate(u"@"+s_name+u" OK, I forwarded your message", m.GetId())
             except twitter.TwitterError as t:
                 log_error("Twitter: Error while trying to retrieve mentions",str(t))   
         
@@ -189,13 +215,16 @@ class twitter_lunch(iface_called_plugin):
             self.dthread.add_screen_name(sname)
             
     def process_lunch_call(self,msg,ip,member_info):
-        pass
+        message = unicode("Lunchtime: ")+msg
+        if member_info.has_key(ip):
+            message+=u" ("+unicode(member_info[u'name'])+u")"
+        self.dthread.post(message)
         
     def process_event(self,cmd,value,_,__):
         if cmd.startswith("HELO_REQUEST_PIC"):
             if cmd=="HELO_REQUEST_PIC_TWITTER":
                 self.dthread.add_screen_name(value)
-                log_debug("Now following these streams for pics:",str(self.dthread.get_screen_names()))
+                log_debug("Twitter: Now following these streams for pics:",str(self.dthread.get_screen_names()))
                 self.set_option("twitter_pics",";;".join(self.dthread.get_screen_names()))
             if self.dthread.get_old_pic_urls().has_key(value):
                 self.dthread.announce_pic(value, self.dthread.get_old_pic_urls()[value])
@@ -205,7 +234,7 @@ class twitter_lunch(iface_called_plugin):
             
         elif cmd=="HELO_TWITTER_USER":
             self.dthread.add_remote_caller(value)
-            log_debug("Now accepting remote calls from:",str(self.dthread.get_remote_callers()))            
+            log_debug("Twitter: Now accepting remote calls from:",str(self.dthread.get_remote_callers()))            
 
     def process_message(self,msg,addr,member_info):
         pass        
