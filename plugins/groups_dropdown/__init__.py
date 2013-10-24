@@ -14,8 +14,11 @@ class groups_dropdown(iface_gui_plugin):
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
         
-    def do_groups(self):
+    def do_show_groups(self, cmd):
         print get_server().get_groups()
+    
+    def do_group(self, cmd):
+        get_server().changeGroup(unicode(cmd))        
         
     def add_group(self):
         from PyQt4.QtGui import QStandardItem, QStandardItemModel
