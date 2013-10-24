@@ -8,7 +8,8 @@ class sql_interface(iface_gui_plugin):
         self.sqlResultTable = None
         self.times_called=0
         self.last_key=-1
-        self.options = [((u"db_connection", u"DB Connection", [u'auto']+get_server().getAvailableDBConnections()),"auto")]
+        self.options = [((u"db_connection", u"DB Connection", [u'auto']+get_server().getAvailableDBConnections()),"auto"),
+                        ((u"use_textedit", u"Use multi-line sql editor"),False)]
     
     def activate(self):
         iface_gui_plugin.activate(self)
@@ -36,7 +37,7 @@ class sql_interface(iface_gui_plugin):
         try:
             header, res = get_server().getDBConnection(self.options['db_connection']).queryWithHeader(sql_stat)
         except Exception as e:
-            msgBox = QMessageBox.warning(self.resultTable,"Error in SQL statement",str(e))
+            QMessageBox.warning(self.resultTable,"Error in SQL statement",str(e))
             log_error("SQL error:")
             return False
         
@@ -55,7 +56,7 @@ class sql_interface(iface_gui_plugin):
         from PyQt4.QtGui import QSortFilterProxyModel
         from PyQt4.QtCore import Qt
         from lunchinator.table_widget import TableWidget
-        self.resultTable = TableWidget(parent, "Execute", self.sendSqlClicked)
+        self.resultTable = TableWidget(parent, "Execute", self.sendSqlClicked, useTextEdit=self.options['use_textedit'])
         
         return self.resultTable
     
