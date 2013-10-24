@@ -31,7 +31,7 @@ class TwitterDownloadThread(Thread):
                     
     def add_screen_name(self,s):
         with self._lock:
-            if not s.toUpper() in [x.toUpper() for x in self._screen_names]:
+            if len(s) and not s.upper() in [x.upper() for x in self._screen_names]:
                 self._screen_names.append(s)
                 if not self._old_pic_urls.has_key(s):
                     self._old_pic_urls[s]=("","")
@@ -169,7 +169,6 @@ class twitter_lunch(iface_called_plugin):
     
     def deactivate(self):
         log_info("Stopping Twitter Thread")
-        self.set_option("twitter_pics",";;".join(self.dthread.get_screen_names()))
         self.stopEvent.set()
         #TODO: join thread
         iface_called_plugin.deactivate(self)
@@ -182,7 +181,7 @@ class twitter_lunch(iface_called_plugin):
         
     def set_twitter_pics(self,oldv=None,newv=None):
         for sname in self.options["twitter_pics"].split(";;"):
-            self.dthread.add_screen_names(s_name)
+            self.dthread.add_screen_name(sname)
             
     def process_lunch_call(self,msg,ip,member_info):
         pass
@@ -192,6 +191,7 @@ class twitter_lunch(iface_called_plugin):
             if cmd=="HELO_REQUEST_PIC_TWITTER":
                 self.dthread.add_screen_name(value)
                 log_debug("Now following these streams for pics:",str(self.dthread.get_screen_names()))
+                self.set_option("twitter_pics",";;".join(self.dthread.get_screen_names()))
             if self.dthread.get_old_pic_urls().has_key(value):
                 self.dthread.announce_pic(value, self.dthread.get_old_pic_urls()[value])
             else:
