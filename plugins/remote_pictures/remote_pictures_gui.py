@@ -44,15 +44,16 @@ class RemotePicturesGui(QStackedWidget):
         imageViewerLayout.setContentsMargins(0, 0, 0, 0)
         imageViewerLayout.setSpacing(0)
         
-        topWidget = HiddenWidget(self.imageLabel)
-        topLayout = QHBoxLayout(topWidget)
+        self.categoryLabel = HiddenLabel(self.imageLabel, fontSize=16, fontOptions=QFont.Bold)
+        topLayout = QHBoxLayout(self.categoryLabel)
         topLayout.setContentsMargins(0, 0, 0, 0)
-        backButton = QToolButton(topWidget)
+        backButton = QToolButton(self.categoryLabel)
+        backButton.setFocusPolicy(Qt.NoFocus)
         backButton.setArrowType(Qt.LeftArrow)
         backButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         backButton.setText("Categories")
         topLayout.addWidget(backButton, 0, Qt.AlignLeft)
-        imageViewerLayout.addWidget(topWidget, 0)
+        imageViewerLayout.addWidget(self.categoryLabel, 0)
         
         navButtonsWidget = QWidget(self.imageLabel)
         navButtonsLayout = QHBoxLayout(navButtonsWidget)
@@ -72,18 +73,8 @@ class RemotePicturesGui(QStackedWidget):
         
         imageViewerLayout.addWidget(navButtonsWidget, 1)
         
-        self.descriptionLabel = HiddenLabel("This is how I test a QLabel", self.imageLabel)
+        self.descriptionLabel = HiddenLabel(self.imageLabel, fontSize=14)
         self.descriptionLabel.setWordWrap(True)
-        self.descriptionLabel.setAutoFillBackground(True)
-        self.descriptionLabel.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.LinksAccessibleByMouse)
-        oldFont = self.descriptionLabel.font()
-        self.descriptionLabel.setFont(QFont(oldFont.family(), 14))
-        self.descriptionLabel.setMargin(5)
-        self.descriptionLabel.setAlignment(Qt.AlignCenter)
-        palette = self.descriptionLabel.palette()
-        palette.setColor(self.descriptionLabel.backgroundRole(), QColor(0,0,0,200))
-        palette.setColor(self.descriptionLabel.foregroundRole(), Qt.white)
-        self.descriptionLabel.setPalette(palette)
         imageViewerLayout.addWidget(self.descriptionLabel, 0)
                 
         self.addWidget(self.imageLabel)
@@ -92,7 +83,7 @@ class RemotePicturesGui(QStackedWidget):
         self.prevButton.clicked.connect(self._displayPreviousImage)
         backButton.clicked.connect(partial(self.setCurrentIndex, 0))
         
-        self.categoryOpened.connect(topWidget._showTemporarily)
+        self.categoryOpened.connect(self.descriptionLabel._showTemporarily)
         self.categoryOpened.connect(self.prevButton._showTemporarily)
         self.categoryOpened.connect(self.nextButton._showTemporarily)
         self.categoryOpened.connect(self.descriptionLabel._showTemporarily)
@@ -133,6 +124,7 @@ class RemotePicturesGui(QStackedWidget):
     
     def _openCategory(self, cat):
         self.currentCategory = cat
+        self.categoryLabel.setText(cat)
         self._displayImage()
         self.categoryOpened.emit()
         
@@ -280,9 +272,19 @@ class HiddenWidgetBase(object):
             self.timer.start(self.INTERVAL)
         
 class HiddenLabel(QLabel, HiddenWidgetBase):
-    def __init__(self, parent, text = None):
-        QLabel.__init__(self, parent, text)
+    def __init__(self, parent, fontSize = 14, fontOptions = 0):
+        QLabel.__init__(self, parent)
         HiddenWidgetBase.__init__(self, maxOpacity=1)
+        
+        self.setAutoFillBackground(True)
+        oldFont = self.font()
+        self.setFont(QFont(oldFont.family(), fontSize, fontOptions))
+        self.setMargin(5)
+        self.setAlignment(Qt.AlignCenter)
+        palette = self.palette()
+        palette.setColor(self.backgroundRole(), QColor(0,0,0,200))
+        palette.setColor(self.foregroundRole(), Qt.white)
+        self.setPalette(palette)
     
     def enterEvent(self, event):
         self._mouseEntered()
@@ -309,6 +311,7 @@ class HiddenToolButton(QToolButton, HiddenWidgetBase):
     def __init__(self, parent):
         QToolButton.__init__(self, parent)
         HiddenWidgetBase.__init__(self)
+        self.setFocusPolicy(Qt.NoFocus)
         
     def enterEvent(self, event):
         self._mouseEntered()
