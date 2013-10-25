@@ -63,6 +63,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
             self.setPixmap(QPixmap())
             
     def setURL(self, newURL):
+        self._displayFallbackPic()
         self.pic_url = newURL
         self.update()
             

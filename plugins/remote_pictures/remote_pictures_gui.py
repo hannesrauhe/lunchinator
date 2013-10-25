@@ -1,7 +1,7 @@
 import sys
 from lunchinator import log_exception, get_settings, convert_string, log_debug
 from PyQt4.QtGui import QImage, QPixmap, QStackedWidget, QIcon, QListView, QStandardItemModel, QStandardItem, QWidget, QHBoxLayout, QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy
-from PyQt4.QtCore import QTimer, QSize, Qt, QVariant, QSettings, pyqtSlot, QModelIndex
+from PyQt4.QtCore import QTimer, QSize, Qt, QVariant, QSettings, pyqtSlot, pyqtSignal, QModelIndex
 from lunchinator.resizing_image_label import ResizingWebImageLabel
 import tempfile
 import os
@@ -10,6 +10,7 @@ from functools import partial
 
 class RemotePicturesGui(QStackedWidget):
     THUMBNAIL_SIZE = 200
+    categoryOpened = pyqtSignal()
     
     def __init__(self,parent):
         super(RemotePicturesGui, self).__init__(parent)
@@ -90,6 +91,11 @@ class RemotePicturesGui(QStackedWidget):
         self.nextButton.clicked.connect(self._displayNextImage)
         self.prevButton.clicked.connect(self._displayPreviousImage)
         backButton.clicked.connect(partial(self.setCurrentIndex, 0))
+        
+        self.categoryOpened.connect(topWidget._showTemporarily)
+        self.categoryOpened.connect(self.prevButton._showTemporarily)
+        self.categoryOpened.connect(self.nextButton._showTemporarily)
+        self.categoryOpened.connect(self.descriptionLabel._showTemporarily)
                 
         # load categories index
         self._loadIndex()
@@ -127,6 +133,7 @@ class RemotePicturesGui(QStackedWidget):
     def _openCategory(self, cat):
         self.currentCategory = cat
         self._displayImage()
+        self.categoryOpened.emit()
         
     def _loadIndex(self):
         if self.good:
@@ -229,14 +236,18 @@ class HiddenWidgetBase(object):
             self.fadeIn = False
             self.effect = QGraphicsOpacityEffect(self)
             self.setGraphicsEffect(self.effect)
-            self.effect.setOpacity(self.maxOpacity)
             
-            self.good = True
             self.timer = QTimer(self)
             self.timer.timeout.connect(self._fade)
-            QTimer.singleShot(self.INITIAL_TIMEOUT, self._fadeOut)
+            self.good = True
         except:
             log_debug(u"Could not enable opacity effects. %s: %s" % (sys.exc_info()[0].__name__, unicode(sys.exc_info()[1])))
+        
+    def _showTemporarily(self):
+        if self.good:
+            self.fadingEnabled = False
+            self.effect.setOpacity(self.maxOpacity)
+            QTimer.singleShot(self.INITIAL_TIMEOUT, self._fadeOut)
         
     def _fadeOut(self):
         self.fadingEnabled = True
