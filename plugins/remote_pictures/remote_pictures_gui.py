@@ -44,10 +44,12 @@ class RemotePicturesGui(QStackedWidget):
         imageViewerLayout.setContentsMargins(0, 0, 0, 0)
         imageViewerLayout.setSpacing(0)
         
+        defaultFont = self.font()
         self.categoryLabel = HiddenLabel(self.imageLabel, fontSize=16, fontOptions=QFont.Bold)
         topLayout = QHBoxLayout(self.categoryLabel)
         topLayout.setContentsMargins(0, 0, 0, 0)
         backButton = QToolButton(self.categoryLabel)
+        backButton.setFont(QFont(defaultFont.family(), defaultFont.pointSize(), 0))
         backButton.setFocusPolicy(Qt.NoFocus)
         backButton.setArrowType(Qt.LeftArrow)
         backButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
@@ -83,7 +85,7 @@ class RemotePicturesGui(QStackedWidget):
         self.prevButton.clicked.connect(self._displayPreviousImage)
         backButton.clicked.connect(partial(self.setCurrentIndex, 0))
         
-        self.categoryOpened.connect(self.descriptionLabel._showTemporarily)
+        self.categoryOpened.connect(self.categoryLabel._showTemporarily)
         self.categoryOpened.connect(self.prevButton._showTemporarily)
         self.categoryOpened.connect(self.nextButton._showTemporarily)
         self.categoryOpened.connect(self.descriptionLabel._showTemporarily)
@@ -244,6 +246,8 @@ class HiddenWidgetBase(object):
     def _showTemporarily(self):
         if self.good:
             self.fadingEnabled = False
+            self.fadeIn = False
+            self.timer.stop()
             self.effect.setOpacity(self.maxOpacity)
             QTimer.singleShot(self.INITIAL_TIMEOUT, self._fadeOut)
         
