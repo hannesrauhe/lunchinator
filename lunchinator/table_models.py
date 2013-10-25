@@ -74,8 +74,9 @@ class TableModelBase(QStandardItemModel):
     def updateRow(self, key, data, row):
         for column in range(self.columnCount()):
             self.updateItem(key, data, row, column)
-            
-    def _convertDict(self, aDict):
+         
+    @classmethod   
+    def convertDict(cls, aDict):
         newDict = {}
         for aKey in aDict:
             newKey = aKey
@@ -84,6 +85,8 @@ class TableModelBase(QStandardItemModel):
             aValue = aDict[aKey]
             if type(aValue) == QString:
                 aValue = convert_string(aValue)
+            elif type(aValue) == QVariant:
+                aValue = convert_string(aValue.toString())
             newDict[newKey] = aValue
         return newDict
             
@@ -91,9 +94,9 @@ class TableModelBase(QStandardItemModel):
         if type(data) == dict:
             for aKey in data:
                 if type(aKey) == QString:
-                    return self._convertDict(data)
+                    return self.convertDict(data)
                 if type(data[aKey]) == QString:
-                    return self._convertDict(data)
+                    return self.convertDict(data)
         return data
                     
     """ ----------------- SLOTS ------------------- """
