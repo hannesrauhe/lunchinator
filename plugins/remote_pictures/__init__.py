@@ -5,7 +5,7 @@ import urllib2,sys,tempfile,csv,contextlib
 from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator.download_thread import DownloadThread
 from StringIO import StringIO
-from IN import IP_ADD_MEMBERSHIP
+from functools import partial
     
 class remote_pictures(iface_gui_plugin):
     def __init__(self):
@@ -13,36 +13,33 @@ class remote_pictures(iface_gui_plugin):
         self.options = [(("trust_policy", u"Accept remote pictures from", (u"Local", u"Everybody", u"Nobody", u"Selected Members")),u"Local"),
                         (("trusted_peers", u"Selected Members:"),u""),
                         (("smooth_scaling", u"Smooth scaling", self.smoothScalingChanged),False)]
-        self.imageLabel = None
+        self.gui = None
         self.imageTarget = None
-        self.imageText = None
+        # TODO remove last_url, search through history
         self.last_url = "" 
         
     def smoothScalingChanged(self, _setting, newValue):
-        self.imageLabel.smooth_scaling = newValue
+        self.gui.imageLabel.smooth_scaling = newValue
     
     def activate(self):
-        self.imageTarget = tempfile.NamedTemporaryFile()
         iface_gui_plugin.activate(self)
+        self.imageTarget = tempfile.NamedTemporaryFile()
         
     def deactivate(self):
         self.imageTarget.close()
+        if self.visible:
+            self.destroy_widget()
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
-        from lunchinator.resizing_image_label import ResizingImageLabel
-        from PyQt4.QtGui import QWidget, QVBoxLayout, QLabel
-        from PyQt4.QtCore import QSize, Qt
-        
+        from remote_pictures.remote_pictures_gui import RemotePicturesGui
         super(remote_pictures, self).create_widget(parent)
-        widget = QWidget(parent)
-        layout = QVBoxLayout(widget)
-        self.imageLabel = ResizingImageLabel(widget, True, QSize(400,400))
-        layout.addWidget(self.imageLabel, 1)
-        self.textLabel = QLabel(widget)
-        self.textLabel.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.textLabel, 0, Qt.AlignCenter)
-        return widget
+        self.gui = RemotePicturesGui(parent)
+        return self.gui
+    
+    def destroy_widget(self):
+        self.gui.destroyWidget()
+        iface_gui_plugin.destroy_widget(self)
 
     def process_message(self,msg,addr,member_info):
         pass
@@ -51,18 +48,17 @@ class remote_pictures(iface_gui_plugin):
         log_error("Error downloading picture from url %s" % convert_string(url))
         thread.deleteLater()
         
-    def downloadedPicture(self, _thread, _):
+    def downloadedPicture(self, category, description, _thread, url):
         from PyQt4.QtGui import QPixmap, QImage
         self.imageTarget.flush()
-        displayNotification("New Remote Picture", self.imageText, self.imageTarget.name)
-        image = QImage(self.imageTarget.name)
-        self.imageLabel.setRawPixmap(QPixmap.fromImage(image))
-        if self.imageText != None:
-            self.textLabel.setText(self.imageText)
-        else:
-            self.textLabel.setText("")
+        name = "New Remote Picture"
+        if category != None:
+            name = name + " in category %s" % category
+        displayNotification(name, description, self.imageTarget.name)
+        
+        self.gui.addPicture(self.imageTarget.name, convert_string(url), category, description)
           
-    def extract_pic(self,url):
+    def extract_pic(self,url,category,description):
         try:
             getValidQtParent()
         except:
@@ -73,7 +69,7 @@ class remote_pictures(iface_gui_plugin):
             self.imageTarget.seek(0)
             self.imageTarget.truncate()
             downloadThread = DownloadThread(getValidQtParent(), url, self.imageTarget)
-            downloadThread.success.connect(self.downloadedPicture)
+            downloadThread.success.connect(partial(self.downloadedPicture, category, description))
             downloadThread.error.connect(self.errorDownloadingPicture)
             downloadThread.finished.connect(downloadThread.deleteLater)
             downloadThread.start()
@@ -118,9 +114,4 @@ class remote_pictures(iface_gui_plugin):
                 if len(valueList) > 2:
                     cat = valueList[2]
             
-            if cat:
-                self.imageText = u"%s: %s" % (cat, desc)
-            else:
-                self.imageText = desc
-                   
-            self.extract_pic(url)
+            self.extract_pic(url, cat, desc)

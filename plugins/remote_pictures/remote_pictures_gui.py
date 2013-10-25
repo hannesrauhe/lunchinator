@@ -119,6 +119,7 @@ class RemotePicturesGui(QStackedWidget):
         self.currentIndex = index
         newestPicTuple = self.categoryPictures[self.currentCategory][self.currentIndex]
         self.imageLabel.setURL(newestPicTuple[0])
+        self.descriptionLabel.setText(newestPicTuple[1])
         self.setCurrentIndex(1)
         
         self.prevButton.setEnabled(self.currentIndex > 0)
@@ -172,6 +173,7 @@ class RemotePicturesGui(QStackedWidget):
                     path = item.data(CategoriesModel.PATH_ROLE)
                     thumbnailDict[cat] = path
                 self.settings.setValue("categoryThumbnails", thumbnailDict)
+                self.settings.sync()
             except:
                 log_exception("Could not save thumbnail index.")
     
@@ -179,7 +181,7 @@ class RemotePicturesGui(QStackedWidget):
         return os.path.join(get_settings().get_main_config_dir(), "remote_pictures")
         
     def _fileForThumbnail(self, url, _category):
-        path = urlparse.urlparse(url).path
+        path = urlparse.urlparse(url.encode('utf-8')).path
         oldSuffix = os.path.splitext(path)[1]
         return tempfile.NamedTemporaryFile(suffix=oldSuffix, dir=self._picturesDirectory(), delete=False)
     
@@ -211,9 +213,13 @@ class RemotePicturesGui(QStackedWidget):
         self.categoryPictures[category] = []
 
     def addPicture(self, path, url, category, description):
+        # TODO display image immediately if category is open
+        # TODO "Not Categorized" always at first position
+        if category == None:
+            category = "Not Categorized"
         if not category in self.categoryPictures:
             self._addCategory(category, firstImagePath=path, firstImageURL=url)
-        self.categoryPictures[category].append([url, description])
+        self.categoryPictures[category].append([url, description if description != None else u""])
         
     def destroyWidget(self):
         self._saveIndex()

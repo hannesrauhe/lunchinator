@@ -469,12 +469,13 @@ class lunch_server(object):
         own_group = get_settings().get_group()
         
         try:
-            (cmd, value) = data.split(" ",1)
-            if cmd.startswith("HELO_INFO"):
-                self._update_peer_info(addr, json.loads(value), requestAvatar=False)
-            elif cmd.startswith("HELO_REQUEST_INFO"):
-                self._update_peer_info(addr, json.loads(value), requestAvatar=False)
-                self.call("HELO_INFO "+self._build_info_string(), client=addr)
+            if " " in data:
+                (cmd, value) = data.split(" ",1)
+                if cmd.startswith("HELO_INFO"):
+                    self._update_peer_info(addr, json.loads(value), requestAvatar=False)
+                elif cmd.startswith("HELO_REQUEST_INFO"):
+                    self._update_peer_info(addr, json.loads(value), requestAvatar=False)
+                    self.call("HELO_INFO "+self._build_info_string(), client=addr)
         except:
             log_exception("was not able to parse Info from",data,addr)
         
