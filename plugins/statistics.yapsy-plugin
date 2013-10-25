@@ -1,0 +1,9 @@
+[Core]
+Name = Statistics
+Module = statistics
+
+[Documentation]
+Author = Hannes Rauhe
+Version = 0.1
+Website = http://www.lunchinator.de
+Description = Collects statistics about incomming calls and peers
