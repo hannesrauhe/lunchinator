@@ -10,12 +10,14 @@ from functools import partial
 class remote_pictures(iface_gui_plugin):
     def __init__(self):
         super(remote_pictures, self).__init__()
-        self.options = [(("trust_policy", u"Accept remote pictures from", (u"Local", u"Everybody", u"Nobody", u"Selected Members")),u"Selected Members"),
-                        (("trusted_peers", u"Selected Members:"),u""),
-                        (("min_opacity", u"Minimum opacity of controls:", self.minOpacityChanged),20),
-                        (("max_opacity", u"Maximum opacity of controls:", self.maxOpacityChanged),80),
-                        (("thumbnail_size", u"Thumbnail Size:", self.thumbnailSizeChanged),150),
-                        (("smooth_scaling", u"Smooth scaling", self.smoothScalingChanged),False)]
+        self.options = [((u"trust_policy", u"Accept remote pictures from", (u"Local", u"Everybody", u"Nobody", u"Selected Members")),u"Selected Members"),
+                        ((u"ask_trust", u"Ask if an unknown member wants to send a picture"), True),
+                        ((u"trusted_peers", u"Selected Members:"),u""),
+                        ((u"untrusted_peers", u"Always reject pictures from:"),u""),
+                        ((u"min_opacity", u"Minimum opacity of controls:", self.minOpacityChanged),20),
+                        ((u"max_opacity", u"Maximum opacity of controls:", self.maxOpacityChanged),80),
+                        ((u"thumbnail_size", u"Thumbnail Size:", self.thumbnailSizeChanged),150),
+                        ((u"smooth_scaling", u"Smooth scaling", self.smoothScalingChanged),False)]
         self.gui = None
         self.imageTarget = None
         
@@ -103,13 +105,29 @@ class remote_pictures(iface_gui_plugin):
         else:
             log_debug("Remote Pics: Downloaded this url before, won't do it again:",url)
             
-    def generateTrustedIPs(self):
-        for aPeer in self.options['trusted_peers'].split(";;"):
+    def _generatePeerList(self, listStr):
+        for aPeer in listStr.split(";;"):
             ip = get_server().ipForMemberName(aPeer.strip())
             if ip != None:
                 yield ip
             else:
                 yield aPeer.strip()
+            
+    def generateTrustedIPs(self):
+        return self._generatePeerList(self.options['trusted_peers'])
+                
+    def generateUntrustedIPs(self):
+        return self._generatePeerList(self.options['untrusted_peers'])
+            
+    def _appendListOption(self, o, new_v):
+        old_val = self.options[o]
+        if len(old_val) > 0:
+            val_list = old_val.split(";;")
+        else:
+            val_list = []
+        val_list.append(new_v)
+        new_val = ";;".join(val_list)
+        self.set_option(o, new_val, convert=False)
             
     def process_event(self,cmd,value,ip,_info):
         if cmd=="HELO_REMOTE_PIC":
@@ -121,8 +139,26 @@ class remote_pictures(iface_gui_plugin):
             elif trustPolicy == "Everybody":
                 reject = False
             elif trustPolicy == "Selected Members":
-                if ip in (self.generateTrustedIPs()):
+                if ip in self.generateTrustedIPs():
                     reject = False
+                elif self.gui != None and self.options[u"ask_trust"] and ip not in self.generateUntrustedIPs():
+                    from PyQt4.QtGui import QMessageBox
+                    box = QMessageBox(QMessageBox.Question,
+                                      "Accept Picture",
+                                      "%s wants to send you a picture. Do you want to accept pictures from this member?" % get_server().memberName(ip),
+                                      QMessageBox.Yes | QMessageBox.YesToAll | QMessageBox.No | QMessageBox.NoToAll,
+                                      self.gui)
+                    box.setDefaultButton(QMessageBox.No)
+                    box.button(QMessageBox.NoToAll).setText(u"No, Never")
+                    box.button(QMessageBox.YesToAll).setText(u"Yes, Always")
+                    res = box.exec_()
+                    if res == QMessageBox.NoToAll:
+                        self._appendListOption(u"untrusted_peers", ip)
+                    elif res == QMessageBox.YesToAll:
+                        self._appendListOption(u"trusted_peers", ip)
+                        reject = False
+                    elif res == QMessageBox.Yes:
+                        reject = False
                     
             if reject:
                 log_debug("Rejecting remote picture from %s (%s)" % (ip, get_server().memberName(ip)))
