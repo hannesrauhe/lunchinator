@@ -258,11 +258,11 @@ class HiddenWidgetBase(object):
     NUM_STEPS = 15
     INTERVAL = 20
     
-    def __init__(self, minOpacity = 0.1, maxOpacity = 0.8):
+    def __init__(self):
         self.good = False
         self.fadingEnabled = False
-        self.minOpacity = minOpacity
-        self.maxOpacity = maxOpacity
+        self.minOpacity = 0.
+        self.maxOpacity = 1.
         self.incr = (self.maxOpacity - self.minOpacity) / self.NUM_STEPS
         self.fadeIn = False
         try:
@@ -336,7 +336,7 @@ class HiddenWidgetBase(object):
 class HiddenLabel(QLabel, HiddenWidgetBase):
     def __init__(self, parent, fontSize = 14, fontOptions = 0):
         QLabel.__init__(self, parent)
-        HiddenWidgetBase.__init__(self, maxOpacity=1)
+        HiddenWidgetBase.__init__(self)
         
         self.setAutoFillBackground(True)
         oldFont = self.font()
@@ -413,7 +413,8 @@ if __name__ == '__main__':
     class RemotePicturesWrapper(object):
         options = {u'min_opacity': 10,
                    u'max_opacity': 90,
-                   u'thumbnail_size': 200}
+                   u'thumbnail_size': 200,
+                   u'smooth_scaling':True}
     
     from lunchinator.iface_plugins import iface_gui_plugin
     iface_gui_plugin.run_standalone(lambda window : RemotePicturesGui(window, RemotePicturesWrapper()))
