@@ -1,6 +1,6 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_error, log_exception, log_info, log_debug, convert_string
+from lunchinator import log_error, log_exception, log_info, convert_string
 import types
 from copy import deepcopy
 
@@ -74,7 +74,7 @@ class iface_plugin(IPlugin):
     def has_options(self):
         return self.options != None and len(self.options) > 0
     
-    def convert_and_set_option(self, o, v, new_v):
+    def convert_option(self, o, v, new_v):
         try:
             if o in self.option_choice:
                 finalValue = None
@@ -83,16 +83,19 @@ class iface_plugin(IPlugin):
                         finalValue = aValue
                         break
                 if finalValue != None:
-                    self.options[o] = finalValue
+                    return finalValue
+                else:
+                    # keep old value
+                    return self.options[o]
             elif type(v)==types.IntType:
-                self.options[o] = int(new_v)
+                return int(new_v)
             elif type(v)==types.BooleanType:
                 if new_v.strip().upper() in ["TRUE", "YES", "1"]:
-                    self.options[o] = True
+                    return True
                 else:
-                    self.options[o] = False
+                    return False
             elif type(v) in (types.StringType, types.UnicodeType):
-                self.options[o] = convert_string(new_v)
+                return convert_string(new_v)
             else:
                 log_error("type of value",o,v,"not supported, using default")
         except:
@@ -104,7 +107,8 @@ class iface_plugin(IPlugin):
         for o,v in self.options.iteritems():
             if self.hasConfigOption(o):
                 new_v = self.getConfigOption(o)
-                self.convert_and_set_option(o, v, new_v)
+                conv = self.convert_option(o, v, new_v)
+                self.options[o] = conv
         
     def add_option_to_layout(self, parent, grid, i, o, v):
         from PyQt4.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
@@ -173,18 +177,16 @@ class iface_plugin(IPlugin):
         if o not in self.options:
             return
         v = self.options[o]
+        if convert:
+            new_v = self.convert_option(o, v, new_v)
         if new_v!=v:
-            self.options[o]=new_v
-            if convert:
-                self.convert_and_set_option(o, v, new_v)
-                self.set_option_value(o, self.options[o])
-            else:
-                self.set_option_value(o, new_v)
             if o in self.option_callbacks:
-                if self.option_callbacks[o](o, new_v)==False:
-                    log_info("Setting %s was not saved, because callback returned False, setting back to %s \n(There should be an erro message above)"%(o,str(v)))
-                    self.set_option_value(o, v)
-                    self.options[o] = v
+                mod_v = self.option_callbacks[o](o, new_v)
+                if mod_v != None:
+                    # callback returned modified value
+                    new_v = mod_v 
+            self.options[o]=new_v
+            self.set_option_value(o, new_v)
                 
     def reset_option(self, o):
         """
@@ -330,7 +332,7 @@ class iface_database_plugin(iface_plugin):
         except:
             log_exception("Problem while closing DB connection in plugin %s"%(self.db_type))
         
-    def _restart_connection(self,old_setting,new_setting):
+    def _restart_connection(self,_old_setting,_new_setting):
         log_info("Trying to reconnect to database")
         self._close_connection()
         self._open_connection()

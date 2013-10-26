@@ -1,6 +1,6 @@
 import sys
 from lunchinator import log_exception, get_settings, convert_string, log_debug
-from PyQt4.QtGui import QImage, QPixmap, QStackedWidget, QIcon, QListView, QStandardItemModel, QStandardItem, QWidget, QHBoxLayout, QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy
+from PyQt4.QtGui import QImage, QPixmap, QStackedWidget, QIcon, QListView, QStandardItemModel, QStandardItem, QWidget, QHBoxLayout, QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy, QSortFilterProxyModel
 from PyQt4.QtCore import QTimer, QSize, Qt, QVariant, QSettings, pyqtSlot, pyqtSignal, QModelIndex
 from lunchinator.resizing_image_label import ResizingWebImageLabel
 import tempfile
@@ -9,12 +9,18 @@ import urlparse
 from functools import partial
 
 class RemotePicturesGui(QStackedWidget):
-    THUMBNAIL_SIZE = 200
-    categoryOpened = pyqtSignal()
+    MIN_THUMBNAIL_SIZE = 16
+    MAX_THUMBNAIL_SIZE = 1024
+    UNCATEGORIZED = "Not Categorized"
     
-    def __init__(self,parent):
+    categoryOpened = pyqtSignal()
+    minOpacityChanged = pyqtSignal(float)
+    maxOpacityChanged = pyqtSignal(float)
+    
+    def __init__(self,parent,rp):
         super(RemotePicturesGui, self).__init__(parent)
         
+        self.rp = rp
         self.good = True
         self.settings = None
         self.categoryPictures = {}
@@ -29,9 +35,15 @@ class RemotePicturesGui(QStackedWidget):
                 self.good = False
                 
         self.categoryModel = CategoriesModel()
+        sortProxy = QSortFilterProxyModel(self)
+        sortProxy.setSortCaseSensitivity(Qt.CaseInsensitive)
+        sortProxy.setSortRole(CategoriesModel.SORT_ROLE)
+        sortProxy.setDynamicSortFilter(True)
+        sortProxy.setSourceModel(self.categoryModel)
+        sortProxy.sort(0)
         
         self.categoryView = QListView(self)
-        self.categoryView.setModel(self.categoryModel)
+        self.categoryView.setModel(sortProxy)
         self.categoryView.setViewMode(QListView.IconMode);
         self.categoryView.setIconSize(QSize(200,200));
         self.categoryView.setResizeMode(QListView.Adjust);
@@ -84,15 +96,29 @@ class RemotePicturesGui(QStackedWidget):
         self.nextButton.clicked.connect(self._displayNextImage)
         self.prevButton.clicked.connect(self._displayPreviousImage)
         backButton.clicked.connect(partial(self.setCurrentIndex, 0))
+        self._initializeHiddenWidget(self.categoryLabel)
+        self._initializeHiddenWidget(self.prevButton)
+        self._initializeHiddenWidget(self.nextButton)
+        self._initializeHiddenWidget(self.descriptionLabel)
         
-        self.categoryOpened.connect(self.categoryLabel._showTemporarily)
-        self.categoryOpened.connect(self.prevButton._showTemporarily)
-        self.categoryOpened.connect(self.nextButton._showTemporarily)
-        self.categoryOpened.connect(self.descriptionLabel._showTemporarily)
+        self.minOpacityChanged.emit(float(self.rp.options['min_opacity']) / 100.)
+        self.maxOpacityChanged.emit(float(self.rp.options['max_opacity']) / 100.)
                 
         # load categories index
         self._loadIndex()
         
+    def hasPictureWithURL(self, url):
+        for tupleList in self.categoryPictures.values():
+            for anUrl, _desc in tupleList:
+                if url == anUrl:
+                    return True
+        return False
+        
+    def _initializeHiddenWidget(self, w):
+        self.categoryOpened.connect(w.showTemporarily)
+        self.minOpacityChanged.connect(w.setMinOpacity)
+        self.maxOpacityChanged.connect(w.setMaxOpacity)
+
     @pyqtSlot(QModelIndex)
     def _itemDoubleClicked(self, index):
         item = self.categoryModel.item(index.row())
@@ -174,45 +200,47 @@ class RemotePicturesGui(QStackedWidget):
     def _picturesDirectory(self):
         return os.path.join(get_settings().get_main_config_dir(), "remote_pictures")
         
-    def _fileForThumbnail(self, url, _category):
-        path = urlparse.urlparse(url.encode('utf-8')).path
-        oldSuffix = os.path.splitext(path)[1]
-        return tempfile.NamedTemporaryFile(suffix=oldSuffix, dir=self._picturesDirectory(), delete=False)
+    def _fileForThumbnail(self, _category):
+        return tempfile.NamedTemporaryFile(suffix='.jpg', dir=self._picturesDirectory(), delete=False)
+    
+    def thumbnailSizeChanged(self, newValue):
+        self.categoryModel.thumbnailSizeChanged(newValue)
     
     def _getThumbnailSize(self):
-        return self.THUMBNAIL_SIZE
+        return self.rp.options['thumbnail_size']
     
-    def _createThumbnail(self, path, url, category):#
+    def _createThumbnail(self, path, category):
         if not os.path.exists(path):
             raise IOError("File '%s' does not exist." % path)
         
-        outFile = self._fileForThumbnail(url, category)
+        outFile = self._fileForThumbnail(category)
         fileName = outFile.name
         
         oldPixmap = QPixmap.fromImage(QImage(path))
-        newPixmap = oldPixmap.scaled(self._getThumbnailSize(),self._getThumbnailSize(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+        if oldPixmap.width() > self.MAX_THUMBNAIL_SIZE or oldPixmap.height() > self.MAX_THUMBNAIL_SIZE:
+            newPixmap = oldPixmap.scaled(self.MAX_THUMBNAIL_SIZE,self.MAX_THUMBNAIL_SIZE,Qt.KeepAspectRatio,Qt.SmoothTransformation)
+        else:
+            # no up-scaling here
+            newPixmap = oldPixmap
         newPixmap.save(fileName, format='jpeg')
         return fileName
             
-    def _addCategory(self, category, thumbnailPath = None, firstImagePath = None, firstImageURL = None):
+    def _addCategory(self, category, thumbnailPath = None, firstImagePath = None):
         # cache category image
         if thumbnailPath != None:
-            self.categoryModel.addCategory(category, thumbnailPath)
+            self.categoryModel.addCategory(category, thumbnailPath, self._getThumbnailSize())
         elif firstImagePath != None:
-            if firstImageURL == None:
-                raise Exception("URL must not be None.")
-            self.categoryModel.addCategory(category, self._createThumbnail(firstImagePath, firstImageURL, category))
+            self.categoryModel.addCategory(category, self._createThumbnail(firstImagePath, category), self._getThumbnailSize())
         else:
             raise Exception("No image path specified.")
         self.categoryPictures[category] = []
 
     def addPicture(self, path, url, category, description):
         # TODO display image immediately if category is open
-        # TODO "Not Categorized" always at first position
         if category == None:
-            category = "Not Categorized"
+            category = self.UNCATEGORIZED
         if not category in self.categoryPictures:
-            self._addCategory(category, firstImagePath=path, firstImageURL=url)
+            self._addCategory(category, firstImagePath=path)
         self.categoryPictures[category].append([url, description if description != None else u""])
         
     def destroyWidget(self):
@@ -224,16 +252,15 @@ class HiddenWidgetBase(object):
     INTERVAL = 20
     
     def __init__(self, minOpacity = 0.1, maxOpacity = 0.8):
-        # TODO option for min / max opacity
         self.good = False
         self.fadingEnabled = False
+        self.minOpacity = minOpacity
+        self.maxOpacity = maxOpacity
+        self.incr = (self.maxOpacity - self.minOpacity) / self.NUM_STEPS
+        self.fadeIn = False
         try:
             from PyQt4.QtGui import QGraphicsOpacityEffect
-            self.minOpacity = minOpacity
-            self.maxOpacity = maxOpacity
-            self.incr = (self.maxOpacity - self.minOpacity) / self.NUM_STEPS
             
-            self.fadeIn = False
             self.effect = QGraphicsOpacityEffect(self)
             self.setGraphicsEffect(self.effect)
             
@@ -243,7 +270,19 @@ class HiddenWidgetBase(object):
         except:
             log_debug(u"Could not enable opacity effects. %s: %s" % (sys.exc_info()[0].__name__, unicode(sys.exc_info()[1])))
         
-    def _showTemporarily(self):
+    def setMinOpacity(self, newVal):
+        self.minOpacity = newVal
+        self.incr = (self.maxOpacity - self.minOpacity) / self.NUM_STEPS
+        if self.fadingEnabled and not self.timer.isActive():
+            self.timer.start(self.INTERVAL)
+    
+    def setMaxOpacity(self, newVal):
+        self.maxOpacity = newVal
+        self.incr = (self.maxOpacity - self.minOpacity) / self.NUM_STEPS
+        if self.fadingEnabled and not self.timer.isActive():
+            self.timer.start(self.INTERVAL)
+        
+    def showTemporarily(self):
         if self.good:
             self.fadingEnabled = False
             self.fadeIn = False
@@ -257,13 +296,25 @@ class HiddenWidgetBase(object):
     
     def _fade(self):
         if self.fadeIn:
-            opacity = self.effect.opacity() + self.incr
-            self.effect.setOpacity(opacity)
-            return opacity < self.maxOpacity
+            desOp = self.maxOpacity
         else:
-            opacity = self.effect.opacity() - self.incr
+            desOp = self.minOpacity
+        
+        opacity = self.effect.opacity()
+        if abs(opacity - desOp) < self.incr:
+            # prevent flickering if timer does not stop immediately
+            return
+        
+        if opacity < desOp:
+            opacity += self.incr
             self.effect.setOpacity(opacity)
-            return opacity > self.minOpacity
+        else:
+            opacity -= self.incr
+            self.effect.setOpacity(opacity)
+        
+        #finish animation if desired opacity is reached
+        if abs(opacity - desOp) < self.incr:
+            self.timer.stop()
         
     def _mouseEntered(self):
         if self.good and self.fadingEnabled:
@@ -333,14 +384,29 @@ class CategoriesModel(QStandardItemModel):
         super(CategoriesModel, self).__init__()
         self.setColumnCount(1)
         
-    def addCategory(self, cat, firstImage):
+    def _initializeItem(self, item, imagePath, thumbnailSize):
+        iconData = QPixmap.fromImage(QImage(imagePath))
+        item.setData(QVariant(QIcon(iconData.scaled(QSize(thumbnailSize, thumbnailSize), Qt.KeepAspectRatio, Qt.SmoothTransformation))), Qt.DecorationRole)
+        
+    def addCategory(self, cat, firstImage, thumbnailSize):
         item = QStandardItem()
         item.setEditable(False)
         item.setData(QVariant(cat), Qt.DisplayRole)
-        item.setData(QVariant(QIcon(firstImage)), Qt.DecorationRole)
+        self._initializeItem(item, firstImage, thumbnailSize)
         item.setData(QVariant(firstImage), self.PATH_ROLE)
+        item.setData(QVariant(cat if cat != RemotePicturesGui.UNCATEGORIZED else ""), self.SORT_ROLE)
         self.appendRow([item])
+        
+    def thumbnailSizeChanged(self, thumbnailSize):
+        for i in range(self.rowCount()):
+            item = self.item(i)
+            self._initializeItem(item, item.data(self.PATH_ROLE).toString(), thumbnailSize)
 
 if __name__ == '__main__':
+    class RemotePicturesWrapper(object):
+        options = {u'min_opacity': 10,
+                   u'max_opacity': 90,
+                   u'thumbnail_size': 200}
+    
     from lunchinator.iface_plugins import iface_gui_plugin
-    iface_gui_plugin.run_standalone(lambda window : RemotePicturesGui(window))
+    iface_gui_plugin.run_standalone(lambda window : RemotePicturesGui(window, RemotePicturesWrapper()))

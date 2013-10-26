@@ -10,13 +10,39 @@ from functools import partial
 class remote_pictures(iface_gui_plugin):
     def __init__(self):
         super(remote_pictures, self).__init__()
-        self.options = [(("trust_policy", u"Accept remote pictures from", (u"Local", u"Everybody", u"Nobody", u"Selected Members")),u"Local"),
+        self.options = [(("trust_policy", u"Accept remote pictures from", (u"Local", u"Everybody", u"Nobody", u"Selected Members")),u"Selected Members"),
                         (("trusted_peers", u"Selected Members:"),u""),
+                        (("min_opacity", u"Minimum opacity of controls:", self.minOpacityChanged),20),
+                        (("max_opacity", u"Maximum opacity of controls:", self.maxOpacityChanged),80),
+                        (("thumbnail_size", u"Thumbnail Size:", self.thumbnailSizeChanged),150),
                         (("smooth_scaling", u"Smooth scaling", self.smoothScalingChanged),False)]
         self.gui = None
         self.imageTarget = None
-        # TODO remove last_url, search through history
-        self.last_url = "" 
+        
+    def _handleOpacity(self, newValue, signal):
+        if newValue < 0:
+            newValue = 0
+        elif newValue > 100:
+            newValue = 100
+            
+        signal.emit(float(newValue) / 100.)
+        return newValue
+        
+    def minOpacityChanged(self, _setting, newValue):
+        return self._handleOpacity(newValue, self.gui.minOpacityChanged)
+    
+    def maxOpacityChanged(self, _setting, newValue):
+        return self._handleOpacity(newValue, self.gui.maxOpacityChanged)
+    
+    def thumbnailSizeChanged(self, _setting, newValue):
+        from remote_pictures.remote_pictures_gui import RemotePicturesGui
+        if newValue < RemotePicturesGui.MIM_THUMBNAIL_SIZE:
+            newValue = RemotePicturesGui.MIN_THUMBNAIL_SIZE
+        elif newValue > RemotePicturesGui.MAX_THUMBNAIL_SIZE:
+            newValue = RemotePicturesGui.MAX_THUMBNAIL_SIZE
+        
+        self.gui.thumbnailSizeChanged(newValue)
+        return newValue
         
     def smoothScalingChanged(self, _setting, newValue):
         self.gui.imageLabel.smooth_scaling = newValue
@@ -34,11 +60,12 @@ class remote_pictures(iface_gui_plugin):
     def create_widget(self, parent):
         from remote_pictures.remote_pictures_gui import RemotePicturesGui
         super(remote_pictures, self).create_widget(parent)
-        self.gui = RemotePicturesGui(parent)
+        self.gui = RemotePicturesGui(parent, self)
         return self.gui
     
     def destroy_widget(self):
-        self.gui.destroyWidget()
+        if self.gui != None:
+            self.gui.destroyWidget()
         iface_gui_plugin.destroy_widget(self)
 
     def process_message(self,msg,addr,member_info):
@@ -64,7 +91,7 @@ class remote_pictures(iface_gui_plugin):
         except:
             log_warning("Remote Pictures does not work without QT")
             return
-        if url!=self.last_url:
+        if not self.gui.hasPictureWithURL(url):
             self.last_url = url
             self.imageTarget.seek(0)
             self.imageTarget.truncate()
