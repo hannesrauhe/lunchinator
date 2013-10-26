@@ -1,7 +1,3 @@
-- avatare auch nach pull-prinzip?
-- implement total cli table width
-- member removed -> remove from members dropdown, update maintainer plugin
-
 TODOs added by Hannes:
 
 - secondary DB connection plugin
