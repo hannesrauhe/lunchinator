@@ -12,6 +12,7 @@ class iface_plugin(IPlugin):
         self.option_callbacks = {}
         self.option_widgets = {}
         self.option_choice = {}
+        self.hidden_options = None
         manager = PluginManagerSingleton.get()
         self.shared_dict = manager.app.shared_dict
         super(iface_plugin, self).__init__()
@@ -41,7 +42,7 @@ class iface_plugin(IPlugin):
                     for aConf in iterconf:
                         # can be callback or choice
                         if callable(aConf):
-                            self.option_callbacks[o[0]] = aConf
+                            self.register_option_callback(o[0], aConf)
                         elif type(aConf) in (tuple, list):
                             self.option_choice[o[0]] = aConf
                 else:
@@ -102,13 +103,19 @@ class iface_plugin(IPlugin):
             log_exception("could not convert value of",o,"from config to type",type(v),"(",new_v,") using default")
     
     def read_options_from_file(self):
-        if not self.options:
-            return
-        for o,v in self.options.iteritems():
-            if self.hasConfigOption(o):
-                new_v = self.getConfigOption(o)
-                conv = self.convert_option(o, v, new_v)
-                self.options[o] = conv
+        if self.options:
+            for o,v in self.options.iteritems():
+                if self.hasConfigOption(o):
+                    new_v = self.getConfigOption(o)
+                    conv = self.convert_option(o, v, new_v)
+                    self.options[o] = conv
+        
+        if self.hidden_options:
+            for o,v in self.hidden_options.iteritems():
+                if self.hasConfigOption(o):
+                    new_v = self.getConfigOption(o)
+                    conv = self.convert_option(o, v, new_v)
+                    self.hidden_options[o] = conv
         
     def add_option_to_layout(self, parent, grid, i, o, v):
         from PyQt4.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
@@ -169,14 +176,10 @@ class iface_plugin(IPlugin):
     def has_option(self, o):
         return o in self.options
     
-    def set_option(self, o, new_v, convert = True):
-        """
-        Set option o to the new value new_v.
-        If you are sure that new_v has the correct type, you can set convert = False.
-        """
-        if o not in self.options:
+    def _set_option(self, o, new_v, targetDict, convert = True):
+        if o not in targetDict:
             return
-        v = self.options[o]
+        v = targetDict[o]
         if convert:
             new_v = self.convert_option(o, v, new_v)
         if new_v!=v:
@@ -185,8 +188,27 @@ class iface_plugin(IPlugin):
                 if mod_v != None:
                     # callback returned modified value
                     new_v = mod_v 
-            self.options[o]=new_v
+            targetDict[o]=new_v
             self.set_option_value(o, new_v)
+            
+    def register_option_callback(self, o, callback):
+        if o in self.option_callbacks:
+            raise AttributeError(u"There already is a callback registered for option '%s'" % o)
+        self.option_callbacks[o] = callback
+    
+    def set_option(self, o, new_v, convert = True):
+        """
+        Set option o to the new value new_v.
+        If you are sure that new_v has the correct type, you can set convert = False.
+        """
+        self._set_option(o, new_v, self.options, convert)
+        
+    def set_hidden_option(self, o, new_v, convert = True):
+        """
+        Set hidden option o to the new value new_v.
+        If you are sure that new_v has the correct type, you can set convert = False.
+        """
+        self._set_option(o, new_v, self.hidden_options, convert)
                 
     def reset_option(self, o):
         """
