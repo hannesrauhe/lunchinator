@@ -16,8 +16,8 @@ class Notify(iface_called_plugin):
     def deactivate(self):        
         iface_called_plugin.deactivate(self)
         
-    def audioFileChanged(self,setting,new_value):
-        audio_file=''
+    def audioFileChanged(self,_setting,new_value):
+        audio_file=self.options[u"audio_file"]
         if os.path.exists(new_value):
             audio_file = new_value
         elif os.path.exists(get_settings().get_main_config_dir()+"/sounds/"+new_value):
@@ -26,9 +26,8 @@ class Notify(iface_called_plugin):
             audio_file = get_settings().get_lunchdir()+"/sounds/"+new_value
         else:
             log_error("configured audio file %s does not exist in sounds folder, using old one"%new_value)
-            #returning false just resets the value
-            return False
-        self.set_option(setting, audio_file)
+            # don't set the new value, keep old value
+        return audio_file
             
     def process_message(self,msg,addr,member_info):
         name = " ["+addr+"]"
