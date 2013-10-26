@@ -91,7 +91,7 @@ class remote_pictures(iface_gui_plugin):
         except:
             log_warning("Remote Pictures does not work without QT")
             return
-        if not self.gui.hasPictureWithURL(url):
+        if not self.gui.hasPicture(url, category):
             self.last_url = url
             self.imageTarget.seek(0)
             self.imageTarget.truncate()

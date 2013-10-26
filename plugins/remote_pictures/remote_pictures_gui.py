@@ -25,7 +25,7 @@ class RemotePicturesGui(QStackedWidget):
         self.settings = None
         self.categoryPictures = {}
         self.currentCategory = None
-        self.currentIndex = 0
+        self.curPicIndex = 0
 
         if not os.path.exists(self._picturesDirectory()):
             try:
@@ -51,7 +51,7 @@ class RemotePicturesGui(QStackedWidget):
 
         self.addWidget(self.categoryView)
         
-        self.imageLabel = ResizingWebImageLabel(self, True)
+        self.imageLabel = ResizingWebImageLabel(self, smooth_scaling=self.rp.options['smooth_scaling'])
         imageViewerLayout = QVBoxLayout(self.imageLabel)
         imageViewerLayout.setContentsMargins(0, 0, 0, 0)
         imageViewerLayout.setSpacing(0)
@@ -107,11 +107,14 @@ class RemotePicturesGui(QStackedWidget):
         # load categories index
         self._loadIndex()
         
-    def hasPictureWithURL(self, url):
-        for tupleList in self.categoryPictures.values():
-            for anUrl, _desc in tupleList:
-                if url == anUrl:
-                    return True
+    def hasPicture(self, url, cat):
+        if not cat:
+            cat = self.UNCATEGORIZED
+        if not cat in self.categoryPictures:
+            return False
+        for anUrl, _desc in self.categoryPictures[cat]:
+            if url == anUrl:
+                return True
         return False
         
     def _initializeHiddenWidget(self, w):
@@ -135,20 +138,20 @@ class RemotePicturesGui(QStackedWidget):
             # invalid index
             return
         
-        self.currentIndex = index
-        newestPicTuple = self.categoryPictures[self.currentCategory][self.currentIndex]
+        self.curPicIndex = index
+        newestPicTuple = self.categoryPictures[self.currentCategory][self.curPicIndex]
         self.imageLabel.setURL(newestPicTuple[0])
         self.descriptionLabel.setText(newestPicTuple[1])
         self.setCurrentIndex(1)
         
-        self.prevButton.setEnabled(self.currentIndex > 0)
-        self.nextButton.setEnabled(self.currentIndex < len(self.categoryPictures[self.currentCategory]) - 1)
+        self.prevButton.setEnabled(self.curPicIndex > 0)
+        self.nextButton.setEnabled(self.curPicIndex < len(self.categoryPictures[self.currentCategory]) - 1)
         
     def _displayNextImage(self):
-        self._displayImage(self.currentIndex + 1)
+        self._displayImage(self.curPicIndex + 1)
         
     def _displayPreviousImage(self):
-        self._displayImage(self.currentIndex - 1)    
+        self._displayImage(self.curPicIndex - 1)    
     
     def _openCategory(self, cat):
         self.currentCategory = cat
@@ -241,7 +244,11 @@ class RemotePicturesGui(QStackedWidget):
             category = self.UNCATEGORIZED
         if not category in self.categoryPictures:
             self._addCategory(category, firstImagePath=path)
+        
         self.categoryPictures[category].append([url, description if description != None else u""])
+        if self.currentIndex() == 1 and category == self.currentCategory:
+            # if category is open, display image immediately
+            self._displayImage()
         
     def destroyWidget(self):
         self._saveIndex()
