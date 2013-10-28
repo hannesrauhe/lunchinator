@@ -1,11 +1,13 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import log_exception, get_settings, log_error, convert_string,\
     log_warning, get_server, log_debug
-import urllib2,sys,tempfile,csv,contextlib
+import urllib2,sys,tempfile,csv,contextlib,os
 from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator.download_thread import DownloadThread
 from StringIO import StringIO
 from functools import partial
+from tempfile import NamedTemporaryFile
+from urlparse import urlparse
     
 class remote_pictures(iface_gui_plugin):
     def __init__(self):
@@ -19,7 +21,6 @@ class remote_pictures(iface_gui_plugin):
                         ((u"thumbnail_size", u"Thumbnail Size:", self.thumbnailSizeChanged),150),
                         ((u"smooth_scaling", u"Smooth scaling", self.smoothScalingChanged),False)]
         self.gui = None
-        self.imageTarget = None
         
     def _handleOpacity(self, newValue, signal):
         if newValue < 0:
@@ -49,12 +50,7 @@ class remote_pictures(iface_gui_plugin):
     def smoothScalingChanged(self, _setting, newValue):
         self.gui.imageLabel.smooth_scaling = newValue
     
-    def activate(self):
-        iface_gui_plugin.activate(self)
-        self.imageTarget = tempfile.NamedTemporaryFile()
-        
     def deactivate(self):
-        self.imageTarget.close()
         if self.visible:
             self.destroy_widget()
         iface_gui_plugin.deactivate(self)
@@ -77,15 +73,21 @@ class remote_pictures(iface_gui_plugin):
         log_error("Error downloading picture from url %s" % convert_string(url))
         thread.deleteLater()
         
-    def downloadedPicture(self, category, description, _thread, url):
+    def downloadedPicture(self, category, description, thread, url):
         from PyQt4.QtGui import QPixmap, QImage
-        self.imageTarget.flush()
         name = "New Remote Picture"
         if category != None:
             name = name + " in category %s" % category
-        displayNotification(name, description, self.imageTarget.name)
+            
+        # create temporary image file to display in notification
+        url = convert_string(url)
+        ext = os.path.splitext(urlparse(url).path)[1]
+        newFile = NamedTemporaryFile(suffix=ext)
+        newFile.write(thread.getResult())
+        newFile.seek(0)
+        displayNotification(name, description, newFile.name)
         
-        self.gui.addPicture(self.imageTarget.name, convert_string(url), category, description)
+        self.gui.addPicture(newFile, url, category, description)
           
     def extract_pic(self,url,category,description):
         try:
@@ -94,10 +96,7 @@ class remote_pictures(iface_gui_plugin):
             log_warning("Remote Pictures does not work without QT")
             return
         if not self.gui.hasPicture(url, category):
-            self.last_url = url
-            self.imageTarget.seek(0)
-            self.imageTarget.truncate()
-            downloadThread = DownloadThread(getValidQtParent(), url, self.imageTarget)
+            downloadThread = DownloadThread(getValidQtParent(), url)
             downloadThread.success.connect(partial(self.downloadedPicture, category, description))
             downloadThread.error.connect(self.errorDownloadingPicture)
             downloadThread.finished.connect(downloadThread.deleteLater)
