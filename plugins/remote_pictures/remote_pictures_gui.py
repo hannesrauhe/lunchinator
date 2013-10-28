@@ -35,15 +35,15 @@ class RemotePicturesGui(QStackedWidget):
                 self.good = False
                 
         self.categoryModel = CategoriesModel()
-        sortProxy = QSortFilterProxyModel(self)
-        sortProxy.setSortCaseSensitivity(Qt.CaseInsensitive)
-        sortProxy.setSortRole(CategoriesModel.SORT_ROLE)
-        sortProxy.setDynamicSortFilter(True)
-        sortProxy.setSourceModel(self.categoryModel)
-        sortProxy.sort(0)
+        self.sortProxy = QSortFilterProxyModel(self)
+        self.sortProxy.setSortCaseSensitivity(Qt.CaseInsensitive)
+        self.sortProxy.setSortRole(CategoriesModel.SORT_ROLE)
+        self.sortProxy.setDynamicSortFilter(True)
+        self.sortProxy.setSourceModel(self.categoryModel)
+        self.sortProxy.sort(0)
         
         self.categoryView = QListView(self)
-        self.categoryView.setModel(sortProxy)
+        self.categoryView.setModel(self.sortProxy)
         self.categoryView.setViewMode(QListView.IconMode);
         self.categoryView.setIconSize(QSize(200,200));
         self.categoryView.setResizeMode(QListView.Adjust);
@@ -124,6 +124,7 @@ class RemotePicturesGui(QStackedWidget):
 
     @pyqtSlot(QModelIndex)
     def _itemDoubleClicked(self, index):
+        index = self.sortProxy.mapToSource(index)
         item = self.categoryModel.item(index.row())
         self._openCategory(convert_string(item.data(Qt.DisplayRole).toString()))
         

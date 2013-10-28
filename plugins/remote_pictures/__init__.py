@@ -38,7 +38,7 @@ class remote_pictures(iface_gui_plugin):
     
     def thumbnailSizeChanged(self, _setting, newValue):
         from remote_pictures.remote_pictures_gui import RemotePicturesGui
-        if newValue < RemotePicturesGui.MIM_THUMBNAIL_SIZE:
+        if newValue < RemotePicturesGui.MIN_THUMBNAIL_SIZE:
             newValue = RemotePicturesGui.MIN_THUMBNAIL_SIZE
         elif newValue > RemotePicturesGui.MAX_THUMBNAIL_SIZE:
             newValue = RemotePicturesGui.MAX_THUMBNAIL_SIZE
