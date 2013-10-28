@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import *
 import sys
-from lunchinator import get_server, log_exception, log_error
+from lunchinator import get_server, log_exception, log_error, log_debug
 
 class statistics(iface_called_plugin):
     def __init__(self):
