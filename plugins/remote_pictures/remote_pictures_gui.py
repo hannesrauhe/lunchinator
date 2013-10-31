@@ -35,15 +35,15 @@ class RemotePicturesGui(QStackedWidget):
                 self.good = False
                 
         self.categoryModel = CategoriesModel()
-        sortProxy = QSortFilterProxyModel(self)
-        sortProxy.setSortCaseSensitivity(Qt.CaseInsensitive)
-        sortProxy.setSortRole(CategoriesModel.SORT_ROLE)
-        sortProxy.setDynamicSortFilter(True)
-        sortProxy.setSourceModel(self.categoryModel)
-        sortProxy.sort(0)
+        self.sortProxy = QSortFilterProxyModel(self)
+        self.sortProxy.setSortCaseSensitivity(Qt.CaseInsensitive)
+        self.sortProxy.setSortRole(CategoriesModel.SORT_ROLE)
+        self.sortProxy.setDynamicSortFilter(True)
+        self.sortProxy.setSourceModel(self.categoryModel)
+        self.sortProxy.sort(0)
         
         self.categoryView = QListView(self)
-        self.categoryView.setModel(sortProxy)
+        self.categoryView.setModel(self.sortProxy)
         self.categoryView.setViewMode(QListView.IconMode);
         self.categoryView.setIconSize(QSize(200,200));
         self.categoryView.setResizeMode(QListView.Adjust);
@@ -124,6 +124,7 @@ class RemotePicturesGui(QStackedWidget):
 
     @pyqtSlot(QModelIndex)
     def _itemDoubleClicked(self, index):
+        index = self.sortProxy.mapToSource(index)
         item = self.categoryModel.item(index.row())
         self._openCategory(convert_string(item.data(Qt.DisplayRole).toString()))
         
@@ -212,14 +213,12 @@ class RemotePicturesGui(QStackedWidget):
     def _getThumbnailSize(self):
         return self.rp.options['thumbnail_size']
     
-    def _createThumbnail(self, path, category):
-        if not os.path.exists(path):
-            raise IOError("File '%s' does not exist." % path)
-        
+    def _createThumbnail(self, inFile, category):
         outFile = self._fileForThumbnail(category)
         fileName = outFile.name
         
-        oldPixmap = QPixmap.fromImage(QImage(path))
+        imageData = inFile.read()
+        oldPixmap = QPixmap.fromImage(QImage.fromData(imageData))
         if oldPixmap.width() > self.MAX_THUMBNAIL_SIZE or oldPixmap.height() > self.MAX_THUMBNAIL_SIZE:
             newPixmap = oldPixmap.scaled(self.MAX_THUMBNAIL_SIZE,self.MAX_THUMBNAIL_SIZE,Qt.KeepAspectRatio,Qt.SmoothTransformation)
         else:
@@ -228,22 +227,27 @@ class RemotePicturesGui(QStackedWidget):
         newPixmap.save(fileName, format='jpeg')
         return fileName
             
-    def _addCategory(self, category, thumbnailPath = None, firstImagePath = None):
+    def _addCategory(self, category, thumbnailPath = None, imageFile = None):
         # cache category image
-        if thumbnailPath != None:
-            self.categoryModel.addCategory(category, thumbnailPath, self._getThumbnailSize())
-        elif firstImagePath != None:
-            self.categoryModel.addCategory(category, self._createThumbnail(firstImagePath, category), self._getThumbnailSize())
-        else:
-            raise Exception("No image path specified.")
-        self.categoryPictures[category] = []
+        closeImmediately = True
+        try:
+            if thumbnailPath != None:
+                self.categoryModel.addCategory(category, thumbnailPath, self._getThumbnailSize())
+            elif imageFile != None:
+                # TODO create thumbnail asynchronously, then close imageFile
+                self.categoryModel.addCategory(category, self._createThumbnail(imageFile, category), self._getThumbnailSize())
+            else:
+                raise Exception("No image path specified.")
+            self.categoryPictures[category] = []
+        finally:
+            if closeImmediately:
+                imageFile.close()
 
-    def addPicture(self, path, url, category, description):
-        # TODO display image immediately if category is open
+    def addPicture(self, imageFile, url, category, description):
         if category == None:
             category = self.UNCATEGORIZED
         if not category in self.categoryPictures:
-            self._addCategory(category, firstImagePath=path)
+            self._addCategory(category, imageFile = imageFile)
         
         self.categoryPictures[category].append([url, description if description != None else u""])
         if self.currentIndex() == 1 and category == self.currentCategory:
