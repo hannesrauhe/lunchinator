@@ -1,7 +1,6 @@
 Package: lunchinator
 Version: 2.0.4
-Architecture: any
-Multi-Arch: same
+Architecture: all
 Maintainer: Hannes Rauhe <hannes@scitivity.net>
 Depends: git (>=1), ubuntu-mono (>=0.0.1), sox (>=14.0), libnotify-bin (>=0.4.5), python-gtk2 (>= 2.12), python (>= 2.5), libatk1.0-0 (>= 1.20.0), libc6 (>= 2.4), libcairo2 (>= 1.6.0), libglib2.0-0 (>= 2.16.0), python-imaging (>=1.1.0), python-qt4(>=4.7.2)
 Installed-Size: 1024
