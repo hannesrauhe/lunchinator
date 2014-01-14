@@ -129,7 +129,7 @@ class TwitterDownloadThread(Thread):
                     self.announce_pic(account_name, urls[0])
                     self._old_pic_urls[account_name]=urls[0]
             except twitter.TwitterError as t:
-                log_error("Twitter: Error while trying to retrieve pics",str(t))
+                log_error("Twitter: Error while trying to retrieve pics from %s: %s"%(account_name,str(t)))
                 
     def _find_remote_calls(self):
         get_server().call("HELO_TWITTER_REMOTE %s"%self._own_screen_name)          
