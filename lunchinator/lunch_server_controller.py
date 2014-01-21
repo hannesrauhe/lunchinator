@@ -11,6 +11,9 @@ class LunchServerController(object):
     def initDone(self):
         pass
         
+    def peerAppended(self, ip):
+        pass
+        
     def memberAppended(self, ip, infoDict):
         pass
     

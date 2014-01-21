@@ -30,6 +30,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     memberUpdatedSignal = pyqtSignal(unicode, dict)
     memberRemovedSignal = pyqtSignal(unicode)
     messagePrependedSignal = pyqtSignal(time.struct_time, list)
+    peerAppendedSignal = pyqtSignal(unicode)
     groupAppendedSignal = pyqtSignal(unicode, set)
     _sendFile = pyqtSignal(unicode, bytearray, int, bool)
     _receiveFile = pyqtSignal(unicode, int, unicode, int)
@@ -205,7 +206,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
         # usually, the emitted signal won't be processed anyway (plug-ins deactivated in quit())
         if exitCode == EXIT_CODE_UPDATE:
             self.serverThread.finished.disconnect(self.serverFinishedUnexpectedly)
-            self._updateRequested.emit()
+            self._updateRequested.emit()    
+        
+    def peerAppended(self, ip):
+        self.peerAppendedSignal.emit(ip)
         
     def memberAppended(self, ip, infoDict):
         self.memberAppendedSignal.emit(ip, infoDict)

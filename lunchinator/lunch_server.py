@@ -117,9 +117,14 @@ class lunch_server(object):
                     daten, addr = s.recvfrom(1024)
                     daten = daten.decode('utf-8')
                     ip = unicode(addr[0])
+                    if ip not in self._peer_timeout:
+                        self._peer_timeout[ip]=time() 
+                        self._peerAppended(ip)
+                    else:
+                        self._peer_timeout[ip]=time()
+                        
                     if self._check_group(daten,ip):
                         if not ip.startswith("127."):
-                            self._peer_timeout[ip]=time()
                             if not ip in self._members:
                                 self._append_member(ip, ip)
                             
@@ -333,6 +338,9 @@ class lunch_server(object):
     
     def _memberRemoved(self, ip):
         self.controller.memberRemoved(ip)
+    
+    def _peerAppended(self, ip):
+        self.controller.peerAppended(ip)
         
     def _append_member(self, ip, hostn, inform = True):
         # insert name into info dict
