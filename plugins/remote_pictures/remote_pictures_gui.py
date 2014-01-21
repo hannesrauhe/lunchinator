@@ -240,7 +240,7 @@ class RemotePicturesGui(QStackedWidget):
                 raise Exception("No image path specified.")
             self.categoryPictures[category] = []
         finally:
-            if closeImmediately:
+            if closeImmediately and imageFile != None:
                 imageFile.close()
 
     def addPicture(self, imageFile, url, category, description):
