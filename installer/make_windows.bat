@@ -1,4 +1,4 @@
-C:\\Python27\\scripts\\pyinstaller.exe -y -F ^
+C:\\Python27\\scripts\\pyinstaller.exe -y -F -w ^
 -n lunchinator ^
 --icon=..\\images\\lunch.ico ^
 --hidden-import=urllib2 ^
@@ -15,4 +15,4 @@ C:\\Python27\\scripts\\pyinstaller.exe -y -F ^
 ..\\plugins\\remote_pictures\\__init__.py ^
 ..\\plugins\\remote_pictures\\remote_pictures_gui.py
 
-move dist\\lunchinator.exe .
+"C:\\Program Files (x86)\\Inno Setup 5\\Compil32.exe" /cc build_installer.iss
