@@ -5,7 +5,7 @@ from PyQt4.QtCore import Qt
 from maintainer.members_widget import MembersWidget
 
 class maintainer_gui(QTabWidget):
-    LOG_REQUEST_TIMEOUT = 10 # 10 seconds until request is invalid
+    LOG_REQUEST_TIMEOUT = 20 # 10 seconds until request is invalid
     def __init__(self,parent):
         super(maintainer_gui, self).__init__(parent)
         self.info_table = None

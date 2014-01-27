@@ -69,8 +69,8 @@ class maintainer(iface_gui_plugin):
                 file_name="%s/tmp.log" % logDir
             
             dr = DataReceiverThread(self.w, ip,file_size,file_name,tcp_port,category="log%s"%ip)
-            dr.successfullyTransferred.connect(self.w.cb_log_transfer_success)
-            dr.errorOnTransfer.connect(self.w.cb_log_transfer_error)
+            dr.successfullyTransferred.connect(self.w.membersWidget.cb_log_transfer_success)
+            dr.errorOnTransfer.connect(self.w.membersWidget.cb_log_transfer_error)
             dr.finished.connect(dr.deleteLater)
             dr.start()
             

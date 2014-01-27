@@ -1,5 +1,6 @@
 C:\\Python27\\scripts\\pyinstaller.exe -y -F -w ^
 -n lunchinator ^
+--noupx ^
 --icon=..\\images\\lunch.ico ^
 --hidden-import=urllib2 ^
 --hidden-import=bisect ^
