@@ -26,7 +26,7 @@ class TwitterDownloadThread(Thread):
         if len(url_text_tuple[0]):
             with contextlib.closing(StringIO()) as strOut:
                 writer = csv.writer(strOut, delimiter = ' ', quotechar = '"')
-                writer.writerow([url_text_tuple[0], url_text_tuple[1], account_name])
+                writer.writerow([url_text_tuple[0].encode("utf-8"), url_text_tuple[1].encode("utf-8"), account_name])
                 get_server().call('HELO_REMOTE_PIC %s' % strOut.getvalue())
         
     def set_polling_time(self,v):
