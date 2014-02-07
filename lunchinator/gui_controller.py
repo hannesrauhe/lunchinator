@@ -90,7 +90,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             # dont set highlighted if window is in foreground
             return
         self.isIconHighlighted = True
-        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunchred.svg")
+        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunchinatorred.png")
         if hasattr(QIcon, "fromTheme"):
             icon = QIcon.fromTheme("lunchinatorred", QIcon(icon_file))
         else:
@@ -110,7 +110,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.isIconHighlighted = False
         if self.resetIconTimer != None and self.resetIconTimer.isActive():
             self.resetIconTimer.stop()
-        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg")
+        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunchinator.png")
         if hasattr(QIcon, "fromTheme"):
             icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
         else:
