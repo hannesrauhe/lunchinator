@@ -289,7 +289,7 @@ class lunch_server(object):
                     i+=1
                 except:
                     # only warning message; happens sometimes if the host is not reachable
-                    log_warning("Message could not be delivered to %s: %s" % (ip, str(sys.exc_info()[0])))
+                    log_warning("Message %s could not be delivered to %s: %s" % (s, ip, str(sys.exc_info()[0])))
                     continue
         finally:
             s.close() 
