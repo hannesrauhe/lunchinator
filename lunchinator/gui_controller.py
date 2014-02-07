@@ -5,7 +5,7 @@ import socket,os,time, subprocess
 import platform
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplication, QTimer
-from PyQt4 import QtCore, QtSvg
+from PyQt4 import QtCore
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
@@ -90,7 +90,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             # dont set highlighted if window is in foreground
             return
         self.isIconHighlighted = True
-        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunchinatorred.png")
+        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunchred.png")
         if hasattr(QIcon, "fromTheme"):
             icon = QIcon.fromTheme("lunchinatorred", QIcon(icon_file))
         else:
@@ -110,7 +110,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.isIconHighlighted = False
         if self.resetIconTimer != None and self.resetIconTimer.isActive():
             self.resetIconTimer.stop()
-        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunchinator.png")
+        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunch.png")
         if hasattr(QIcon, "fromTheme"):
             icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
         else:

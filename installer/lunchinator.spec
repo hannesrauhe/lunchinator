@@ -7,16 +7,11 @@ a = Analysis(['..\\\\start_lunchinator.py', '..\\\\plugins\\\\members_table\\\\_
 pyz = PYZ(a.pure)
 exe = EXE(pyz,
           a.scripts,
-          exclude_binaries=True,
+          a.binaries,
+          a.zipfiles,
+          a.datas,
           name='lunchinator.exe',
           debug=False,
           strip=None,
           upx=False,
           console=False , icon='..\\images\\lunch.ico')
-coll = COLLECT(exe,
-               a.binaries,
-               a.zipfiles,
-               a.datas,
-               strip=None,
-               upx=False,
-               name='lunchinator')
