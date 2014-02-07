@@ -1,4 +1,4 @@
-from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplication, QMenu, QKeySequence
+from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplication, QMenu, QKeySequence, QIcon
 from PyQt4.QtCore import Qt, QSettings, QVariant, QEvent
 from lunchinator import get_settings, get_server, log_exception, convert_string
 import sys, os
@@ -20,6 +20,7 @@ class LunchinatorWindow(QMainWindow):
 
         self.guiHandler = controller
         self.setWindowTitle("Lunchinator")
+        self.setWindowIcon(QIcon(os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg"))) 
 
         self.setDockNestingEnabled(True)
         self.setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
