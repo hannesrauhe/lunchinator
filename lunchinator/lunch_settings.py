@@ -69,6 +69,7 @@ class lunch_settings(object):
         self._logging_level = u"ERROR"
         self._group_plugins = False
         self._default_db_connection = u"auto"
+        self._proxy = u""
         
         if not os.path.exists(self._main_config_dir):
             os.makedirs(self._main_config_dir)
@@ -122,7 +123,12 @@ class lunch_settings(object):
         self._avatar_file =  self.read_value_from_config_file(self._avatar_file,"general","avatar_file")                 
         
         if self._user_name=="":
-            self._user_name = getpass.getuser().decode()  
+            self._user_name = getpass.getuser().decode()         
+        
+        #apply proxy on start if given
+        self._proxy =  self.read_value_from_config_file(self._proxy,"general","proxy")  
+        if self._proxy:
+            self.set_proxy(self._proxy)
             
     def read_value_from_config_file(self,value,section,name):
         try:
@@ -317,4 +323,12 @@ class lunch_settings(object):
             
     def get_advanced_gui_enabled(self):
         return self._logging_level == u"DEBUG"
+        
+    def get_proxy(self):
+        return self._proxy
     
+    def set_proxy(self, newValue):
+        os.environ["http_proxy"]=newValue
+        os.environ["https_proxy"]=newValue
+        self._proxy=newValue
+        

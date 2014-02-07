@@ -1,6 +1,6 @@
 from PyQt4.QtCore import QThread, pyqtSignal
-from lunchinator import log_exception, log_error
-import urllib2, contextlib
+from lunchinator import log_exception, log_error, log_info
+import urllib2, contextlib, os
 from cStringIO import StringIO, OutputType
 from urllib2 import HTTPError
    
