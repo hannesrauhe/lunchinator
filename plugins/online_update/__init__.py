@@ -1,7 +1,7 @@
 from lunchinator import get_server
 from lunchinator.lunch_settings import lunch_settings
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import log_exception, log_error, log_info, get_settings
+from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
 from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator.download_thread import DownloadThread
 import urllib2,sys,os,contextlib
@@ -9,7 +9,7 @@ import urllib2,sys,os,contextlib
 class online_update(iface_gui_plugin):
     def __init__(self):
         super(online_update, self).__init__()
-        self.options = [(("check_url", "update URL"), "http://lunchinator.de/update/")]
+        self.options = [(("check_url", "update URL"), "http://update.lunchinator.de/")]
         self._avail_version = 0
         self._statusLabel = None
         self._versionLabel = None
@@ -24,7 +24,7 @@ class online_update(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
-        from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, QVBoxLayout, QLabel, QSizePolicy, QPushButton
+        from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, QVBoxLayout, QLabel, QSizePolicy, QPushButton, QTextEdit
 
         iface_gui_plugin.create_widget(self, parent)        
         
@@ -41,12 +41,12 @@ class online_update(iface_gui_plugin):
         button.clicked.connect(self.check_for_update)
         layout.addWidget(button)
         
-        self._versionLabel = QLabel("")
+        self._versionLabel = QTextEdit("")
         self._update_version_label()
         layout.addWidget(self._versionLabel)
         
         widget.setMaximumHeight(widget.sizeHint().height())
-        widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)   
+        widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)   
         return widget  
     
     def _set_status(self,status,err=False):
@@ -62,9 +62,9 @@ class online_update(iface_gui_plugin):
             
     def _update_version_label(self):
         if self._version_info and self._versionLabel:
-            vstr = "New Version Info:\n"
+            vstr = "Online Version Info:\n"
             for k,v in self._version_info.iteritems():
-                vstr += str(k)+": "+str(v)+"\n"
+                vstr += str(k)+":"+str(v)+"\n"
             self._versionLabel.setText(vstr)           
             
         
@@ -91,6 +91,8 @@ class online_update(iface_gui_plugin):
             log_error("Verification of Signature failed")
             return False
         
+        return v
+        
     def version_info_downloaded(self,thread):
         try:
             signedString = thread.getResult()
@@ -98,35 +100,66 @@ class online_update(iface_gui_plugin):
             self._set_status("Version info not available", True)
             return
         
+        log_debug("Update: Got version info, checking signature",signedString)
+        
         ver_result = False
         try:
-            self._verify_signature(signedString)
+            ver_result = self._verify_signature(signedString)
         except:
             self._set_status("Signature could not be verified because of unknown error", True)
             return
         
         if not ver_result:
             return
+                
+        log_debug("Updater: Signature OK, checking version info")
         
         for l in signedString.splitlines():
             info = l.split(":",2)
-            if len(info)>2:
-                self._version_info[info[0]] = info[1]
+            if len(info)>1:
+                self._version_info[info[0]] = info[1].strip()
+                
+        if not self._version_info.has_key("URL") or not self._version_info.has_key("Commit Count"):
+            self._set_status("Version Info corrupt - URL and/or Commit Count missing", True)
+            log_debug(str(self._version_info))
+            return
+        else:
+            try:
+                self._version_info["Commit Count"] = int(self._version_info["Commit Count"])
+            except:
+                self._statusLabel("Commit Count has wrong format: "%self._version_info["Commit Count"], True)
+                return
                 
         self._update_version_label()
         
         self._installer_url = self.options["check_url"]+self._version_info["URL"]
         self._local_installer_file = os.path.join(get_settings().get_main_config_dir(), "setup_lunchinator.exe")
             
-        if self._avail_version>int(get_settings().get_commit_count()):
-            self._set_status("New Version %d available, Downloading ..."%self._avail_version)
+        if self._version_info["Commit Count"]>int(get_settings().get_commit_count()):
+            self._set_status("New Version %d available, Downloading ..."%(self._version_info["Commit Count"]))
             installer_download = DownloadThread(getValidQtParent(), self._installer_url, target = open(self._local_installer_file, "wb"))
             installer_download.success.connect(self.installer_downloaded)
             installer_download.error.connect(self.error_while_downloading)
             installer_download.finished.connect(installer_download.deleteLater)
             installer_download.start()
+        else:
+            self._set_status("No new version available")
         
     def installer_downloaded(self):
+        fileHash = ""
+        try:
+            import hashlib
+            with contextlib.closing(open(self._local_installer_file,"rb")) as fileToHash:
+                md = hashlib.md5()
+                md.update(fileToHash.read())
+                fileHash = md.hexdigest()
+        except:
+            self._set_status("Could not calculate hash of installer", True)
+        
+        if fileHash!=self._version_info["Installer Hash"]:
+            self._set_status("Installer Hash wrong %s!=%s"%(fileHash, self._version_info["Installer Hash"]), True)
+            return
+            
         self._set_status("installer successfully downloaded - ready to install")
     
     def error_while_downloading(self):
@@ -144,4 +177,6 @@ class online_update(iface_gui_plugin):
         
 if __name__ == '__main__':
     from lunchinator.iface_plugins import iface_gui_plugin
-    iface_gui_plugin.run_standalone(lambda window : online_update().create_widget(window))
+    w = online_update()
+    iface_gui_plugin.run_standalone(lambda window : w.create_widget(window))
+    

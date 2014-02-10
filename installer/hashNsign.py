@@ -44,7 +44,7 @@ if not os.path.isfile(sec_key):
 gpg = GPG(gbinary,ghome)
 
 gpg.import_keys(open(sec_key,"r").read())
-signedString = gpg.sign(stringToSign)
+signedString = gpg.sign(stringToSign, keyid="0x17F57DC2")
 v = gpg.verify(str(signedString))
 if not v:
     logging.error("Verification of Signature failed")
