@@ -14,7 +14,7 @@ class iface_plugin(IPlugin):
         self.option_choice = {}
         self.hidden_options = None
         manager = PluginManagerSingleton.get()
-        self.shared_dict = manager.app.shared_dict
+        self.shared_dict = manager.app.shared_dict if hasattr(manager, "app") else None
         super(iface_plugin, self).__init__()
     
     def activate(self):

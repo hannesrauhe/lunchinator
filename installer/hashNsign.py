@@ -1,4 +1,4 @@
-import logging,sys,os,hashlib
+import logging,sys,os,hashlib,shutil
 
 path = os.path.abspath(sys.argv[0])
 while os.path.dirname(path) != path:
@@ -29,7 +29,7 @@ commitCount = lunch_settings.get_singleton_instance().get_commit_count()
 
 #create signed version.asc
 
-stringToSign = "Commit Count: %s\nInstaller Hash: %s"%(commitCount,fileHash)
+stringToSign = "Commit Count: %s\nInstaller Hash: %s\nURL: %s/%s"%(commitCount,fileHash,commitCount,os.path.basename(fileToSign.name))
 
 gbinary = os.path.join(lunch_settings.get_singleton_instance().get_lunchdir(),"gnupg","gpg.exe")
 ghome = os.path.join(lunch_settings.get_singleton_instance().get_main_config_dir(),"gnupg")
@@ -51,5 +51,15 @@ if not v:
     sys.exit(-1)
 
 print stringToSign
+    
+version_file = open(os.path.join(os.path.dirname(sys.argv[1]),"latest_version.asc"),"w")
+version_file.write(str(signedString))
+version_file.close()
 
-open(os.path.join(os.path.dirname(sys.argv[1]),"version.asc"),"w").write(str(signedString))
+#moving files around
+
+if not os.path.isdir(os.path.join(os.path.dirname(sys.argv[1]),str(commitCount))):
+    os.mkdir(os.path.join(os.path.dirname(sys.argv[1]),str(commitCount)))
+
+shutil.copyfile(os.path.join(os.path.dirname(sys.argv[1]),"latest_version.asc"), os.path.join(os.path.dirname(sys.argv[1]),commitCount,"version.asc"))
+shutil.copyfile(sys.argv[1], os.path.join(os.path.dirname(sys.argv[1]),commitCount,os.path.basename(sys.argv[1])))
