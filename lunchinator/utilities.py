@@ -19,7 +19,7 @@ def getPlatform():
     else:
         return PLATFORM_OTHER
 
-def displayNotification(name,msg,icon):
+def displayNotification(name,msg,icon=None):
     myPlatform = getPlatform()
     try:
         if myPlatform == PLATFORM_LINUX:

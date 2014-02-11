@@ -56,6 +56,21 @@ class online_update(iface_gui_plugin):
         widget.setMaximumHeight(widget.sizeHint().height())
         widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)   
         return widget  
+        
+    def check_for_update(self):
+        self._set_status("Checking for Update...")
+        
+        version_download = DownloadThread(getValidQtParent(), self.options["check_url"])
+        version_download.success.connect(self.version_info_downloaded)
+        version_download.error.connect(self.error_while_downloading)
+        version_download.finished.connect(version_download.deleteLater)
+        version_download.start()
+        
+    def install_update(self):
+        if os.path.isfile(self._local_installer_file):
+            self._set_status("Starting Installer")
+            args = [self._local_installer_file, "/SILENT"]
+            subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
     
     def _set_status(self,status,err=False):
         if err:
@@ -98,6 +113,34 @@ class online_update(iface_gui_plugin):
             return False
         
         return v
+    
+    def _check_hash(self):
+        if not os.path.isfile(self._local_installer_file):
+            return False
+        
+        fileHash = ""
+        try:
+            import hashlib
+            with contextlib.closing(open(self._local_installer_file,"rb")) as fileToHash:
+                md = hashlib.md5()
+                md.update(fileToHash.read())
+                fileHash = md.hexdigest()
+        except:
+            self._set_status("Could not calculate hash of installer", True)
+            return False
+            
+        if fileHash!=self._version_info["Installer Hash"]:
+            self._set_status("Installer Hash wrong %s!=%s"%(fileHash, self._version_info["Installer Hash"]), True)
+            return False
+            
+        self._set_status("installer successfully downloaded - ready to install_update")
+        self._install_ready = True
+        if self._installButton:
+            self._installButton.setEnabled(self._install_ready)
+        displayNotification("New Version Available","Install via Update Plugin")
+            
+        return True
+        
         
     def version_info_downloaded(self,thread):
         try:
@@ -141,12 +184,14 @@ class online_update(iface_gui_plugin):
         self._installer_url = self.options["check_url"]+self._version_info["URL"]
             
         if self._version_info["Commit Count"]>int(get_settings().get_commit_count()):
-            self._set_status("New Version %d available, Downloading ..."%(self._version_info["Commit Count"]))
-            installer_download = DownloadThread(getValidQtParent(), self._installer_url, target = open(self._local_installer_file, "wb"))
-            installer_download.success.connect(self.installer_downloaded)
-            installer_download.error.connect(self.error_while_downloading)
-            installer_download.finished.connect(installer_download.deleteLater)
-            installer_download.start()
+            #check if we already downloaded this version before
+            if not self._check_hash():
+                self._set_status("New Version %d available, Downloading ..."%(self._version_info["Commit Count"]))
+                installer_download = DownloadThread(getValidQtParent(), self._installer_url, target = open(self._local_installer_file, "wb"))
+                installer_download.success.connect(self.installer_downloaded)
+                installer_download.error.connect(self.error_while_downloading)
+                installer_download.finished.connect(installer_download.deleteLater)
+                installer_download.start()
         else:
             self._set_status("No new version available")
         
@@ -157,42 +202,10 @@ class online_update(iface_gui_plugin):
         except:
             self._set_status("unexpected error after downloading installer", True)
             
-        fileHash = ""
-        try:
-            import hashlib
-            with contextlib.closing(open(self._local_installer_file,"rb")) as fileToHash:
-                md = hashlib.md5()
-                md.update(fileToHash.read())
-                fileHash = md.hexdigest()
-        except:
-            self._set_status("Could not calculate hash of installer", True)
-            
-        if fileHash!=self._version_info["Installer Hash"]:
-            self._set_status("Installer Hash wrong %s!=%s"%(fileHash, self._version_info["Installer Hash"]), True)
-            return
-            
-        self._set_status("installer successfully downloaded - ready to install_update")
-        self._install_ready = True
-        if self._installButton:
-            self._installButton.setEnabled(self._install_ready)
+        self._check_hash()
     
     def error_while_downloading(self):
         self._set_status("Download failed",True)
-        
-    def check_for_update(self):
-        self._set_status("Checking for Update...")
-        
-        version_download = DownloadThread(getValidQtParent(), self.options["check_url"])
-        version_download.success.connect(self.version_info_downloaded)
-        version_download.error.connect(self.error_while_downloading)
-        version_download.finished.connect(version_download.deleteLater)
-        version_download.start()
-        
-    def install_update(self):
-        if os.path.isfile(self._local_installer_file):
-            self._set_status("Starting Installer")
-            args = [self._local_installer_file]
-            subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
         
         
 if __name__ == '__main__':
