@@ -1,3 +1,5 @@
+git rev-list HEAD --count > ..\\version
+
 C:\\Python27\\scripts\\pyinstaller.exe -y -F -w ^
 -n lunchinator ^
 --noupx ^

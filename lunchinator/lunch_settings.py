@@ -1,7 +1,7 @@
-import sys,os,getpass,ConfigParser,types,subprocess,logging,codecs
+import sys,os,getpass,ConfigParser,types,subprocess,logging,codecs,contextlib
 
 '''integrate the cli-parser into the default_config sooner or later'''
-from lunchinator import log_exception, log_warning, log_error, setLoggingLevel, convert_string, MAIN_CONFIG_DIR
+from lunchinator import log_exception, log_warning, log_error, log_info, setLoggingLevel, convert_string, MAIN_CONFIG_DIR
     
 class lunch_settings(object):
     _instance = None
@@ -97,7 +97,13 @@ class lunch_settings(object):
                 if retCode == 0:
                     self._commit_count_plugins = cco.strip()
         except:
-            log_exception("git rev-list could not be executed correctly - commit count information not available")
+            version_file = os.path.join(self.get_lunchdir(),"version")
+            if os.path.exists(version_file):
+                log_info("git rev_list not available, using version file info instead")
+                with contextlib.closing(open(version_file,"r")) as vfh:
+                    self._commit_count = vfh.read()
+            else:
+                log_exception("git rev-list could not be executed correctly - commit count information not available")
             
     def read_config_from_hd(self): 
         self._config_file.read(self._main_config_dir+'/settings.cfg')

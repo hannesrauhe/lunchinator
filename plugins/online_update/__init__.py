@@ -44,7 +44,7 @@ class online_update(iface_gui_plugin):
         checkButton.clicked.connect(self.check_for_update)
         layout.addWidget(checkButton)
         
-        self._installButton = QPushButton("Install Update", parent)
+        self._installButton = QPushButton("Install Update and Restart", parent)
         self._installButton.clicked.connect(self.install_update)
         self._installButton.setEnabled(self._install_ready)
         layout.addWidget(self._installButton)
@@ -71,6 +71,7 @@ class online_update(iface_gui_plugin):
             self._set_status("Starting Installer")
             args = [self._local_installer_file, "/SILENT"]
             subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
+            get_server().call("HELO_STOP installer_update",client="127.0.0.1")
     
     def _set_status(self,status,err=False):
         if err:
