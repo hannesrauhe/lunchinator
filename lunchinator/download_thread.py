@@ -21,7 +21,8 @@ class DownloadThread(QThread):
         if type(self.target) is OutputType:
             return self.target.getvalue()
         else:
-            raise Exception("Cannot get the value from target of type %s" % type(self.target))
+            return self.target
+            #raise Exception("Cannot get the value from target of type %s" % type(self.target))
 
     def run(self):
         try:

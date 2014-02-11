@@ -4,7 +4,7 @@ from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
 from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator.download_thread import DownloadThread
-import urllib2,sys,os,contextlib
+import urllib2,sys,os,contextlib, subprocess
     
 class online_update(iface_gui_plugin):
     def __init__(self):
@@ -15,6 +15,9 @@ class online_update(iface_gui_plugin):
         self._versionLabel = None
         self._status_holder = "not checked"        
         self._version_info = {}
+        self._local_installer_file = os.path.join(get_settings().get_main_config_dir(), "setup_lunchinator.exe")
+        self._install_ready = False
+        self._installButton = None
     
     def activate(self):
         iface_gui_plugin.activate(self)
@@ -37,9 +40,14 @@ class online_update(iface_gui_plugin):
         self._statusLabel = QLabel("Status: "+self._status_holder)
         layout.addWidget(self._statusLabel)
         
-        button = QPushButton("Check for Update", parent)
-        button.clicked.connect(self.check_for_update)
-        layout.addWidget(button)
+        checkButton = QPushButton("Check for Update", parent)
+        checkButton.clicked.connect(self.check_for_update)
+        layout.addWidget(checkButton)
+        
+        self._installButton = QPushButton("Install Update", parent)
+        self._installButton.clicked.connect(self.install_update)
+        self._installButton.setEnabled(self._install_ready)
+        layout.addWidget(self._installButton)
         
         self._versionLabel = QTextEdit("")
         self._update_version_label()
@@ -65,9 +73,7 @@ class online_update(iface_gui_plugin):
             vstr = "Online Version Info:\n"
             for k,v in self._version_info.iteritems():
                 vstr += str(k)+":"+str(v)+"\n"
-            self._versionLabel.setText(vstr)           
-            
-        
+            self._versionLabel.setText(vstr)       
             
     def _verify_signature(self,signedString):
         from gnupg.gnupg import GPG
@@ -133,7 +139,6 @@ class online_update(iface_gui_plugin):
         self._update_version_label()
         
         self._installer_url = self.options["check_url"]+self._version_info["URL"]
-        self._local_installer_file = os.path.join(get_settings().get_main_config_dir(), "setup_lunchinator.exe")
             
         if self._version_info["Commit Count"]>int(get_settings().get_commit_count()):
             self._set_status("New Version %d available, Downloading ..."%(self._version_info["Commit Count"]))
@@ -145,7 +150,13 @@ class online_update(iface_gui_plugin):
         else:
             self._set_status("No new version available")
         
-    def installer_downloaded(self):
+    def installer_downloaded(self,thread):
+        try:
+            #close the file object that keeps the downloaded data
+            thread.getResult().close()
+        except:
+            self._set_status("unexpected error after downloading installer", True)
+            
         fileHash = ""
         try:
             import hashlib
@@ -155,12 +166,15 @@ class online_update(iface_gui_plugin):
                 fileHash = md.hexdigest()
         except:
             self._set_status("Could not calculate hash of installer", True)
-        
+            
         if fileHash!=self._version_info["Installer Hash"]:
             self._set_status("Installer Hash wrong %s!=%s"%(fileHash, self._version_info["Installer Hash"]), True)
             return
             
-        self._set_status("installer successfully downloaded - ready to install")
+        self._set_status("installer successfully downloaded - ready to install_update")
+        self._install_ready = True
+        if self._installButton:
+            self._installButton.setEnabled(self._install_ready)
     
     def error_while_downloading(self):
         self._set_status("Download failed",True)
@@ -173,6 +187,12 @@ class online_update(iface_gui_plugin):
         version_download.error.connect(self.error_while_downloading)
         version_download.finished.connect(version_download.deleteLater)
         version_download.start()
+        
+    def install_update(self):
+        if os.path.isfile(self._local_installer_file):
+            self._set_status("Starting Installer")
+            args = [self._local_installer_file]
+            subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
         
         
 if __name__ == '__main__':
