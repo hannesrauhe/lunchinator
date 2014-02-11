@@ -1,12 +1,16 @@
 REPO_DIR=/var/www/hana-students/
+MAJOR_VERSION=2
 
-all: lunchinator.deb lunchinator-nodep.deb lunchinator.rpm
+all: lunchinator.deb lunchinator.rpm
 
 lunchinator.deb:
+	grep -v "Version:" deb_build/DEBIAN/control > deb_build/DEBIAN/control.noversion
+	echo Version: $(MAJOR_VERSION).`git rev-list HEAD --count` >> deb_build/DEBIAN/control.noversion 
+	mv deb_build/DEBIAN/control.noversion deb_build/DEBIAN/control
 	sudo chown -R root:root deb_build
 	dpkg --build deb_build lunchinator.deb
 	lintian lunchinator.deb
-	dpkg-sig -k AF32F68C --sign builder lunchinator.deb
+	dpkg-sig -k 17F57DC2 --sign builder lunchinator.deb
 	sudo chown -R ${USER}:${USER} deb_build
 
 lunchinator-nodep.deb:
@@ -15,7 +19,7 @@ lunchinator-nodep.deb:
 	grep -v "Depends:" deb_build/DEBIAN/control.nodep > deb_build/DEBIAN/control
 	sudo chown -R root:root deb_build
 	dpkg --build deb_build lunchinator-nodep.deb
-	dpkg-sig -k AF32F68C --sign builder lunchinator-nodep.deb
+	dpkg-sig -k 17F57DC2 --sign builder lunchinator-nodep.deb
 	sudo chown -R ${USER}:${USER} deb_build
 	mv deb_build/DEBIAN/control.bak deb_build/DEBIAN/control	
 	rm deb_build/DEBIAN/control.nodep
