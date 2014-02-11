@@ -45,15 +45,15 @@ gpg = GPG(gbinary,ghome)
 
 gpg.import_keys(open(sec_key,"r").read())
 signedString = gpg.sign(stringToSign, keyid="0x17F57DC2")
-v = gpg.verify(str(signedString))
-if not v:
-    logging.error("Verification of Signature failed")
-    sys.exit(-1)
 
 print stringToSign
     
 version_file = open(os.path.join(os.path.dirname(sys.argv[1]),"latest_version.asc"),"w")
 version_file.write(str(signedString))
+version_file.close()
+
+version_file = open(os.path.join(os.path.dirname(sys.argv[1]),"index.html"),"w")
+version_file.write('Download lunchinator: <a href="%s/%s">Version %s</a>'%(commitCount,os.path.basename(fileToSign.name),commitCount))
 version_file.close()
 
 #moving files around
