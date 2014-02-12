@@ -22,4 +22,8 @@ coll = COLLECT(exe,
                name='Lunchinator')
 app = BUNDLE(coll,
              name='Lunchinator.app',
+             info_plist={
+               'NSPrincipalClass': 'NSApplication',
+               'LSUIElement': 'True'
+             },
              icon='../images/lunch.icns')
