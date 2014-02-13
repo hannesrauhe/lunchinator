@@ -1,5 +1,6 @@
 import subprocess,sys,ctypes
-from lunchinator import log_exception, get_server, log_warning, log_debug
+from lunchinator import log_exception, get_server, log_warning, log_debug,\
+    get_settings
 import os
 from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
 import threading
@@ -19,6 +20,7 @@ def getPlatform():
     else:
         return PLATFORM_OTHER
 
+# TODO: message groups for notification center
 def displayNotification(name,msg,icon=None):
     myPlatform = getPlatform()
     try:
@@ -26,7 +28,10 @@ def displayNotification(name,msg,icon=None):
             subprocess.call(["notify-send","--icon="+icon, name, msg])
         elif myPlatform == PLATFORM_MAC:
             fh = open(os.path.devnull,"w")
-            subprocess.call(["terminal-notifier", "-title", "Lunchinator: %s" % name, "-message", msg], stdout=fh, stderr=fh)
+            exe = "terminal-notifier"
+            if os.path.exists(os.path.join(get_settings().get_lunchdir(), exe)):
+                exe = os.path.join(get_settings().get_lunchdir(), exe)
+            subprocess.call([exe, "-title", "Lunchinator: %s" % name, "-message", msg, "-sender", "hannesrauhe.lunchinator"], stdout=fh, stderr=fh)
         elif myPlatform == PLATFORM_WINDOWS:
             get_server().controller.statusicon.showMessage(name,msg)
     except:

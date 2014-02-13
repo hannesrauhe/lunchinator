@@ -23,6 +23,7 @@ coll = COLLECT(exe,
 app = BUNDLE(coll,
              name='Lunchinator.app',
              info_plist={
+               'CFBundleIdentifier': "hannesrauhe.lunchinator",
                'NSPrincipalClass': 'NSApplication',
                'LSUIElement': 'True'
              },
