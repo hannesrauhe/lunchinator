@@ -10,6 +10,8 @@ PLATFORM_LINUX = 0
 PLATFORM_MAC = 1
 PLATFORM_WINDOWS = 2
 
+_LUNCHINATOR_BUNDLE_IDENTIFIER = "hannesrauhe.lunchinator"
+
 def getPlatform():
     if "linux" in sys.platform:
         return PLATFORM_LINUX
@@ -19,6 +21,10 @@ def getPlatform():
         return PLATFORM_WINDOWS
     else:
         return PLATFORM_OTHER
+
+def checkBundleIdentifier(ident):
+    res = subprocess.call([get_settings().get_lunchdir()+'/bin/check_bundle_identifier.sh', ident])
+    return res == 1
 
 # TODO: message groups for notification center
 def displayNotification(name,msg,icon=None):
@@ -31,7 +37,13 @@ def displayNotification(name,msg,icon=None):
             exe = "terminal-notifier"
             if os.path.exists(os.path.join(get_settings().get_lunchdir(), exe)):
                 exe = os.path.join(get_settings().get_lunchdir(), exe)
-            subprocess.call([exe, "-title", "Lunchinator: %s" % name, "-message", msg, "-sender", "hannesrauhe.lunchinator"], stdout=fh, stderr=fh)
+            
+            call = [exe, "-title", "Lunchinator: %s" % name, "-message", msg]
+            if False and AttentionGetter.getInstance().existsBundle: # no sender until code signing is fixed (probably never)
+                call.extend(["-sender", _LUNCHINATOR_BUNDLE_IDENTIFIER])
+                
+            log_debug(call)
+            subprocess.call(call, stdout=fh, stderr=fh)
         elif myPlatform == PLATFORM_WINDOWS:
             get_server().controller.statusicon.showMessage(name,msg)
     except:
@@ -57,6 +69,8 @@ class AttentionGetter(object):
     def __init__(self):
         super(AttentionGetter, self).__init__()
         self.attentionThread = None
+        if getPlatform() == PLATFORM_MAC:
+            self.existsBundle = checkBundleIdentifier(_LUNCHINATOR_BUNDLE_IDENTIFIER)
         
     @classmethod
     def getInstance(cls):
