@@ -115,8 +115,12 @@ class lunch_server(object):
                     self.new_msg=False
                 try:
                     daten, addr = s.recvfrom(1024)
-                    daten = daten.decode('utf-8')
                     ip = unicode(addr[0])
+                    try:
+                        daten = daten.decode('utf-8')
+                    except:
+                        log_error("Received illegal data from %s, maybe wrong encoding"%ip)
+                        continue
                     if ip not in self._peer_timeout:
                         self._peer_timeout[ip]=time() 
                         self._peerAppended(ip)

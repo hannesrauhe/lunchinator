@@ -31,7 +31,7 @@ class Notify(iface_called_plugin):
             
     def process_message(self,msg,addr,member_info):
         name = " ["+addr+"]"
-        icon = self.options["icon_file"]
+        icon = self.options[u"icon_file"]
         if member_info.has_key("avatar"):
             icon = get_settings().get_avatar_dir()+"/"+member_info["avatar"]
         if member_info.has_key("name"):
