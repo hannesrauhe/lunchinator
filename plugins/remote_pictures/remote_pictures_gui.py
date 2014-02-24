@@ -164,11 +164,6 @@ class RemotePicturesGui(QStackedWidget):
         if self.good:
             try:
                 self.settings = QSettings(os.path.join(self._picturesDirectory(), u"index"), QSettings.NativeFormat)
-                storedThumbnails  = self.settings.value("categoryThumbnails", None)
-                if storedThumbnails != None:
-                    storedThumbnails = storedThumbnails.toMap()
-                    for aCat in storedThumbnails:
-                        self._addCategory(convert_string(aCat), thumbnailPath=convert_string(storedThumbnails[aCat].toString()))
                         
                 storedCategories = self.settings.value("categoryPictures", None)
                 if storedCategories != None:
@@ -181,7 +176,21 @@ class RemotePicturesGui(QStackedWidget):
                         for picTuple in picTupleList:
                             tupleList = picTuple.toList()
                             newTupleList.append([convert_string(tupleList[0].toString()), convert_string(tupleList[1].toString())])
-                        self.categoryPictures[newKey] = newTupleList
+                        if len(newTupleList) > 0:
+                            self.categoryPictures[newKey] = newTupleList
+                            
+                storedThumbnails  = self.settings.value("categoryThumbnails", None)
+                if storedThumbnails != None:
+                    storedThumbnails = storedThumbnails.toMap()
+                    for aCat in storedThumbnails:
+                        thumbnailPath = convert_string(storedThumbnails[aCat].toString())
+                        aCat = convert_string(aCat)
+                        if aCat in self.categoryPictures:
+                            self._addCategory(aCat, thumbnailPath=thumbnailPath)
+                        else:
+                            # there has been an error, the category is empty. Remove it.
+                            if os.path.exists(thumbnailPath):
+                                os.remove(thumbnailPath)
             except:
                 log_exception("Could not load thumbnail index.")
     
