@@ -35,6 +35,9 @@ def parse_args():
     optionParser.add_option("--no-gui",
                       default = False, dest = "noGui", action = "store_true",
                       help = "Start Lunchinator without the GUI.")
+    optionParser.add_option("--show-window",
+                      default = False, dest = "showWindow", action = "store_true",
+                      help = "Automatically open Lunchinator window.")
     optionParser.add_option("--cli",
                       default = False, dest = "cli", action = "store_true",
                       help = "Start Lunchinator with a command line interface.")
@@ -158,6 +161,8 @@ if __name__ == "__main__":
         app = QApplication(sys.argv)
         app.setQuitOnLastWindowClosed(False)
         lanschi = LunchinatorGuiController(options.noUpdates)
+        if options.showWindow:
+            lanschi.openWindowClicked()
         
         # enable CRTL-C
         signal.signal(signal.SIGINT, partial(handleInterrupt, lanschi))
