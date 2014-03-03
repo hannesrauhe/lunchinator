@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# coding=utf-8
+
 from iface_plugins import iface_called_plugin, iface_database_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
 from time import strftime, localtime, time, mktime
 import socket,sys,os,json,codecs,contextlib
@@ -98,7 +100,7 @@ class lunch_server(object):
     '''listening method - should be started in its own thread'''    
     def start_server(self):
         self.initialize()
-        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Starting the lunch notifier service")
+        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"),"Starting the lunch notifier service")
         self.running = True
         self.my_master=-1 #the peer i use as master
         announce_name=-1 #how often did I announce my name
@@ -306,7 +308,7 @@ class lunch_server(object):
     """ ---------------------- PRIVATE -------------------------------- """
     
     def _finish(self):
-        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()),"Stopping the lunch notifier service")
+        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"),"Stopping the lunch notifier service")
         self._write_members_to_file()
         self._write_messages_to_file()
         self.controller.serverStopped(self.exitCode)
@@ -500,7 +502,7 @@ class lunch_server(object):
     def _incoming_call(self,msg,addr):
         mtime = localtime()
         
-        t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
+        t = strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8")
         m = self.memberName(addr)
             
         log_info("%s: [%s] %s" % (t,m,msg))
@@ -519,7 +521,7 @@ class lunch_server(object):
                     self.last_lunch_call = timenum
                     self.controller.processLunchCall(msg, addr)
                 else:
-                    log_debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)"%(t,m,msg,strftime("%a, %d %b %Y %H:%M:%S", localtime(timenum + get_settings().get_mute_timeout()))))
+                    log_debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)"%(t,m,msg,strftime("%H:%M:%S", localtime(timenum + get_settings().get_mute_timeout()))))
       
     def _update_peer_info(self, ip, newInfo, requestAvatar = True):            
         peer_group = newInfo["group"] if newInfo.has_key("group") else ""     
@@ -576,7 +578,7 @@ class lunch_server(object):
         try:        
             (cmd, value) = data.split(" ",1)
             if cmd.startswith("HELO_UPDATE"):
-                t = strftime("%a, %d %b %Y %H:%M:%S", localtime())
+                t = strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8")
                 self.update_request = True
                 self.controller.notifyUpdates()
                 if get_settings().get_auto_update_enabled() and not self.no_updates:
