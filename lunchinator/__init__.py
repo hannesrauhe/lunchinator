@@ -1,7 +1,15 @@
-from datetime import datetime
 __all__ = ["gui_general", "lunch_settings", "lunch_server", "iface_plugins", "lunch_datathread"]
 
-import logging, logging.handlers, os, time
+import sys, os
+import logging, logging.handlers, time
+from datetime import datetime
+
+path = os.path.abspath(sys.argv[0])
+while os.path.dirname(path) != path:
+    if os.path.exists(os.path.join(path, 'lunchinator', '__init__.py')):
+        sys.path.insert(0, path)
+        break
+    path = os.path.dirname(path)
 
 MAIN_CONFIG_DIR = unicode(os.path.join(os.getenv("HOME"), ".lunchinator") if os.getenv("HOME") else os.path.join(os.getenv("USERPROFILE"), ".lunchinator"))
         

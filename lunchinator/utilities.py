@@ -140,10 +140,18 @@ def _drawAttentionWindows(audioFile):
     except:
         log_exception("notify error: eject error (close)")
 
+qtParent = None 
+
+def setValidQtParent(parent):
+    global qtParent
+    qtParent = parent
+
 def getValidQtParent():
     from PyQt4.QtCore import QObject
     if isinstance(get_server().controller, QObject):
         return get_server().controller
+    elif isinstance(qtParent, QObject):
+        return qtParent
     raise Exception("Could not find a valid QObject instance")
     
 def processPluginCall(ip, call):

@@ -5,6 +5,7 @@ from lunchinator import log_exception, log_error, log_info, get_settings, log_de
 from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator.download_thread import DownloadThread
 import urllib2,sys,os,contextlib, subprocess
+from Canvas import Window
     
 class online_update(iface_general_plugin):
     def __init__(self):
@@ -29,7 +30,7 @@ class online_update(iface_general_plugin):
     def create_options_widget(self, parent):
         from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, QVBoxLayout, QLabel, QSizePolicy, QPushButton, QTextEdit
        
-        #embedd the standard options widget first:
+        #embed the standard options widget first:
         widget = QWidget(parent)    
         w = super(online_update, self).create_options_widget(widget)    
         layout = QVBoxLayout(widget)
@@ -93,9 +94,28 @@ class online_update(iface_general_plugin):
                 vstr += str(k)+":"+str(v)+"\n"
             self._versionLabel.setText(vstr)       
             
+    def which(self, program):
+        def is_exe(fpath):
+            return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+    
+        fpath, _fname = os.path.split(program)
+        if fpath:
+            if is_exe(program):
+                return program
+        else:
+            for path in os.environ["PATH"].split(os.pathsep):
+                path = path.strip('"')
+                exe_file = os.path.join(path, program)
+                if is_exe(exe_file):
+                    return exe_file
+    
+        return None
+            
     def _verify_signature(self,signedString):
         from gnupg.gnupg import GPG
-        gbinary = os.path.join(get_settings().get_lunchdir(),"gnupg","gpg.exe")
+        gbinary = self.which("gpg")
+        if not gbinary:
+            gbinary = os.path.join(get_settings().get_lunchdir(),"gnupg","gpg.exe")
         ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
         pub_key = os.path.join(get_settings().get_lunchdir(),"lunchinator_pub_0x17F57DC2.asc")
         if not os.path.isfile(gbinary):
@@ -105,6 +125,7 @@ class online_update(iface_general_plugin):
             log_error("Public Key not found")
             return False
             
+        import locale
         gpg = GPG(gbinary,ghome)
         
         with contextlib.closing(open(pub_key,"r")) as pub_keyf:
@@ -158,6 +179,7 @@ class online_update(iface_general_plugin):
         try:
             ver_result = self._verify_signature(signedString)
         except:
+            log_exception("Error verifying signature")
             self._set_status("Signature could not be verified because of unknown error", True)
             return
         
@@ -210,4 +232,10 @@ class online_update(iface_general_plugin):
     
     def error_while_downloading(self):
         self._set_status("Download failed",True)
+        
+        
+if __name__ == '__main__':
+    from lunchinator.iface_plugins import iface_gui_plugin
+    w = online_update()
+    w.run_options_widget()
     

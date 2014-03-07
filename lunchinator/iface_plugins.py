@@ -1,7 +1,8 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_error, log_exception, log_info, convert_string
-import types
+from lunchinator import log_error, log_exception, log_info, convert_string,\
+    get_settings
+import types, sys, logging, os
 from copy import deepcopy
 
 class iface_plugin(IPlugin):    
@@ -103,6 +104,8 @@ class iface_plugin(IPlugin):
             log_exception("could not convert value of",o,"from config to type",type(v),"(",new_v,") using default")
     
     def read_options_from_file(self):
+        if not hasattr(self, "hasConfigOption"):
+            return
         if self.options:
             for o,v in self.options.iteritems():
                 if self.hasConfigOption(o):
@@ -257,6 +260,33 @@ class iface_plugin(IPlugin):
     def discard_options_widget_data(self):
         self.option_widgets = {}
         
+    @classmethod
+    def prepare_application(cls, factory):
+        from PyQt4.QtGui import QApplication, QMainWindow
+        from lunchinator import setLoggingLevel
+        from utilities import setValidQtParent
+    
+        setLoggingLevel(logging.DEBUG)    
+        app = QApplication(sys.argv)
+        window = QMainWindow()
+        
+        setValidQtParent(window)
+        window.setWindowTitle("Layout Example")
+        window.resize(300, 300)
+        window.setCentralWidget(factory(window))
+        window.show()
+        window.activateWindow()
+        window.raise_()
+        return window, app
+    
+    def _init_run_options_widget(self, parent):
+        self.activate()
+        return self.create_options_widget(parent)
+    
+    def run_options_widget(self):
+        _window, app = iface_general_plugin.prepare_application(self._init_run_options_widget)
+        sys.exit(app.exec_())
+        
 class iface_general_plugin(iface_plugin): 
     pass
 
@@ -289,20 +319,12 @@ class iface_gui_plugin(iface_plugin):
     
     @classmethod
     def run_standalone(cls, factory):
-        from PyQt4.QtGui import QApplication, QMainWindow
-        from lunchinator import setLoggingLevel
-        import sys, logging
-    
-        setLoggingLevel(logging.DEBUG)    
-        app = QApplication(sys.argv)
-        window = QMainWindow()
-        window.setWindowTitle("Layout Example")
-        window.resize(300, 300)
-        window.setCentralWidget(factory(window))
-        window.show()
-        window.activateWindow()
-        window.raise_()
-    
+        _window, app = cls.prepare_application(factory)
+        sys.exit(app.exec_())
+        
+    def run_in_window(self):
+        _window, app = iface_gui_plugin.prepare_application(lambda window : self.create_widget(window))
+        self.activate()
         sys.exit(app.exec_())
         
     def process_message(self,msg,ip,member_info):

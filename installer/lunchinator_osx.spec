@@ -25,6 +25,7 @@ app = BUNDLE(coll,
              info_plist={
                'CFBundleIdentifier': "hannesrauhe.lunchinator",
                'NSPrincipalClass': 'NSApplication',
-               'LSUIElement': 'True'
+               'LSUIElement': 'True',
+               'LSBackgroundOnly': 'False'
              },
              icon='../images/lunch.icns')

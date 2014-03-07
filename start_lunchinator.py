@@ -5,13 +5,6 @@
 import platform, os, sys
 import signal
 from functools import partial
-path = os.path.abspath(sys.argv[0])
-while os.path.dirname(path) != path:
-    if os.path.exists(os.path.join(path, 'lunchinator', '__init__.py')):
-        sys.path.insert(0, path)
-        break
-    path = os.path.dirname(path)
-    
 from optparse import OptionParser
 from lunchinator import log_info, log_warning, log_error, get_settings,\
     get_server, log_exception

@@ -652,7 +652,7 @@ class GPG(object):
         if isinstance(options, str):
             options = [options]
         self.options = options
-        self.encoding = locale.getpreferredencoding()
+        self.encoding = "utf-8"#locale.getpreferredencoding()
         if self.encoding is None: # This happens on Jython!
             self.encoding = sys.stdin.encoding
         if self.encoding is None:
