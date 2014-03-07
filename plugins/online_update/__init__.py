@@ -9,7 +9,7 @@ import urllib2,sys,os,contextlib, subprocess
 class online_update(iface_gui_plugin):
     def __init__(self):
         super(online_update, self).__init__()
-        self.options = [(("check_url", "update URL"), "http://update.lunchinator.de/")]
+        self.options = [(("check_url", "update URL"), "http://update.lunchinator.de/latest_version.asc")]
         self._avail_version = 0
         self._statusLabel = None
         self._versionLabel = None
