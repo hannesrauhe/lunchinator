@@ -9,7 +9,7 @@ import urllib2,sys,os,contextlib, subprocess
 class online_update(iface_gui_plugin):
     def __init__(self):
         super(online_update, self).__init__()
-        self.options = [(("check_url", "update URL"), "http://update.lunchinator.de/latest_version.asc")]
+        self.options = [(("check_url", "update URL"), "http://update.lunchinator.de")]
         self._avail_version = 0
         self._statusLabel = None
         self._versionLabel = None
@@ -60,7 +60,7 @@ class online_update(iface_gui_plugin):
     def check_for_update(self):
         self._set_status("Checking for Update...")
         
-        version_download = DownloadThread(getValidQtParent(), self.options["check_url"])
+        version_download = DownloadThread(getValidQtParent(), self.options["check_url"]+"/latest_version.asc")
         version_download.success.connect(self.version_info_downloaded)
         version_download.error.connect(self.error_while_downloading)
         version_download.finished.connect(version_download.deleteLater)
