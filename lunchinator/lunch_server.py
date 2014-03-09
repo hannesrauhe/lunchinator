@@ -62,13 +62,14 @@ class lunch_server(object):
         if self.initialized:
             return
         self.initialized = True
+        
+        self._read_config()
+        
         if controller != None:
             self.controller = controller
         else:
             from lunchinator.lunch_server_controller import LunchServerController
             self.controller = LunchServerController()
-        
-        self._read_config()
         
         PluginManagerSingleton.setBehaviour([
             ConfigurablePluginManager,
