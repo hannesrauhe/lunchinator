@@ -2,7 +2,7 @@
 # coding=utf-8
 
 from iface_plugins import iface_called_plugin, iface_database_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
-from time import strftime, localtime, time, mktime
+from time import strftime, localtime, time, mktime, gmtime
 import socket,sys,os,json,codecs,contextlib
 from threading import Lock
 from cStringIO import StringIO
@@ -242,8 +242,21 @@ class lunch_server(object):
     def releaseMembers(self):
         self.membersLock.release()
                     
-    def getMessages(self):  
-        return self.last_messages
+    def getMessages(self, begin=None):
+        self.messagesLock.acquire()
+        messages = []
+        try:
+            if not begin:  
+                messages = self.last_messages[:]
+            else:
+                for mtime,addr,msg in self.last_messages:                    
+                    if mtime>=gmtime(begin):
+                        messages.append([mtime,addr,msg])
+                    else:
+                        break
+        finally:
+            self.messagesLock.release()
+        return messages
             
     def get_groups(self):  
         return self._peer_groups

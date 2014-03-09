@@ -1,0 +1,9 @@
+[Core]
+Name = Simple View
+Module = simple_view
+
+[Documentation]
+Author = Cornelius Ratsch, Hannes Rauhe
+Version = 0.1
+Website = http://www.lunchinator.de
+Description = If you only want the core functionality displayed in a intuitive way.
