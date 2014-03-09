@@ -162,6 +162,7 @@ class online_update(iface_general_plugin):
             return
         
         if not ver_result:
+            self._set_status("Signature could not be verified", True)
             return
                 
         log_debug("Updater: Signature OK, checking version info")
