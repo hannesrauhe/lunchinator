@@ -1,12 +1,12 @@
 from lunchinator import get_server
 from lunchinator.lunch_settings import lunch_settings
-from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator.iface_plugins import iface_general_plugin
 from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
 from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator.download_thread import DownloadThread
 import urllib2,sys,os,contextlib, subprocess
     
-class online_update(iface_gui_plugin):
+class online_update(iface_general_plugin):
     def __init__(self):
         super(online_update, self).__init__()
         self.options = [(("check_url", "update URL"), "http://update.lunchinator.de")]
@@ -20,20 +20,22 @@ class online_update(iface_gui_plugin):
         self._installButton = None
     
     def activate(self):
-        iface_gui_plugin.activate(self)
+        iface_general_plugin.activate(self)
         self.check_for_update()
         
     def deactivate(self):
-        iface_gui_plugin.deactivate(self)
+        iface_general_plugin.deactivate(self)
     
-    def create_widget(self, parent):
+    def create_options_widget(self, parent):
         from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, QVBoxLayout, QLabel, QSizePolicy, QPushButton, QTextEdit
-
-        iface_gui_plugin.create_widget(self, parent)        
-        
-        widget = QWidget(parent)        
+       
+        #embedd the standard options widget first:
+        widget = QWidget(parent)    
+        w = super(online_update, self).create_options_widget(widget)    
         layout = QVBoxLayout(widget)
+        layout.addWidget(w)
         
+        #now add the new stuff
         versionLabel = QLabel("Installed Version: "+get_settings().get_commit_count())
         layout.addWidget(versionLabel)
         
@@ -207,10 +209,4 @@ class online_update(iface_gui_plugin):
     
     def error_while_downloading(self):
         self._set_status("Download failed",True)
-        
-        
-if __name__ == '__main__':
-    from lunchinator.iface_plugins import iface_gui_plugin
-    w = online_update()
-    iface_gui_plugin.run_standalone(lambda window : w.create_widget(window))
     

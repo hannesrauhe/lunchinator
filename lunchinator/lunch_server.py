@@ -232,11 +232,11 @@ class lunch_server(object):
         return message
     
     def lockMessages(self):
-        log_info("Getting Messages with lock")
+        log_debug("Getting Messages with lock")
         self.messagesLock.acquire()
         
     def releaseMessages(self):
-        log_info("lock released")
+        log_debug("lock released")
         self.messagesLock.release()
         
     def lockMembers(self):
