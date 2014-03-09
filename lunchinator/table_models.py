@@ -353,11 +353,7 @@ class MessagesTableModel(TableModelBase):
     def updateSenders(self):
         self.dataSource.lockMembers()
         try:
-            self.dataSource.lockMessages()
-            try:
-                for row, aMsg in enumerate(self.dataSource.getMessages()):
-                    self.updateItem(aMsg[0], [aMsg[1], aMsg[2]], row, 1)
-            finally:
-                self.dataSource.releaseMessages()
+            for row, aMsg in enumerate(self.dataSource.getMessages()):
+                self.updateItem(aMsg[0], [aMsg[1], aMsg[2]], row, 1)
         finally:
             self.dataSource.releaseMembers()

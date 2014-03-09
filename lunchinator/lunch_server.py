@@ -232,9 +232,11 @@ class lunch_server(object):
         return message
     
     def lockMessages(self):
+        log_info("Getting Messages with lock")
         self.messagesLock.acquire()
         
     def releaseMessages(self):
+        log_info("lock released")
         self.messagesLock.release()
         
     def lockMembers(self):
@@ -244,7 +246,7 @@ class lunch_server(object):
         self.membersLock.release()
                     
     def getMessages(self, begin=None):
-        self.messagesLock.acquire()
+        self.lockMessages()
         messages = []
         try:
             if not begin:  
@@ -256,7 +258,7 @@ class lunch_server(object):
                     else:
                         break
         finally:
-            self.messagesLock.release()
+            self.releaseMessages()
         return messages
             
     def get_groups(self):  
