@@ -89,7 +89,10 @@ class lunch_settings(object):
         
         try:    
             revListArgs = ["rev-list", "HEAD", "--count"]
-            _, cco, __ = self.runGitCommand(revListArgs, self._lunchdir, quiet=False)
+            ret, cco, _ = self.runGitCommand(revListArgs, self._lunchdir, quiet=False)
+            if ret:
+                # something went wrong, get out of here!
+                raise False
             self._commit_count = cco.strip()
             
             if os.path.exists(self._external_plugin_dir):

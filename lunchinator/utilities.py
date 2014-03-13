@@ -1,9 +1,10 @@
 import subprocess,sys,ctypes
 from lunchinator import log_exception, get_server, log_warning, log_debug,\
-    get_settings
+    get_settings, log_error
 import os
 from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
 import threading
+import contextlib
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -168,3 +169,70 @@ def processPluginCall(ip, call):
                 call(pluginInfo.plugin_object, ip, member_info)
             except:
                 log_exception(u"plugin error in %s while processing event" % pluginInfo.name)
+                
+def which(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, _fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+def getGPGBinary():
+    gbinary = which("gpg")
+    if not gbinary:
+        gbinary = os.path.join(get_settings().get_lunchdir(),"gnupg","gpg.exe")
+    if not os.path.isfile(gbinary):
+        return None
+    return gbinary
+
+def _findLunchinatorKeyID(gpg, secret):
+    # use key from keyring as default
+    for key in gpg.list_keys(secret):
+        for uid in key['uids']:
+            if 'info@lunchinator.de' in uid:
+                return key['keyid']
+    return None
+
+def getGPG(secret=False):
+    """ Returns tuple (GPG instance, keyid) """
+    
+    from gnupg.gnupg import GPG
+    gbinary = getGPGBinary()
+    if not gbinary:
+        log_error("GPG not found")
+        return None, None
+    
+    ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
+    
+    gpg = GPG(gbinary,ghome)
+    
+    # use key from keyring as default
+    keyid = _findLunchinatorKeyID(gpg, secret)
+    
+    if keyid == None:
+        # no key in keyring, try to import from file
+        path = None
+        if secret:
+            path = os.path.join(ghome, "lunchinator_pub_sec_0x17F57DC2.asc")
+        else:
+            path = os.path.join(get_settings().get_lunchdir(),"lunchinator_pub_0x17F57DC2.asc")
+                
+        if not os.path.isfile(path):
+            log_error("Key file not found:", path)
+            return None, None
+        with contextlib.closing(open(path,"r")) as keyf:
+            gpg.import_keys(keyf.read())
+            keyid = _findLunchinatorKeyID(gpg, secret)
+    
+    return gpg, keyid
+

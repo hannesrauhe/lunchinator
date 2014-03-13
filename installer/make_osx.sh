@@ -1,14 +1,24 @@
-git rev-list HEAD --count > ../version
+#!/bin/bash
 
 # ensure pyinstaller is in PATH
 
+echo "*** Building Application Bundle ***"
 pyinstaller -y -F -w lunchinator_osx.spec
 
+git rev-list HEAD --count > dist/Lunchinator.app/Contents/version
 cat > dist/Lunchinator.app/Contents/Resources/qt.conf <<EOF
 [paths]
 Plugins=MacOS/qt4_plugins
 EOF
 
+echo "*** copying python code into bundle ***"
 cp -r ../bin ../images ../lunchinator ../plugins ../sounds ../yapsy ../start_lunchinator.py  dist/Lunchinator.app/Contents
 cp $(which terminal-notifier) dist/Lunchinator.app/Contents
 
+echo "*** Creating tarball ***"
+cd dist
+tar cjf Lunchinator.app.tbz Lunchinator.app
+cd ..
+
+echo "*** Creating signature file ***"
+python hashNsign.py dist/Lunchinator.app.tbz latest_version_mac.asc
