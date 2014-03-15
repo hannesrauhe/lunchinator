@@ -10,14 +10,14 @@ RestartIfNeededByRun=False
 DefaultDirName={localappdata}\Lunchinator
 DisableWelcomePage=True
 DisableReadyPage=True
-OutputDir=.\windows
+OutputDir=.\win
 OutputBaseFilename=setup_lunchinator
 AllowNoIcons=yes
 DefaultGroupName=Lunchinator
 
 [Files]
 Source: "dist\lunchinator.exe"; DestDir: "{app}"
-Source: "C:\Users\d054203\lunchinator\*"; DestDir: "{app}\"; Flags: recursesubdirs; Excludes: "*.pyc,installer"
+Source: "..\*"; DestDir: "{app}\"; Flags: recursesubdirs; Excludes: "*.pyc,installer"
 
 [Icons]
 Name: "{group}\Lunchinator"; Filename: "{app}\lunchinator.exe"; WorkingDir: "{app}"
