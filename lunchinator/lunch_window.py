@@ -35,18 +35,7 @@ class LunchinatorWindow(QMainWindow):
         
         if savedState == None:
             # first run, create initial state
-            self.addPluginWidgetByName(u"Messages")
-            self.addPluginWidgetByName(u"Members")
-            
-            # check if an old-stype plugins are enabled, if not, display "about plugins"
-            foundOldStylePlugin = False
-            for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
-                if pluginInfo.name not in (u"Messages", u"Members") and pluginInfo.plugin_object.is_activated:
-                    foundOldStylePlugin = True
-                    break
-            
-            if not foundOldStylePlugin:
-                self.addPluginWidgetByName(u"About Plugins")
+            self.addPluginWidgetByName(u"Simple View")
         
         # add plugins
         try:

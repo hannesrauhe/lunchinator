@@ -63,7 +63,7 @@ class lunch_settings(object):
         self._default_lunch_end = u"12:45"
         self._alarm_begin_time = u"11:30"
         self._alarm_end_time = u"13:00"
-        self._peer_timeout = 604800 #one week so that we don't forget someone too soon
+        self._peer_timeout = 300 # 5 min should be enough
         self._mute_timeout = 30
         self._reset_icon_time = 5
         self._logging_level = u"ERROR"
