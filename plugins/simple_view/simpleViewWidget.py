@@ -53,7 +53,7 @@ class SimpleViewWidget(QWidget):
             member = get_server().memberName(addr)
             color = self.getMemberColor(addr)
             msgTexts+="<span style='color:#%s'><b>%s</b> \
-                        <i>[%d sec]</i>: %s</span>\n"%(color,member,time()-mktime(timest),msg)
+                        <i>[%d sec]</i>: %s</span><br />\n"%(color,member,time()-mktime(timest),msg)
                         
         self.msgview.setHtml(msgTexts)
         
