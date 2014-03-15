@@ -70,7 +70,10 @@ class LunchinatorWindow(QMainWindow):
         windowMenu.addAction("Lock Widgets", self.lockDockWidgets)
         windowMenu.addAction("Unlock Widgets", self.unlockWidgets)
         windowMenu.addSeparator()
-        windowMenu.addAction("Close", self.close, QKeySequence(QKeySequence.Close))
+        windowMenu.addAction("Settings", self.guiHandler.openSettingsClicked)
+        windowMenu.addSeparator()
+        windowMenu.addAction("Close Window", self.close, QKeySequence(QKeySequence.Close))
+        windowMenu.addAction("Exit Lunchinator", self.guiHandler.quit)
         menuBar.addMenu(windowMenu)
         
         pluginMenu = QMenu("PlugIns", menuBar)
