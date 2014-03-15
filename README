@@ -1,9 +1,9 @@
 INSTALL DEPENDENCIES
 =======
- sudo apt-get install sox libnotify-bin
 
-Open Up port 50000/UDP on your machine
-Additionally open Up port 50001/TCP on your machine
+On Linux you need Python 2.7, Git, Sox and libnotify. For Mac and Linux a package with all required programms is provided under http://update.lunchinator.de
+
+Open Up port 50000/UDP and 50001/TCP on your machine
 
 
 USAGE
@@ -21,7 +21,7 @@ PLUGINS
 
 Most of the functionality you can see is implemented in Plugins. The core program does just relay/store messages and finds peers.
 
-*activated by default:
+for example:
 -General Settings (to be able to change settings via GUI)
 -Notify (to open/close optical drive, show a notification (depends on libnotify) and play a sound on linux (depends on sox)
 -Avatar (to set a picture as your avatar - you can see other pictures in the norification without this plugin)
@@ -29,21 +29,11 @@ Most of the functionality you can see is implemented in Plugins. The core progra
 Details
 ======
 
-start_lunchinator.py will start 
-*an appindicator on Ubuntu 10.04 and newer, (bin/indicator_applet.py 
-*a GTK tray icon on any system, where pyGTK is available (bin/gui_tray.py)
-*or the CLI version, if no GTK is available (bin/nogui.py)
+Use ./start_lunchinator.py --help to see additional options, e.g., a pure command line version and a server version.
 
-The start_lunchinator.py script also pulls changes from the git repository on start and updates/restarts the lunchinator,
-if somebody called "HELO_UPDATE smth"
-
-The indicator plugin will install its icons to the ubuntu theme directory (after asking)
-
-Configuration is done by adding/modifying files to/in the .lunchinator dir in your home or via GUI (Settings).
-Logs are stored in ~/.lunchinator/lunchinator.log
+Updates are handled via Git. You can use the auto update instead plugin if you do not have git.
 
 lunch_server listens on incoming UDP connections on Port 50000
 ATM it will not parse incoming messages - it will simply show a notice (and open/close your DVD and play a sound at lunch time)
 (Exception: Messages starting with HELO are there to communicate user names etc.)
-From time to time, the lunch_server will write all members to lunch_members.cfg
 
