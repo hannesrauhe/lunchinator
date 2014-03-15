@@ -1,28 +1,17 @@
 #@author: Cornelius Ratsch, Hannes Rauhe
 #@summary: This plugin is supposed to be the only one necessary for the core functionality of the lunchinator
 
-import string,os #fixed typo was using
-from functools import partial
-from PyQt4.QtGui import QWidget, QVBoxLayout, QPushButton, QTextEdit, QSizePolicy, QIcon
-from PyQt4.QtCore import QSize
-from lunchinator import get_server,get_settings
+from PyQt4.QtGui import QWidget, QVBoxLayout, QTextEdit
+from lunchinator import get_server
 from time import mktime,time
+from lunchinator.lunch_button import LunchButton
 
-class simpleViewWidget(QWidget):   
-    
-    def callForLunch(self):
-        get_server().call("lunch")
-    
+class SimpleViewWidget(QWidget):   
     def __init__(self, parent):
-        super(simpleViewWidget, self).__init__(parent)
+        super(SimpleViewWidget, self).__init__(parent)
         layout = QVBoxLayout(self)
         
-        lunchIcon = QIcon(os.path.join(get_settings().get_lunchdir(), "images", "lunch.svg"))
-        lunchButton = QPushButton(parent)
-        lunchButton.setIcon(lunchIcon)
-        lunchButton.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
-        lunchButton.setIconSize(QSize(64, 64))
-        lunchButton.clicked.connect(self.callForLunch)
+        lunchButton = LunchButton(parent)
         
         msgview = QTextEdit(parent)
         msgview.setLineWrapMode(QTextEdit.WidgetWidth)
@@ -38,4 +27,4 @@ class simpleViewWidget(QWidget):
         
 if __name__ == '__main__':        
     from lunchinator.iface_plugins import iface_gui_plugin
-    iface_gui_plugin.run_standalone(lambda window : simpleViewWidget(window))
+    iface_gui_plugin.run_standalone(lambda window : SimpleViewWidget(window))
