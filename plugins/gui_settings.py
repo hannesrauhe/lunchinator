@@ -5,7 +5,7 @@ class gui_settings(iface_general_plugin):
     def __init__(self):
         super(gui_settings, self).__init__()
         option_names = [(u'user_name', u'User Name'),
-                        (u'group', u'Group Name'),
+                        (u'group', u'Group Name', self.change_group),
                         (u'auto_update', u"Automatic Update"),
                         (u"default_lunch_begin", u'Free for Lunch from'),
                         (u"default_lunch_end", u'Free for Lunch until'),
@@ -40,4 +40,6 @@ class gui_settings(iface_general_plugin):
             _member(self.options[o])
         else:
             log_warning("settings has no setter for '%s'" % o)
-        
+            
+    def change_group(self, key, value):
+        get_server().changeGroup(unicode(value))

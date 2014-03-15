@@ -1,9 +1,0 @@
-[Core]
-Name = Groups
-Module = groups_dropdown
-
-[Documentation]
-Author = Hannes Rauhe, Cornelius Ratsch
-Version = 0.1
-Website = http://www.lunchinator.de
-Description = Displays lunch groups

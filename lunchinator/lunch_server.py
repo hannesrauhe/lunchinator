@@ -179,6 +179,7 @@ class lunch_server(object):
     
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
     def changeGroup(self,newgroup):
+        log_info("Changing Group: %s -> %s"%(get_settings().get_group(),newgroup))
         get_settings().set_group(newgroup)
         self.call("HELO_LEAVE Changing Group")
         self.call("HELO_REQUEST_INFO "+self._build_info_string())
