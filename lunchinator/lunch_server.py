@@ -3,6 +3,7 @@
 
 from iface_plugins import iface_called_plugin, iface_database_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
 from time import strftime, localtime, time, mktime, gmtime
+from datetime import datetime
 import socket,sys,os,json,codecs,contextlib
 from threading import Lock
 from cStringIO import StringIO
@@ -10,6 +11,7 @@ from cStringIO import StringIO
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning,\
     convert_string
+     
 import tarfile
 import platform
 
@@ -281,10 +283,46 @@ class lunch_server(object):
         self._load_plugins = enable
     
     def get_peer_info(self):  
-        return self._peer_info    
+        return self._peer_info   
     
+    def is_peer_ready(self,peer_addr):
+        if self._peer_info.has_key(peer_addr):
+            p = self._peer_info[peer_addr]
+            if p.has_key(u"next_lunch_begin") and p.has_key(u"next_lunch_end"):
+                return self.getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"])>0
+        return False
+        
     def getOwnIP(self):
         return self.own_ip
+        
+    def getTimeDifference(self,begin,end):
+        """ calculates the correlation of now and the specified lunch dates
+        negative value: now is before begin, seconds until begin
+        positive value: now is after begin but before end, seconds until end
+         0: now is after end
+        """
+        try:
+            now = datetime.now()
+            begin = datetime.strptime(begin, "%H:%M")
+            begin = begin.replace(year = now.year, month = now.month, day = now.day)
+            end = datetime.strptime(end, "%H:%M")
+            end = end.replace(year = now.year, month = now.month, day = now.day)
+            
+            if now < begin:
+                # now is before begin
+                td = begin - now
+                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**3
+                return -1 if millis == 0 else -millis
+            elif now < end:
+                td = end - now
+                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**3
+                return 1 if millis == 0 else millis
+            else:
+                # now is after end
+                return 0
+        except:
+            log_exception("don't know how to handle time span")
+            return False;
         
     def call(self,msg,client='',hosts=[]):
         self.initialize()
@@ -343,15 +381,6 @@ class lunch_server(object):
             
             if not ip in self._members:
                 self._append_member(ip, hostn)
-            
-    def _is_now_in_time_span(self,begin,end):
-        try:
-            begin_hour,_,begin_min = begin.partition(":")
-            end_hour,_,end_min = end.partition(":")
-            return localtime()[3]*60+localtime()[4] >= int(begin_hour)*60+int(begin_min) and localtime()[3]*60+localtime()[4] <= int(end_hour)*60+int(end_min)
-        except:
-            log_exception("don't know how to handle time span %s"%(str(sys.exc_info())))
-            return False;
         
     def _memberAppended(self, ip):
         self.controller.memberAppended(ip, self._peer_info[ip])
@@ -532,7 +561,7 @@ class lunch_server(object):
         if not msg.startswith("ignore"):
             self.controller.processMessage(msg, addr)
             
-            if "lunch" in msg.lower() and self._is_now_in_time_span(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
+            if "lunch" in msg.lower() and 0<self.getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
                 timenum = mktime(mtime)
                 if timenum - self.last_lunch_call > get_settings().get_mute_timeout():
                     self.last_lunch_call = timenum
