@@ -8,7 +8,7 @@ class sql_interface(iface_gui_plugin):
         self.sqlResultTable = None
         self.times_called=0
         self.last_key=-1
-        self.options = [((u"db_connection", u"DB Connection", [u'auto']+get_server().getAvailableDBConnections()),"auto"),
+        self.options = [((u"db_connection", u"DB Connection", [u'auto']),"auto"),
                         ((u"use_textedit", u"Use multi-line sql editor"),False)]
     
     def activate(self):

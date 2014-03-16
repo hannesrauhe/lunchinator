@@ -16,8 +16,7 @@ class gui_settings(iface_general_plugin):
                         (u"tcp_port", u"TCP Port"),
                         (u"logging_level", u"Logging Level", (u"CRITICAL", u"ERROR", u"WARNING", u"INFO", u"DEBUG")),
                         (u"group_plugins", u"Group Plugins by category"),
-                        (u"proxy", u"Proxy Server (usually detected automatically)"),
-                        (u"default_db_connection", u"Default DB Connection", [u'auto']+get_server().getAvailableDBConnections())]
+                        (u"proxy", u"Proxy Server (usually detected automatically)")]
         self.options = []
         for o in option_names:
             methodname = "get_"+o[0]

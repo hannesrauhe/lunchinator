@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # coding=utf-8
 
-from iface_plugins import iface_called_plugin, iface_database_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
+from iface_plugins import iface_called_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
+from iface_db_plugin import iface_db_plugin, lunch_db
 from time import strftime, localtime, time, mktime, gmtime
 from datetime import datetime
 import socket,sys,os,json,codecs,contextlib
@@ -84,7 +85,7 @@ class lunch_server(object):
            "general" : iface_general_plugin,
            "called" : iface_called_plugin,
            "gui" : iface_gui_plugin,
-           "db" : iface_database_plugin
+           "db" : iface_db_plugin
            }
         self.plugin_manager.setCategoriesFilter(categoriesFilter) 
         
@@ -92,11 +93,13 @@ class lunch_server(object):
             try:
                 self.plugin_manager.collectPlugins()
             except:
-                log_exception("problem when loading plugin")
+                log_exception("problem when loading plugins")
             
             #always load these plugins
             self.plugin_manager.activatePluginByName("General Settings", "general") 
+            self.plugin_manager.activatePluginByName("Database Settings", "general") 
             self.plugin_manager.activatePluginByName("Notify", "called") 
+            
         else:
             log_info("lunchinator initialised without plugins")
 
@@ -185,26 +188,7 @@ class lunch_server(object):
         get_settings().set_group(newgroup)
         self.call("HELO_LEAVE Changing Group")
         self.call("HELO_REQUEST_INFO "+self._build_info_string())
-        
-    def getAvailableDBConnections(self):
-        return [unicode(pluginInfo.name) for pluginInfo in self.plugin_manager.getPluginsOfCategory("db")]
-    
-    def getDBConnection(self,db_name=None):
-        if db_name in [None,"","auto"]:
-            db_name = get_settings().get_default_db_connection()
-            
-        if db_name not in [None,"","auto"]:
-            pluginInfo = self.plugin_manager.getPluginByName(db_name, "db")
-            if pluginInfo and pluginInfo.plugin_object.is_activated:
-                return pluginInfo.plugin_object
-            log_error("No DB connection for %s available, falling back to default"%db_name)
-        
-        for pluginInfo in self.plugin_manager.getPluginsOfCategory("db"):
-            if pluginInfo.plugin_object.is_activated:
-                return pluginInfo.plugin_object
-        log_error("No DB Connection available - activate a db plugin and check settings")
-        return None
-            
+                    
     def memberName(self, addr):
         if addr in self._peer_info and u'name' in self._peer_info[addr]:
             return self._peer_info[addr][u'name']

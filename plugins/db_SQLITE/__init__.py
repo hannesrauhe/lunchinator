@@ -1,17 +1,77 @@
-from lunchinator.iface_plugins import iface_database_plugin
+from lunchinator.iface_db_plugin import iface_db_plugin,lunch_db
 import sys,sqlite3,threading,Queue,datetime
-from lunchinator import get_server, get_settings, log_debug
+from lunchinator import get_server, get_settings, log_debug, log_exception, log_error
 
-class MultiThreadSQLite(threading.Thread):
-    def __init__(self, db):
-        super(MultiThreadSQLite, self).__init__()
-        self.db=db
+ 
+class db_SQLITE(iface_db_plugin):  
+    VERSION_TABLE = "DB_VERSION"
+    DATABASE_VERSION_EMPTY = 0
+    DATABASE_VERSION_DEFAULT_STATISTICS = 1
+    DATABASE_VERSION_LUNCH_STATISTICS = 2
+    
+    version_schema = "CREATE TABLE \"%s\" (VERSION INTEGER)" % VERSION_TABLE 
+    messages_schema = "CREATE TABLE messages (m_id INTEGER PRIMARY KEY AUTOINCREMENT, \
+            mtype TEXT, message TEXT, sender TEXT, rtime INTEGER)"
+    members_schema = "CREATE TABLE members (IP TEXT, name TEXT, avatar TEXT, lunch_begin TEXT, lunch_end TEXT, rtime INTEGER)"
+    lunch_soup_schema =    "CREATE TABLE LUNCH_SOUP    (DATE DATE, NAME TEXT, ADDITIVES TEXT, LAST_UPDATE DATE)" 
+    lunch_main_schema =    "CREATE TABLE LUNCH_MAIN    (DATE DATE, NAME TEXT, ADDITIVES TEXT, LAST_UPDATE DATE)" 
+    lunch_side_schema =    "CREATE TABLE LUNCH_SIDE    (DATE DATE, NAME TEXT, ADDITIVES TEXT, LAST_UPDATE DATE)" 
+    lunch_dessert_schema = "CREATE TABLE LUNCH_DESSERT (DATE DATE, NAME TEXT, ADDITIVES TEXT, LAST_UPDATE DATE)"
+      
+    def __init__(self):
+        super(iface_db_plugin, self).__init__()
+        self.db_type="SQLite"
+        self.options=[("sqlite_file", get_settings().get_main_config_dir()+"/statistics.sq3")]
+        self.members={}
+        
+    def open_connection(self, options):
+        newconn = None
+        try:
+            newconn = MultiThreadSQLite(options["sqlite_file"])
+        except:
+            log_exception("Problem while opening DB connection in plugin %s"%(self.db_type))   
+            raise
+        
+        try:            
+            if not self.existsTable("members"):
+                self.execute(self.members_schema)
+            if not self.existsTable("messages"):
+                self.execute(self.messages_schema)
+            res = self.get_newest_members_data()
+            if res:
+                for e in res:
+                    self.members[e[0]]=e
+        except:
+            newconn.close()
+            log_exception("Problem after opening DB connection in plugin %s"%(self.db_type))  
+            raise 
+        
+        return newconn
+        
+    def close_connection(self,conn):        
+        try:            
+            self._pre_close()
+        except:
+            log_exception("Proble mbefore closing DB connection in plugin %s"%(self.db_type))
+            
+        try:            
+            conn.close()
+        except:
+            log_exception("Problem while closing DB connection in plugin %s"%(self.db_type))
+        
+class MultiThreadSQLite(threading.Thread,lunch_db):
+    def __init__(self, db_file):
+        threading.Thread.__init__(self)
+        lunch_db.__init__(self)
+        
+        self.db=db_file
         self.description=None
         self.last_res=None
         self.reqs=Queue.Queue()
-        self.start()
+        self.open = False
+        
     def run(self):
-        cnx = sqlite3.connect(self.db) 
+        cnx = sqlite3.connect(self.db_file) 
         cursor = cnx.cursor()
         while True:
             req, arg, res = self.reqs.get()
@@ -26,79 +86,53 @@ class MultiThreadSQLite(threading.Thread):
                         res.put(rec)
                     res.put('--no more--')
         cnx.close()
-    def execute(self, req, arg=None):
+        
+    def _cursor_execute(self, req, arg=None):        
         self.last_res = Queue.Queue()
         self.reqs.put((req, arg or tuple(), self.last_res))
+        
     def fetch(self):
         while True:
             rec=self.last_res.get()
             if rec=='--no more--': break
             yield rec
+            
     def fetchall(self):
         return list(self.fetch())
-    def close(self):
-        self.execute('--close--')
+        
     def commit(self):
         self.execute('--commit--')
-        
-class db_SQLITE(iface_database_plugin):    
-    VERSION_TABLE = "DB_VERSION"
-    DATABASE_VERSION_EMPTY = 0
-    DATABASE_VERSION_DEFAULT_STATISTICS = 1
-    DATABASE_VERSION_LUNCH_STATISTICS = 2
     
-    version_schema = "CREATE TABLE \"%s\" (VERSION INTEGER)" % VERSION_TABLE 
-    messages_schema = "CREATE TABLE messages (m_id INTEGER PRIMARY KEY AUTOINCREMENT, \
-            mtype TEXT, message TEXT, sender TEXT, rtime INTEGER)"
-    members_schema = "CREATE TABLE members (IP TEXT, name TEXT, avatar TEXT, lunch_begin TEXT, lunch_end TEXT, rtime INTEGER)"
-    lunch_soup_schema =    "CREATE TABLE LUNCH_SOUP    (DATE DATE, NAME TEXT, ADDITIVES TEXT, LAST_UPDATE DATE)" 
-    lunch_main_schema =    "CREATE TABLE LUNCH_MAIN    (DATE DATE, NAME TEXT, ADDITIVES TEXT, LAST_UPDATE DATE)" 
-    lunch_side_schema =    "CREATE TABLE LUNCH_SIDE    (DATE DATE, NAME TEXT, ADDITIVES TEXT, LAST_UPDATE DATE)" 
-    lunch_dessert_schema = "CREATE TABLE LUNCH_DESSERT (DATE DATE, NAME TEXT, ADDITIVES TEXT, LAST_UPDATE DATE)"
+    def _open(self):       
+        self.open = True 
+        self.start()
     
-    def __init__(self):
-        iface_database_plugin.__init__(self)
-        self.options = [(("sqlite_db_file", "SQLite DB file",self._restart_connection),get_settings().get_main_config_dir()+"/statistics.sq3")]
-        self.members={}
-        self.db_type="sqlite"
-        
-    def _open(self):
-        return MultiThreadSQLite(self.options["sqlite_db_file"])
-    
-    def _post_open(self):
-        if not self.existsTable("members"):
-            self.execute(self.members_schema)
-        if not self.existsTable("messages"):
-            self.execute(self.messages_schema)
-        res = self.get_newest_members_data()
-        if res:
-            for e in res:
-                self.members[e[0]]=e
-                
     def _close(self):
-        self._conn().close()   
+        self.execute('--close--')
+        self.open = False
         
     def _execute(self, query, wildcards, returnResults=True, commit=False, returnHeader=False):
-        if not self._conn():
+        if not self.open:
             raise Exception("not connected to a database")
         
-        cursor = self._conn()#.cursor()
         if wildcards:
             log_debug(query, wildcards)
-            cursor.execute(query, wildcards)
+            self._cursor_execute(query, wildcards)
         else:
             log_debug(query)
-            cursor.execute(query)
+            self._cursor_execute(query)
         if commit:
             self._conn().commit()
         header=[]
-        if cursor.description:
-            for d in cursor.description:
+        if self.description:
+            for d in self.description:
                 header.append(d[0])
         if returnHeader:
-            return header,cursor.fetchall()
+            return header,self.fetchall()
         if returnResults:
-            return cursor.fetchall()
+            return self.fetchall()
+        
+        
     
     '''Statistics'''
     def insert_call(self,mtype,msg,sender):
@@ -144,5 +178,4 @@ class db_SQLITE(iface_database_plugin):
         
     def parse_result_date(self, resultDate):
         return datetime.datetime.strptime(resultDate, '%Y-%m-%d').date()
-
             
