@@ -1,12 +1,13 @@
 #@author: Cornelius Ratsch, Hannes Rauhe
 #@summary: This plugin is supposed to be the only one necessary for the core functionality of the lunchinator
 
-from PyQt4.QtGui import QWidget, QVBoxLayout, QTextEdit
-from PyQt4.QtCore import QTimer
+from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, \
+                        QLineEdit
+from PyQt4.QtCore import QTimer, Qt
 from lunchinator import get_server
 from time import mktime,time
 from lunchinator.lunch_button import LunchButton
-
+            
 class SimpleViewWidget(QWidget):   
     #http://www.colourlovers.com/palette/1930/cheer_up_emo_kid
     colors = ["C44D58","FF6B6B","C7F464","4ECDC4","556270"]
@@ -18,18 +19,23 @@ class SimpleViewWidget(QWidget):
         
         layout = QVBoxLayout(self)
         
-        self.memberView = QTextEdit(parent)
-        self.memberView.setLineWrapMode(QTextEdit.WidgetWidth)
-        self.memberView.setReadOnly(True)
+        self.memberView = QLabel(self)
+        self.memberView.setAlignment(Qt.AlignHCenter)
         
-        lunchButton = LunchButton(parent)
+        sendLayout = QHBoxLayout()
+        sendMessageField = QLineEdit(self)
+        sendMessageField.setPlaceholderText("optional Message")
+        lunchButton = LunchButton(parent, sendMessageField)
         
-        self.msgview = QTextEdit(parent)
+        sendLayout.addWidget(sendMessageField)
+        sendLayout.addWidget(lunchButton)
+        
+        self.msgview = QTextEdit(self)
         self.msgview.setLineWrapMode(QTextEdit.WidgetWidth)
         self.msgview.setReadOnly(True)
         
         layout.addWidget(self.memberView)
-        layout.addWidget(lunchButton)
+        layout.addLayout(sendLayout)
         layout.addWidget(self.msgview)
         
         self.timer = QTimer(self)
@@ -45,8 +51,23 @@ class SimpleViewWidget(QWidget):
             
     def updateWidgets(self):
         members = get_server().get_members()
-        memText = "%d people online"%len(members)
-        self.memberView.setHtml(memText)
+        memText = "%d people online<br />"%len(members)
+        memToolTip = ""
+        
+        readyMembers = []
+        notReadyMembers = []
+        for m in members:
+            if get_server().is_peer_ready(m):
+                readyMembers.append(get_server().memberName(m))
+            else:
+                notReadyMembers.append(get_server().memberName(m))
+                
+        memToolTip += "<span style='color:green'>%s</span><br />"%", ".join(readyMembers) if len(readyMembers) else ""
+        memToolTip += "<span style='color:red'>%s</span>"%", ".join(notReadyMembers) if len(notReadyMembers) else ""
+        
+        memText += "<span style='color:green'>%d ready for lunch</span>"%len(readyMembers) if len(readyMembers) else "no one ready for lunch"
+        self.memberView.setText(memText)
+        self.memberView.setToolTip(memToolTip)
         
         msgTexts=""
         for timest,addr,msg in get_server().getMessages(time()-(180*60)):
