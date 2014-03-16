@@ -7,9 +7,6 @@ class messages_table(iface_gui_plugin):
         super(messages_table, self).__init__()
         self.messagesTable = None
         
-    def smoothScalingChanged(self, _setting, newValue):
-        self.webcam.smooth_scaling = newValue
-    
     def activate(self):
         iface_gui_plugin.activate(self)
         
@@ -30,6 +27,7 @@ class messages_table(iface_gui_plugin):
         from PyQt4.QtCore import Qt
         from lunchinator.table_widget import TableWidget
         from lunchinator.table_models import MessagesTableModel
+        
         self.messagesTable = TableWidget(parent, "Send Message", self.sendMessageClicked, placeholderText="Enter a message")
         
         # initialize messages table

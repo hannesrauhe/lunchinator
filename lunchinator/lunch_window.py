@@ -9,6 +9,7 @@ class PluginDockWidget(QDockWidget):
     def __init__(self, name, parent, closeCallback):
         super(PluginDockWidget, self).__init__(name, parent)
         self.closeCallback = closeCallback
+        self.setAttribute(Qt.WA_DeleteOnClose)
         
     def closeEvent(self, closeEvent):
         self.closeCallback(self)
@@ -41,7 +42,7 @@ class LunchinatorWindow(QMainWindow):
         try:
             for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
                 if pluginInfo.plugin_object.is_activated:
-                    self.addPluginWidget(pluginInfo.plugin_object, pluginInfo.name)
+                    self.addPluginWidget(pluginInfo.plugin_object, pluginInfo.name, noTabs=True)
         except:
             log_exception("while including plugins %s"%str(sys.exc_info()))
         
@@ -117,7 +118,7 @@ class LunchinatorWindow(QMainWindow):
             name = self.objectNameToPluginName[objectName]
             self.guiHandler.plugin_widget_closed(name)
             
-    def addPluginWidget(self, po, name, makeVisible = False):
+    def addPluginWidget(self, po, name, makeVisible = False, noTabs = False):
         if name in self.pluginNameToDockWidget:
             # widget already visible
             return
@@ -130,17 +131,18 @@ class LunchinatorWindow(QMainWindow):
         self.objectNameToPluginName[convert_string(dockWidget.objectName())] = name.decode()
 
         widgetToTabify = None
-        for aDockWidget in self.pluginNameToDockWidget.values():
-            tabified = self.tabifiedDockWidgets(aDockWidget)
-            if len(tabified) > 0:
-                widgetToTabify = aDockWidget
-                break
-        
-        if widgetToTabify == None:
+        if not noTabs:
             for aDockWidget in self.pluginNameToDockWidget.values():
-                if self.objectNameToPluginName[convert_string(aDockWidget.objectName())] not in (u"Members", u"Messages", name):
+                tabified = self.tabifiedDockWidgets(aDockWidget)
+                if len(tabified) > 0:
                     widgetToTabify = aDockWidget
                     break
+            
+            if widgetToTabify == None:
+                for aDockWidget in self.pluginNameToDockWidget.values():
+                    if self.objectNameToPluginName[convert_string(aDockWidget.objectName())] not in (u"Members", u"Messages", name):
+                        widgetToTabify = aDockWidget
+                        break
         
         if widgetToTabify != None:
             dockArea = self.dockWidgetArea(widgetToTabify)

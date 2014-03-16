@@ -6,19 +6,15 @@ class members_table(iface_gui_plugin):
     def __init__(self):
         super(members_table, self).__init__()
         self.membersTable = None
-        
-    def smoothScalingChanged(self, _setting, newValue):
-        self.webcam.smooth_scaling = newValue
+        self.timeoutTimer = None
     
     def activate(self):
         iface_gui_plugin.activate(self)
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
+        self.timeoutTimer.stop()
         
-    def do_members(self):
-        print get_server().get_members()
-
     def updateTimeoutsInMembersTables(self):
         self.membersProxyModel.setDynamicSortFilter(False)
         self.membersModel.updateTimeouts()
@@ -45,10 +41,10 @@ class members_table(iface_gui_plugin):
         self.membersProxyModel.setSourceModel(self.membersModel)
         self.membersTable.setModel(self.membersProxyModel)
         
-        timeoutTimer = QTimer(self.membersModel)
-        timeoutTimer.setInterval(1000)
-        timeoutTimer.timeout.connect(self.updateTimeoutsInMembersTables)
-        timeoutTimer.start(1000)  
+        self.timeoutTimer = QTimer(self.membersModel)
+        self.timeoutTimer.setInterval(1000)
+        self.timeoutTimer.timeout.connect(self.updateTimeoutsInMembersTables)
+        self.timeoutTimer.start(1000)  
         
         get_server().controller.memberAppendedSignal.connect(self.membersModel.externalRowAppended)
         get_server().controller.memberUpdatedSignal.connect(self.membersModel.externalRowUpdated)
