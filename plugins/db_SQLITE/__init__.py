@@ -28,21 +28,22 @@ class db_SQLITE(iface_db_plugin):
         newconn = None
         try:
             newconn = MultiThreadSQLite(options["sqlite_file"])
+            newconn._open()
         except:
             log_exception("Problem while opening DB connection in plugin %s"%(self.db_type))   
             raise
         
         try:            
-            if not self.existsTable("members"):
-                self.execute(self.members_schema)
-            if not self.existsTable("messages"):
-                self.execute(self.messages_schema)
-            res = self.get_newest_members_data()
+            if not newconn.existsTable("members"):
+                newconn.execute(self.members_schema)
+            if not newconn.existsTable("messages"):
+                newconn.execute(self.messages_schema)
+            res = newconn.get_newest_members_data()
             if res:
                 for e in res:
-                    self.members[e[0]]=e
+                    newconn.members[e[0]]=e
         except:
-            newconn.close()
+            newconn._close()
             log_exception("Problem after opening DB connection in plugin %s"%(self.db_type))  
             raise 
         
@@ -64,11 +65,11 @@ class MultiThreadSQLite(threading.Thread,lunch_db):
         threading.Thread.__init__(self)
         lunch_db.__init__(self)
         
-        self.db=db_file
+        self.db_file=db_file
         self.description=None
         self.last_res=None
         self.reqs=Queue.Queue()
-        self.open = False
+        self.is_open = False
         
     def run(self):
         cnx = sqlite3.connect(self.db_file) 
@@ -101,18 +102,18 @@ class MultiThreadSQLite(threading.Thread,lunch_db):
         return list(self.fetch())
         
     def commit(self):
-        self.execute('--commit--')
+        self._cursor_execute('--commit--')
     
     def _open(self):       
-        self.open = True 
+        self.is_open = True 
         self.start()
     
     def _close(self):
         self.execute('--close--')
-        self.open = False
+        self.is_open = False
         
     def _execute(self, query, wildcards, returnResults=True, commit=False, returnHeader=False):
-        if not self.open:
+        if not self.is_open:
             raise Exception("not connected to a database")
         
         if wildcards:
@@ -122,7 +123,7 @@ class MultiThreadSQLite(threading.Thread,lunch_db):
             log_debug(query)
             self._cursor_execute(query)
         if commit:
-            self._conn().commit()
+            self.commit()
         header=[]
         if self.description:
             for d in self.description:

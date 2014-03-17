@@ -7,24 +7,32 @@ class db_connections(iface_general_plugin):
         super(db_connections, self).__init__()
         self.options = [(("connections","Connections"),"Standard"),
                         (("default_connection","Default Connection"),"Standard")]
+        self.open_connections = {}
+        self.db_props = {"Standard":{"db_type":"SQLite Connection",
+                                     "sqlite_file":get_settings().get_main_config_dir()+"/statistics.sq3"}}
+        self.plugin_manager = PluginManagerSingleton.get()
+        
+    def getProperties(self,name):
+        return self.db_props[name]
           
     def getAvailableDBConnections(self):
-        return self.options["connections"].split(";;")
+        return self.options["connections"].split(";;")    
     
-    '''
-    def getDBConnection(self):
-        if db_name in [None,"","auto"]:
-            db_name = get_settings().get_default_db_connection()
-            
-        if db_name not in [None,"","auto"]:
-            pluginInfo = self.plugin_manager.getPluginByName(db_name, "db")
-            if pluginInfo and pluginInfo.plugin_object.is_activated:
-                return pluginInfo.plugin_object
-            log_error("No DB connection for %s available, falling back to default"%db_name)
+    def getDBConnection(self,name=""):
+        if len(name)==0:
+            name = self.options["default_connection"]
+        connections = self.options["connections"].split(";;")
         
-        for pluginInfo in self.plugin_manager.getPluginsOfCategory("db"):
-            if pluginInfo.plugin_object.is_activated:
-                return pluginInfo.plugin_object
-        log_error("No DB Connection available - activate a db plugin and check settings")
-        return None
-    '''
+        if name not in connections:
+            return None
+        
+        if name not in self.open_connections:
+            db_type = self.getProperties(name)["db_type"]
+            pluginInfo = self.plugin_manager.getPluginByName(db_type, "db")
+            if pluginInfo and pluginInfo.plugin_object.is_activated:
+                self.open_connections[name] = pluginInfo.plugin_object.open_connection(self.getProperties(name))
+            else:
+                log_error("DB Connections: %s is not available or not activated"%name)
+                return None
+        
+        return self.open_connections[name]

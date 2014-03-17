@@ -1,6 +1,7 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import log_exception, log_error, get_settings, get_server
 import urllib2,sys
+
     
 class sql_interface(iface_gui_plugin):
     def __init__(self):
@@ -8,11 +9,12 @@ class sql_interface(iface_gui_plugin):
         self.sqlResultTable = None
         self.times_called=0
         self.last_key=-1
-        self.options = [((u"db_connection", u"DB Connection", [u'auto']),"auto"),
+        self.options = [((u"db_connection", u"DB Connection", [u'Standard']),"Standard"),
                         ((u"use_textedit", u"Use multi-line sql editor"),False)]
+        self.db_connection = None
     
     def activate(self):
-        iface_gui_plugin.activate(self)
+        iface_gui_plugin.activate(self)      
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)        
@@ -34,8 +36,16 @@ class sql_interface(iface_gui_plugin):
     def sendSqlClicked(self, sql_stat):
         from PyQt4.QtGui import QMessageBox
         from lunchinator.table_models import TableModelBase
+        from yapsy.PluginManager import PluginManagerSingleton
+        
+        if None==self.db_connection:
+            name = self.options["db_connection"]
+            pluginInfo = PluginManagerSingleton.get().getPluginByName("Database Settings", "general")
+            if pluginInfo and pluginInfo.plugin_object.is_activated:
+                self.db_connection = pluginInfo.plugin_object.getDBConnection(name)
+                    
         try:
-            header, res = get_server().getDBConnection(self.options['db_connection']).queryWithHeader(sql_stat)
+            header, res = self.db_connection.queryWithHeader(sql_stat)
         except Exception as e:
             QMessageBox.warning(self.resultTable,"Error in SQL statement",str(e))
             log_error("SQL error:")

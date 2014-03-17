@@ -56,12 +56,6 @@ class lunch_db(object):
         return self._execute(query, wildcards, returnResults=True, commit=False, returnHeader=True)
     
     '''abstract methods - basic functionality'''   
-    
-    def _open(self):
-        raise  NotImplementedError("%s does not implement the open method"%self.db_type)
-    
-    def _close(self):
-        raise  NotImplementedError("%s does not implement the close method"%self.db_type)
             
     def _execute(self, query, wildcards, returnResults=True, commit=False, returnHeader=False):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
