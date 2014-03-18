@@ -88,6 +88,7 @@ class lunch_server(object):
            "db" : iface_db_plugin
            }
         self.plugin_manager.setCategoriesFilter(categoriesFilter) 
+
         
         if self.get_plugins_enabled():
             try:
@@ -278,6 +279,20 @@ class lunch_server(object):
         
     def getOwnIP(self):
         return self.own_ip
+    
+    def getAvailableDBConnections(self):
+        pluginInfo = PluginManagerSingleton.get().getPluginByName("Database Settings", "general")
+        if pluginInfo and pluginInfo.plugin_object.is_activated:
+            return pluginInfo.plugin_object.getAvailableDBConnections()
+        log_exception("getAvailableDBConnections: DB Connections plugin not yet loaded")
+        return None        
+        
+    def getDBConnection(self, name=""):
+        pluginInfo = PluginManagerSingleton.get().getPluginByName("Database Settings", "general")
+        if pluginInfo and pluginInfo.plugin_object.is_activated:
+            return pluginInfo.plugin_object.getDBConnection(name)
+        log_exception("getDBConnection: DB Connections plugin not yet loaded")
+        return None        
         
     def getTimeDifference(self,begin,end):
         """ calculates the correlation of now and the specified lunch dates

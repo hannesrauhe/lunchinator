@@ -36,13 +36,9 @@ class sql_interface(iface_gui_plugin):
     def sendSqlClicked(self, sql_stat):
         from PyQt4.QtGui import QMessageBox
         from lunchinator.table_models import TableModelBase
-        from yapsy.PluginManager import PluginManagerSingleton
         
-        if None==self.db_connection:
-            name = self.options["db_connection"]
-            pluginInfo = PluginManagerSingleton.get().getPluginByName("Database Settings", "general")
-            if pluginInfo and pluginInfo.plugin_object.is_activated:
-                self.db_connection = pluginInfo.plugin_object.getDBConnection(name)
+        if None==self.db_connection:        
+            self.db_connection = get_server().getDBConnection(self.options["db_connection"])
                     
         try:
             header, res = self.db_connection.queryWithHeader(sql_stat)

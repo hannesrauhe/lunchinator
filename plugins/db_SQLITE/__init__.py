@@ -53,7 +53,7 @@ class db_SQLITE(iface_db_plugin):
         try:            
             self._pre_close()
         except:
-            log_exception("Proble mbefore closing DB connection in plugin %s"%(self.db_type))
+            log_exception("Problem before closing DB connection in plugin %s"%(self.db_type))
             
         try:            
             conn.close()

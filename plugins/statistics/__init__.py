@@ -10,33 +10,31 @@ class statistics(iface_called_plugin):
     
     def activate(self):
         iface_called_plugin.activate(self)
-        self.connect_to_db()
         
     def deactivate(self):
         iface_called_plugin.deactivate(self)
         
     def connect_to_db(self,_=None,__=None):
-        if ""==self.options["db_connect"]:            
-            self.connectionPlugin = get_server().getDBConnection()
-        else:
-            self.connectionPlugin = get_server().getDBConnection(self.options["db_connect"])
+        self.connectionPlugin = get_server().getDBConnection(self.options["db_connect"])
             
-        log_debug("Statistics: Using DB Connection ",self.connectionPlugin.db_type)
+        log_debug("Statistics: Using DB Connection ",type(self.connectionPlugin))
             
         if None==self.connectionPlugin:
             log_error("Statistics: DB %s connection not available - will deactivate statistics now"%self.options["db_connect"])
             log_error("Statistics: Activate a DB Connection plugin and check settings")
+            return False
+        return True
             
     def process_message(self,msg,addr,member_info):
-        if self.connectionPlugin:
+        if self.connectionPlugin or self.connect_to_db():
             self.connectionPlugin.insert_call("msg", msg, addr)
             
     def process_lunch_call(self,msg,ip,member_info):
-        if self.connectionPlugin:
+        if self.connectionPlugin or self.connect_to_db():
             self.connectionPlugin.insert_call("lunch", msg, ip)
     
     def process_event(self,cmd,value,ip,member_info):
-        if self.connectionPlugin:
+        if self.connectionPlugin or self.connect_to_db():
             self.connectionPlugin.insert_call(cmd, value, ip)
         
         #ignore member stuff for now

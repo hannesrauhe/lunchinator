@@ -16,7 +16,7 @@ class db_connections(iface_general_plugin):
         return self.db_props[name]
           
     def getAvailableDBConnections(self):
-        return self.options["connections"].split(";;")    
+        return [unicode(x) for x in self.options["connections"].split(";;")]    
     
     def getDBConnection(self,name=""):
         if len(name)==0:
