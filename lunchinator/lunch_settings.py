@@ -68,7 +68,8 @@ class lunch_settings(object):
         self._reset_icon_time = 5
         self._logging_level = u"ERROR"
         self._group_plugins = False
-        self._default_db_connection = u"auto"
+        self._default_db_connection = u"Standard"
+        self._available_db_connections = u"Standard" #list separated by ;; (like yapsy)
         self._proxy = u""
         
         if not os.path.exists(self._main_config_dir):
@@ -329,6 +330,17 @@ class lunch_settings(object):
     
     def set_default_db_connection(self, newValue):
         self._default_db_connection = newValue
+        
+    #always force at least one connection
+    def get_available_db_connections(self):
+        conn = [unicode(x) for x in self._available_db_connections.split(";;")]
+        if len(conn):
+            return conn
+        else:
+            return [u'Standard']
+    
+    def set_available_db_connections(self, newValue):
+        self._available_db_connections = ";;".join(newValue)
             
     def get_advanced_gui_enabled(self):
         return self._logging_level == u"DEBUG"

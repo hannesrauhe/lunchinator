@@ -80,12 +80,18 @@ class MultiThreadSQLite(threading.Thread,lunch_db):
                 cnx.commit()
             else:
                 if req=='--close--': break
-                cursor.execute(req, arg)
-                self.description = cursor.description
-                if res:
-                    for rec in cursor:
-                        res.put(rec)
-                    res.put('--no more--')
+                try:
+                    cursor.execute(req, arg)
+                    self.description = cursor.description
+                    if res:
+                        for rec in cursor:
+                            res.put(rec)
+                        res.put('--no more--')
+                    self.last_error = ""
+                except Exception, e:
+                    self.description = None
+                    self.last_error = e
+                    res.put('--error--')
         cnx.close()
         
     def _cursor_execute(self, req, arg=None):        
@@ -95,6 +101,8 @@ class MultiThreadSQLite(threading.Thread,lunch_db):
     def fetch(self):
         while True:
             rec=self.last_res.get()
+            if rec=='--error--':
+                raise self.last_error
             if rec=='--no more--': break
             yield rec
             

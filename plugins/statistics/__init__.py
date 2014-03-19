@@ -5,7 +5,9 @@ from lunchinator import get_server, log_exception, log_error, log_debug
 class statistics(iface_called_plugin):
     def __init__(self):
         super(statistics, self).__init__()
-        self.options = [(("db_connect", "Which db connection to use (leave empty for default)",self.connect_to_db),"")]
+        self.options = [((u"db_connection", u"DB Connection", 
+                          get_settings().get_available_db_connections()),
+                         get_settings().get_default_db_connection())]
         self.connectionPlugin = None
     
     def activate(self):
@@ -15,7 +17,7 @@ class statistics(iface_called_plugin):
         iface_called_plugin.deactivate(self)
         
     def connect_to_db(self,_=None,__=None):
-        self.connectionPlugin = get_server().getDBConnection(self.options["db_connect"])
+        self.connectionPlugin = get_server().getDBConnection(self.options["db_connection"])
             
         log_debug("Statistics: Using DB Connection ",type(self.connectionPlugin))
             

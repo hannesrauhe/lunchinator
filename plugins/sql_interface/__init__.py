@@ -9,7 +9,9 @@ class sql_interface(iface_gui_plugin):
         self.sqlResultTable = None
         self.times_called=0
         self.last_key=-1
-        self.options = [((u"db_connection", u"DB Connection", [u'Standard']),"Standard"),
+        self.options = [((u"db_connection", u"DB Connection", 
+                          get_settings().get_available_db_connections()),
+                         get_settings().get_default_db_connection()),
                         ((u"use_textedit", u"Use multi-line sql editor"),False)]
         self.db_connection = None
     
