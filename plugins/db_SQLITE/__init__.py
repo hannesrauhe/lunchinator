@@ -59,15 +59,14 @@ class db_SQLITE(iface_db_plugin):
             conn.close()
         except:
             log_exception("Problem while closing DB connection in plugin %s"%(self.db_type))
-        
+            
 class MultiThreadSQLite(threading.Thread,lunch_db):
     def __init__(self, db_file):
         threading.Thread.__init__(self)
         lunch_db.__init__(self)
         
         self.db_file=db_file
-        self.description=None
-        self.last_res=None
+        self.results={}
         self.reqs=Queue.Queue()
         self.is_open = False
         
@@ -75,42 +74,29 @@ class MultiThreadSQLite(threading.Thread,lunch_db):
         cnx = sqlite3.connect(self.db_file) 
         cursor = cnx.cursor()
         while True:
-            req, arg, res = self.reqs.get()
-            if req=='--commit--': 
-                cnx.commit()
-            else:
-                if req=='--close--': break
-                try:
-                    cursor.execute(req, arg)
-                    self.description = cursor.description
-                    if res:
-                        for rec in cursor:
-                            res.put(rec)
-                        res.put('--no more--')
-                    self.last_error = ""
-                except Exception, e:
-                    self.description = None
-                    self.last_error = e
-                    res.put('--error--')
+            req, arg, res, err, description = self.reqs.get()
+            if req=='--close--': break
+            try:
+                cursor.execute(req, arg)
+                description.put(cursor.description)
+                if res:
+                    for rec in cursor:
+                        res.put(rec)
+                    res.put('--no more--')
+                self.last_error = ""
+            except Exception, e:
+                err.put(e)
+                description.put('--error')
+                res.put('--error--')
         cnx.close()
-        
-    def _cursor_execute(self, req, arg=None):        
-        self.last_res = Queue.Queue()
-        self.reqs.put((req, arg or tuple(), self.last_res))
         
     def fetch(self):
         while True:
-            rec=self.last_res.get()
+            rec=self.results[threading.current_thread().name].get()
             if rec=='--error--':
-                raise self.last_error
+                raise self.error
             if rec=='--no more--': break
             yield rec
-            
-    def fetchall(self):
-        return list(self.fetch())
-        
-    def commit(self):
-        self._cursor_execute('--commit--')
     
     def _open(self):       
         self.is_open = True 
@@ -120,26 +106,41 @@ class MultiThreadSQLite(threading.Thread,lunch_db):
         self.execute('--close--')
         self.is_open = False
         
-    def _execute(self, query, wildcards, returnResults=True, commit=False, returnHeader=False):
+    def _execute(self, query, wildcards, returnResults=True, commit=False, returnHeader=False):            
         if not self.is_open:
             raise Exception("not connected to a database")
         
+        res = Queue.Queue()
+        err = Queue.Queue()
+        descr = Queue.Queue()
         if wildcards:
             log_debug(query, wildcards)
-            self._cursor_execute(query, wildcards)
+            self.reqs.put((query, wildcards, res, err, descr))
         else:
             log_debug(query)
-            self._cursor_execute(query)
-        if commit:
-            self.commit()
+            self.reqs.put((query, tuple(), res, err, descr))
+        
+        #@todo Hannes:commit - ignore for now
+#         if commit:
+#             self.commit()
+        
+        resultList = []
+        while True:
+            rec=res.get()
+            if rec=='--no more--': break
+            if rec=='--error--':
+                raise err.get()
+            resultList.append(rec)
+        
         header=[]
-        if self.description:
-            for d in self.description:
+        description = descr.get()
+        if description:
+            for d in description:
                 header.append(d[0])
         if returnHeader:
-            return header,self.fetchall()
+            return header,resultList
         if returnResults:
-            return self.fetchall()
+            return resultList
         
         
     
