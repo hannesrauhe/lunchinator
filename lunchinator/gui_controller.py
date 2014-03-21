@@ -351,12 +351,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
         p_cat = convert_string(p_cat)
         p_name = convert_string(w.text())
         if new_state:
-            log_debug("Activating plugin '%s' of type '%s'" % (p_name, p_cat))
+            log_info("Activating plugin '%s' of type '%s'" % (p_name, p_cat))
             po = get_server().plugin_manager.activatePluginByName(p_name,p_cat)
             if p_cat=="gui" and self.mainWindow != None:
                 self.mainWindow.addPluginWidget(po, p_name, makeVisible=True)
         else:
-            log_debug("Deactivating plugin '%s' of type '%s'" % (p_name, p_cat))
+            log_info("Deactivating plugin '%s' of type '%s'" % (p_name, p_cat))
             get_server().plugin_manager.deactivatePluginByName(p_name,p_cat)  
             if p_cat=="gui" and self.mainWindow != None:
                 self.mainWindow.removePluginWidget(p_name)

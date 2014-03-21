@@ -74,7 +74,7 @@ class MultiThreadSQLite(threading.Thread,lunch_db):
         cnx = sqlite3.connect(self.db_file) 
         cursor = cnx.cursor()
         while True:
-            req, arg, res, err, description = self.reqs.get()
+            req, arg, res, err, description, commit = self.reqs.get()
             if req=='--close--': break
             try:
                 cursor.execute(req, arg)
@@ -83,21 +83,14 @@ class MultiThreadSQLite(threading.Thread,lunch_db):
                     for rec in cursor:
                         res.put(rec)
                     res.put('--no more--')
-                self.last_error = ""
+                if commit:
+                    cursor.commit()
             except Exception, e:
                 err.put(e)
                 description.put('--error')
                 res.put('--error--')
         cnx.close()
         
-    def fetch(self):
-        while True:
-            rec=self.results[threading.current_thread().name].get()
-            if rec=='--error--':
-                raise self.error
-            if rec=='--no more--': break
-            yield rec
-    
     def _open(self):       
         self.is_open = True 
         self.start()
@@ -115,15 +108,11 @@ class MultiThreadSQLite(threading.Thread,lunch_db):
         descr = Queue.Queue()
         if wildcards:
             log_debug(query, wildcards)
-            self.reqs.put((query, wildcards, res, err, descr))
+            self.reqs.put((query, wildcards, res, err, descr, commit))
         else:
             log_debug(query)
-            self.reqs.put((query, tuple(), res, err, descr))
-        
-        #@todo Hannes:commit - ignore for now
-#         if commit:
-#             self.commit()
-        
+            self.reqs.put((query, tuple(), res, err, descr, commit))
+            
         resultList = []
         while True:
             rec=res.get()

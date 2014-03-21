@@ -5,14 +5,14 @@ from lunchinator import log_exception, log_info, log_error
 (necessary, because multiple connections of the same type are allowed)
 
 * the first inherits from iface_db_plugin and should handle creation of 
-necessary databases/tables the lunchinator will open and close connections
+necessary databases/tables the lunchinator will open  connections
 through this interface, so that additional tasks can be executed before opening
 and after closing
 it also has to tell the lunchinator which properties are necessary to open a connection
 
 * the second one inherits from lunch_db, 
 the actual connection is created and administered here,
-only the execute function will be used from the outside
+only the execute and close function will be used from the outside
 '''
 
 class iface_db_plugin(iface_plugin):    
@@ -35,9 +35,6 @@ class iface_db_plugin(iface_plugin):
         
     '''should return an object of Type lunch_db'''
     def open_connection(self, properties):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
-    def close_connection(self):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
 

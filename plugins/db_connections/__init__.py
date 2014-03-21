@@ -14,6 +14,11 @@ class db_connections(iface_general_plugin):
                                      "sqlite_file":get_settings().get_main_config_dir()+"/statistics.sq3"}}
         self.plugin_manager = PluginManagerSingleton.get()
         
+    def deactivate(self):
+        for conn in self.open_connections.values():
+            conn.close()   
+        iface_general_plugin.deactivate(self)
+        
     def getProperties(self,name):
         return self.db_props[name]
     
