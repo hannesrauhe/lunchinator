@@ -28,13 +28,13 @@ class iface_db_plugin(iface_plugin):
         iface_plugin.deactivate(self)            
     
     def create_db_options_widget(self, parent):
-        return super(iface_db_plugin, self).create_db_options_widget(parent)
+        return super(iface_db_plugin, self).create_options_widget(parent)
     
     def create_options_widget(self, parent):
         return None
         
-    '''should return an object of Type lunch_db'''
-    def open_connection(self, properties):
+    '''should return an object of Type lunch_db which is already open'''
+    def create_connection(self, properties):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
 

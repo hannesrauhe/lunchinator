@@ -20,15 +20,14 @@ class db_SQLITE(iface_db_plugin):
       
     def __init__(self):
         super(iface_db_plugin, self).__init__()
-        self.db_type="SQLite"
         self.options=[("sqlite_file", get_settings().get_main_config_dir()+"/statistics.sq3")]
         self.members={}
         
-    def open_connection(self, options):
+    def create_connection(self, options):
         newconn = None
         try:
             newconn = MultiThreadSQLite(options["sqlite_file"])
-            newconn._open()
+            newconn.open()
         except:
             log_exception("Problem while opening DB connection in plugin %s"%(self.db_type))   
             raise
@@ -91,11 +90,11 @@ class MultiThreadSQLite(threading.Thread,lunch_db):
                 res.put('--error--')
         cnx.close()
         
-    def _open(self):       
+    def open(self):       
         self.is_open = True 
         self.start()
     
-    def _close(self):
+    def close(self):
         self.execute('--close--')
         self.is_open = False
         
