@@ -118,7 +118,7 @@ class online_update(iface_general_plugin):
     
     def _set_status(self, status, err=False):
         if err:
-            log_exception("Updater: " + status)
+            log_error("Updater: " + status)
             status = "Error: " + status
         else:
             log_info("Updater: " + status)
@@ -136,6 +136,8 @@ class online_update(iface_general_plugin):
             
     def _verify_signature(self, signedString):
         gpg, _keyid = getGPG()
+        if gpg == None:
+            return None
         v = gpg.verify(str(signedString))
         if not v:
             log_error("Verification of Signature failed")

@@ -214,7 +214,11 @@ def getGPG(secret=False):
     
     ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
     
-    gpg = GPG(gbinary,ghome)
+    try:
+        gpg = GPG(gbinary,ghome)
+    except:
+        log_error("GPG not found or not working")
+        return None, None
     
     # use key from keyring as default
     keyid = _findLunchinatorKeyID(gpg, secret)
