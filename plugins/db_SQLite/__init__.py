@@ -1,9 +1,9 @@
-from lunchinator.iface_db_plugin import iface_db_plugin,lunch_db
-import sys,sqlite3,threading,Queue,datetime
+from lunchinator.iface_db_plugin import iface_db_plugin, lunch_db
+import sys, sqlite3, threading, Queue, datetime, os
 from lunchinator import get_server, get_settings, log_debug, log_exception, log_error
 
  
-class db_SQLITE(iface_db_plugin):  
+class db_SQLite(iface_db_plugin):  
     VERSION_TABLE = "DB_VERSION"
     DATABASE_VERSION_EMPTY = 0
     DATABASE_VERSION_DEFAULT_STATISTICS = 1
@@ -20,7 +20,7 @@ class db_SQLITE(iface_db_plugin):
       
     def __init__(self):
         super(iface_db_plugin, self).__init__()
-        self.options=[("sqlite_file", get_settings().get_main_config_dir()+"/statistics.sq3")]
+        self.options=[("sqlite_file", os.path.join(get_settings().get_main_config_dir(),"statistics.sq3"))]
         self.members={}
         
     def create_connection(self, options):
@@ -47,17 +47,6 @@ class db_SQLITE(iface_db_plugin):
             raise 
         
         return newconn
-        
-    def close_connection(self,conn):        
-        try:            
-            self._pre_close()
-        except:
-            log_exception("Problem before closing DB connection in plugin %s"%(self.db_type))
-            
-        try:            
-            conn.close()
-        except:
-            log_exception("Problem while closing DB connection in plugin %s"%(self.db_type))
             
 class MultiThreadSQLite(threading.Thread,lunch_db):
     def __init__(self, db_file):

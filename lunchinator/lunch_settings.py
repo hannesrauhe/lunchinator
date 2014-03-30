@@ -130,7 +130,8 @@ class lunch_settings(object):
         self._group_plugins = self.read_value_from_config_file(self._group_plugins, 'general', 'group_plugins')
         
         #not shown in settings-plugin - handled by avatar-plugin
-        self._avatar_file =  self.read_value_from_config_file(self._avatar_file,"general","avatar_file")                 
+        self._avatar_file =  self.read_value_from_config_file(self._avatar_file,"general","avatar_file")
+        self._available_db_connections = self.read_value_from_config_file(self._available_db_connections,"general","available_db_connections")        
         
         if self._user_name=="":
             self._user_name = getpass.getuser().decode()         
@@ -341,6 +342,7 @@ class lunch_settings(object):
     
     def set_available_db_connections(self, newValue):
         self._available_db_connections = ";;".join(newValue)
+        self._config_file.set('general', 'available_db_connections', str(self._available_db_connections))
             
     def get_advanced_gui_enabled(self):
         return self._logging_level == u"DEBUG"

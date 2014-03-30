@@ -13,26 +13,40 @@ it also has to tell the lunchinator which properties are necessary to open a con
 * the second one inherits from lunch_db, 
 the actual connection is created and administered here,
 only the execute and close function will be used from the outside
+
 '''
 
 class iface_db_plugin(iface_plugin):    
     def __init__(self):
         super(iface_db_plugin, self).__init__()
-        self.db_type="Unknown"
+        self.conn_options={}
         
     ''' do not overwrite these methods '''    
     def activate(self):        
         iface_plugin.activate(self)
+        self.conn_options = self.options
 
     def deactivate(self):        
         iface_plugin.deactivate(self)            
     
+    ''' Options are set differently from other plugins, since - again - multiple
+    instances with different options are allowed. The DB Connections plugin handles the
+    properties'''
+    def create_options_widget(self, parent):
+        return None  
+      
+    def save_options_widget_data(self):
+        pass
+    
     def create_db_options_widget(self, parent):
         return super(iface_db_plugin, self).create_options_widget(parent)
-    
-    def create_options_widget(self, parent):
-        return None
+
+    def fill_options_widget(self, options):
+        self.conn_options.update(options)
         
+    def get_options_from_widget(self):
+        return self.conn_options
+    
     '''should return an object of Type lunch_db which is already open'''
     def create_connection(self, properties):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
