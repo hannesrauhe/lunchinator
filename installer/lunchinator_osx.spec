@@ -1,5 +1,10 @@
 # -*- mode: python -*-
-a = Analysis(['../start_lunchinator.py', '../plugins/members_table/__init__.py', '../plugins/simple_view/__init__.py', '../plugins/remote_pictures/__init__.py', '../plugins/remote_pictures/remote_pictures_gui.py'],
+a = Analysis(['../start_lunchinator.py',
+              '../plugins/members_table/__init__.py',
+              '../plugins/simple_view/__init__.py',
+              '../plugins/remote_pictures/__init__.py',
+              '../plugins/remote_pictures/remote_pictures_gui.py',
+              '../plugins/online_update/__init__.py'],
              pathex=['.'],
              hiddenimports=['SimpleHTTPServer', 'sqlite3', 'dbapi2', 'cgi', 'csv', 'Queue', 'netrc'],
              hookspath=None,

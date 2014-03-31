@@ -5,10 +5,10 @@ from lunchinator import log_exception, log_error, log_info, get_settings, log_de
 from lunchinator.utilities import getValidQtParent, displayNotification, \
     getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC
 from lunchinator.download_thread import DownloadThread
+from lunchinator.shell_thread import ShellThread
 import urllib2, sys, os, contextlib, subprocess
 import tempfile
 from functools import partial
-from lunchinator.shell_thread import ShellThread
 from xml.etree import ElementTree
     
 class online_update(iface_general_plugin):
