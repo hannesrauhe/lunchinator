@@ -1,0 +1,9 @@
+[Core]
+Name = Database Settings
+Module = db_connections
+
+[Documentation]
+Author = Hannes Rauhe
+Version = 0.1
+Website = http://www.lunchinator.de
+Description = Settings for database connections

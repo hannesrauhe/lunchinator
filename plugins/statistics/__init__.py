@@ -5,38 +5,38 @@ from lunchinator import get_server, log_exception, log_error, log_debug
 class statistics(iface_called_plugin):
     def __init__(self):
         super(statistics, self).__init__()
-        self.options = [(("db_connect", "Which db connection to use (leave empty for default)",self.connect_to_db),"")]
+        self.options = [((u"db_connection", u"DB Connection", 
+                          get_settings().get_available_db_connections()),
+                         get_settings().get_default_db_connection())]
         self.connectionPlugin = None
     
     def activate(self):
         iface_called_plugin.activate(self)
-        self.connect_to_db()
         
     def deactivate(self):
         iface_called_plugin.deactivate(self)
         
     def connect_to_db(self,_=None,__=None):
-        if ""==self.options["db_connect"]:            
-            self.connectionPlugin = get_server().getDBConnection()
-        else:
-            self.connectionPlugin = get_server().getDBConnection(self.options["db_connect"])
+        self.connectionPlugin = get_server().getDBConnection(self.options["db_connection"])
             
-        log_debug("Statistics: Using DB Connection ",self.connectionPlugin.db_type)
+        log_debug("Statistics: Using DB Connection ",type(self.connectionPlugin))
             
         if None==self.connectionPlugin:
             log_error("Statistics: DB %s connection not available - will deactivate statistics now"%self.options["db_connect"])
             log_error("Statistics: Activate a DB Connection plugin and check settings")
+            return False
+        return True
             
     def process_message(self,msg,addr,member_info):
-        if self.connectionPlugin:
+        if self.connectionPlugin or self.connect_to_db():
             self.connectionPlugin.insert_call("msg", msg, addr)
             
     def process_lunch_call(self,msg,ip,member_info):
-        if self.connectionPlugin:
+        if self.connectionPlugin or self.connect_to_db():
             self.connectionPlugin.insert_call("lunch", msg, ip)
     
     def process_event(self,cmd,value,ip,member_info):
-        if self.connectionPlugin:
+        if self.connectionPlugin or self.connect_to_db():
             self.connectionPlugin.insert_call(cmd, value, ip)
         
         #ignore member stuff for now

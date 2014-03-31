@@ -4,6 +4,7 @@ from lunchinator import log_error, log_exception, log_info, convert_string,\
     get_settings
 import types, sys, logging, os
 from copy import deepcopy
+from PyQt4.QtCore import Qt
 
 class iface_plugin(IPlugin):    
     def __init__(self):
@@ -231,22 +232,26 @@ class iface_plugin(IPlugin):
     def get_option(self, o):
         if o in self.options:
             return self.options[o]
+        
+    def read_data_from_widget(self, o, e):
+        v = self.options[o]
+        new_v = v
+        if o in self.option_choice:
+            new_v = self.option_choice[o][e.currentIndex()]
+        elif type(v)==types.IntType:
+            new_v = e.value()
+        elif type(v)==types.BooleanType:
+            new_v = e.checkState() == Qt.Checked
+        else:
+            new_v = convert_string(e.text())
+        return new_v        
     
     def save_data(self):
         from PyQt4.QtCore import Qt
         if not self.option_widgets:
             return
         for o,e in self.option_widgets.iteritems():
-            v = self.options[o]
-            new_v = v
-            if o in self.option_choice:
-                new_v = self.option_choice[o][e.currentIndex()]
-            elif type(v)==types.IntType:
-                new_v = e.value()
-            elif type(v)==types.BooleanType:
-                new_v = e.checkState() == Qt.Checked
-            else:
-                new_v = convert_string(e.text())
+            new_v = self.read_data_from_widget(o, e)
             self.set_option(o, new_v, False)
         self.discard_options_widget_data()
         
@@ -335,117 +340,4 @@ class iface_gui_plugin(iface_plugin):
         
     def process_event(self,cmd,value,ip,member_info):
         pass
-
-class iface_database_plugin(iface_plugin):
-    #connection_names = {}
-    
-    def __init__(self):
-        super(iface_database_plugin, self).__init__()
-        self.db_type="Unknown"
-        self._connection=None
-        
-    ''' do not overwrite these methods '''
-    
-    #do NOT overwrite this method -> use _post_open instead
-    def activate(self):        
-        iface_plugin.activate(self)
-        self._open_connection()
-
-    #do NOT overwrite this method -> use _pre_close instead
-    def deactivate(self):        
-        self._close_connection()
-        iface_plugin.deactivate(self)        
-        
-    def _open_connection(self):
-        try:
-            self._connection = self._open()  
-            try:
-                self._post_open()
-            except:
-                log_exception("Problem after opening DB connection in plugin %s"%(self.db_type))
-        except:
-            log_exception("Problem while opening DB connection in plugin %s"%(self.db_type))      
-        
-    def _close_connection(self):        
-        try:            
-            self._pre_close()
-        except:
-            log_exception("Problem while closing DB connection in plugin %s"%(self.db_type))
-        try:            
-            self._close()
-        except:
-            log_exception("Problem while closing DB connection in plugin %s"%(self.db_type))
-        
-    def _restart_connection(self,_old_setting,_new_setting):
-        log_info("Trying to reconnect to database")
-        self._close_connection()
-        self._open_connection()
-            
-    def _conn(self):
-        return self._connection
-            
-    def commit(self):
-        if self._conn():
-            self._conn().commit()
-        #raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
-    '''abstract methods - basic functionality'''    
-    def _post_open(self):
-        pass
-    
-    def _pre_close(self):
-        pass
-    
-    def _open(self):
-        raise  NotImplementedError("%s does not implement the open method"%self.db_type)
-    
-    def _close(self):
-        raise  NotImplementedError("%s does not implement the close method"%self.db_type)
-            
-    def _execute(self, query, wildcards, returnResults=True, commit=False, returnHeader=False):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
-    def existsTable(self, tableName):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
-    def insert_values(self, table, *values):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-            
-            
-    '''message statistics plugin methods''' 
-    def insert_call(self,mtype,msg,sender):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
-    def get_calls(self):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
-    def insert_members(self,ip,name,avatar,lunch_begin,lunch_end):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-        
-    def get_newest_members_data(self):    
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
-    '''lunch statistics plugin methods'''    
-    def lastUpdateForLunchDay(self, date, tableName):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-        
-    def insertLunchPart(self, date, textAndAdditivesList, update, table):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
-    '''maintenance plugin methods'''    
-    def getBugsFromDB(self,mode="open"):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-        
-    '''convenience calls'''    
-    def execute(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=False, commit=True)
-        
-    def executeNoCommit(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=False, commit=False)
-        
-    def query(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=True, commit=False)
-    
-    def queryWithHeader(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=True, commit=False, returnHeader=True)
     
