@@ -63,7 +63,10 @@ class MultiThreadSQLite(threading.Thread,lunch_db):
         cursor = cnx.cursor()
         while True:
             req, arg, res, err, description, commit = self.reqs.get()
-            if req=='--close--': break
+            if req=='--close--': 
+                res.put('--no more--')
+                description.put('--no more--')
+                break
             try:
                 cursor.execute(req, arg)
                 description.put(cursor.description)

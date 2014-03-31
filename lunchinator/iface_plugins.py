@@ -4,6 +4,7 @@ from lunchinator import log_error, log_exception, log_info, convert_string,\
     get_settings
 import types, sys, logging, os
 from copy import deepcopy
+from PyQt4.QtCore import Qt
 
 class iface_plugin(IPlugin):    
     def __init__(self):
@@ -231,22 +232,26 @@ class iface_plugin(IPlugin):
     def get_option(self, o):
         if o in self.options:
             return self.options[o]
+        
+    def read_data_from_widget(self, o, e):
+        v = self.options[o]
+        new_v = v
+        if o in self.option_choice:
+            new_v = self.option_choice[o][e.currentIndex()]
+        elif type(v)==types.IntType:
+            new_v = e.value()
+        elif type(v)==types.BooleanType:
+            new_v = e.checkState() == Qt.Checked
+        else:
+            new_v = convert_string(e.text())
+        return new_v        
     
     def save_data(self):
         from PyQt4.QtCore import Qt
         if not self.option_widgets:
             return
         for o,e in self.option_widgets.iteritems():
-            v = self.options[o]
-            new_v = v
-            if o in self.option_choice:
-                new_v = self.option_choice[o][e.currentIndex()]
-            elif type(v)==types.IntType:
-                new_v = e.value()
-            elif type(v)==types.BooleanType:
-                new_v = e.checkState() == Qt.Checked
-            else:
-                new_v = convert_string(e.text())
+            new_v = self.read_data_from_widget(o, e)
             self.set_option(o, new_v, False)
         self.discard_options_widget_data()
         

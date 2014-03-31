@@ -1,6 +1,7 @@
 from lunchinator.iface_plugins import iface_general_plugin
 from lunchinator import get_settings, log_error, log_debug, log_warning
 from yapsy.PluginManager import PluginManagerSingleton
+from threading import Lock
 
 class db_connections(iface_general_plugin):
     STANDARD_PLUGIN = "SQLite Connection"
@@ -9,6 +10,7 @@ class db_connections(iface_general_plugin):
         super(db_connections, self).__init__()
         self.plugin_manager = PluginManagerSingleton.get()
         
+        self.conn_properties_lock = Lock()
         self.open_connections = {}
         self.conn_properties = {}
         self.conn_plugins = {} #will be filled later (init plugin obejcts)
@@ -28,11 +30,15 @@ class db_connections(iface_general_plugin):
                     o[k] = v
             if not o.has_key("plugin_type"):
                 o["plugin_type"] = self.STANDARD_PLUGIN
-            self.conn_properties[conn_name] = o
+                
+            self.conn_properties_lock.acquire()
+            self.conn_properties[conn_name] = o            
+            self.conn_properties_lock.release()
 
     ''' lazy plugin loading (not to be called in __init__ - plugins might not ba activated then) '''
     def _init_plugin_objects(self):        
         if len(self.conn_plugins)==0:
+            self.conn_properties_lock.acquire()
             for name, o in self.conn_properties.iteritems():
                 t = o["plugin_type"]
                 p = self.plugin_manager.getPluginByName(t, "db")
@@ -40,13 +46,16 @@ class db_connections(iface_general_plugin):
                     self.conn_plugins[name] = p.plugin_object
                 else:
                     raise "DB Connection %s requires plugin of type \
-                    %s which is not available or not activated"%(name,t)
+                    %s which is not available or not activated"%(name,t)            
+            self.conn_properties_lock.release()
                     
     def getProperties(self, conn_id):
         self._init_plugin_objects()
         
-        ob = self.conn_plugins[conn_id]
+        ob = self.conn_plugins[conn_id]            
+        self.conn_properties_lock.acquire()
         prop = self.conn_properties[conn_id]
+        self.conn_properties_lock.release()
         assert("plugin_type" in prop)
         
         if len(prop)==1:
@@ -77,15 +86,19 @@ class db_connections(iface_general_plugin):
         
         self._init_plugin_objects()
         
+        self.conn_properties_lock.acquire()
         self.conn_options_widget = DbConnOptions(parent, self.conn_properties)
-        
+        self.conn_properties_lock.release()
+
         return self.conn_options_widget
     
     def save_options_widget_data(self):
         new_props = self.conn_options_widget.get_connection_properties()
         
-        '''@todo lock everything'''
+
         '''@todo Delete connections here'''
+
+        self.conn_properties_lock.acquire()
         
         for conn_name, props in new_props.iteritems():
             section_name = "DB Connection: "+str(conn_name)
@@ -113,10 +126,12 @@ class db_connections(iface_general_plugin):
                     necessary, will be re-opened automatically)'''
                     conn = self.open_connections.pop(conn_name)
                     conn.close()
-        
+                
+        get_settings().set_available_db_connections(self.conn_properties.keys())
+        self.conn_properties_lock.release()
+            
         self.conn_plugins = {}
         self._init_plugin_objects()
         
-        get_settings().set_available_db_connections(self.conn_properties.keys())
         
         '''@todo release locks'''

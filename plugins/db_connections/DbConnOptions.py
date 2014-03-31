@@ -29,7 +29,11 @@ class DbConnOptions(QWidget):
         self.nameCombo.addItems(conn_properties.keys())
         self.typeCombo.addItems(self.available_types.keys())
         for p in self.available_types.values():
-            self.conn_details.addWidget(p.create_db_options_widget(parent))        
+            self.conn_details.addWidget(p.create_db_options_widget(parent))   
+        
+        type_name = self.conn_properties[str(self.nameCombo.currentText())]["plugin_type"]
+        type_index = self.typeCombo.findText(type_name)
+        self.typeCombo.setCurrentIndex(type_index)     
         
         newConnButton.clicked.connect(self.new_conn)
         self.typeCombo.currentIndexChanged.connect(self.type_changed)
@@ -37,11 +41,14 @@ class DbConnOptions(QWidget):
         
         self.last_name = str(self.nameCombo.currentText())
         self.last_type = str(self.typeCombo.currentText())
-        
-    def fill_conn_details(self):
+        self.fill_conn_details()
+    
+    def store_conn_details(self):
         p = self.available_types[self.last_type]
         self.conn_properties[self.last_name].update(p.get_options_from_widget())
+        self.conn_properties[self.last_name]["plugin_type"] = self.last_type
         
+    def fill_conn_details(self):        
         self.last_type = str(self.typeCombo.currentText())
         self.last_name = str(self.nameCombo.currentText())
         
@@ -50,12 +57,14 @@ class DbConnOptions(QWidget):
         
     def type_changed(self, index):
         self.conn_details.setCurrentIndex(index)
+        self.store_conn_details()
         self.fill_conn_details()
         
     def name_changed(self, index):
         type_name = self.conn_properties[str(self.nameCombo.currentText())]["plugin_type"]
         type_index = self.typeCombo.findText(type_name)
         if type_index == self.typeCombo.currentIndex():
+            self.store_conn_details()
             self.fill_conn_details()
         else:
             self.typeCombo.setCurrentIndex(type_index)
@@ -67,4 +76,5 @@ class DbConnOptions(QWidget):
         self.nameCombo.setCurrentIndex(self.nameCombo.count()-1)
         
     def get_connection_properties(self):
+        self.store_conn_details()
         return self.conn_properties

@@ -1,5 +1,6 @@
 from lunchinator.iface_plugins import iface_plugin
-from lunchinator import log_exception, log_info, log_error
+from lunchinator import log_exception, log_info, log_error, convert_string
+import types
 
 ''' every DB plugin consists of at least two objects:
 (necessary, because multiple connections of the same type are allowed)
@@ -43,8 +44,30 @@ class iface_db_plugin(iface_plugin):
 
     def fill_options_widget(self, options):
         self.conn_options.update(options)
+        if not self.option_widgets:
+            return
+
+        from PyQt4.QtCore import Qt
+        for o,e in self.option_widgets.iteritems():
+            v = self.conn_options[o]
+            if o[0] in self.option_choice:
+                currentIndex = 0
+                if v in self.option_choice[o[0]]:
+                    currentIndex = self.option_choice[o[0]].index(v)
+                e.setCurrentIndex(currentIndex)
+            elif type(v)==types.IntType:
+                e.setValue(v)
+            elif type(v)==types.BooleanType:
+                e.setCheckState(Qt.Checked if v else Qt.Unchecked)
+            else:
+                e.setText(v)
         
     def get_options_from_widget(self):
+        from PyQt4.QtCore import Qt
+        if not self.option_widgets:
+            return
+        for o,e in self.option_widgets.iteritems():
+            self.conn_options[o] = self.read_data_from_widget(o, e)
         return self.conn_options
     
     '''should return an object of Type lunch_db which is already open'''
