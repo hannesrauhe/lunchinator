@@ -78,7 +78,9 @@ class DownloadThread(QThread):
             except HTTPError as e:
                 # don't print trace on HTTP error
                 log_exception("Error while downloading %s (%s)" % (self.url, e))
-                self.error.emit(self, self.url)
+                if nTries >= self.NUMBER_OF_TRIES:
+                    self.error.emit(self, self.url)
+                    
                 if e.code == 404:
                     # no need to retry
                     break

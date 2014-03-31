@@ -6,10 +6,10 @@ from lunchinator.utilities import getValidQtParent, displayNotification, \
     getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC
 from lunchinator.download_thread import DownloadThread
 import urllib2, sys, os, contextlib, subprocess
-from lxml import etree
 import tempfile
 from functools import partial
 from lunchinator.shell_thread import ShellThread
+from xml.etree import ElementTree
     
 class online_update(iface_general_plugin):
     def __init__(self):
@@ -150,9 +150,8 @@ class online_update(iface_general_plugin):
                 xmlContent = dt.getResult()
                 dt.close()
                 
-                root = etree.fromstring(xmlContent)
-                textelem = root.find('channel/item/enclosure')
-                dmgURL = textelem.attrib["url"]
+                e = ElementTree.fromstring(xmlContent)
+                dmgURL = e.iter("channel").next().iter("item").next().iter("enclosure").next().attrib["url"]
                 
                 tmpFile = tempfile.NamedTemporaryFile(suffix=".dmg", prefix="macgpg", delete=False)
                 log_debug("Donloading", dmgURL, "to", tmpFile.name)
