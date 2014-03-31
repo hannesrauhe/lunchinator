@@ -35,9 +35,9 @@ def displayNotification(name,msg,icon=None):
             subprocess.call(["notify-send","--icon="+icon, name, msg])
         elif myPlatform == PLATFORM_MAC:
             fh = open(os.path.devnull,"w")
-            exe = "terminal-notifier"
-            if os.path.exists(os.path.join(get_settings().get_lunchdir(), exe)):
-                exe = os.path.join(get_settings().get_lunchdir(), exe)
+            exe = getBinary("terminal-notifier")
+            if not exe:
+                return
             
             call = [exe, "-title", "Lunchinator: %s" % name, "-message", msg]
             if False and AttentionGetter.getInstance().existsBundle: # no sender until code signing is fixed (probably never)
@@ -187,10 +187,13 @@ def which(program):
 
     return None
 
-def getGPGBinary():
-    gbinary = which("gpg")
+def getBinary(name, altLocation = ""):
+    if getPlatform() == PLATFORM_WINDOWS:
+        name += ".exe"
+        
+    gbinary = which(name)
     if not gbinary:
-        gbinary = os.path.join(get_settings().get_lunchdir(),"gnupg","gpg.exe")
+        gbinary = os.path.join(get_settings().get_lunchdir(),altLocation,name)
     if not os.path.isfile(gbinary):
         return None
     return gbinary
@@ -207,7 +210,7 @@ def getGPG(secret=False):
     """ Returns tuple (GPG instance, keyid) """
     
     from gnupg.gnupg import GPG
-    gbinary = getGPGBinary()
+    gbinary = getBinary("gpg", "gnupg")
     if not gbinary:
         log_error("GPG not found")
         return None, None

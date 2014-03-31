@@ -3,10 +3,13 @@ from lunchinator.lunch_settings import lunch_settings
 from lunchinator.iface_plugins import iface_general_plugin
 from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
 from lunchinator.utilities import getValidQtParent, displayNotification, \
-    getGPGBinary, getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC
+    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC
 from lunchinator.download_thread import DownloadThread
 import urllib2, sys, os, contextlib, subprocess
+from lxml import etree
 import tempfile
+from functools import partial
+from lunchinator.shell_thread import ShellThread
     
 class online_update(iface_general_plugin):
     def __init__(self):
@@ -14,8 +17,10 @@ class online_update(iface_general_plugin):
         self.options = [(("check_url", "update URL"), "http://update.lunchinator.de")]
         self._avail_version = 0
         self._statusLabel = None
+        self._progressBar = None
         self._versionLabel = None
         self._status_holder = "not checked"        
+        self._progress_holder = False
         self._version_info = {}
         self._local_installer_file = None
         self._install_ready = False
@@ -28,13 +33,25 @@ class online_update(iface_general_plugin):
             if "/usr/local/bin" not in os.environ["PATH"]:
                 os.environ["PATH"] += ":/usr/local/bin"
         
-        self.check_for_update()
         
+        # check for GPG
+        if self._has_gpg():
+            self.check_for_update()
+        else:
+            self._set_status("GPG not installed or not working properly.")
+        
+    def _has_gpg(self):
+        gpg, _key = getGPG()
+        return gpg != None
+        
+    def _can_install_gpg(self):
+        return getPlatform() == PLATFORM_MAC    
+    
     def deactivate(self):
         iface_general_plugin.deactivate(self)
     
     def create_options_widget(self, parent):
-        from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, QVBoxLayout, QLabel, QSizePolicy, QPushButton, QTextEdit
+        from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, QVBoxLayout, QLabel, QSizePolicy, QPushButton, QTextEdit, QProgressBar
        
         # embed the standard options widget first:
         widget = QWidget(parent)    
@@ -49,9 +66,14 @@ class online_update(iface_general_plugin):
         self._statusLabel = QLabel("Status: " + self._status_holder)
         layout.addWidget(self._statusLabel)
         
-        checkButton = QPushButton("Check for Update", parent)
-        checkButton.clicked.connect(self.check_for_update)
-        layout.addWidget(checkButton)
+        self._progressBar = QProgressBar(parent)
+        self._progressBar.setVisible(self._progress_holder)
+        layout.addWidget(self._progressBar)
+        
+        self._checkButton = QPushButton("Check for Update", parent)
+        self._checkButton.clicked.connect(self.check_for_update)
+        
+        layout.addWidget(self._checkButton)
         
         self._installButton = QPushButton("Install Update and Restart", parent)
         self._installButton.clicked.connect(self.install_update)
@@ -63,8 +85,15 @@ class online_update(iface_general_plugin):
         layout.addWidget(self._versionLabel)
         
         widget.setMaximumHeight(widget.sizeHint().height())
-        widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)   
+        widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
+        
+        self._setInteractive(True)
+        
         return widget  
+        
+    def _downloadProgressChanged(self, _t, prog):
+        if self._progressBar != None:
+            self._progressBar.setValue(prog)
         
     def getCheckURLBase(self):
         if getPlatform() == PLATFORM_WINDOWS:
@@ -75,6 +104,10 @@ class online_update(iface_general_plugin):
             return None  # TODO
         
     def check_for_update(self):
+        if not self._has_gpg():
+            # user clicked on "Install GPG"
+            return self.install_gpg()
+        
         self._set_status("Checking for Update...")
         
         url = self.getCheckURLBase() + "/latest_version.asc"
@@ -83,6 +116,81 @@ class online_update(iface_general_plugin):
         version_download.error.connect(self.error_while_downloading)
         version_download.finished.connect(version_download.deleteLater)
         version_download.start()
+        
+    def _setInteractive(self, i):
+        if i:
+            if not self._has_gpg():
+                if self._can_install_gpg():
+                    self._checkButton.setEnabled(True)
+                    self._checkButton.setText("Install GPG")
+                else:
+                    self._checkButton.setEnabled(False)
+            else:
+                self._checkButton.setEnabled(True)
+                self._checkButton.setText("Check for Update")
+                    
+            self._installButton.setEnabled(self._install_ready)
+        else:
+            self._checkButton.setEnabled(False)
+            self._installButton.setEnabled(False)
+        
+    def install_gpg(self, phase=0, dt=None):
+        if getPlatform() == PLATFORM_MAC:
+            # TODO handle errors
+            if phase == 0:
+                self._setInteractive(False)
+                
+                self._set_status("Searching for latest version...")
+                dt = DownloadThread(getValidQtParent(), "https://releases.gpgtools.org/nightlies/macgpg2/appcast.xml")
+                dt.success.connect(partial(self._install_gpg_finished, 0))
+                dt.start()
+                
+            elif phase == 1:
+                xmlContent = dt.getResult()
+                dt.close()
+                
+                root = etree.fromstring(xmlContent)
+                textelem = root.find('channel/item/enclosure')
+                dmgURL = textelem.attrib["url"]
+                
+                tmpFile = tempfile.NamedTemporaryFile(suffix=".dmg", prefix="macgpg", delete=False)
+                log_debug("Donloading", dmgURL, "to", tmpFile.name)
+                self._set_status("Downloading MacGPG...", progress=True)
+                self._progressBar.setValue(0)
+                
+                dt = DownloadThread(getValidQtParent(), dmgURL, target=tmpFile, progress=True)
+                dt.success.connect(partial(self._install_gpg_finished, 1))
+                dt.progressChanged.connect(self._downloadProgressChanged)
+                dt.start()
+                
+            elif phase == 2:
+                # indeterminate
+                self._progressBar.setMaximum(0)
+                self._set_status("Installing MacGPG...", progress=True)
+                
+                dmgFile = dt.target.name
+                dt.close()
+                
+                st = ShellThread(getValidQtParent(), [get_settings().get_lunchdir() + '/bin/mac_gpg_installer.sh', dmgFile], context=dmgFile, quiet=False)
+                st.finished.connect(partial(self._install_gpg_finished, 2))
+                st.start()
+                
+            elif phase == 3:
+                dmgFile = dt.context
+                if os.path.exists(dmgFile):
+                    os.remove(dmgFile)
+                
+                self._progressBar.setMaximum(100)
+                if dt.exitCode == 0:
+                    self._set_status("MacGPG installed successfully.")
+                else:
+                    self._set_status("Error installing MacGPG.", err=True)
+                    if dt.pErr:
+                        log_error("Console output:", dt.pErr.strip())
+                self._setInteractive(True)
+        
+    def _install_gpg_finished(self, phase, dt, _url=None):
+        self.install_gpg(phase + 1, dt)
         
     def install_update(self):
         if os.path.isfile(self._local_installer_file):
@@ -104,19 +212,22 @@ class online_update(iface_general_plugin):
                 if path == None or not os.path.exists(os.path.join(path, "Contents", "MacOS", "Lunchinator")):
                     log_error("Could not find application bundle. Cannot update.")
                     self._set_status("Could not find application bundle. Cannot update.", True)
-                
-                pid = os.fork()
-                if pid != 0:
-                    # new process
-                    installer = os.path.join(get_settings().get_lunchdir(), "bin", "mac_installer.sh")
-                    args = [installer, self._local_installer_file, path, str(os.getpid())]
-                    subprocess.Popen(args)
                 else:
-                    get_server().call("HELO_STOP installer_update", client="127.0.0.1")
+                    pid = os.fork()
+                    if pid != 0:
+                        # new process
+                        installer = os.path.join(get_settings().get_lunchdir(), "bin", "mac_installer.sh")
+                        args = [installer, self._local_installer_file, path, str(os.getpid())]
+                        subprocess.Popen(args)
+                    else:
+                        get_server().call("HELO_STOP installer_update", client="127.0.0.1")
         else:
             log_error("This platform does not support updates (yet).")
     
-    def _set_status(self, status, err=False):
+    def _set_status(self, status, err=False, progress=False):
+        if self._progressBar != None:
+            self._progressBar.setVisible(progress)
+    
         if err:
             log_error("Updater: " + status)
             status = "Error: " + status
@@ -126,6 +237,7 @@ class online_update(iface_general_plugin):
             self._statusLabel.setText("Status: " + status)
         else:
             self._status_holder = status
+            self._progress_holder = progress
             
     def _update_version_label(self):
         if self._version_info and self._versionLabel:
@@ -164,7 +276,7 @@ class online_update(iface_general_plugin):
             self._set_status("Installer Hash wrong %s!=%s" % (fileHash, self._version_info["Installer Hash"]), True)
             return False
             
-        self._set_status("installer successfully downloaded - ready to install_update")
+        self._set_status("New version %d downloaded, ready to install" % self._version_info["Commit Count"])
         self._install_ready = True
         if self._installButton:
             self._installButton.setEnabled(self._install_ready)
@@ -215,14 +327,15 @@ class online_update(iface_general_plugin):
         self._update_version_label()
         
         self._installer_url = self.getCheckURLBase() + self._version_info["URL"]
-        self._local_installer_file = os.path.join(get_settings().get_main_config_dir(), self._installer_url.rsplit('/',1)[1])
+        self._local_installer_file = os.path.join(get_settings().get_main_config_dir(), self._installer_url.rsplit('/', 1)[1])
             
         if self._version_info["Commit Count"] > int(get_settings().get_commit_count()):
             # check if we already downloaded this version before
             if not self._check_hash():
-                self._set_status("New Version %d available, Downloading ..." % (self._version_info["Commit Count"]))
+                self._set_status("New Version %d available, Downloading ..." % (self._version_info["Commit Count"]), progress=True)
                 
-                installer_download = DownloadThread(getValidQtParent(), self._installer_url, target=open(self._local_installer_file, "wb"))
+                installer_download = DownloadThread(getValidQtParent(), self._installer_url, target=open(self._local_installer_file, "wb"), progress=True)
+                installer_download.progressChanged.connect(self._downloadProgressChanged)
                 installer_download.success.connect(self.installer_downloaded)
                 installer_download.error.connect(self.error_while_downloading)
                 installer_download.finished.connect(installer_download.deleteLater)
