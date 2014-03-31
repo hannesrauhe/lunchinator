@@ -143,6 +143,7 @@ class online_update(iface_general_plugin):
                 self._set_status("Searching for latest version...")
                 dt = DownloadThread(getValidQtParent(), "https://releases.gpgtools.org/nightlies/macgpg2/appcast.xml")
                 dt.success.connect(partial(self._install_gpg_finished, 0))
+                dt.error.connect(partial(self._install_gpg_failed, 0))
                 dt.start()
                 
             elif phase == 1:
@@ -160,6 +161,7 @@ class online_update(iface_general_plugin):
                 
                 dt = DownloadThread(getValidQtParent(), dmgURL, target=tmpFile, progress=True)
                 dt.success.connect(partial(self._install_gpg_finished, 1))
+                dt.error.connect(partial(self._install_gpg_failed, 1))
                 dt.progressChanged.connect(self._downloadProgressChanged)
                 dt.start()
                 
@@ -189,8 +191,18 @@ class online_update(iface_general_plugin):
                         log_error("Console output:", dt.pErr.strip())
                 self._setInteractive(True)
         
-    def _install_gpg_finished(self, phase, dt, _url=None):
+    def _install_gpg_finished(self, phase, dt, _):
         self.install_gpg(phase + 1, dt)
+        
+    def _install_gpg_failed(self, phase, dt, _url):
+        dt.close()
+        if phase == 0:
+            self._set_status("Error downloading MacGPG version information.", True)
+        elif phase == 1:
+            self._set_status("Error downloading MacGPG installer.", True)
+            dmgFile = dt.target.name
+            if os.path.exists(dmgFile):
+                os.remove(dmgFile)
         
     def install_update(self):
         if os.path.isfile(self._local_installer_file):
