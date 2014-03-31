@@ -1,7 +1,7 @@
 import sys, sip
-from lunchinator import get_server, log_exception, log_info, get_settings,\
+from lunchinator import get_server, log_exception, log_info, get_settings, \
     log_error, convert_string, log_warning, log_debug
-import socket,os,time, subprocess
+import socket, os, time, subprocess
 import platform
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplication, QTimer
@@ -40,14 +40,14 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _updateRequested = pyqtSignal()
     # -----------------------------
     
-    def __init__(self, noUpdates = False): 
+    def __init__(self, noUpdates=False): 
         QObject.__init__(self)
         LunchServerController.__init__(self)
         
         log_info("Your PyQt version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
         
         self.resetIconTimer = None
-        self.isIconHighlighted = True # set to True s.t. first dehighlight can set the default icon
+        self.isIconHighlighted = True  # set to True s.t. first dehighlight can set the default icon
         
         self.exitCode = 0
         self.serverThread = None
@@ -59,6 +59,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         # initialize main window
         self.mainWindow = LunchinatorWindow(self)
+        self.settingsWindow = None
         self.setParent(self.mainWindow)
         
         if not self.createTrayIcon():
@@ -127,7 +128,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                                               buttons=QMessageBox.Yes | QMessageBox.No,
                                               defaultButton=QMessageBox.Yes)
                 if result == QMessageBox.Yes:
-                    if subprocess.call(['gksu', get_settings().get_lunchdir()+'/bin/install-lunch-icons.sh lunch'])==0:
+                    if subprocess.call(['gksu', get_settings().get_lunchdir() + '/bin/install-lunch-icons.sh lunch']) == 0:
                         log_info("restarting after icons were installed")
                         self.quit(EXIT_CODE_UPDATE)
                         sys.exit(EXIT_CODE_UPDATE)
@@ -157,7 +158,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if reason == QSystemTrayIcon.Trigger:
             self.statusicon.contextMenu().popup(QCursor.pos())
         
-    def quit(self, exitCode = 0):
+    def quit(self, exitCode=0):
         if self.mainWindow != None:
             self.mainWindow.close()
         if self.serverThread != None and not sip.isdeleted(self.serverThread) and self.serverThread.isRunning():
@@ -232,12 +233,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
     def getOpenTCPPort(self, senderIP):
         assert senderIP != None
-        return DataReceiverThread.getOpenPort(category = "avatar%s" % senderIP)
+        return DataReceiverThread.getOpenPort(category="avatar%s" % senderIP)
     
     def receiveFile(self, ip, fileSize, fileName, tcp_port):
         self._receiveFile.emit(ip, fileSize, fileName, tcp_port)
     
-    def sendFile(self, ip, fileOrData, otherTCPPort, isData = False):
+    def sendFile(self, ip, fileOrData, otherTCPPort, isData=False):
         if not isData and type(fileOrData) == unicode:
             # encode to send as str
             fileOrData = fileOrData.encode('utf-8')
@@ -258,7 +259,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     """ ----------------- CALLED ON MAIN THREAD -------------------"""
     
     def init_menu(self, parent):        
-        #create the plugin submenu
+        # create the plugin submenu
         menu = QMenu(parent)
         plugin_menu = QMenu("PlugIns", menu)
         
@@ -266,7 +267,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             self.pluginActions = {}
             catMenus = {}
             
-            allPlugins= PluginManagerSingleton.get().getAllPlugins()
+            allPlugins = PluginManagerSingleton.get().getAllPlugins()
             for pluginInfo in sorted(allPlugins, key=lambda info : info.name):
                 categoryMenu = None
                 anAction = None
@@ -290,11 +291,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
                         self.pluginActions[aCat].append(anAction)
                     else:
                         self.pluginActions[aCat] = [anAction]
-            for _cat, aMenu in sorted(catMenus.iteritems(), key = lambda aTuple : aTuple[0]):
+            for _cat, aMenu in sorted(catMenus.iteritems(), key=lambda aTuple : aTuple[0]):
                 plugin_menu.addMenu(aMenu)
         else:
             self.pluginActions = []
-            allPlugins= PluginManagerSingleton.get().getAllPlugins()
+            allPlugins = PluginManagerSingleton.get().getAllPlugins()
             for pluginInfo in sorted(allPlugins, key=lambda info : info.name):
                 anAction = plugin_menu.addAction(pluginInfo.name)
                 anAction.setCheckable(True)
@@ -303,7 +304,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 self.pluginNameToMenuAction[pluginInfo.name] = anAction
                 self.pluginActions.append(anAction)
         
-        #main _menu
+        # main _menu
         anAction = menu.addAction('Call for lunch')
         anAction.triggered.connect(partial(self.sendMessageClicked, u'lunch', None))
         
@@ -324,7 +325,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         return get_server().new_msg
     
     def reset_new_msgs(self):
-        get_server().new_msg=False
+        get_server().new_msg = False
         
     def disable_auto_update(self):
         get_settings().set_auto_update_enabled(False)
@@ -347,18 +348,18 @@ class LunchinatorGuiController(QObject, LunchServerController):
         anAction.setChecked(False)
 
     @pyqtSlot(QAction, unicode, bool)
-    def toggle_plugin(self,w,p_cat,new_state):
+    def toggle_plugin(self, w, p_cat, new_state):
         p_cat = convert_string(p_cat)
         p_name = convert_string(w.text())
         if new_state:
-            log_debug("Activating plugin '%s' of type '%s'" % (p_name, p_cat))
-            po = get_server().plugin_manager.activatePluginByName(p_name,p_cat)
-            if p_cat=="gui" and self.mainWindow != None:
+            log_info("Activating plugin '%s' of type '%s'" % (p_name, p_cat))
+            po = get_server().plugin_manager.activatePluginByName(p_name, p_cat)
+            if p_cat == "gui" and self.mainWindow != None:
                 self.mainWindow.addPluginWidget(po, p_name, makeVisible=True)
         else:
-            log_debug("Deactivating plugin '%s' of type '%s'" % (p_name, p_cat))
-            get_server().plugin_manager.deactivatePluginByName(p_name,p_cat)  
-            if p_cat=="gui" and self.mainWindow != None:
+            log_info("Deactivating plugin '%s' of type '%s'" % (p_name, p_cat))
+            get_server().plugin_manager.deactivatePluginByName(p_name, p_cat)  
+            if p_cat == "gui" and self.mainWindow != None:
                 self.mainWindow.removePluginWidget(p_name)
     
     @pyqtSlot(unicode, QObject)
@@ -379,12 +380,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
     @pyqtSlot(bool)
     @pyqtSlot()
-    def quitClicked(self,_ = None):
+    def quitClicked(self, _=None):
         self.quit()
 
     @pyqtSlot(bool)
     @pyqtSlot()
-    def openWindowClicked(self, _ = None):    
+    def openWindowClicked(self, _=None):    
         self.reset_new_msgs() 
         
         if self.mainWindow == None:
@@ -396,19 +397,21 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
     @pyqtSlot(bool)
     @pyqtSlot()
-    def openSettingsClicked(self,_ = None):
+    def openSettingsClicked(self, _=None):
         if self.mainWindow == None:
             log_error("mainWindow not specified")
             return
         
         self.reset_new_msgs()
         
-        settingsDialog = LunchinatorSettingsDialog(self.mainWindow)
-        resp = settingsDialog.exec_()
+        if self.settingsWindow == None:
+            self.settingsWindow = LunchinatorSettingsDialog(self.mainWindow)
+
+        resp = self.settingsWindow.exec_()
         
         for pluginInfo in get_server().plugin_manager.getAllPlugins():
             if pluginInfo.plugin_object.is_activated:
-                if resp==LunchinatorSettingsDialog.Accepted:
+                if resp == LunchinatorSettingsDialog.Accepted:
                     try:
                         pluginInfo.plugin_object.save_options_widget_data()
                     except:
@@ -417,7 +420,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                     pluginInfo.plugin_object.discard_options_widget_data()
         get_settings().write_config_to_hd()
             
-        get_server().call("HELO_INFO "+get_server()._build_info_string())        
+        get_server().call("HELO_INFO " + get_server()._build_info_string())        
 
     @pyqtSlot(unicode, bytearray, int, bool)
     def sendFileSlot(self, addr, fileToSend, other_tcp_port, isData):
@@ -426,7 +429,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             fileToSend = str(fileToSend)
         else:
             fileToSend = str(fileToSend).decode("utf-8")
-        ds = DataSenderThread(self,addr,fileToSend, other_tcp_port, isData)
+        ds = DataSenderThread(self, addr, fileToSend, other_tcp_port, isData)
         ds.finished.connect(ds.deleteLater)
         ds.start()
         
@@ -440,7 +443,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def receiveFileSlot(self, addr, file_size, file_name, tcp_port):
         addr = convert_string(addr)
         file_name = convert_string(file_name)
-        dr = DataReceiverThread(self,addr,file_size,file_name,tcp_port,category="avatar%s" % addr)
+        dr = DataReceiverThread(self, addr, file_size, file_name, tcp_port, category="avatar%s" % addr)
         dr.successfullyTransferred.connect(self.successfullyReceivedFile)
         dr.errorOnTransfer.connect(self.errorOnTransfer)
         dr.finished.connect(dr.deleteLater)
