@@ -1,5 +1,5 @@
 from lunchinator.iface_plugins import iface_general_plugin
-from lunchinator import get_settings, log_error, log_debug, log_warning
+from lunchinator import get_server, get_settings, log_error, log_debug, log_warning
 from yapsy.PluginManager import PluginManagerSingleton
 from threading import Lock
 
@@ -42,11 +42,15 @@ class db_connections(iface_general_plugin):
             for name, o in self.conn_properties.iteritems():
                 t = o["plugin_type"]
                 p = self.plugin_manager.getPluginByName(t, "db")
-                if p and p.plugin_object.is_activated:
+                if p:
+                    if not p.plugin_object.is_activated:
+                        log_warning("Activating plugin of type %s because it is needed for a connection"%t)
+                        get_server().plugin_manager.activatePluginByName(name, u"gui")
                     self.conn_plugins[name] = p.plugin_object
                 else:
-                    raise "DB Connection %s requires plugin of type \
-                    %s which is not available or not activated"%(name,t)            
+                    self.conn_properties_lock.release()
+                    raise Exception("DB Connection %s requires plugin of type \
+                    %s which is not available"%(name,t))
             self.conn_properties_lock.release()
                     
     def getProperties(self, conn_id):
@@ -94,7 +98,6 @@ class db_connections(iface_general_plugin):
     
     def save_options_widget_data(self):
         new_props = self.conn_options_widget.get_connection_properties()
-        
 
         '''@todo Delete connections here'''
 

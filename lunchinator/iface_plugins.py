@@ -154,7 +154,7 @@ class iface_plugin(IPlugin):
         
     def create_options_widget(self, parent):
         from PyQt4.QtGui import QWidget, QGridLayout
-        if not self.options:
+        if not self.options or not self.is_activated:
             return None
         optionsWidget = QWidget(parent)
         t = QGridLayout(optionsWidget)

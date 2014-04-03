@@ -13,8 +13,13 @@ class DbConnOptions(QWidget):
         self.available_types = {}
         for dbplugin in self.plugin_manager.getPluginsOfCategory("db"):
             self.available_types[dbplugin.name] = dbplugin.plugin_object
-        
+                
         lay = QGridLayout(self)
+        
+        if len(self.available_types)==0:
+            lay.addWidget(QLabel("No DB plugin activated",parent),0,0, Qt.AlignRight)
+            return
+            
         lay.addWidget(QLabel("Name: ",parent),0,0, Qt.AlignRight)        
         self.nameCombo = QComboBox(parent)
         lay.addWidget(self.nameCombo,0,1)
@@ -29,7 +34,10 @@ class DbConnOptions(QWidget):
         self.nameCombo.addItems(conn_properties.keys())
         self.typeCombo.addItems(self.available_types.keys())
         for p in self.available_types.values():
-            self.conn_details.addWidget(p.create_db_options_widget(parent))   
+            w = p.create_db_options_widget(parent)
+            if not w:
+                w = QLabel("Plugin not activated",parent)
+            self.conn_details.addWidget(w)   
         
         type_name = self.conn_properties[str(self.nameCombo.currentText())]["plugin_type"]
         type_index = self.typeCombo.findText(type_name)
@@ -45,8 +53,10 @@ class DbConnOptions(QWidget):
     
     def store_conn_details(self):
         p = self.available_types[self.last_type]
-        self.conn_properties[self.last_name].update(p.get_options_from_widget())
-        self.conn_properties[self.last_name]["plugin_type"] = self.last_type
+        o = p.get_options_from_widget()
+        if o:
+            self.conn_properties[self.last_name].update(o)
+            self.conn_properties[self.last_name]["plugin_type"] = self.last_type
         
     def fill_conn_details(self):        
         self.last_type = str(self.typeCombo.currentText())

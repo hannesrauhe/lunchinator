@@ -43,9 +43,9 @@ class iface_db_plugin(iface_plugin):
         return super(iface_db_plugin, self).create_options_widget(parent)
 
     def fill_options_widget(self, options):
-        self.conn_options.update(options)
         if not self.option_widgets:
             return
+        self.conn_options.update(options)
 
         from PyQt4.QtCore import Qt
         for o,e in self.option_widgets.iteritems():
