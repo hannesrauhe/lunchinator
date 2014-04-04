@@ -15,8 +15,8 @@ class iface_plugin(IPlugin):
         self.option_widgets = {}
         self.option_choice = {}
         self.hidden_options = None
+        self.force_activation = False
         manager = PluginManagerSingleton.get()
-        self.shared_dict = manager.app.shared_dict if hasattr(manager, "app") else None
         super(iface_plugin, self).__init__()
     
     def activate(self):
@@ -265,6 +265,9 @@ class iface_plugin(IPlugin):
     def discard_options_widget_data(self):
         self.option_widgets = {}
         
+    def is_activation_forced(self):
+        return self.force_activation
+    
     @classmethod
     def prepare_application(cls, factory):
         from PyQt4.QtGui import QApplication, QMainWindow

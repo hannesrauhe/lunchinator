@@ -18,6 +18,7 @@ class gui_settings(iface_general_plugin):
                         (u"group_plugins", u"Group Plugins by category"),
                         (u"proxy", u"Proxy Server (usually detected automatically)")]
         self.options = []
+        self.force_activation = True
         for o in option_names:
             methodname = "get_"+o[0]
             if hasattr(get_settings(), methodname): 

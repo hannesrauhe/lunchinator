@@ -21,6 +21,7 @@ class iface_db_plugin(iface_plugin):
     def __init__(self):
         super(iface_db_plugin, self).__init__()
         self.conn_options={}
+        self.force_activation = True
         
     ''' do not overwrite these methods '''    
     def activate(self):        

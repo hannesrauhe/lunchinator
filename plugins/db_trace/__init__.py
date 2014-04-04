@@ -5,7 +5,7 @@ from lunchinator import get_server, get_settings, log_debug, log_exception, log_
  
 class db_trace(iface_db_plugin):        
     def __init__(self):
-        super(iface_db_plugin, self).__init__()
+        super(db_trace, self).__init__()
         self.options=[("trace_file", os.path.join(get_settings().get_main_config_dir(),"trace.sql"))]
         
     def create_connection(self, options):

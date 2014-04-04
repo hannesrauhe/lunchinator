@@ -14,13 +14,7 @@ class example_called(iface_called_plugin):
         
     def activate(self):
         iface_called_plugin.activate(self)
-        '''do something when the user activates the plugin'''        
-        
-        '''if you want to exchange information between plugins at run-time, 
-        you can write it to this dictionary -
-        use unique keys, collisions are not handled by the main programm, 
-        in fact, the lunchinator itself ignores this dict completely'''        
-        self.shared_dict={"exmaple_plugin_info":42}
+        '''do something when the user activates the plugin'''     
         
         '''to send a message'''
         get_server().call_all_members("this is a message sent by the example plugin")
@@ -31,7 +25,6 @@ class example_called(iface_called_plugin):
     def deactivate(self):
         iface_called_plugin.deactivate(self)
         '''do something when the user deactivates the plugin'''
-        del self.shared_dict["exmaple_plugin_info"]
         
     def process_message(self,msg,addr,member_info):
         '''if a text-message comes in, this method will be called'''

@@ -262,13 +262,13 @@ class LunchinatorGuiController(QObject, LunchServerController):
         # create the plugin submenu
         menu = QMenu(parent)
         plugin_menu = QMenu("PlugIns", menu)
+        allPlugins = [x for x in PluginManagerSingleton.get().getAllPlugins() if not x.plugin_object.is_activation_forced()]
         
         if get_settings().get_group_plugins():
             self.pluginActions = {}
             catMenus = {}
             
-            allPlugins = PluginManagerSingleton.get().getAllPlugins()
-            for pluginInfo in sorted(allPlugins, key=lambda info : info.name):
+            for pluginInfo in sorted(allPlugins, key=lambda info : info.name):                
                 categoryMenu = None
                 anAction = None
                 for aCat in pluginInfo.categories:
@@ -295,7 +295,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 plugin_menu.addMenu(aMenu)
         else:
             self.pluginActions = []
-            allPlugins = PluginManagerSingleton.get().getAllPlugins()
             for pluginInfo in sorted(allPlugins, key=lambda info : info.name):
                 anAction = plugin_menu.addAction(pluginInfo.name)
                 anAction.setCheckable(True)

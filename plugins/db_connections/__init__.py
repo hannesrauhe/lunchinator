@@ -19,6 +19,7 @@ class db_connections(iface_general_plugin):
                           self.conn_properties.keys(),
                           get_settings().set_default_db_connection),
                          get_settings().get_default_db_connection())]
+        self.force_activation = True
         
     def _init_connection_properties(self):      
         self.config_file = get_settings().get_config_file()

@@ -50,7 +50,6 @@ class lunch_server(object):
         self.own_ip = ""
         self.messagesLock = Lock()
         self.membersLock = Lock()
-        self.shared_dict = {} #for plugins
         self.dontSendTo = set()
         self.unknown_cmd = ["HELO_REQUEST_INFO","HELO_INFO"]
         self._peer_groups = set()
@@ -96,11 +95,10 @@ class lunch_server(object):
             except:
                 log_exception("problem when loading plugins")
             
-            #always load these plugins
-            self.plugin_manager.activatePluginByName("General Settings", "general") 
-            self.plugin_manager.activatePluginByName("Database Settings", "general") 
-            self.plugin_manager.activatePluginByName("Notify", "called") 
-            
+            for p in self.plugin_manager.getAllPlugins():
+                if p.plugin_object.is_activation_forced() and not p.plugin_object.is_activated:
+                    self.plugin_manager.activatePluginByName(p.name, p.category)
+                    
         else:
             log_info("lunchinator initialised without plugins")
 
