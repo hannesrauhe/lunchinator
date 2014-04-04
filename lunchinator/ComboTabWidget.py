@@ -27,20 +27,32 @@ class ComboTabWidget(QWidget):
     def addTab(self, w, tabText):
         self.pageArea.addWidget(w)
         self.switchCombo.addItem(tabText)
+    
+    def insertTab(self, pos, w, tabText):
+        self.pageArea.insertWidget(pos, w)
+        self.switchCombo.insertItem(pos, tabText)
         
     def removeTab(self, index=-1):
-        if index<0:
-            index = self.switchCombo.currentIndex()
+        if index < 0:
+            index = self.currentIndex()
+        
+        w = self.pageArea.widget(index)
+        if self.currentIndex() == index:
+            if index > 0:
+                self.setCurrentIndex(index - 1)
+            elif index + 1 < self.count():
+                self.setCurrentIndex(index + 1)
+                
         self.switchCombo.removeItem(index)
-        self.pageArea.removeWidget(index)
+        self.pageArea.removeWidget(w)
         
     def updateTab(self, w, tabText, index=-1):
-        if index<0:
+        if index < 0:
             index = self.switchCombo.currentIndex()
-        self.removeTab(index)
         
-        self.switchCombo.insertItem(index, tabText)
-        self.pageArea.insertItem(index, w)
+        self.removeTab(index)
+        self.insertTab(index, w, tabText)
+        self.setCurrentIndex(index)
         
     def setCurrentIndex(self, index):
         self.switchCombo.setCurrentIndex(index)

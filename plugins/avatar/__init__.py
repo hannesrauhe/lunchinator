@@ -71,10 +71,13 @@ class avatar(iface_general_plugin):
         else:
             log_debug("Avatar: no file selected")
     
+    def _display_avatar(self):
+        img_path = get_settings().get_avatar_dir()+get_settings().get_avatar_file()
+        self._setImage(img_path, self.label)
+        
     def create_options_widget(self, parent):
         from PyQt4.QtGui import QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton
         from PyQt4.QtCore import Qt
-        img_path = get_settings().get_avatar_dir()+get_settings().get_avatar_file()
         
         widget = QWidget(parent)
         layout = QVBoxLayout(widget)
@@ -83,8 +86,6 @@ class avatar(iface_general_plugin):
         hlayout = QHBoxLayout()
         hlayout.addWidget(self.label, 0, Qt.AlignCenter)
         layout.addLayout(hlayout)
-        
-        self._setImage(img_path, self.label)
                 
         b = QPushButton("Choose Picture", widget)
         b.clicked.connect(self._chooseFile)
@@ -98,3 +99,6 @@ class avatar(iface_general_plugin):
         if self.selectedFile != None:
             l = l_avatar()
             l.use_as_avatar(self.selectedFile)
+
+    def discard_changes(self):
+        self._display_avatar()

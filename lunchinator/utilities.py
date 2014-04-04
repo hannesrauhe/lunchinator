@@ -179,7 +179,6 @@ def which(program):
         if is_exe(program):
             return program
     else:
-        print os.environ["PATH"]
         for path in os.environ["PATH"].split(os.pathsep) + ["/usr/local/bin"]:
             path = path.strip('"')
             exe_file = os.path.join(path, program)
