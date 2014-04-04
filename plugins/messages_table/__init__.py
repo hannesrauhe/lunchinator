@@ -22,6 +22,17 @@ class messages_table(iface_gui_plugin):
         if get_server().controller != None:
             get_server().controller.sendMessageClicked(None, text)
         
+    def destroy_widget(self):
+        iface_gui_plugin.destroy_widget(self)
+        
+        get_server().controller.messagePrependedSignal.disconnect(self.messagesModel.externalRowPrepended)
+        get_server().controller.memberAppendedSignal.disconnect(self.updateSendersInMessagesTable)
+        get_server().controller.memberUpdatedSignal.disconnect(self.updateSendersInMessagesTable)
+        get_server().controller.memberRemovedSignal.disconnect(self.updateSendersInMessagesTable)
+        self.messagesModel = None
+        self.messagesProxyModel = None
+        self.messagesTable = None
+        
     def create_widget(self, parent):
         from PyQt4.QtGui import QSortFilterProxyModel
         from PyQt4.QtCore import Qt

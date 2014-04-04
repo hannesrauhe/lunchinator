@@ -13,7 +13,6 @@ class members_table(iface_gui_plugin):
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
-        self.timeoutTimer.stop()
         
     def updateTimeoutsInMembersTables(self):
         self.membersProxyModel.setDynamicSortFilter(False)
@@ -23,6 +22,19 @@ class members_table(iface_gui_plugin):
     def addHostClicked(self, text):
         if get_server().controller != None:
             get_server().controller.addHostClicked(text)        
+    
+    def destroy_widget(self):
+        iface_gui_plugin.destroy_widget(self)
+        
+        self.timeoutTimer.timeout.disconnect(self.updateTimeoutsInMembersTables)
+        self.timeoutTimer.stop()
+        get_server().controller.memberAppendedSignal.disconnect(self.membersModel.externalRowAppended)
+        get_server().controller.memberUpdatedSignal.disconnect(self.membersModel.externalRowUpdated)
+        get_server().controller.memberRemovedSignal.disconnect(self.membersModel.externalRowRemoved)
+        self.membersTable = None
+        self.membersModel = None
+        self.membersProxyModel = None
+        self.timeoutTimer = None
     
     def create_widget(self, parent):
         from PyQt4.QtGui import QSortFilterProxyModel
