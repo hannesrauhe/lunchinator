@@ -280,6 +280,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 
                     if anAction == None:
                         anAction = categoryMenu.addAction(pluginInfo.name)
+                        if pluginInfo.name == "General Settings":
+                            anAction.setEnabled(False)
                         anAction.setCheckable(True)
                         anAction.setChecked(pluginInfo.plugin_object.is_activated)
                         anAction.toggled.connect(partial(self.toggle_plugin, anAction, aCat))
@@ -356,11 +358,16 @@ class LunchinatorGuiController(QObject, LunchServerController):
             po = get_server().plugin_manager.activatePluginByName(p_name, p_cat)
             if p_cat == "gui" and self.mainWindow != None:
                 self.mainWindow.addPluginWidget(po, p_name, makeVisible=True)
+            if self.settingsWindow != None:
+                self.settingsWindow.addPlugin(po, p_name)
         else:
             log_info("Deactivating plugin '%s' of type '%s'" % (p_name, p_cat))
-            get_server().plugin_manager.deactivatePluginByName(p_name, p_cat)  
+            po = get_server().plugin_manager.deactivatePluginByName(p_name, p_cat)  
             if p_cat == "gui" and self.mainWindow != None:
+                po.destroy_widget()
                 self.mainWindow.removePluginWidget(p_name)
+            if self.settingsWindow != None:
+                self.settingsWindow.removePlugin(p_name)
     
     @pyqtSlot(unicode, QObject)
     def sendMessageClicked(self, message, text):
@@ -406,9 +413,15 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         if self.settingsWindow == None:
             self.settingsWindow = LunchinatorSettingsDialog(self.mainWindow)
+            self.settingsWindow.closed.connect(self.settingsDialogClosed)
 
-        resp = self.settingsWindow.exec_()
-        
+        self.settingsWindow.setVisible(True)
+        self.settingsWindow.activateWindow()
+        self.settingsWindow.raise_()
+
+    @pyqtSlot()        
+    def settingsDialogClosed(self):
+        resp = self.settingsWindow.result()
         for pluginInfo in get_server().plugin_manager.getAllPlugins():
             if pluginInfo.plugin_object.is_activated:
                 if resp == LunchinatorSettingsDialog.Accepted:
@@ -417,7 +430,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                     except:
                         log_exception("was not able to save data for plugin %s" % pluginInfo.name)
                 else:
-                    pluginInfo.plugin_object.discard_options_widget_data()
+                    pluginInfo.plugin_object.discard_changes()
         get_settings().write_config_to_hd()
             
         get_server().call("HELO_INFO " + get_server()._build_info_string())        

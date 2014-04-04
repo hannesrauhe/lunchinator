@@ -1,8 +1,7 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_error, log_exception, log_info, convert_string,\
-    get_settings
-import types, sys, logging, os
+from lunchinator import log_error, log_exception, convert_string
+import types, sys, logging
 from copy import deepcopy
 from PyQt4.QtCore import Qt
 
@@ -61,6 +60,7 @@ class iface_plugin(IPlugin):
         Just call the parent class's method
         """
         IPlugin.deactivate(self)
+        self.option_widgets = {}
     
     def get_option_names(self):
         if self.option_names == None:
@@ -121,9 +121,22 @@ class iface_plugin(IPlugin):
                     conv = self.convert_option(o, v, new_v)
                     self.hidden_options[o] = conv
         
+    def _displayOptionValue(self, o, v):
+        e = self.option_widgets[o]
+        if o in self.option_choice:
+            currentIndex = 0
+            if v in self.option_choice[o]:
+                currentIndex = self.option_choice[o].index(v)
+            e.setCurrentIndex(currentIndex)
+        elif type(v)==types.IntType:
+            e.setValue(v)
+        elif type(v)==types.BooleanType:
+            e.setCheckState(Qt.Checked if v else Qt.Unchecked)
+        else:
+            e.setText(v)
+        
     def add_option_to_layout(self, parent, grid, i, o, v):
         from PyQt4.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
-        from PyQt4.QtCore import Qt
         e = ""
         fillHorizontal = False
         if o[0] in self.option_choice:
@@ -194,6 +207,7 @@ class iface_plugin(IPlugin):
                     new_v = mod_v 
             targetDict[o]=new_v
             self.set_option_value(o, new_v)
+        self._displayOptionValue(o, new_v)
             
     def register_option_callback(self, o, callback):
         if o in self.option_callbacks:
@@ -253,17 +267,17 @@ class iface_plugin(IPlugin):
         for o,e in self.option_widgets.iteritems():
             new_v = self.read_data_from_widget(o, e)
             self.set_option(o, new_v, False)
-        self.discard_options_widget_data()
         
     def set_option_value(self, o, new_v):
         self.setConfigOption(o,str(new_v))
         
     def save_options_widget_data(self):
         self.save_data()
-        self.discard_options_widget_data()
     
-    def discard_options_widget_data(self):
-        self.option_widgets = {}
+    def discard_changes(self):
+        for o,_e in self.option_widgets.iteritems():
+            val = self.get_option(o)
+            self.set_option(o, val, convert=False)
         
     @classmethod
     def prepare_application(cls, factory):
