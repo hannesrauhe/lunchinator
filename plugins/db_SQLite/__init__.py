@@ -1,7 +1,6 @@
 from lunchinator.iface_db_plugin import iface_db_plugin, lunch_db
 import sys, sqlite3, threading, Queue, datetime, os
 from lunchinator import get_server, get_settings, log_debug, log_exception, log_error
-
  
 class db_SQLite(iface_db_plugin):  
     VERSION_TABLE = "DB_VERSION"
@@ -29,7 +28,7 @@ class db_SQLite(iface_db_plugin):
             newconn = MultiThreadSQLite(options["sqlite_file"])
             newconn.open()
         except:
-            log_exception("Problem while opening DB connection in plugin %s"%(self.db_type))   
+            log_exception("Problem while opening SQLite connection")   
             raise
         
         try:            

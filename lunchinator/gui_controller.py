@@ -280,8 +280,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 
                     if anAction == None:
                         anAction = categoryMenu.addAction(pluginInfo.name)
-                        if pluginInfo.name == "General Settings":
-                            anAction.setEnabled(False)
                         anAction.setCheckable(True)
                         anAction.setChecked(pluginInfo.plugin_object.is_activated)
                         anAction.toggled.connect(partial(self.toggle_plugin, anAction, aCat))

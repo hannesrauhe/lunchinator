@@ -3,7 +3,6 @@ from yapsy.PluginManager import PluginManagerSingleton
 from lunchinator import log_error, log_exception, convert_string
 import types, sys, logging
 from copy import deepcopy
-from PyQt4.QtCore import Qt
 
 class iface_plugin(IPlugin):    
     def __init__(self):
@@ -122,6 +121,8 @@ class iface_plugin(IPlugin):
                     self.hidden_options[o] = conv
         
     def _displayOptionValue(self, o, v):
+        from PyQt4.QtCore import Qt
+        
         e = self.option_widgets[o]
         if o in self.option_choice:
             currentIndex = 0
