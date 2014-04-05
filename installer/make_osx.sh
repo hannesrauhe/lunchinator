@@ -23,4 +23,4 @@ tar cjf Lunchinator.app.tbz Lunchinator.app
 cd ..
 
 echo "*** Creating signature file ***"
-python hashNsign.py dist/Lunchinator.app.tbz latest_version_mac.asc
+python hashNsign.py dist/Lunchinator.app.tbz
