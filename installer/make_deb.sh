@@ -18,19 +18,6 @@ mkdir -p dist/usr/share/icons/hicolor/scalable/apps
 mkdir -p dist/usr/share/icons/ubuntu-mono-dark/status/24/
 mkdir -p dist/usr/share/icons/ubuntu-mono-light/status/24/
 
-cat > dist/DEBIAN/control <<EOF
-Package: lunchinator
-Version: $(git rev-list HEAD --count)
-Section: Application/Utilities
-Priority: optional
-Architecture: amd64
-Depends:
-Maintainer: Cornelius Ratsch <ratsch@stud.uni-heidelberg.de>
-Installed-Size: 10000
-Description: The Lunchinator.
- It's the Lunchinator. It does lunch stuff.
-EOF
-
 cat > dist/DEBIAN/postinst <<EOF
 gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light
 gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark
@@ -57,7 +44,7 @@ pushd /usr/lib/lunchinator
 popd
 EOF
 
-chmod +755 dist/usr/bin/lunchinator
+chmod +x dist/usr/bin/lunchinator
 
 mv dist/lunchinator dist/usr/lib/
 
@@ -72,12 +59,24 @@ cp ../images/lunchred.svg dist/usr/share/icons/ubuntu-mono-light/status/24/lunch
 # install program icon
 cp ../images/lunch.svg dist/usr/share/icons/hicolor/scalable/apps
 
+cat > dist/DEBIAN/control <<EOF
+Package: lunchinator
+Version: $(git rev-list HEAD --count)
+Section: Application/Utilities
+Priority: optional
+Architecture: amd64
+Depends:
+Maintainer: Cornelius Ratsch <ratsch@stud.uni-heidelberg.de>
+Installed-Size: $(du -s dist/usr/ | cut -f 1 -d $'\t') 
+Description: The Lunchinator.
+ It's the Lunchinator. It does lunch stuff.
+EOF
+
 echo "*** Creating Debian package ***"
 fakeroot dpkg-deb --build dist
 source /etc/lsb-release
 DEB_NAME=lunchinator_$(git rev-list HEAD --count)_${DISTRIB_RELEASE}.deb
 mv dist.deb dist/"$DEB_NAME" 
-
 
 echo "*** Creating signature file ***"
 python hashNsign.py dist/"$DEB_NAME"
