@@ -14,7 +14,8 @@ class iface_plugin(IPlugin):
         self.option_choice = {}
         self.hidden_options = None
         self.force_activation = False
-        manager = PluginManagerSingleton.get()
+        # TODO is this necessary?
+        _manager = PluginManagerSingleton.get()
         super(iface_plugin, self).__init__()
     
     def activate(self):
@@ -138,6 +139,7 @@ class iface_plugin(IPlugin):
         
     def add_option_to_layout(self, parent, grid, i, o, v):
         from PyQt4.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
+        from PyQt4.QtCore import Qt
         e = ""
         fillHorizontal = False
         if o[0] in self.option_choice:
@@ -249,6 +251,7 @@ class iface_plugin(IPlugin):
             return self.options[o]
         
     def read_data_from_widget(self, o, e):
+        from PyQt4.QtCore import Qt
         v = self.options[o]
         new_v = v
         if o in self.option_choice:
@@ -262,7 +265,6 @@ class iface_plugin(IPlugin):
         return new_v        
     
     def save_data(self):
-        from PyQt4.QtCore import Qt
         if not self.option_widgets:
             return
         for o,e in self.option_widgets.iteritems():
