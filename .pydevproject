@@ -7,7 +7,6 @@
 <path>/lunchinator/plugins</path>
 <path>/lunchinator/plugins/avatar</path>
 <path>/lunchinator/plugins/bug_report</path>
-<path>/lunchinator/plugins/db_SQLITE</path>
 <path>/lunchinator/plugins/maintainer</path>
 <path>/lunchinator/plugins/rot13</path>
 <path>/lunchinator/plugins/tdtnotify</path>

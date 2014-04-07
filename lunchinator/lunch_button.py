@@ -23,4 +23,4 @@ class LunchButton(QPushButton):
         if len(optmsg):
             get_server().call(optmsg)
         else:
-            get_server().call(u"Lunch")
+            get_server().call(get_settings().get_lucnh_trigger())

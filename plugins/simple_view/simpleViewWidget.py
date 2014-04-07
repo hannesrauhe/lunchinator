@@ -10,7 +10,7 @@ from lunchinator.lunch_button import LunchButton
             
 class SimpleViewWidget(QWidget):   
     #http://www.colourlovers.com/palette/1930/cheer_up_emo_kid
-    colors = ["C44D58","FF6B6B","C7F464","4ECDC4","556270"]
+    colors = ["C44D58","C7F464","4ECDC4","556270","FF6B6B"]
     
     def __init__(self, parent):
         super(SimpleViewWidget, self).__init__(parent)

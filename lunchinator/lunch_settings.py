@@ -51,9 +51,8 @@ class lunch_settings(object):
         for aDir in self._plugin_dirs:
             sys.path.insert(0, aDir)
         
-        ''' not in files'''    
-        self._next_lunch_begin = None
-        self._next_lunch_end = None
+        #configurable  
+        self._lunch_trigger = u"lunch"
         self._user_name = u""
         self._group = u""
         self._avatar_file = u""    
@@ -71,6 +70,10 @@ class lunch_settings(object):
         self._default_db_connection = u"Standard"
         self._available_db_connections = u"Standard" #list separated by ;; (like yapsy)
         self._proxy = u""
+        
+        
+        self._next_lunch_begin = None
+        self._next_lunch_end = None
         
         if not os.path.exists(self._main_config_dir):
             os.makedirs(self._main_config_dir)
@@ -128,6 +131,7 @@ class lunch_settings(object):
         
         self._logging_level = self.read_value_from_config_file(self._logging_level, 'general', 'logging_level')
         self._group_plugins = self.read_value_from_config_file(self._group_plugins, 'general', 'group_plugins')
+        self._lunch_trigger = self.read_value_from_config_file(self._lunch_trigger, 'general', 'lunch_trigger')
         
         #not shown in settings-plugin - handled by avatar-plugin
         self._avatar_file =  self.read_value_from_config_file(self._avatar_file,"general","avatar_file")
@@ -233,7 +237,12 @@ class lunch_settings(object):
     def get_log_file(self):
         return self._log_file
     
-    #the rest is read from/written to the config file          
+    #the rest is read from/written to the config file        
+    def get_lunch_trigger(self):
+        return self._lunch_trigger
+    def set_lunch_trigger(self,value):
+        self._lunch_trigger = value
+             
     def get_user_name(self):
         return self._user_name    
     def set_user_name(self,name):

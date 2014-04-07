@@ -5,6 +5,7 @@ class gui_settings(iface_general_plugin):
     def __init__(self):
         super(gui_settings, self).__init__()
         option_names = [(u'user_name', u'User Name'),
+                        (u'lunch_trigger', u'Word that triggers alarm'),
                         (u'group', u'Group Name', self.change_group),
                         (u'auto_update', u"Automatic Update"),
                         (u"default_lunch_begin", u'Free for Lunch from'),
