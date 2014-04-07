@@ -13,46 +13,43 @@ class db_connections(iface_general_plugin):
         self.conn_properties_lock = Lock()
         self.open_connections = {}
         self.conn_properties = {}
-        self.conn_plugins = {} #will be filled later (init plugin obejcts)
-        self._init_connection_properties()
+        self.conn_plugins = {} #will be filled later (init plugin obejcts)        
+            
         self.options = [(("default_connection","Default Connection",
                           self.conn_properties.keys(),
                           get_settings().set_default_db_connection),
                          get_settings().get_default_db_connection())]
         self.force_activation = True
-        
-    def _init_connection_properties(self):      
-        self.config_file = get_settings().get_config_file()
-        for conn_name in get_settings().get_available_db_connections():
-            section_name = "DB Connection: "+str(conn_name)
-            o = {}
-            if self.config_file.has_section(section_name):
-                for k,v in self.config_file.items(section_name):
-                    o[k] = v
-            if not o.has_key("plugin_type"):
-                o["plugin_type"] = self.STANDARD_PLUGIN
-                
-            self.conn_properties_lock.acquire()
-            self.conn_properties[conn_name] = o            
-            self.conn_properties_lock.release()
 
     ''' lazy plugin loading (not to be called in __init__ - plugins might not ba activated then) '''
     def _init_plugin_objects(self):        
         if len(self.conn_plugins)==0:
-            self.conn_properties_lock.acquire()
-            for name, o in self.conn_properties.iteritems():
-                t = o["plugin_type"]
-                p = self.plugin_manager.getPluginByName(t, "db")
-                if p:
-                    if not p.plugin_object.is_activated:
-                        log_warning("Activating plugin of type %s because it is needed for a connection"%t)
-                        get_server().plugin_manager.activatePluginByName(name, u"gui")
-                    self.conn_plugins[name] = p.plugin_object
+            
+            '''fill the only known property for now: the type of every connection
+            and store the instance'''
+            for conn_name in get_settings().get_available_db_connections():
+                section_name = "DB Connection: "+str(conn_name)  
+                plugin_type = self.STANDARD_PLUGIN                      
+                plugin_type = get_settings().read_value_from_config_file(plugin_type,
+                                                                         section_name, 
+                                                                         "plugin_type")
+
+                p = self.plugin_manager.getPluginByName(plugin_type, "db")
+                if p and p.plugin_object.is_activated:
+                    self.conn_plugins[conn_name] = p.plugin_object
                 else:
-                    self.conn_properties_lock.release()
                     raise Exception("DB Connection %s requires plugin of type \
-                    %s which is not available"%(name,t))
-            self.conn_properties_lock.release()
+                    %s which is not available"%(conn_name,plugin_type))
+                p_options = p.plugin_object.options
+                for k,v in p_options.items():
+                    '''this takes care of the option-type'''
+                    p_options[k] = get_settings().read_value_from_config_file(v,
+                                                                         section_name, 
+                                                                         k)
+                p_options["plugin_type"]=plugin_type
+                self.conn_properties_lock.acquire()
+                self.conn_properties[conn_name] = p_options
+                self.conn_properties_lock.release()              
                     
     def getProperties(self, conn_id):
         self._init_plugin_objects()
@@ -99,7 +96,7 @@ class db_connections(iface_general_plugin):
     
     def save_options_widget_data(self):
         new_props = self.conn_options_widget.get_connection_properties()
-
+        self.config_file = get_settings().get_config_file()
         '''@todo Delete connections here'''
 
         self.conn_properties_lock.acquire()
@@ -122,7 +119,7 @@ class db_connections(iface_general_plugin):
                     self.config_file.add_section(section_name)
                     
                 for o, v in props.iteritems():
-                    self.config_file.set(section_name, o, v)
+                    self.config_file.set(section_name, o, unicode(v))
                 self.conn_properties[conn_name] = props
                 
                 if conn_name in self.open_connections:
