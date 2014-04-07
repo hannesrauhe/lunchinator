@@ -195,7 +195,10 @@ def getBinary(name, altLocation = ""):
     if not gbinary:
         gbinary = os.path.join(get_settings().get_lunchdir(),altLocation,name)
     if not os.path.isfile(gbinary):
-        return None
+        return None   
+    
+    if getPlatform() == PLATFORM_WINDOWS:
+        gbinary = "\""+gbinary+"\""
     return gbinary
 
 def _findLunchinatorKeyID(gpg, secret):
@@ -219,8 +222,8 @@ def getGPG(secret=False):
     
     try:
         gpg = GPG(gbinary,ghome)
-    except:
-        log_error("GPG not found or not working")
+    except Exception, e:
+        log_error("GPG not working: "+str(e))
         return None, None
     
     # use key from keyring as default
