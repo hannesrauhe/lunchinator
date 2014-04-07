@@ -129,7 +129,7 @@ if __name__ == "__main__":
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
         except:
-            log_exception("cli version cannot be started, is readline installed")
+            log_exception("cli version cannot be started, is readline installed?")
         finally:
             sys.exit(retCode)
     elif options.noGui:
