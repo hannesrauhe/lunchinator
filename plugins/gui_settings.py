@@ -7,7 +7,6 @@ class gui_settings(iface_general_plugin):
         option_names = [(u'user_name', u'User Name'),
                         (u'lunch_trigger', u'Word that triggers alarm'),
                         (u'group', u'Group Name', self.change_group),
-                        (u'auto_update', u"Automatic Update"),
                         (u"default_lunch_begin", u'Free for Lunch from'),
                         (u"default_lunch_end", u'Free for Lunch until'),
                         (u"alarm_begin_time", u"No Alarm before"),
