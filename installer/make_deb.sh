@@ -1,6 +1,11 @@
 #!/bin/bash
 pushd ..
-python ../setup.py --command-packages=stdeb.command sdist_dsc
+rm -rf deb_dist
+python setup.py --command-packages=stdeb.command sdist_dsc
+cd deb_dist/lunchinator-*
+echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light" >>debian/*.postinst
+echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark" >>debian/*.postinst
+dpkg-buildpackage -rfakeroot -uc -us
 popd
 exit 0
 

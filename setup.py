@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from __future__ import with_statement
-import subprocess
+import os, subprocess
 from distutils.core import setup
 
 def get_version():
@@ -42,6 +42,17 @@ You may report bugs on the `bug tracker`_.
 .. _`bug tracker`: http://github.com/hannesrauhe/lunchinator/issues
 '''
 
+data_files = [('share/lunchinator/sounds', ['sounds/sonar.wav']),
+              ('share/lunchinator/images', ['images/webcam.jpg',
+                                            'images/mini_breakfast.png',
+                                            'images/lunchinator.png',
+                                            'images/lunchinatorred.png']),
+              ('share/icons/hicolor/scalable/apps', ['images/lunchinator.svg']),
+              ('share/icons/ubuntu-mono-dark/status/24', ['images/white/lunchinator.svg', 'images/lunchinatorred.svg']),
+              ('share/icons/ubuntu-mono-light/status/24', ['images/black/lunchinator.svg', 'images/lunchinatorred.svg']),
+              ('share/applications', ['installer/lunchinator.desktop'])]
+data_files.extend([(dp, [os.path.join(dp, fn) for fn in fns if not fn.endswith('.pyc')]) for dp, _, fns in os.walk('plugins')])
+
 setup(
     name =          'Lunchinator',
     version =       version,
@@ -56,12 +67,7 @@ setup(
     license =       'BSD License',
     packages =      ['lunchinator', 'lunchinator.cli', 'lunchinator.yapsy', 'gnupg'],
     scripts =       ['bin/lunchinator'],
-    data_files =    [('share/lunchinator/sounds', ['sounds/sonar.wav']),
-                     ('share/lunchinator/images', ['images/webcam.jpg',
-                                 'images/mini_breakfast.png',
-                                 'images/lunch.png',
-                                 'images/lunchred.png']),
-                     ('share/lunchinator/plugins', ['plugins/*'])],
+    data_files =    data_files,
     classifiers =   ['Development Status :: %s' % DEVSTATUS,
                      'License :: OSI Approved :: BSD License',
                      'Operating System :: OS Independent',
@@ -74,3 +80,4 @@ setup(
                      'Topic :: Communications :: Chat',
                     ],
     )
+
