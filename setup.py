@@ -4,17 +4,25 @@ import os, subprocess
 from distutils.core import setup
 
 def get_version():
-    call = ["git","--no-pager","rev-list", "HEAD", "--count"]
-    fh = subprocess.PIPE    
-    p = subprocess.Popen(call,stdout=fh, stderr=fh)
-    pOut, _ = p.communicate()
-    retCode = p.returncode
-    
-    if retCode:
-        # something went wrong
-        return None, None
-    
-    commit_count = pOut.strip()
+    if os.path.exists("version"):
+        with open("version", "rb") as inFile:
+            commit_count = inFile.next().strip()
+    else:
+        try:
+            call = ["git","--no-pager","rev-list", "HEAD", "--count"]
+            fh = subprocess.PIPE    
+            p = subprocess.Popen(call,stdout=fh, stderr=fh)
+            pOut, _ = p.communicate()
+            retCode = p.returncode
+            
+            if retCode:
+                # something went wrong
+                return None, None
+        
+            commit_count = pOut.strip()
+        except:
+            return None, None
+
     return commit_count, (0, 1, commit_count, 'final', 0)
     
 version, version_info = get_version()
@@ -47,6 +55,7 @@ data_files = [('share/lunchinator/sounds', ['sounds/sonar.wav']),
                                             'images/mini_breakfast.png',
                                             'images/lunchinator.png',
                                             'images/lunchinatorred.png']),
+              ('share/lunchinator', ['lunchinator_pub_0x17F57DC2.asc', 'installer/version']),
               ('share/icons/hicolor/scalable/apps', ['images/lunchinator.svg']),
               ('share/icons/ubuntu-mono-dark/status/24', ['images/white/lunchinator.svg', 'images/lunchinatorred.svg']),
               ('share/icons/ubuntu-mono-light/status/24', ['images/black/lunchinator.svg', 'images/lunchinatorred.svg']),
@@ -69,7 +78,7 @@ setup(
     scripts =       ['bin/lunchinator'],
     data_files =    data_files,
     classifiers =   ['Development Status :: %s' % DEVSTATUS,
-                     'License :: OSI Approved :: BSD License',
+                     'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
                      'Operating System :: OS Independent',
                      'Programming Language :: Python',
                      'Programming Language :: Python :: 2',

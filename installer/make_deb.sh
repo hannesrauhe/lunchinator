@@ -1,6 +1,7 @@
 #!/bin/bash
 pushd ..
 rm -rf deb_dist
+git rev-list HEAD --count > installer/version
 python setup.py --command-packages=stdeb.command sdist_dsc
 cd deb_dist/lunchinator-*
 echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light" >>debian/*.postinst
