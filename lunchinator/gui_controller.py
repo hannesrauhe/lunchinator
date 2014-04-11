@@ -13,7 +13,7 @@ from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
-from yapsy.PluginManager import PluginManagerSingleton
+from lunchinator.yapsy.PluginManager import PluginManagerSingleton
 
 class LunchServerThread(QThread):
     def __init__(self, parent):

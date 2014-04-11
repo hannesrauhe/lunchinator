@@ -1,6 +1,6 @@
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QGroupBox, QComboBox, QWidget, QGridLayout, QLabel, QStackedWidget, QPushButton
-from yapsy.PluginManager import PluginManagerSingleton
+from lunchinator.yapsy.PluginManager import PluginManagerSingleton
 from copy import deepcopy
         
 

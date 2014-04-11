@@ -51,12 +51,12 @@ All analyzers must enforce the policy represented by the ``IPluginFileAnalyzer``
 
 import os
 import re
-from yapsy import log
+from lunchinator.yapsy import log
 import ConfigParser
 
-from yapsy.PluginInfo import PluginInfo
-from yapsy import PLUGIN_NAME_FORBIDEN_STRING
-from yapsy.IPluginLocator import IPluginLocator
+from lunchinator.yapsy.PluginInfo import PluginInfo
+from lunchinator.yapsy import PLUGIN_NAME_FORBIDEN_STRING
+from lunchinator.yapsy.IPluginLocator import IPluginLocator
 
 
 

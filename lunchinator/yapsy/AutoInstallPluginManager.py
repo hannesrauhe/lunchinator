@@ -19,9 +19,9 @@ import shutil
 import zipfile
 import StringIO
 
-from yapsy.IPlugin import IPlugin
-from yapsy.PluginManagerDecorator import PluginManagerDecorator
-from yapsy import log
+from lunchinator.yapsy.IPlugin import IPlugin
+from lunchinator.yapsy.PluginManagerDecorator import PluginManagerDecorator
+from lunchinator.yapsy import log
 
 
 class AutoInstallPluginManager(PluginManagerDecorator):

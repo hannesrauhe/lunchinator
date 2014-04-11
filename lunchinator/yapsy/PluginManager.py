@@ -130,20 +130,20 @@ import sys
 import os
 import imp
 
-from yapsy import log
-from yapsy import NormalizePluginNameForModuleName
+from lunchinator.yapsy import log
+from lunchinator.yapsy import NormalizePluginNameForModuleName
 
-from yapsy.IPlugin import IPlugin
-from yapsy.IPluginLocator import IPluginLocator
+from lunchinator.yapsy.IPlugin import IPlugin
+from lunchinator.yapsy.IPluginLocator import IPluginLocator
 # The follozing two imports are used to implement the default behaviour
-from yapsy.PluginFileLocator import PluginFileAnalyzerWithInfoFile
-from yapsy.PluginFileLocator import PluginFileLocator
+from lunchinator.yapsy.PluginFileLocator import PluginFileAnalyzerWithInfoFile
+from lunchinator.yapsy.PluginFileLocator import PluginFileLocator
 # imported for backward compatibility (this variable was defined here
 # before 1.10)
-from yapsy import PLUGIN_NAME_FORBIDEN_STRING
+from lunchinator.yapsy import PLUGIN_NAME_FORBIDEN_STRING
 # imported for backward compatibility (this PluginInfo was imported
 # here before 1.10)
-from yapsy.PluginInfo import PluginInfo
+from lunchinator.yapsy.PluginInfo import PluginInfo
 
 
 class PluginManager(object):
@@ -661,5 +661,5 @@ class PluginManagerSingleton(object):
 
 # For backward compatility import the most basic decorator (it changed
 # place as of v1.8)
-from yapsy.PluginManagerDecorator import PluginManagerDecorator
+from lunchinator.yapsy.PluginManagerDecorator import PluginManagerDecorator
 

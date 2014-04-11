@@ -28,8 +28,8 @@ API
 
 import os
 
-from yapsy.IPlugin import IPlugin
-from yapsy import log
+from lunchinator.yapsy.IPlugin import IPlugin
+from lunchinator.yapsy import log
 
 
 class PluginManagerDecorator(object):
@@ -74,7 +74,7 @@ class PluginManagerDecorator(object):
 		
 		if decorated_object is None:
 			log.debug("Creating a default PluginManager instance to be decorated.")
-			from yapsy.PluginManager import PluginManager
+			from lunchinator.yapsy.PluginManager import PluginManager
 			decorated_object = PluginManager(categories_filter, 
 											 directories_list,
 											 plugin_info_ext)

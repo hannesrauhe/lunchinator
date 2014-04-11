@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import iface_general_plugin
 from lunchinator import get_server, get_settings, log_error, log_debug, log_warning
-from yapsy.PluginManager import PluginManagerSingleton
+from lunchinator.yapsy.PluginManager import PluginManagerSingleton
 from threading import Lock
 
 class db_connections(iface_general_plugin):

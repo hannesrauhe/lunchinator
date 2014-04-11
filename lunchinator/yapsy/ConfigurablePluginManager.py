@@ -12,11 +12,11 @@ API
 ===
 """
 
-from yapsy.IPlugin import IPlugin
+from lunchinator.yapsy.IPlugin import IPlugin
 
 
-from yapsy.PluginManagerDecorator import PluginManagerDecorator
-from yapsy.PluginManager import PLUGIN_NAME_FORBIDEN_STRING
+from lunchinator.yapsy.PluginManagerDecorator import PluginManagerDecorator
+from lunchinator.yapsy.PluginManager import PLUGIN_NAME_FORBIDEN_STRING
 
 
 

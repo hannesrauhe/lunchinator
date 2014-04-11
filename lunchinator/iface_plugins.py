@@ -1,5 +1,5 @@
-from yapsy.IPlugin import IPlugin
-from yapsy.PluginManager import PluginManagerSingleton
+from lunchinator.yapsy.IPlugin import IPlugin
+from lunchinator.yapsy.PluginManager import PluginManagerSingleton
 from lunchinator import log_error, log_exception, convert_string
 import types, sys, logging
 from copy import deepcopy

@@ -15,9 +15,9 @@ API
 
 from distutils.version import StrictVersion
 
-from yapsy.PluginInfo import PluginInfo
-from yapsy.IPlugin import IPlugin
-from yapsy.PluginManagerDecorator import PluginManagerDecorator
+from lunchinator.yapsy.PluginInfo import PluginInfo
+from lunchinator.yapsy.IPlugin import IPlugin
+from lunchinator.yapsy.PluginManagerDecorator import PluginManagerDecorator
 
 
 class VersionedPluginInfo(PluginInfo):

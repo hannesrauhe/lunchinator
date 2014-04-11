@@ -17,7 +17,7 @@ API
 """
 
 
-from yapsy import log
+from lunchinator.yapsy import log
 
 class IPluginLocator(object):
 	"""

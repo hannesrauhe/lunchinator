@@ -2,14 +2,14 @@
 # coding=utf-8
 
 from iface_plugins import iface_called_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
-from iface_db_plugin import iface_db_plugin, lunch_db
+from iface_db_plugin import iface_db_plugin
 from time import strftime, localtime, time, mktime, gmtime
 from datetime import datetime
 import socket,sys,os,json,codecs,contextlib
 from threading import Lock
 from cStringIO import StringIO
 
-from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
+from lunchinator.yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning,\
     convert_string
      
