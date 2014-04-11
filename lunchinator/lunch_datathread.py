@@ -15,7 +15,7 @@ def _sendFile(con, receiver, path_or_data, tcp_port, sleep, is_data):
         
     data = None
     if is_data:
-        data = path_or_data
+        data = path_or_dat
     else:
         # no utf-8, might be binary file
         with open(path_or_data, 'rb') as sendfile:           

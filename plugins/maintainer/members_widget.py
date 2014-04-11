@@ -99,7 +99,7 @@ class MembersWidget(QWidget):
     def listLogfiles(self, basePath, sort = None):
         if sort is None:
             sort = lambda aFile : -self.getLogNumber(aFile)
-        logList = [basePath + os.sep + aFile for aFile in os.listdir(basePath) if aFile.endswith(".log") and not os.path.isdir(basePath + os.sep + aFile)]
+        logList = [os.path.join(basePath, aFile) for aFile in os.listdir(basePath) if aFile.endswith(".log") and not os.path.isdir(os.path.join(basePath, aFile))]
         return sorted(logList, key = sort)
     
     def getNumLogsToKeep(self, oldLogFiles, newLogFiles, logOffset):
@@ -155,7 +155,7 @@ class MembersWidget(QWidget):
                 # don't touch up-to-date logs
                 break
             if index < numToKeep:
-                newName = "%s%s%d.log" % (os.path.dirname(aFile), os.sep, logNum + shift)
+                newName = os.path.join(os.path.dirname(aFile), "%d.log" % (logNum + shift))
                 renamedLogfiles.append((len(oldLogFiles) - index - 1, aFile, newName))
                 os.rename(aFile, newName)
             else:
@@ -178,7 +178,7 @@ class MembersWidget(QWidget):
         for index, aLogFile in enumerate(reversed(newLogFiles)):
             shutil.move(aLogFile, basePath)
             if index < numNew:
-                addedLogfiles.append((index + logOffset, "%s%s%s" % (basePath, os.sep, os.path.basename(aLogFile))))
+                addedLogfiles.append((index + logOffset, os.path.join(basePath, os.path.basename(aLogFile))))
         shutil.rmtree(tmpPath, True)
         
         return numNew, addedLogfiles, renamedLogfiles
@@ -192,7 +192,7 @@ class MembersWidget(QWidget):
         path = convert_string(path)
         
         basePath = os.path.dirname(path)
-        tmpPath = basePath + os.sep + "tmp"
+        tmpPath = os.path.join(basePath, "tmp")
         if not os.path.exists(tmpPath):
             os.makedirs(tmpPath)
 
@@ -215,7 +215,7 @@ class MembersWidget(QWidget):
                     # request timed out or was finished already
                     logNum = 0
             
-            shutil.move(path, "%s%s%d.log" % (tmpPath, os.sep, logNum))
+            shutil.move(path, os.path.join(tmpPath, "%d.log" % logNum))
             
             numNew, logsAdded, logsRenamed = self.handleNewLogFiles(basePath, tmpPath, logNum)
             if numNew > 0 and logNum < 9:

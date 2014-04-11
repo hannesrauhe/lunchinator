@@ -666,7 +666,7 @@ class lunch_server(object):
                     tcp_port = int(values[1].strip())
                 file_name=""
                 if self._peer_info[ip].has_key("avatar"):
-                    file_name=get_settings().get_avatar_dir()+os.sep+self._peer_info[ip]["avatar"]
+                    file_name=os.path.join(get_settings().get_avatar_dir(), self._peer_info[ip]["avatar"])
                 else:
                     log_error("%s tried to send his avatar, but I don't know where to safe it"%(ip))
                 

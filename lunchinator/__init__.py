@@ -4,13 +4,6 @@ import sys, os
 import logging, logging.handlers, time
 from datetime import datetime
 
-path = os.path.abspath(sys.argv[0])
-while os.path.dirname(path) != path:
-    if os.path.exists(os.path.join(path, 'lunchinator', '__init__.py')):
-        sys.path.insert(0, path)
-        break
-    path = os.path.dirname(path)
-
 MAIN_CONFIG_DIR = unicode(os.path.join(os.getenv("HOME"), ".lunchinator") if os.getenv("HOME") else os.path.join(os.getenv("USERPROFILE"), ".lunchinator"))
         
 class _log_formatter (logging.Formatter):
@@ -35,7 +28,7 @@ class _lunchinator_logger:
         if cls.lunch_logger == None:
             if not os.path.exists(MAIN_CONFIG_DIR ):
                 os.makedirs(MAIN_CONFIG_DIR )
-            log_file = MAIN_CONFIG_DIR+os.sep+"lunchinator.log"
+            log_file = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
                 
             cls.logfileHandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
             cls.logfileHandler.setFormatter(_log_formatter())

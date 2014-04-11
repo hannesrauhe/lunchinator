@@ -172,7 +172,7 @@ class online_update(iface_general_plugin):
                 dmgFile = dt.target.name
                 dt.close()
                 
-                st = ShellThread(getValidQtParent(), [get_settings().get_lunchdir() + '/bin/mac_gpg_installer.sh', dmgFile], context=dmgFile, quiet=False)
+                st = ShellThread(getValidQtParent(), [get_settings().get_resource('bin', 'mac_gpg_installer.sh'), dmgFile], context=dmgFile, quiet=False)
                 st.finished.connect(partial(self._install_gpg_finished, 2))
                 st.start()
                 
@@ -227,7 +227,7 @@ class online_update(iface_general_plugin):
                     pid = os.fork()
                     if pid != 0:
                         # new process
-                        installer = os.path.join(get_settings().get_lunchdir(), "bin", "mac_installer.sh")
+                        installer = get_settings().get_resource("bin", "mac_installer.sh")
                         args = [installer, self._local_installer_file, path, str(os.getpid())]
                         subprocess.Popen(args)
                     else:

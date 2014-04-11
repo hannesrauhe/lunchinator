@@ -21,14 +21,14 @@ class LunchinatorWindow(QMainWindow):
 
         self.guiHandler = controller
         self.setWindowTitle("Lunchinator")
-        self.setWindowIcon(QIcon(os.path.join(get_settings().get_lunchdir(), "images", "lunch.png"))) 
+        self.setWindowIcon(QIcon(get_settings().get_resource("images", "lunchinator.png"))) 
 
         self.setDockNestingEnabled(True)
         self.setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
         
         self.pluginNameToDockWidget = {}
         self.objectNameToPluginName = {}
-        self.settings = QSettings(get_settings().get_main_config_dir() + os.sep + u"gui_settings.ini", QSettings.IniFormat)
+        self.settings = QSettings(get_settings().get_config("gui_settings.ini"), QSettings.IniFormat)
         
         savedGeometry = self.settings.value("geometry", None)
         savedState = self.settings.value("state", None)

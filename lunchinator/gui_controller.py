@@ -91,7 +91,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             # dont set highlighted if window is in foreground
             return
         self.isIconHighlighted = True
-        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunchred.png")
+        icon_file = get_settings().get_resource("images", "lunchinatorred.png")
         if hasattr(QIcon, "fromTheme"):
             icon = QIcon.fromTheme("lunchinatorred", QIcon(icon_file))
         else:
@@ -111,7 +111,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.isIconHighlighted = False
         if self.resetIconTimer != None and self.resetIconTimer.isActive():
             self.resetIconTimer.stop()
-        icon_file = os.path.join(get_settings().get_lunchdir(), "images", "lunch.png")
+        icon_file = get_settings().get_resource("images", "lunchinator.png")
         if hasattr(QIcon, "fromTheme"):
             icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
         else:
@@ -128,7 +128,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                                               buttons=QMessageBox.Yes | QMessageBox.No,
                                               defaultButton=QMessageBox.Yes)
                 if result == QMessageBox.Yes:
-                    if subprocess.call(['gksu', get_settings().get_lunchdir() + '/bin/install-lunch-icons.sh lunch']) == 0:
+                    if subprocess.call(['gksu', get_settings().get_resource('bin', 'install-lunch-icons.sh') + ' lunch']) == 0:
                         log_info("restarting after icons were installed")
                         self.quit(EXIT_CODE_UPDATE)
                         sys.exit(EXIT_CODE_UPDATE)

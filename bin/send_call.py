@@ -4,14 +4,7 @@
 #it sends a message to the members saved in the members-file, 
 #no guarantees that you reach everyone in the peer group
 
-import sys,os
-path = os.path.abspath(sys.argv[0])
-while os.path.dirname(path) != path:
-    if os.path.exists(os.path.join(path, 'lunchinator', '__init__.py')):
-        sys.path.insert(0, path)
-        break
-    path = os.path.dirname(path)
-    
+import sys
 from lunchinator import get_server
 
 if __name__ == "__main__":

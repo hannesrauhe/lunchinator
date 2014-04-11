@@ -1,7 +1,6 @@
 """Base class for Lunch Server Controller classes"""
 from lunchinator import get_server, get_settings, log_info
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
-from lunchinator.iface_plugins import iface_called_plugin
 from lunchinator.utilities import processPluginCall
 
 class LunchServerController(object):

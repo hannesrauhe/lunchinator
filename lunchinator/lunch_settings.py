@@ -1,4 +1,4 @@
-import sys,os,getpass,ConfigParser,types,subprocess,logging,codecs,contextlib
+import sys, os, getpass, ConfigParser, types, subprocess, logging, codecs, contextlib
 
 '''integrate the cli-parser into the default_config sooner or later'''
 from lunchinator import log_exception, log_warning, log_error, log_info, setLoggingLevel, convert_string, MAIN_CONFIG_DIR
@@ -12,46 +12,66 @@ class lunch_settings(object):
             cls._instance = cls()
         return cls._instance
     
-    def runGitCommand(self, args, path = None, quiet = True):
+    def runGitCommand(self, args, path=None, quiet=True):
         if path == None:
-            path = self._lunchdir
+            path = self.get_main_package_path()
         
-        call = ["git","--no-pager","--git-dir="+path+"/.git","--work-tree="+path]
+        call = ["git", "--no-pager", "--git-dir=" + path + "/.git", "--work-tree=" + path]
         call = call + args
         
         fh = subprocess.PIPE    
         if quiet:
-            fh = open(os.path.devnull,"w")
-        p = subprocess.Popen(call,stdout=fh, stderr=fh)
+            fh = open(os.path.devnull, "w")
+        p = subprocess.Popen(call, stdout=fh, stderr=fh)
         pOut, pErr = p.communicate()
         retCode = p.returncode
         return retCode, pOut, pErr
     
-    def getGitCommandResult(self, args, path = None, quiet = True):
+    def getGitCommandResult(self, args, path=None, quiet=True):
         retCode, _, __ = self.runGitCommand(args, path, quiet)
         return retCode
+    
+    def _findMainPackagePath(self):
+        path = os.path.realpath(__file__) 
+        while os.path.dirname(path) != path:
+            if os.path.exists(os.path.join(path, 'lunchinator', '__init__.py')):
+                return path
+            path = os.path.dirname(path)
+        return None
+    
+    def _findResourcesPath(self, defaultPath):
+        possibilities = [defaultPath, "/usr/share/lunchinator", "/usr/local/share/lunchinator"]
+        for poss in possibilities:
+            if os.path.exists(os.path.join(poss, "images", "lunchinator.png")):
+                return poss
+        return None
     
     def __init__(self):
         '''unchangeable for now'''
         self._main_config_dir = MAIN_CONFIG_DIR
-        self._members_file = unicode(self._main_config_dir+os.path.sep+"lunch_members.cfg")
-        self._messages_file = unicode(self._main_config_dir+os.path.sep+"messages")
-        self._log_file = unicode(self._main_config_dir+os.path.sep+"lunchinator.log")
-        self._avatar_dir = unicode(self._main_config_dir+os.path.sep+"avatars"+os.path.sep)
+        self._members_file = self.get_config("lunch_members.cfg")
+        self._messages_file = self.get_config("messages")
+        self._log_file = self.get_config("lunchinator.log")
+        self._avatar_dir = self.get_config("avatars")
         self._version = u"unknown"
         self._version_short = u"unknown"
         self._commit_count = "0"
         self._commit_count_plugins = "-1"
-        self._lunchdir = sys.path[0]
-        self._internal_plugin_dir = unicode(self._lunchdir+os.path.sep+"plugins"+os.path.sep)
-        self._external_plugin_dir = unicode(self._main_config_dir+os.path.sep+"plugins")
+        self._main_package_path = self._findMainPackagePath()
+        if self._main_package_path == None:
+            raise Exception("Could not determine path to the main lunchinator package.")
+        self._resources_path = self._findResourcesPath(self._main_package_path)
+        if self._resources_path == None:
+            raise Exception("Could not determine path to the lunchinator resource files.")
+        self._internal_plugin_dir = self.get_resource("plugins")
+        self._external_plugin_dir = self.get_config("plugins")
         self._plugin_dirs = [self._internal_plugin_dir, self._external_plugin_dir]
         
-        #insert plugin folders into path
+        # insert plugin folders into path
         for aDir in self._plugin_dirs:
             sys.path.insert(0, aDir)
         
-        #configurable  
+        # configurable  
         self._lunch_trigger = u"lunch"
         self._user_name = u""
         self._group = u""
@@ -62,13 +82,13 @@ class lunch_settings(object):
         self._default_lunch_end = u"12:45"
         self._alarm_begin_time = u"11:30"
         self._alarm_end_time = u"13:00"
-        self._peer_timeout = 300 # 5 min should be enough
+        self._peer_timeout = 300  # 5 min should be enough
         self._mute_timeout = 30
         self._reset_icon_time = 5
         self._logging_level = u"ERROR"
         self._group_plugins = False
         self._default_db_connection = u"Standard"
-        self._available_db_connections = u"Standard" #list separated by ;; (like yapsy)
+        self._available_db_connections = u"Standard"  # list separated by ;; (like yapsy)
         self._proxy = u""
         
         
@@ -84,7 +104,7 @@ class lunch_settings(object):
         self.read_config_from_hd()
         
         try:
-            _, self._version, __ = self.runGitCommand(["log", "-1"], self._lunchdir, quiet=False)
+            _, self._version, __ = self.runGitCommand(["log", "-1"], self.get_main_package_path(), quiet=False)
             for line in self._version.splitlines():
                 if line.startswith("Date:"):
                     self._version_short = unicode(line[5:].strip())            
@@ -93,7 +113,7 @@ class lunch_settings(object):
         
         try:    
             revListArgs = ["rev-list", "HEAD", "--count"]
-            ret, cco, _ = self.runGitCommand(revListArgs, self._lunchdir, quiet=False)
+            ret, cco, _ = self.runGitCommand(revListArgs, self.get_main_package_path(), quiet=False)
             if ret:
                 # something went wrong, get out of here!
                 raise False
@@ -104,26 +124,26 @@ class lunch_settings(object):
                 if retCode == 0:
                     self._commit_count_plugins = cco.strip()
         except:
-            version_file = os.path.join(self.get_lunchdir(),"version")
+            version_file = self.get_resource("version")
             if os.path.exists(version_file):
                 log_info("git rev_list not available, using version file info instead")
-                with contextlib.closing(open(version_file,"r")) as vfh:
+                with contextlib.closing(open(version_file, "r")) as vfh:
                     self._commit_count = vfh.read()
             else:
                 log_exception("git rev-list could not be executed correctly - commit count information not available")
             
     def read_config_from_hd(self): 
-        self._config_file.read(self._main_config_dir+'/settings.cfg')
+        self._config_file.read(self._main_config_dir + '/settings.cfg')
         
-        self._user_name = self.read_value_from_config_file(self._user_name,"general","user_name")
-        self._group = self.read_value_from_config_file(self._group,"general","group")
-        self._tcp_port = self.read_value_from_config_file(self._tcp_port,"general","tcp_port")
+        self._user_name = self.read_value_from_config_file(self._user_name, "general", "user_name")
+        self._group = self.read_value_from_config_file(self._group, "general", "group")
+        self._tcp_port = self.read_value_from_config_file(self._tcp_port, "general", "tcp_port")
         
-        self._auto_update = self.read_value_from_config_file(self._auto_update,"general","auto_update")
-        self._default_lunch_begin = self.read_value_from_config_file(self._default_lunch_begin,"general","default_lunch_begin")
-        self._default_lunch_end = self.read_value_from_config_file(self._default_lunch_end,"general","default_lunch_end")
-        self._alarm_begin_time = self.read_value_from_config_file(self._alarm_begin_time,"general","alarm_begin_time")
-        self._alarm_end_time = self.read_value_from_config_file(self._alarm_end_time,"general","alarm_end_time")
+        self._auto_update = self.read_value_from_config_file(self._auto_update, "general", "auto_update")
+        self._default_lunch_begin = self.read_value_from_config_file(self._default_lunch_begin, "general", "default_lunch_begin")
+        self._default_lunch_end = self.read_value_from_config_file(self._default_lunch_end, "general", "default_lunch_end")
+        self._alarm_begin_time = self.read_value_from_config_file(self._alarm_begin_time, "general", "alarm_begin_time")
+        self._alarm_end_time = self.read_value_from_config_file(self._alarm_end_time, "general", "alarm_end_time")
         
         self._peer_timeout = self.read_value_from_config_file(self._peer_timeout, "general", "peer_timeout")
         self._mute_timeout = self.read_value_from_config_file(self._mute_timeout, "general", "mute_timeout")
@@ -133,59 +153,59 @@ class lunch_settings(object):
         self._group_plugins = self.read_value_from_config_file(self._group_plugins, 'general', 'group_plugins')
         self._lunch_trigger = self.read_value_from_config_file(self._lunch_trigger, 'general', 'lunch_trigger')
         
-        #not shown in settings-plugin - handled by avatar-plugin
-        self._avatar_file =  self.read_value_from_config_file(self._avatar_file,"general","avatar_file")
-        self._available_db_connections = self.read_value_from_config_file(self._available_db_connections,"general","available_db_connections")        
+        # not shown in settings-plugin - handled by avatar-plugin
+        self._avatar_file = self.read_value_from_config_file(self._avatar_file, "general", "avatar_file")
+        self._available_db_connections = self.read_value_from_config_file(self._available_db_connections, "general", "available_db_connections")        
         
-        if self._user_name=="":
+        if self._user_name == "":
             self._user_name = getpass.getuser().decode()         
         
-        #apply proxy on start if given
-        self._proxy =  self.read_value_from_config_file(self._proxy,"general","proxy")  
+        # apply proxy on start if given
+        self._proxy = self.read_value_from_config_file(self._proxy, "general", "proxy")  
         if self._proxy:
             self.set_proxy(self._proxy)
             
-    def read_value_from_config_file(self,value,section,name):
+    def read_value_from_config_file(self, value, section, name):
         try:
             if type(value) is types.BooleanType:
-                value = self._config_file.getboolean(section,name)
+                value = self._config_file.getboolean(section, name)
             elif type(value) is types.IntType:
-                value = self._config_file.getint(section,name)
+                value = self._config_file.getint(section, name)
             else:
-                value = unicode(self._config_file.get(section,name))
+                value = unicode(self._config_file.get(section, name))
         except ConfigParser.NoSectionError:
             self._config_file.add_section(section)
         except ConfigParser.NoOptionError:
             pass
         except:
-            log_exception("error while reading %s from config file",name)
+            log_exception("error while reading %s from config file", name)
         return value
         
     def write_config_to_hd(self):
-        with codecs.open(self._main_config_dir+'/settings.cfg','w','utf-8') as f: 
+        with codecs.open(self._main_config_dir + '/settings.cfg', 'w', 'utf-8') as f: 
             self._config_file.write(f)
         
     def getCanUpdate(self, repo):
         if self.getGitCommandResult(["rev-parse"], repo) != 0:
             return (False, "'%s' is no git repository" % repo)
         
-        if self.getGitCommandResult(["diff","--name-only","--exit-code","--quiet"], repo) != 0:
+        if self.getGitCommandResult(["diff", "--name-only", "--exit-code", "--quiet"], repo) != 0:
             return (False, "There are unstaged changes")
         
-        if self.getGitCommandResult(["diff","--cached","--exit-code","--quiet"], repo) != 0:
+        if self.getGitCommandResult(["diff", "--cached", "--exit-code", "--quiet"], repo) != 0:
             return (False, "There are staged, uncommitted changes")
         
-        _, branch, __ = self.runGitCommand(["symbolic-ref","HEAD"], repo, quiet=False)
+        _, branch, __ = self.runGitCommand(["symbolic-ref", "HEAD"], repo, quiet=False)
         if "master" not in branch:
             return (False, "The selected branch is not the master branch")
         
-        if self.getGitCommandResult(["log","origin/master..HEAD","--exit-code","--quiet"]) != 0:
+        if self.getGitCommandResult(["log", "origin/master..HEAD", "--exit-code", "--quiet"]) != 0:
             return (False, "There are unpushed commits on the master branch")
         
         return (True, None)
     
     def getCanUpdateMain(self):
-        return self.getCanUpdate(self._lunchdir)
+        return self.getCanUpdate(self.get_main_package_path())
         
     def getCanUpdatePlugins(self):
         return self.getCanUpdate(self._main_config_dir + "/plugins/")
@@ -195,11 +215,23 @@ class lunch_settings(object):
     def set_auto_update_enabled(self, enable):
         self._auto_update = enable
     
-    def get_lunchdir(self):
-        return self._lunchdir
+    def get_main_package_path(self):
+        return self._main_package_path
+    
+    def get_resources_path(self):
+        return self._resources_path
+    
+    def get_resource(self, *args):
+        res = unicode(os.path.join(self.get_resources_path(), *args))
+        if not os.path.exists(res):
+            raise Exception("Resource %s does not exist." % res)
+        return res
     
     def get_main_config_dir(self):
         return self._main_config_dir
+    
+    def get_config(self, *args):
+        return unicode(os.path.join(self.get_main_config_dir(), *args))
     
     def get_plugin_dirs(self):
         return self._plugin_dirs
@@ -237,21 +269,21 @@ class lunch_settings(object):
     def get_log_file(self):
         return self._log_file
     
-    #the rest is read from/written to the config file        
+    # the rest is read from/written to the config file        
     def get_lunch_trigger(self):
         return self._lunch_trigger
-    def set_lunch_trigger(self,value):
+    def set_lunch_trigger(self, value):
         self._lunch_trigger = value
              
     def get_user_name(self):
         return self._user_name    
-    def set_user_name(self,name):
+    def set_user_name(self, name):
         self._user_name = convert_string(name)
         self._config_file.set('general', 'user_name', self._user_name)
        
     def get_group(self):
         return self._group
-    def set_group(self,value):
+    def set_group(self, value):
         self._group = value
     
     def get_auto_update(self):
@@ -264,9 +296,9 @@ class lunch_settings(object):
                  
     def get_avatar_file(self):
         return self.get_avatar()
-    def set_avatar_file(self,file_name,_something):  
-        if not os.path.exists(self._avatar_dir+"/"+file_name):
-            log_error("avatar does not exist: %s",file_name)
+    def set_avatar_file(self, file_name, _something):  
+        if not os.path.exists(self._avatar_dir + "/" + file_name):
+            log_error("avatar does not exist: %s", file_name)
             return
         self._avatar_file = convert_string(file_name)
         self._config_file.set('general', 'avatar_file', str(file_name))
@@ -341,7 +373,7 @@ class lunch_settings(object):
     def set_default_db_connection(self, newValue):
         self._default_db_connection = newValue
         
-    #always force at least one connection
+    # always force at least one connection
     def get_available_db_connections(self):
         conn = [unicode(x) for x in self._available_db_connections.split(";;")]
         if len(conn):
@@ -360,7 +392,7 @@ class lunch_settings(object):
         return self._proxy
     
     def set_proxy(self, newValue):
-        os.environ["http_proxy"]=newValue
-        os.environ["https_proxy"]=newValue
-        self._proxy=newValue
+        os.environ["http_proxy"] = newValue
+        os.environ["https_proxy"] = newValue
+        self._proxy = newValue
         

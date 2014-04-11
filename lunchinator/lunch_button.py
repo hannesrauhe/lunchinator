@@ -7,7 +7,7 @@ class LunchButton(QPushButton):
     def __init__(self, parent, msgfield=None):
         super(LunchButton, self).__init__(parent)
         
-        lunchIcon = QIcon(os.path.join(get_settings().get_lunchdir(), "images", "lunch.png"))
+        lunchIcon = QIcon(get_settings().get_resource("images", "lunchinator.png"))
         self.setIcon(lunchIcon)
         self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         self.setIconSize(QSize(64, 64))

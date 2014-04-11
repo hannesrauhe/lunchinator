@@ -6,8 +6,8 @@ import os
 class Notify(iface_called_plugin):    
     def __init__(self):
         super(Notify, self).__init__()
-        self.options = [((u"icon_file", u"Icon if no avatar"),get_settings().get_lunchdir()+"/images/mini_breakfast.png"),
-                        ((u"audio_file", u"Audio File for Lunch Messages",self.audioFileChanged), get_settings().get_lunchdir()+"/sounds/sonar.wav"),
+        self.options = [((u"icon_file", u"Icon if no avatar"),get_settings().get_resource("images", "mini_breakfast.png")),
+                        ((u"audio_file", u"Audio File for Lunch Messages",self.audioFileChanged), get_settings().get_resource("sounds", "sonar.wav")),
                         ((u"open_optival_drive", "Open Optical Drive on Lunc"), True)]
         
     def activate(self):
@@ -22,10 +22,12 @@ class Notify(iface_called_plugin):
             audio_file = new_value
         elif os.path.exists(get_settings().get_main_config_dir()+"/sounds/"+new_value):
             audio_file= get_settings().get_main_config_dir()+"/sounds/"+new_value
-        elif os.path.exists(get_settings().get_lunchdir()+"/sounds/"+new_value):
-            audio_file = get_settings().get_lunchdir()+"/sounds/"+new_value
         else:
-            log_error("configured audio file %s does not exist in sounds folder, using old one"%new_value)
+            try:
+                # get_resource will raise if the resource does not exist.
+                audio_file = get_settings().get_resource("sounds", new_value)
+            except:
+                log_error("configured audio file %s does not exist in sounds folder, using old one"%new_value)
             # don't set the new value, keep old value
         return audio_file
             

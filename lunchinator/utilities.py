@@ -24,7 +24,7 @@ def getPlatform():
         return PLATFORM_OTHER
 
 def checkBundleIdentifier(ident):
-    res = subprocess.call([get_settings().get_lunchdir()+'/bin/check_bundle_identifier.sh', ident])
+    res = subprocess.call([get_settings().get_resource('bin', 'check_bundle_identifier.sh'), ident])
     return res == 1
 
 # TODO: message groups for notification center
@@ -193,7 +193,7 @@ def getBinary(name, altLocation = ""):
         
     gbinary = which(name)
     if not gbinary:
-        gbinary = os.path.join(get_settings().get_lunchdir(),altLocation,name)
+        gbinary = get_settings().get_resource(altLocation, name)
     if not os.path.isfile(gbinary):
         return None   
     
@@ -235,7 +235,7 @@ def getGPG(secret=False):
         if secret:
             path = os.path.join(ghome, "lunchinator_pub_sec_0x17F57DC2.asc")
         else:
-            path = os.path.join(get_settings().get_lunchdir(),"lunchinator_pub_0x17F57DC2.asc")
+            path = get_settings().get_resource("lunchinator_pub_0x17F57DC2.asc")
                 
         if not os.path.isfile(path):
             log_error("Key file not found:", path)

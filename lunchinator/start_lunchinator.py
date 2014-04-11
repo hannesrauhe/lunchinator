@@ -62,7 +62,7 @@ def updateRepositories():
                 log_error("git pull did not work (main repository). The Update mechanism therefore does not work.\n\
 If you do not know, what to do now:\n\
 it should be safe to call 'git stash' in the lunchinator directory %s start lunchinator again.\n\
-Error was: %s"%(get_settings().get_lunchdir(),str(upd_res)))
+Error was: %s"%(get_settings().get_main_package_path(),str(upd_res)))
 
         if os.path.exists(get_settings().get_external_plugin_dir()):    
             canUpdate, reason = get_settings().getCanUpdatePlugins()
