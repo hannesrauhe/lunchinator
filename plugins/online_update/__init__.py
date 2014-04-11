@@ -111,7 +111,7 @@ class online_update(iface_general_plugin):
         self._set_status("Checking for Update...")
         
         if self.getCheckURLBase() == None:
-            log_warning("Auto Update does not work on your OS yet.")
+            self._set_status("Auto Update does not work on your OS yet.", True)
             return
         
         url = self.getCheckURLBase() + "/latest_version.asc"
