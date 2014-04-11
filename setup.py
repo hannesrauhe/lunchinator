@@ -14,7 +14,7 @@ def get_version():
         # something went wrong
         return None, None
     
-    commit_count = int(pOut.strip())
+    commit_count = pOut.strip()
     return commit_count, (0, 1, commit_count, 'final', 0)
     
 version, version_info = get_version()
@@ -54,13 +54,14 @@ setup(
     maintainer =    'Hannes Rauhe',
     maintainer_email = 'hannes [at] scitivity.net',
     license =       'BSD License',
-    packages =      ['lunchinator', 'lunchinator.cli', 'lunchinator.yapsy'],
+    packages =      ['lunchinator', 'lunchinator.cli', 'lunchinator.yapsy', 'gnupg'],
     scripts =       ['bin/lunchinator'],
-    data_files =    [('sounds', ['sounds/sonar.wav']),
-                     ('images', ['images/webcam.jpg',
+    data_files =    [('share/lunchinator/sounds', ['sounds/sonar.wav']),
+                     ('share/lunchinator/images', ['images/webcam.jpg',
                                  'images/mini_breakfast.png',
                                  'images/lunch.png',
-                                 'images/lunchred.png'])],
+                                 'images/lunchred.png']),
+                     ('share/lunchinator/plugins', ['plugins/*'])],
     classifiers =   ['Development Status :: %s' % DEVSTATUS,
                      'License :: OSI Approved :: BSD License',
                      'Operating System :: OS Independent',
@@ -72,5 +73,4 @@ setup(
                      'Topic :: Utilities',
                      'Topic :: Communications :: Chat',
                     ],
-      requires =    ['gnupg']
     )

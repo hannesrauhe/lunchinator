@@ -1,5 +1,10 @@
 #!/bin/bash
+pushd ..
+python ../setup.py --command-packages=stdeb.command sdist_dsc
+popd
+exit 0
 
+# old version
 rm -rf dist
 
 echo "*** Compiling Application ***"
