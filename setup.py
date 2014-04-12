@@ -3,7 +3,27 @@ from __future__ import with_statement
 import os, subprocess
 from distutils.core import setup
 
-def get_version():
+
+def _get_version(version_info):
+    " Returns a PEP 386-compliant version number from version_info. "
+    " Taken from python-markdown project. "
+    assert len(version_info) == 5
+    assert version_info[3] in ('alpha', 'beta', 'rc', 'final')
+
+    parts = 2 if version_info[2] == 0 else 3
+    main = '.'.join(map(str, version_info[:parts]))
+
+    sub = ''
+    if version_info[3] == 'alpha' and version_info[4] == 0:
+        # TODO: maybe append some sort of git info here??
+        sub = '.dev'
+    elif version_info[3] != 'final':
+        mapping = {'alpha': 'a', 'beta': 'b', 'rc': 'c'}
+        sub = mapping[version_info[3]] + str(version_info[4])
+
+    return str(main + sub)
+
+def compute_version():
     if os.path.exists("version"):
         with open("version", "rb") as inFile:
             commit_count = inFile.next().strip()
@@ -23,9 +43,10 @@ def get_version():
         except:
             return None, None
 
-    return commit_count, (0, 1, commit_count, 'final', 0)
+    version_info = (0, 1, commit_count, 'final', 0)
+    return _get_version(version_info), version_info
     
-version, version_info = get_version()
+version, version_info = compute_version()
 
 # Get development Status for classifiers
 dev_status_map = {
@@ -71,9 +92,9 @@ setup(
     description =   'The Lunchinator.',
     long_description = long_description,
     author =        'Hannes Rauhe, Cornelius Ratsch',
-    author_email =  'info [at] lunchinator.de',
-    maintainer =    'Hannes Rauhe',
-    maintainer_email = 'hannes [at] scitivity.net',
+    author_email =  'info@lunchinator.de',
+    maintainer =     os.getenv('DEBFULLNAME'),
+    maintainer_email = os.getenv('DEBEMAIL'),
     license =       'BSD License',
     packages =      ['lunchinator', 'lunchinator.cli', 'lunchinator.yapsy', 'gnupg'],
     scripts =       ['bin/lunchinator'],

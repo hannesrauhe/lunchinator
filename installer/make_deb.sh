@@ -1,12 +1,24 @@
 #!/bin/bash
+
+if [ "$DEBFULLNAME" == "" ] || [ "$DEBEMAIL" == "" ]
+then
+  echo "Please export DEBFULLNAME and DEBEMAIL to your environment."
+  exit -1
+fi
+
+dists=(lucid precise quantal rraring saucy trusty)
+
+rm -rf dist deb_dist
+git rev-list HEAD --count > version
 pushd ..
-rm -rf deb_dist
-git rev-list HEAD --count > installer/version
-python setup.py --command-packages=stdeb.command sdist_dsc
-cd deb_dist/lunchinator-*
+python setup.py sdist --dist-dir=installer/dist
+popd
+py2dsc dist/Lunchinator*
+pushd deb_dist/lunchinator-*
 echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light" >>debian/*.postinst
 echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark" >>debian/*.postinst
-dpkg-buildpackage -rfakeroot -uc -us
+sed -i -e 's/unstable/precise/' debian/changelog
+debuild -S
 popd
 exit 0
 

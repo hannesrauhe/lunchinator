@@ -1,0 +1,4 @@
+exclude images/*.icns
+exclude images/mini_breakfast_by*
+global-exclude *.exe *.pyc
+include version lunchinator_pub_0x17F57DC2.asc
