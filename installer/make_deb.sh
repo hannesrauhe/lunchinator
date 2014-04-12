@@ -1,105 +1,69 @@
 #!/bin/bash
 
+args=$(getopt -l "publish,clean" -o "pc" -- "$@")
+
+if [ ! $? == 0 ]
+then
+  exit 1
+fi
+
+eval set -- "$args"
+
+PUBLISH=false
+
+while [ $# -ge 1 ]; do
+  case "$1" in
+    --)
+        # No more options left.
+        shift
+        break
+       ;;
+    -p|--publish)
+        PUBLISH=true
+        shift
+        ;;
+    -c|--clean)
+        rm -rf deb_*/ *.log dist
+        exit 0
+        ;;
+    -h)
+        echo "Use with -p|--publish to publish to Launchpad immediately."
+        exit 0
+        ;;
+  esac
+
+  shift
+done
+
 if [ "$DEBFULLNAME" == "" ] || [ "$DEBEMAIL" == "" ]
 then
   echo "Please export DEBFULLNAME and DEBEMAIL to your environment."
   exit -1
 fi
 
-dists=(lucid precise quantal rraring saucy trusty)
-
-rm -rf dist deb_dist
 git rev-list HEAD --count > version
-pushd ..
-python setup.py sdist --dist-dir=installer/dist
-popd
-py2dsc dist/Lunchinator*
-pushd deb_dist/lunchinator-*
-echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light" >>debian/*.postinst
-echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark" >>debian/*.postinst
-sed -i -e 's/unstable/precise/' debian/changelog
-debuild -S
-popd
-exit 0
 
-# old version
-rm -rf dist
+dists=(lucid precise quantal raring saucy trusty)
 
-echo "*** Compiling Application ***"
-pyinstaller -y -F -w lunchinator_lin.spec
-git rev-list HEAD --count > dist/lunchinator/version
-
-echo "*** copying python code ***"
-cp -r ../bin ../images ../lunchinator ../plugins ../sounds ../yapsy ../start_lunchinator.py  dist/lunchinator
-
-echo "*** Creating Package Structure ***"
-mkdir -p dist/DEBIAN
-mkdir -p dist/usr/bin
-mkdir -p dist/usr/lib
-mkdir -p dist/usr/share/applications
-mkdir -p dist/usr/share/icons/hicolor/scalable/apps
-mkdir -p dist/usr/share/icons/ubuntu-mono-dark/status/24/
-mkdir -p dist/usr/share/icons/ubuntu-mono-light/status/24/
-
-cat > dist/DEBIAN/postinst <<EOF
-gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light
-gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark
-EOF
-chmod 755 dist/DEBIAN/postinst
-
-cat > dist/usr/share/applications/lunchinator.desktop <<EOF
-[Desktop Entry]
-Type=Application
-Encoding=UTF-8
-Name=lunchinator
-GenericName=The Lunchinator
-Comment=It's the Lunchinator.
-Exec=lunchinator
-Icon=lunch
-Terminal=false
-Categories=Utilities;Application
-EOF
-
-cat > dist/usr/bin/lunchinator <<EOF
-#!/bin/bash
-pushd /usr/lib/lunchinator
-./lunchinator_exe
-popd
-EOF
-
-chmod +x dist/usr/bin/lunchinator
-
-mv dist/lunchinator dist/usr/lib/
-
-# install icons for mono-dark (yes, the 'light' icon is for the dark theme)
-cp ../images/lunchlight.svg dist/usr/share/icons/ubuntu-mono-dark/status/24/lunchinator.svg
-cp ../images/lunchred.svg dist/usr/share/icons/ubuntu-mono-dark/status/24/lunchinatorred.svg
-
-# install icons for mono-light
-cp ../images/lunch.svg dist/usr/share/icons/ubuntu-mono-light/status/24/lunchinator.svg
-cp ../images/lunchred.svg dist/usr/share/icons/ubuntu-mono-light/status/24/lunchinatorred.svg
-
-# install program icon
-cp ../images/lunch.svg dist/usr/share/icons/hicolor/scalable/apps
-
-cat > dist/DEBIAN/control <<EOF
-Package: lunchinator
-Version: $(git rev-list HEAD --count)
-Section: Application/Utilities
-Priority: optional
-Architecture: amd64
-Depends:
-Maintainer: Cornelius Ratsch <ratsch@stud.uni-heidelberg.de>
-Installed-Size: $(du -s dist/usr/ | cut -f 1 -d $'\t') 
-Description: The Lunchinator.
- It's the Lunchinator. It does lunch stuff.
-EOF
-
-echo "*** Creating Debian package ***"
-fakeroot dpkg-deb --build dist
-source /etc/lsb-release
-DEB_NAME=lunchinator_$(git rev-list HEAD --count)_${DISTRIB_RELEASE}.deb
-mv dist.deb dist/"$DEB_NAME" 
-
-echo "*** Creating signature file ***"
-python hashNsign.py dist/"$DEB_NAME"
+for dist in "${dists[@]}"
+do
+  echo -e "\e[00;31m***** Creating source package for ${dist} *****\e[00m"
+  export dist
+  rm -rf dist deb_${dist}
+  pushd ..
+  python setup.py sdist --dist-dir=installer/dist
+  popd
+  py2dsc --suite=${dist} --dist-dir=deb_${dist} dist/Lunchinator*
+  pushd deb_${dist}/lunchinator-*
+  echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light" >>debian/*.postinst
+  echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark" >>debian/*.postinst
+  debuild -S 2>&1 | tee ../../${dist}.log
+  if $PUBLISH
+  then
+    pushd ..
+    echo -e "\e[00;31m***** Publishing package for ${dist} *****\e[00m"
+    dput ppa:lunch-team/lunchinator lunchinator_*.changes
+    popd
+  fi
+  popd
+done

@@ -21,7 +21,10 @@ def _get_version(version_info):
         mapping = {'alpha': 'a', 'beta': 'b', 'rc': 'c'}
         sub = mapping[version_info[3]] + str(version_info[4])
 
-    return str(main + sub)
+    dist = ""
+    if os.getenv("dist"):
+        dist = "." + os.getenv("dist")
+    return str(main + sub + dist)
 
 def compute_version():
     if os.path.exists("version"):
