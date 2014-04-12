@@ -3,4 +3,5 @@
 /win
 /mac
 /linux
-/deb_dist
+/deb_*
+*.log

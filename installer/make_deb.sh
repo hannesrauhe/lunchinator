@@ -1,5 +1,7 @@
 #!/bin/bash
 
+dists=(lucid precise saucy trusty)
+
 args=$(getopt -l "publish,clean" -o "pc" -- "$@")
 
 if [ ! $? == 0 ]
@@ -41,9 +43,8 @@ then
   exit -1
 fi
 
-git rev-list HEAD --count > version
-
-dists=(lucid precise quantal raring saucy trusty)
+# version has to be located besides setup.py
+git rev-list HEAD --count > ../version
 
 for dist in "${dists[@]}"
 do
