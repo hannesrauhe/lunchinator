@@ -2,6 +2,8 @@
 
 # ensure pyinstaller is in PATH
 
+rm -rf build/ dist/
+
 echo "*** Building Application Bundle ***"
 pyinstaller -y -F -w lunchinator_osx.spec
 
@@ -12,7 +14,7 @@ Plugins=MacOS/qt4_plugins
 EOF
 
 echo "*** copying python code into bundle ***"
-cp -r ../bin ../images ../lunchinator ../plugins ../sounds ../yapsy ../start_lunchinator.py  dist/Lunchinator.app/Contents
+cp -r ../bin ../images ../lunchinator ../plugins ../sounds ../start_lunchinator.py  dist/Lunchinator.app/Contents
 cp $(which terminal-notifier) dist/Lunchinator.app/Contents
 mkdir dist/Lunchinator.app/Contents/gnupg
 cp $(which gpg) dist/Lunchinator.app/Contents/gnupg

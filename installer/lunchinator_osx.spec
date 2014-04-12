@@ -4,7 +4,8 @@ a = Analysis(['../start_lunchinator.py',
               '../plugins/simple_view/__init__.py',
               '../plugins/remote_pictures/__init__.py',
               '../plugins/remote_pictures/remote_pictures_gui.py',
-              '../plugins/online_update/__init__.py'],
+              '../plugins/online_update/__init__.py',
+              '../plugins/lunch_button.py'],
              pathex=['.'],
              hiddenimports=['SimpleHTTPServer', 'sqlite3', 'dbapi2', 'cgi', 'csv', 'Queue', 'netrc'],
              hookspath=None,
@@ -17,7 +18,7 @@ exe = EXE(pyz,
           debug=False,
           strip=None,
           upx=True,
-          console=False , icon='../images/lunch.icns')
+          console=False , icon='../images/lunchinator.icns')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
@@ -33,4 +34,4 @@ app = BUNDLE(coll,
                'LSUIElement': 'True',
                'LSBackgroundOnly': 'False'
              },
-             icon='../images/lunch.icns')
+             icon='../images/lunchinator.icns')

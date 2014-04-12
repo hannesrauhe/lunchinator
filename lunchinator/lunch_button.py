@@ -1,7 +1,6 @@
 from PyQt4.QtGui import QPushButton, QSizePolicy, QIcon
 from PyQt4.QtCore import QSize
 from lunchinator import get_settings, get_server, convert_string
-import os
     
 class LunchButton(QPushButton):
     def __init__(self, parent, msgfield=None):
