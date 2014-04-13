@@ -2,7 +2,7 @@
 from __future__ import with_statement
 import os, subprocess
 from distutils.core import setup
-
+from distutils.command import install
 
 def _get_version(version_info):
     " Returns a PEP 386-compliant version number from version_info. "
@@ -81,11 +81,55 @@ data_files = [('share/lunchinator/sounds', ['sounds/sonar.wav']),
                                             'images/lunchinatorred.png']),
               ('share/lunchinator', ['lunchinator_pub_0x17F57DC2.asc', 'version']),
               ('share/icons/hicolor/scalable/apps', ['images/lunchinator.svg']),
-              ('share/icons/ubuntu-mono-dark/status/24', ['images/white/lunchinator.svg', 'images/lunchinatorred.svg']),
-              ('share/icons/ubuntu-mono-light/status/24', ['images/black/lunchinator.svg', 'images/lunchinatorred.svg']),
               ('share/applications', ['installer/lunchinator.desktop'])]
+if os.getenv('dist'):
+    data_files.append(('share/icons/ubuntu-mono-dark/status/24', ['images/white/lunchinator.svg', 'images/lunchinatorred.svg']))
+    data_files.append(('share/icons/ubuntu-mono-light/status/24', ['images/black/lunchinator.svg', 'images/lunchinatorred.svg']))
 data_files.extend([("share/lunchinator/" + dp, [os.path.join(dp, fn) for fn in fns if not fn.endswith('.pyc')]) for dp, _, fns in os.walk('plugins')])
 data_files.extend([("share/lunchinator/" + dp, [os.path.join(dp, fn) for fn in fns]) for dp, _, fns in os.walk('bin')])
+
+# take ownership of the following directories, this is for RPM generation
+total_ownership = set(['share/lunchinator'])
+partial_ownership = set(['local/share/icons', 'icons/hicolor', 'lib/python.\..', 'lib64/python.\..', 'local/share/applications'])
+
+class my_install(install.install):
+    def get_outputs(self):
+        import re
+        outputs = install.install.get_outputs(self)
+        # take ownership of directories, too
+        
+        dirs = set()
+        
+        root_len = 0
+        if self.root:
+            root_len = len(self.root)
+        
+        for aFile in outputs:
+            found = False
+            for pattern in total_ownership:
+                match = re.search('/' + pattern + '/', aFile)
+                if match:
+                    dirs.add(aFile[:match.end()])
+                    # file can only match one pattern
+                    found = True
+                    break
+                    
+            if not found:
+                for pattern in partial_ownership:
+                    match = re.search('/' + pattern + '/', aFile)
+                    if match:
+                        # strip prefix
+                        aFile = aFile[root_len:]
+                        
+                        while len(aFile) > match.end() - root_len:
+                            aFile = os.path.dirname(aFile)
+                            dirs.add(" " * root_len + "%%dir %s" % (aFile))
+                        
+                        # file can only match one pattern
+                        break
+                
+        outputs.extend(sorted(dirs))
+        return outputs
 
 setup(
     name =          'Lunchinator',
@@ -102,6 +146,7 @@ setup(
     packages =      ['lunchinator', 'lunchinator.cli'],
     scripts =       ['bin/lunchinator'],
     data_files =    data_files,
+    cmdclass =      {'install': my_install},
     classifiers =   ['Development Status :: %s' % DEVSTATUS,
                      'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
                      'Operating System :: OS Independent',
