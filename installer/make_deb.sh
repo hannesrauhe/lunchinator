@@ -58,6 +58,7 @@ do
   pushd deb_${dist}/lunchinator-*
   echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light" >>debian/*.postinst
   echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark" >>debian/*.postinst
+	echo "pip install requests requests-oauthlib oauthlib python-twitter python-gnupg yapsy" >> debian/*.postinst
   debuild -S 2>&1 | tee ../../${dist}.log
   if $PUBLISH
   then

@@ -199,7 +199,7 @@ def getBinary(name, altLocation = ""):
     
     if getPlatform() == PLATFORM_WINDOWS:
         gbinary = "\""+gbinary+"\""
-    return gbinary
+    return os.path.realpath(gbinary)
 
 def _findLunchinatorKeyID(gpg, secret):
     # use key from keyring as default
@@ -212,7 +212,7 @@ def _findLunchinatorKeyID(gpg, secret):
 def getGPG(secret=False):
     """ Returns tuple (GPG instance, keyid) """
     
-    from gnupg.gnupg import GPG
+    from gnupg import GPG
     gbinary = getBinary("gpg", "gnupg")
     if not gbinary:
         log_error("GPG not found")
@@ -222,8 +222,10 @@ def getGPG(secret=False):
     
     try:
         gpg = GPG(gbinary,ghome)
+        if not gpg.encoding:
+            gpg.encoding = 'utf-8'
     except Exception, e:
-        log_error("GPG not working: "+str(e))
+        log_exception("GPG not working: "+str(e))
         return None, None
     
     # use key from keyring as default

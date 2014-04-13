@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import iface_general_plugin
 from lunchinator import get_server, get_settings, log_error, log_debug, log_warning
-from lunchinator.yapsy.PluginManager import PluginManagerSingleton
+from yapsy.PluginManager import PluginManagerSingleton
 from threading import Lock
 
 class db_connections(iface_general_plugin):
@@ -84,7 +84,7 @@ class db_connections(iface_general_plugin):
         return self.open_connections[name]
     
     def create_options_widget(self, parent):
-        from DbConnOptions import DbConnOptions
+        from db_connections.DbConnOptions import DbConnOptions
         
         self._init_plugin_objects()
         

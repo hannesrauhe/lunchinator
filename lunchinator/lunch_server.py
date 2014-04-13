@@ -9,7 +9,7 @@ import socket,sys,os,json,codecs,contextlib
 from threading import Lock
 from cStringIO import StringIO
 
-from lunchinator.yapsy.ConfigurablePluginManager import ConfigurablePluginManager
+from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning,\
     convert_string
      

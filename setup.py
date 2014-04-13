@@ -99,7 +99,7 @@ setup(
     maintainer =     os.getenv('DEBFULLNAME'),
     maintainer_email = os.getenv('DEBEMAIL'),
     license =       'BSD License',
-    packages =      ['lunchinator', 'lunchinator.cli', 'lunchinator.yapsy', 'gnupg'],
+    packages =      ['lunchinator', 'lunchinator.cli'],
     scripts =       ['bin/lunchinator'],
     data_files =    data_files,
     classifiers =   ['Development Status :: %s' % DEVSTATUS,

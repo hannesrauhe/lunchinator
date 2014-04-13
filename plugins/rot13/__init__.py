@@ -12,7 +12,7 @@ class rot13(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
-        from rot13 import rot13box
+        from rot13.rot13box import rot13box
         
         w = rot13box(parent)
         if get_server().messagesCount() > 0:

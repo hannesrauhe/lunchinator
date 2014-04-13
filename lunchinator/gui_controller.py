@@ -1,6 +1,6 @@
 import sys, sip
 from lunchinator import get_server, log_exception, log_info, get_settings, \
-    log_error, convert_string, log_warning, log_debug
+    log_error, convert_string, log_warning
 import socket, os, time, subprocess
 import platform
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
@@ -13,7 +13,7 @@ from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
-from lunchinator.yapsy.PluginManager import PluginManagerSingleton
+from yapsy.PluginManager import PluginManagerSingleton
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
