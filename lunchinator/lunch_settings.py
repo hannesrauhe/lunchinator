@@ -83,12 +83,12 @@ class lunch_settings(object):
         self._config_file = ConfigParser.SafeConfigParser()
         self.read_config_from_hd()
         
-        version_file = self.get_resource("version")
-        if os.path.exists(version_file):
+        try:
+            version_file = self.get_resource("version")
             with contextlib.closing(open(version_file, "r")) as vfh:
                 self._commit_count = vfh.read()
-        else:
-            log_exception("version file missing, no version information")
+        except Exception, e:
+            log_error("version file missing, no version information")
             
     def read_config_from_hd(self): 
         self._config_file.read(self._main_config_dir + '/settings.cfg')

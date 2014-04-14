@@ -604,36 +604,13 @@ class lunch_server(object):
                 log_info("Got Stop Command from localhost: %s"%data)
                 self.running = False
                 self.exitCode = EXIT_CODE_STOP #run_forever script will stop
-            elif data.startswith("HELO_UPDATE"):
-                self.update_request = True
-                self.controller.notifyUpdates()
-                if get_settings().get_auto_update_enabled() and not self.no_updates:
-                    log_info("local update")
-                    self.running = False
-                    
-                    #new update-script:
-                    self.exitCode = EXIT_CODE_UPDATE
-                else:
-                    log_info("local update issued but updates are disabled")
-            #only stop and update command is allowed from localhost, returning here
+            #only stop command is allowed from localhost, returning here
             return     
                 
         try:        
             (cmd, value) = data.split(" ",1)
-            if cmd.startswith("HELO_UPDATE"):
-                t = strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8")
-                self.update_request = True
-                self.controller.notifyUpdates()
-                if get_settings().get_auto_update_enabled() and not self.no_updates:
-                    log_info("%s: [%s] update"%(t,ip))
-                    self.running = False
-                    
-                    #new update-script:
-                    self.exitCode = EXIT_CODE_UPDATE
-                else:
-                    log_info("%s: %s issued an update but updates are disabled"%( t,ip))
                 
-            elif cmd.startswith("HELO_REQUEST_DICT"):
+            if cmd.startswith("HELO_REQUEST_DICT"):
                 self._update_peer_info(ip, json.loads(value))
                 self.call("HELO_DICT "+json.dumps(self._createMembersDict()),client=ip)                   
                 
