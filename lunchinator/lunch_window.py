@@ -40,9 +40,10 @@ class LunchinatorWindow(QMainWindow):
         
         # add plugins
         try:
-            for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
-                if pluginInfo.plugin_object.is_activated:
-                    self.addPluginWidget(pluginInfo.plugin_object, pluginInfo.name, noTabs=True)
+            if get_server().get_plugins_enabled():
+                for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
+                    if pluginInfo.plugin_object.is_activated:
+                        self.addPluginWidget(pluginInfo.plugin_object, pluginInfo.name, noTabs=True)
         except:
             log_exception("while including plugins %s"%str(sys.exc_info()))
         
@@ -102,6 +103,8 @@ class LunchinatorWindow(QMainWindow):
             aDockWidget.setFeatures(aDockWidget.features() | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
             
     def addPluginWidgetByName(self, name):
+        if not get_server().get_plugins_enabled():
+            return
         try:
             pluginInfo = get_server().plugin_manager.getPluginByName(name, u"gui")
             if not pluginInfo.plugin_object.is_activated:

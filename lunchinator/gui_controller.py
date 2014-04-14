@@ -13,7 +13,6 @@ from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
-from yapsy.PluginManager import PluginManagerSingleton
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -174,10 +173,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
             log_info("server not running")
              
         if self.running:
-            for pluginInfo in get_server().plugin_manager.getAllPlugins():
-                if pluginInfo.plugin_object.is_activated:
-                    pluginInfo.plugin_object.deactivate()
-            log_info("plug-ins deactivated, exiting")
+            if get_server().get_plugins_enabled():
+                for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                    if pluginInfo.plugin_object.is_activated:
+                        pluginInfo.plugin_object.deactivate()
+                log_info("plug-ins deactivated, exiting")
             self.running = False
             
         finalExitCode = 0
@@ -262,46 +262,50 @@ class LunchinatorGuiController(QObject, LunchServerController):
         # create the plugin submenu
         menu = QMenu(parent)
         plugin_menu = QMenu("PlugIns", menu)
-        allPlugins = [x for x in PluginManagerSingleton.get().getAllPlugins() if not x.plugin_object.is_activation_forced()]
         
-        if get_settings().get_group_plugins():
-            self.pluginActions = {}
-            catMenus = {}
+        self.pluginActions = None
+        if get_server().get_plugins_enabled():
+            from yapsy.PluginManager import PluginManagerSingleton
+            allPlugins = [x for x in PluginManagerSingleton.get().getAllPlugins() if not x.plugin_object.is_activation_forced()]
             
-            for pluginInfo in sorted(allPlugins, key=lambda info : info.name):                
-                categoryMenu = None
-                anAction = None
-                for aCat in pluginInfo.categories:
-                    if aCat in catMenus:
-                        categoryMenu = catMenus[aCat]
-                    else:
-                        categoryMenu = QMenu(aCat, plugin_menu)
-                        catMenus[aCat] = categoryMenu
+            if get_settings().get_group_plugins():
+                self.pluginActions = {}
+                catMenus = {}
                 
-                    if anAction == None:
-                        anAction = categoryMenu.addAction(pluginInfo.name)
-                        anAction.setCheckable(True)
-                        anAction.setChecked(pluginInfo.plugin_object.is_activated)
-                        anAction.toggled.connect(partial(self.toggle_plugin, anAction, aCat))
-                        self.pluginNameToMenuAction[pluginInfo.name] = anAction
-                    else:
-                        categoryMenu.addAction(anAction)
+                for pluginInfo in sorted(allPlugins, key=lambda info : info.name):                
+                    categoryMenu = None
+                    anAction = None
+                    for aCat in pluginInfo.categories:
+                        if aCat in catMenus:
+                            categoryMenu = catMenus[aCat]
+                        else:
+                            categoryMenu = QMenu(aCat, plugin_menu)
+                            catMenus[aCat] = categoryMenu
                     
-                    if aCat in self.pluginActions:
-                        self.pluginActions[aCat].append(anAction)
-                    else:
-                        self.pluginActions[aCat] = [anAction]
-            for _cat, aMenu in sorted(catMenus.iteritems(), key=lambda aTuple : aTuple[0]):
-                plugin_menu.addMenu(aMenu)
-        else:
-            self.pluginActions = []
-            for pluginInfo in sorted(allPlugins, key=lambda info : info.name):
-                anAction = plugin_menu.addAction(pluginInfo.name)
-                anAction.setCheckable(True)
-                anAction.setChecked(pluginInfo.plugin_object.is_activated)
-                anAction.toggled.connect(partial(self.toggle_plugin, anAction, pluginInfo.categories[0]))
-                self.pluginNameToMenuAction[pluginInfo.name] = anAction
-                self.pluginActions.append(anAction)
+                        if anAction == None:
+                            anAction = categoryMenu.addAction(pluginInfo.name)
+                            anAction.setCheckable(True)
+                            anAction.setChecked(pluginInfo.plugin_object.is_activated)
+                            anAction.toggled.connect(partial(self.toggle_plugin, anAction, aCat))
+                            self.pluginNameToMenuAction[pluginInfo.name] = anAction
+                        else:
+                            categoryMenu.addAction(anAction)
+                        
+                        if aCat in self.pluginActions:
+                            self.pluginActions[aCat].append(anAction)
+                        else:
+                            self.pluginActions[aCat] = [anAction]
+                for _cat, aMenu in sorted(catMenus.iteritems(), key=lambda aTuple : aTuple[0]):
+                    plugin_menu.addMenu(aMenu)
+            else:
+                self.pluginActions = []
+                for pluginInfo in sorted(allPlugins, key=lambda info : info.name):
+                    anAction = plugin_menu.addAction(pluginInfo.name)
+                    anAction.setCheckable(True)
+                    anAction.setChecked(pluginInfo.plugin_object.is_activated)
+                    anAction.toggled.connect(partial(self.toggle_plugin, anAction, pluginInfo.categories[0]))
+                    self.pluginNameToMenuAction[pluginInfo.name] = anAction
+                    self.pluginActions.append(anAction)
         
         # main _menu
         anAction = menu.addAction('Call for lunch')
@@ -418,6 +422,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
 
     @pyqtSlot()        
     def settingsDialogClosed(self):
+        if not get_server().get_plugins_enabled():
+            return
         resp = self.settingsWindow.result()
         for pluginInfo in get_server().plugin_manager.getAllPlugins():
             if pluginInfo.plugin_object.is_activated:

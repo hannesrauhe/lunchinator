@@ -2,7 +2,6 @@ import subprocess,sys,ctypes
 from lunchinator import log_exception, get_server, log_warning, log_debug,\
     get_settings, log_error
 import os
-from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
 import threading
 import contextlib
 
@@ -156,6 +155,9 @@ def getValidQtParent():
     raise Exception("Could not find a valid QObject instance")
     
 def processPluginCall(ip, call):
+    if not get_server().get_plugins_enabled():
+        return
+    from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
     member_info = {}
     if get_server().get_peer_info().has_key(ip):
         member_info = get_server().get_peer_info()[ip]

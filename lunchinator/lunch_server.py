@@ -1,15 +1,12 @@
 #!/usr/bin/python
 # coding=utf-8
 
-from iface_plugins import iface_called_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
-from iface_db_plugin import iface_db_plugin
 from time import strftime, localtime, time, mktime, gmtime
 from datetime import datetime
 import socket,sys,os,json,codecs,contextlib
 from threading import Lock
 from cStringIO import StringIO
 
-from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning,\
     convert_string
      
@@ -72,24 +69,27 @@ class lunch_server(object):
         else:
             from lunchinator.lunch_server_controller import LunchServerController
             self.controller = LunchServerController()
-        
-        PluginManagerSingleton.setBehaviour([
-            ConfigurablePluginManager,
-        ])
-        self.plugin_manager = PluginManagerSingleton.get()
-        self.plugin_manager.app = self
-        self.plugin_manager.setConfigParser(get_settings().get_config_file(),get_settings().write_config_to_hd)
-        self.plugin_manager.setPluginPlaces(get_settings().get_plugin_dirs())
-        categoriesFilter = {
-           "general" : iface_general_plugin,
-           "called" : iface_called_plugin,
-           "gui" : iface_gui_plugin,
-           "db" : iface_db_plugin
-           }
-        self.plugin_manager.setCategoriesFilter(categoriesFilter) 
 
-        
-        if self.get_plugins_enabled():
+        if self.get_plugins_enabled():  
+            from iface_plugins import iface_called_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
+            from iface_db_plugin import iface_db_plugin
+            from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
+            
+            PluginManagerSingleton.setBehaviour([
+                ConfigurablePluginManager,
+            ])
+            self.plugin_manager = PluginManagerSingleton.get()
+            self.plugin_manager.app = self
+            self.plugin_manager.setConfigParser(get_settings().get_config_file(),get_settings().write_config_to_hd)
+            self.plugin_manager.setPluginPlaces(get_settings().get_plugin_dirs())
+            categoriesFilter = {
+               "general" : iface_general_plugin,
+               "called" : iface_called_plugin,
+               "gui" : iface_gui_plugin,
+               "db" : iface_db_plugin
+               }
+            self.plugin_manager.setCategoriesFilter(categoriesFilter) 
+
             try:
                 self.plugin_manager.collectPlugins()
             except:
@@ -279,6 +279,11 @@ class lunch_server(object):
         return self.own_ip
     
     def getAvailableDBConnections(self):
+        if not self.get_plugins_enabled():
+            log_error("Plugins are disabled, cannot get DB connections.")
+            return None
+        
+        from iface_plugins import PluginManagerSingleton
         pluginInfo = PluginManagerSingleton.get().getPluginByName("Database Settings", "general")
         if pluginInfo and pluginInfo.plugin_object.is_activated:
             return pluginInfo.plugin_object.getAvailableDBConnections()
@@ -286,6 +291,11 @@ class lunch_server(object):
         return None        
         
     def getDBConnection(self, name=""):
+        if not self.get_plugins_enabled():
+            log_error("Plugins are disabled, cannot get DB connections.")
+            return None
+        
+        from iface_plugins import PluginManagerSingleton
         pluginInfo = PluginManagerSingleton.get().getPluginByName("Database Settings", "general")
         if pluginInfo and pluginInfo.plugin_object.is_activated:
             return pluginInfo.plugin_object.getDBConnection(name)

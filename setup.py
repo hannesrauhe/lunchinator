@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from __future__ import with_statement
-import os, subprocess
+import os
 from distutils.core import setup
 from distutils.command import install
 
@@ -18,7 +18,6 @@ def _get_version(version_info, branch = ""):
 
     sub = ''
     if version_info[3] == 'alpha' and version_info[4] == 0:
-        # TODO: maybe append some sort of git info here??
         sub = '.dev'
     elif version_info[3] != 'final':
         mapping = {'alpha': 'a', 'beta': 'b', 'rc': 'c'}

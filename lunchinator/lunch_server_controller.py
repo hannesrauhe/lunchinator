@@ -63,6 +63,7 @@ class LunchServerController(object):
 
     def serverStopped(self, _exit_code):
         get_settings().write_config_to_hd()
-        for pluginInfo in get_server().plugin_manager.getAllPlugins():
-            if pluginInfo.plugin_object.is_activated:
-                pluginInfo.plugin_object.deactivate()
+        if get_server().get_plugins_enabled():
+            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                if pluginInfo.plugin_object.is_activated:
+                    pluginInfo.plugin_object.deactivate()
