@@ -46,6 +46,15 @@ fi
 # version has to be located besides setup.py
 git rev-list HEAD --count > ../version
 
+function generate_changelog() {
+  echo "$(git cat-file -p $(git rev-parse $(git tag | head)) | tail -n +6)" |
+  while read line 
+  do
+    dch -a "$line"
+  done
+  sed -i -e '/automatically created by stdeb/d' debian/changelog
+}
+
 for dist in "${dists[@]}"
 do
   echo -e "\e[00;31m***** Creating source package for ${dist} *****\e[00m"
@@ -66,6 +75,7 @@ do
   echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light" >>$POSTINST
   echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark" >>$POSTINST
 	echo "pip install requests requests-oauthlib oauthlib python-twitter python-gnupg yapsy" >> $POSTINST
+  generate_changelog
   debuild -S 2>&1 | tee ../../${dist}.log
   if $PUBLISH
   then
