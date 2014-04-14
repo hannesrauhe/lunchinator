@@ -39,7 +39,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _updateRequested = pyqtSignal()
     # -----------------------------
     
-    def __init__(self, noUpdates=False): 
+    def __init__(self): 
         QObject.__init__(self)
         LunchServerController.__init__(self)
         
@@ -51,7 +51,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.exitCode = 0
         self.serverThread = None
         self.running = True
-        get_server().no_updates = noUpdates
         get_server().initialize(self)
         
         self.pluginNameToMenuAction = {}
@@ -127,7 +126,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                                               buttons=QMessageBox.Yes | QMessageBox.No,
                                               defaultButton=QMessageBox.Yes)
                 if result == QMessageBox.Yes:
-                    if subprocess.call(['gksu', get_settings().get_resource('bin', 'install-lunch-icons.sh') + ' lunch']) == 0:
+                    if subprocess.call(['gksu', get_settings().get_resource('bin', 'install-lunch-icons.sh') + ' lunchinator']) == 0:
                         log_info("restarting after icons were installed")
                         self.quit(EXIT_CODE_UPDATE)
                         sys.exit(EXIT_CODE_UPDATE)

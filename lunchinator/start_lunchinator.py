@@ -14,18 +14,9 @@ from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS
 def parse_args():
     usage = "usage: %prog [options]"
     optionParser = OptionParser(usage = usage)
-    optionParser.add_option("--no-auto-update",
-                      default = False, dest = "noUpdates", action = "store_true",
-                      help = "Disable automatic updates from Git (override the GUI setting).")
     optionParser.add_option("--no-plugins",
                       default = False, dest = "noPlugins", action = "store_true",
                       help = "Disable plugins completely.")
-    optionParser.add_option("--should-auto-update",
-                      default = False, dest = "checkAutoUpdate", action = "store_true",
-                      help = "Don't start Lunchinator but check if auto update is enabled. Exits with 1 if auto update is enabled.")
-    optionParser.add_option("--update",
-                      default = False, dest = "doUpdate", action = "store_true",
-                      help = "Don't start Lunchinator but update the repository.")
     optionParser.add_option("--no-gui",
                       default = False, dest = "noGui", action = "store_true",
                       help = "Start Lunchinator without the GUI.")
@@ -43,46 +34,9 @@ def parse_args():
                       help="Send call to this specific member.")
     optionParser.add_option("--stop", default=False, dest="stop", action="store_true",
                       help="Stop local Lunch server.")
-    optionParser.add_option("--updateCode", default=False, dest="exitWithUpdateCode", action="store_true",
-                      help="Exits immediately with the update exit code.")
     optionParser.add_option("--stopCode", default=False, dest="exitWithStopCode", action="store_true",
                       help="Exits immediately with the stop exit code.")
     return optionParser.parse_args()
-
-def updateRepositories():
-    # TODO check if lunch server is running, choose update mechanism accordingly
-    running = False
-    if not running:
-        canUpdate, reason = get_settings().getCanUpdateMain()
-        if not canUpdate:
-            log_warning("Cannot update main repository: %s" % reason)
-        else:
-            log_info("Updating main repository")
-            upd_res = get_settings().runGitCommand(["pull"])
-            if upd_res[0] != 0:
-                log_error("git pull did not work (main repository). The Update mechanism therefore does not work.\n\
-If you do not know, what to do now:\n\
-it should be safe to call 'git stash' in the lunchinator directory %s start lunchinator again.\n\
-Error was: %s"%(get_settings().get_main_package_path(),str(upd_res)))
-
-        if os.path.exists(get_settings().get_external_plugin_dir()):    
-            canUpdate, reason = get_settings().getCanUpdatePlugins()
-            if not canUpdate:
-                log_warning("Cannot update plugin repository: %s" % reason)
-            else:
-                log_info("Updating plugin repository")
-                #locate plugins repository
-                upd_res = get_settings().runGitCommand(["pull"], get_settings().get_external_plugin_dir())
-                if upd_res[0] != 0:
-                    log_error("git pull did not work (plugin repository). The Update mechanism therefore does not work.\n\
-If you do not know, what to do now:\n\
-it should be safe to call 'git stash' in the plugins directory %s/plugins and start lunchinator again.\n\
-Error was: %s"%(get_settings().get_main_config_dir(),str(upd_res)))
-    else:
-        msg = "local update"
-        get_server().set_plugins_enabled(False)
-        get_server().call("HELO_UPDATE "+msg,client="127.0.0.1")
-        print "Sent update command to local lunchinator"
 
 def trace(frame, event, _):
     print "%s, %s:%d" % (event, frame.f_code.co_filename, frame.f_lineno)
@@ -165,20 +119,9 @@ def checkDependencies(noPlugins, gui = False):
 
 def startLunchinator():    
     (options, _args) = parse_args()
-    
     usePlugins = options.noPlugins
-    if options.exitWithUpdateCode:
-        sys.exit(EXIT_CODE_UPDATE)
-    elif options.exitWithStopCode:
+    if options.exitWithStopCode:
         sys.exit(EXIT_CODE_STOP)
-    elif options.doUpdate:
-        # don't start Lunchinator, do update
-        updateRepositories()
-    elif options.checkAutoUpdate:
-        if get_settings().get_auto_update_enabled():
-            sys.exit(1)
-        else:
-            sys.exit(0)
     elif options.lunchCall or options.message != None:
         sendMessage(options.message, options.client)
     elif options.stop:
@@ -192,7 +135,6 @@ def startLunchinator():
         retCode = 1
         try:
             from lunchinator import lunch_cli
-            get_server().no_updates = True
             get_server().set_plugins_enabled(usePlugins)
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
@@ -204,7 +146,6 @@ def startLunchinator():
         usePlugins = checkDependencies(usePlugins)
         
     #    sys.settrace(trace)
-        get_server().no_updates = options.noUpdates
         get_server().set_plugins_enabled(usePlugins)
         get_server().start_server()
         sys.exit(get_server().exitCode)
@@ -221,11 +162,10 @@ def startLunchinator():
         
         app = QApplication(sys.argv)
         usePlugins = checkDependencies(usePlugins, gui=True)
-        
-        get_server().no_updates = options.noUpdates
+
         get_server().set_plugins_enabled(usePlugins)
         app.setQuitOnLastWindowClosed(False)
-        lanschi = LunchinatorGuiController(options.noUpdates)
+        lanschi = LunchinatorGuiController()
         if options.showWindow:
             lanschi.openWindowClicked()
         
