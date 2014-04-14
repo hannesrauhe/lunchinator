@@ -9,6 +9,7 @@ from optparse import OptionParser
 from lunchinator import log_info, log_warning, log_error, get_settings,\
     get_server, log_exception
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
+from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS
     
 def parse_args():
     usage = "usage: %prog [options]"
@@ -107,6 +108,18 @@ def checkDependencies(noPlugins, gui = False):
         import yapsy
         return True
     except:
+        if getPlatform()==PLATFORM_WINDOWS:
+            #not possible to install pip with admin rights on Windows (although get-pip.py looked promising)
+            msg = "There are missing dependencies. Install pip and run python -m pip install -r requirements.txt"
+            if gui:                
+                from PyQt4.QtGui import QMessageBox
+                QMessageBox.critical(None,
+                                         "Error: missing dependencies",
+                                         msg,
+                                         buttons=QMessageBox.Ok,
+                                         defaultButton=QMessageBox.Ok)
+            log_error(msg)
+            return False
         if gui:
             from PyQt4.QtGui import QMessageBox
             mbox = QMessageBox (QMessageBox.Question,
@@ -139,16 +152,16 @@ def checkDependencies(noPlugins, gui = False):
                     return True
                 except:
                     pass
-            QMessageBox.critical(None,
-                                 "Error installing dependencies",
-                                 "There was an error, the dependencies could not be installed. Continuing without plugins.",
-                                 buttons=QMessageBox.Ok,
-                                 defaultButton=QMessageBox.Ok)
-            log_error("Dependencies could not be installed.")
-            return False
-        else:
-            log_error("Yapsy not installed (run sudo pip install yapsy) -- continuing without plugins")
-            return False
+                QMessageBox.critical(None,
+                                     "Error installing dependencies",
+                                     "There was an error, the dependencies could not be installed. Continuing without plugins.",
+                                     buttons=QMessageBox.Ok,
+                                     defaultButton=QMessageBox.Ok)
+                log_error("Dependencies could not be installed.")
+                return False
+            else:
+                log_error("Yapsy not installed (run sudo pip install yapsy) -- continuing without plugins")
+                return False
 
 def startLunchinator():    
     (options, _args) = parse_args()
