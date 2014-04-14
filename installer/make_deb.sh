@@ -43,8 +43,10 @@ then
   exit -1
 fi
 
+source determine_version.sh
+
 # version has to be located besides setup.py
-git rev-list HEAD --count > ../version
+echo "$VERSION" >../version
 
 function generate_changelog() {
   echo "$(git cat-file -p $(git rev-parse $(git tag | head)) | tail -n +6)" |

@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ "$OBSUSERNAME" == "" ]
+then
+  echo "Please export OBSUSERNAME to your environment."
+  exit -1
+fi
+
 args=$(getopt -l "publish,clean" -o "pc" -- "$@")
 
 if [ ! $? == 0 ]
@@ -23,7 +29,13 @@ while [ $# -ge 1 ]; do
         shift
         ;;
     -c|--clean)
-        rm -rf deb_*/ *.log dist
+        pushd osc/home:${OBSUSERNAME}/lunchinator &>/dev/null
+        for f in $(osc st | grep '^?' | sed -e 's/^?\s*//')
+        do
+          echo "Deleting ${f}"
+          rm "$f"
+        done
+        popd &>/dev/null
         exit 0
         ;;
     -h)
@@ -34,12 +46,6 @@ while [ $# -ge 1 ]; do
 
   shift
 done
-
-if [ "$OBSUSERNAME" == "" ]
-then
-  echo "Please export OBSUSERNAME to your environment."
-  exit -1
-fi
 
 if ! type osc $>/dev/null
 then
@@ -60,8 +66,9 @@ then
   popd
 fi
 
+source determine_version.sh
+
 # version has to be located besides setup.py
-VERSION=$(git rev-list HEAD --count)
 echo $VERSION > ../version
 
 export dist=

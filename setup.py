@@ -4,14 +4,17 @@ import os, subprocess
 from distutils.core import setup
 from distutils.command import install
 
-def _get_version(version_info):
+DEVSTATUS = None
+
+def _get_version(version_info, branch = ""):
     " Returns a PEP 386-compliant version number from version_info. "
-    " Taken from python-markdown project. "
     assert len(version_info) == 5
     assert version_info[3] in ('alpha', 'beta', 'rc', 'final')
 
     parts = 2 if version_info[2] == 0 else 3
     main = '.'.join(map(str, version_info[:parts]))
+    if branch:
+        main += "-" + branch
 
     sub = ''
     if version_info[3] == 'alpha' and version_info[4] == 0:
@@ -21,47 +24,33 @@ def _get_version(version_info):
         mapping = {'alpha': 'a', 'beta': 'b', 'rc': 'c'}
         sub = mapping[version_info[3]] + str(version_info[4])
 
-    dist = ""
-    if os.getenv("dist"):
-        dist = "." + os.getenv("dist")
-    return str(main + sub + dist)
+    return str(main + sub)
 
 def compute_version():
+    global DEVSTATUS
     if os.path.exists("version"):
         with open("version", "rb") as inFile:
-            commit_count = inFile.next().strip()
+            version = inFile.next().strip()
     else:
-        try:
-            call = ["git","--no-pager","rev-list", "HEAD", "--count"]
-            fh = subprocess.PIPE    
-            p = subprocess.Popen(call,stdout=fh, stderr=fh)
-            pOut, _ = p.communicate()
-            retCode = p.returncode
-            
-            if retCode:
-                # something went wrong
-                return None, None
-        
-            commit_count = pOut.strip()
-        except:
-            return None, None
+        raise IOError("version file does not exist")
 
-    version_info = (0, 1, commit_count, 'final', 0)
-    return _get_version(version_info), version_info
+    v_split = version.split('.')
+    branch = None
+    if len(v_split) == 3:
+        status = 'final'
+        DEVSTATUS = '5 - Production/Stable'
+    elif len(v_split) == 4:
+        status = 'alpha'
+        DEVSTATUS = '3 - Alpha'
+        branch = v_split[3]
+    else:
+        raise AttributeError("Illegal version format")
+    version_info = (int(v_split[0]), int(v_split[1]), int(v_split[2]), status, 0)
+
+    return _get_version(version_info, branch), version_info
     
 version, version_info = compute_version()
 
-# Get development Status for classifiers
-dev_status_map = {
-    'alpha': '3 - Alpha',
-    'beta' : '4 - Beta',
-    'rc'   : '4 - Beta',
-    'final': '5 - Production/Stable'
-}
-if version_info[3] == 'alpha' and version_info[4] == 0:
-    DEVSTATUS = '2 - Pre-Alpha'
-else:
-    DEVSTATUS = dev_status_map[version_info[3]]
 
 long_description = \
 '''This is the Lunchinator. It does lunch stuff.
