@@ -47,12 +47,8 @@ class gitUpdate(object):
                 subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
                 get_server().call("HELO_STOP installer_update", client="127.0.0.1")
             else:
-                pid = os.fork()
-                if pid != 0:
-                    # new process
-                    subprocess.Popen(args)
-                else:
-                    get_server().call("HELO_STOP installer_update", client="127.0.0.1")
+                subprocess.Popen(" ".join(args), shell=True, close_fds=True)
+                get_server().call("HELO_STOP installer_update", client="127.0.0.1")
         else:
             log_error("Update Script was not found at %s"%UPDATE_SCRIPT_EXEC_PATH)
         

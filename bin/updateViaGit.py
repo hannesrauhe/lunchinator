@@ -46,11 +46,11 @@ if __name__ == "__main__":
     if console_output:
         raw_input("Press Enter to restart the lunchinator...")
     else:
-        print "A log can be found here: "+logging.getLogger().handlers[0].baseFilename
+        print "A log of the Update can be found here: "+logging.getLogger().handlers[0].baseFilename
     
     args = [pythonex_wo_console, os.path.join(lunchbindir,"start_lunchinator.py")]
     if platform.system()=="Windows":
         subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
     else:
-        subprocess.Popen(args)
+        subprocess.Popen(" ".join(args), shell=True, close_fds=True)
 
