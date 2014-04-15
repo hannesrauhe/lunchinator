@@ -111,7 +111,9 @@ class lunch_server(object):
         announce_name=-1 #how often did I announce my name
         
         self._determineOwnIP()
-            
+        
+        is_in_broadcast_mode = False
+        
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try: 
             s.bind(("", 50000)) 
@@ -148,7 +150,11 @@ class lunch_server(object):
                     else:
                         log_debug("Dropped a message from",ip,daten)
                 except socket.timeout:
-                    if len(self._members)>1:
+                    if len(self._members)>1:                        
+                        if is_in_broadcast_mode:
+                            is_in_broadcast_mode = False
+                            log_warning("ending braodcast")
+                            
                         if not len(self.own_ip):
                             self._determineOwnIP()
                         if announce_name==-1:
@@ -164,7 +170,9 @@ class lunch_server(object):
                             #just wait for the next time when i have to announce my name
                             announce_name+=1
                     else:
-                        log_warning("seems like you are alone - broadcasting for others")
+                        if not is_in_broadcast_mode:
+                            is_in_broadcast_mode = True
+                            log_warning("seems like you are alone - broadcasting for others")
                         self._broadcast()
                     #log_debug("Current Members:", self._members)
         except socket.error as e:

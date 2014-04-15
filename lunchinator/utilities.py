@@ -45,7 +45,8 @@ def displayNotification(name,msg,icon=None):
             log_debug(call)
             subprocess.call(call, stdout=fh, stderr=fh)
         elif myPlatform == PLATFORM_WINDOWS:
-            get_server().controller.statusicon.showMessage(name,msg)
+            if hasattr(get_server().controller, "statusicon"):
+                get_server().controller.statusicon.showMessage(name,msg)
     except:
         log_exception("error displaying notification")
         
