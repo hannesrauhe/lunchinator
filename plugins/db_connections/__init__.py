@@ -1,6 +1,5 @@
 from lunchinator.iface_plugins import iface_general_plugin
 from lunchinator import get_server, get_settings, log_error, log_debug, log_warning
-from yapsy.PluginManager import PluginManagerSingleton
 from threading import Lock
 
 class db_connections(iface_general_plugin):
@@ -8,7 +7,7 @@ class db_connections(iface_general_plugin):
     
     def __init__(self):
         super(db_connections, self).__init__()
-        self.plugin_manager = PluginManagerSingleton.get()
+        self.plugin_manager = get_server().plugin_manager
         
         self.conn_properties_lock = Lock()
         self.open_connections = {}
