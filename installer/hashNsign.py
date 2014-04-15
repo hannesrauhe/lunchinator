@@ -51,8 +51,9 @@ version_file.close()
 
 # moving files around
 
-if not os.path.isdir(os.path.join(os.path.dirname(sys.argv[1]), str(commitCount))):
-    os.mkdir(os.path.join(os.path.dirname(sys.argv[1]), str(commitCount)))
+installer_dir = os.path.join(os.path.dirname(sys.argv[1]), str(commitCount))
+if not os.path.isdir(installer_dir):
+    os.mkdir(installer_dir)
 
 shutil.copyfile(os.path.join(os.path.dirname(sys.argv[1]), "latest_version.asc"), os.path.join(os.path.dirname(sys.argv[1]), commitCount, "version.asc"))
 shutil.copyfile(sys.argv[1], os.path.join(os.path.dirname(sys.argv[1]), commitCount, os.path.basename(sys.argv[1])))

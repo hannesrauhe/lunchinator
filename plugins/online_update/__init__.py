@@ -98,9 +98,9 @@ class online_update(iface_general_plugin):
         
     def getCheckURLBase(self):
         if getPlatform() == PLATFORM_WINDOWS:
-            return self.options["check_url"] + "/win/"
+            return self.hidden_options["check_url"] + "/win/"
         elif getPlatform() == PLATFORM_MAC:
-            return self.options["check_url"] + "/mac/"
+            return self.hidden_options["check_url"] + "/mac/"
         else:
             return None  # TODO
         

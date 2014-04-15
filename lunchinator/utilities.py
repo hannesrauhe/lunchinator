@@ -193,15 +193,18 @@ def which(program):
 def getBinary(name, altLocation = ""):
     if getPlatform() == PLATFORM_WINDOWS:
         name += ".exe"
-        
-    gbinary = which(name)
-    if not gbinary:
-        gbinary = get_settings().get_resource(altLocation, name)
-    if not os.path.isfile(gbinary):
+    try:
+        if altLocation:
+            gbinary = get_settings().get_resource(altLocation, name)
+    except:
+        altLocation=""
+         
+    if not altLocation:
+        gbinary = which(name)
+    
+    if not gbinary or not os.path.isfile(gbinary):
         return None   
     
-    if getPlatform() == PLATFORM_WINDOWS:
-        gbinary = "\""+gbinary+"\""
     return os.path.realpath(gbinary)
 
 def _findLunchinatorKeyID(gpg, secret):
@@ -216,7 +219,7 @@ def getGPG(secret=False):
     """ Returns tuple (GPG instance, keyid) """
     
     from gnupg import GPG
-    gbinary = getBinary("gpg", "gnupg")
+    gbinary = getBinary("gpg", "bin")
     if not gbinary:
         log_error("GPG not found")
         return None, None
@@ -224,7 +227,11 @@ def getGPG(secret=False):
     ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
     
     try:
-        gpg = GPG(gbinary,ghome)
+        gpg = None
+        if getPlatform() == PLATFORM_WINDOWS:
+            gpg = GPG("\""+gbinary+"\"",ghome)
+        else:
+            gpg = GPG(gbinary,ghome)
         if not gpg.encoding:
             gpg.encoding = 'utf-8'
     except Exception, e:

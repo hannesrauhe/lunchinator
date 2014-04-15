@@ -13,6 +13,8 @@ class lunch_settings(object):
         return cls._instance
         
     def _findMainPackagePath(self):
+        if hasattr(sys, "_MEIPASS"):  #pyinstaller
+            return sys._MEIPASS
         path = os.path.realpath(__file__) 
         while os.path.dirname(path) != path:
             if os.path.exists(os.path.join(path, 'lunchinator', '__init__.py')):
@@ -20,8 +22,10 @@ class lunch_settings(object):
             path = os.path.dirname(path)
         return None
     
-    def _findResourcesPath(self, defaultPath):
+    def _findResourcesPath(self, defaultPath):        
         possibilities = [defaultPath, "/usr/share/lunchinator", "/usr/local/share/lunchinator"]
+        if hasattr(sys, "_MEIPASS"): #pyinstaller            
+            possibilities = [os.path.dirname(sys.executable)] + possibilities
         for poss in possibilities:
             if os.path.exists(os.path.join(poss, "images", "lunchinator.png")):
                 return poss
@@ -86,7 +90,7 @@ class lunch_settings(object):
         try:
             version_file = self.get_resource("version")
             with contextlib.closing(open(version_file, "r")) as vfh:
-                self._commit_count = vfh.read()
+                self._commit_count = vfh.read().strip()
         except Exception, e:
             log_error("version file missing, no version information")
             

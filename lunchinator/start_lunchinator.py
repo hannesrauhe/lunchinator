@@ -69,9 +69,7 @@ def checkDependencies(noPlugins, gui = False):
                 from PyQt4.QtGui import QMessageBox
                 QMessageBox.critical(None,
                                          "Error: missing dependencies",
-                                         msg,
-                                         buttons=QMessageBox.Ok,
-                                         defaultButton=QMessageBox.Ok)
+                                         msg)
             log_error(msg)
             return False
         if gui:
@@ -108,9 +106,7 @@ def checkDependencies(noPlugins, gui = False):
                     pass
                 QMessageBox.critical(None,
                                      "Error installing dependencies",
-                                     "There was an error, the dependencies could not be installed. Continuing without plugins.",
-                                     buttons=QMessageBox.Ok,
-                                     defaultButton=QMessageBox.Ok)
+                                     "There was an error, the dependencies could not be installed. Continuing without plugins.")
                 log_error("Dependencies could not be installed.")
                 return False
             else:
@@ -177,3 +173,4 @@ def startLunchinator():
         finally:
             retValue = lanschi.quit()
             sys.exit(retValue)
+    
