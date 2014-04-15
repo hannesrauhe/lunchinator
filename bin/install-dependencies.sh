@@ -24,7 +24,7 @@ then
   if type gksu &>/dev/null
   then
     SUDO=gksu
-  elif type gnomesu >/dev/null
+  elif type gnomesu &>/dev/null
   then
     SUDO=gnomesu
   fi
