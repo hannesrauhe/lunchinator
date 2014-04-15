@@ -1,8 +1,34 @@
 INSTALL DEPENDENCIES
 =======
 
-On Linux you need Python 2.7, Git, Sox and libnotify. For Mac and Linux a package with all required programms is provided under http://update.lunchinator.de
+Lunchinator works on Mac, Linux and Windows. 
 
+- Windows
+Download setup.exe from http://update.lunchinator.de/win/
+
+- Mac
+Download package from http://update.lunchinator.de/mac/
+
+- Ubuntu >= 12.04:
+sudo apt-add-repository ppa:lunch-team/lunchinator
+sudo apt-get update
+sudo apt-get lunchinator
+
+- SLES 11 SP2: 
+Add the following repositories:
+
+http://download.opensuse.org/repositories/home:/Cornelius_Ratsch/SLE_11_SP2/
+http://download.opensuse.org/repositories/devel:/languages:/python/SLE_11_SP2/
+sudo zypper in lunchinator
+
+- manually on every system
+Install Python, pyqt4 and pip
+python -m pip -r requirements.txt
+
+If you have git, you can just clone https://github.com/hannesrauhe/lunchinator.git, otherwise download the zip from https://github.com/hannesrauhe/lunchinator/archive/master.zip and extract it.
+
+
+-additionally:
 Open Up port 50000/UDP and 50001/TCP on your machine
 
 
