@@ -47,14 +47,16 @@ while [ $# -ge 1 ]; do
   shift
 done
 
-if ! type osc $>/dev/null
+if ! type osc &>/dev/null
 then
   echo "Please install osc first."
+  exit 1
 fi
 
-if ! type rpm $>/dev/null
+if ! type rpm &>/dev/null
 then
   echo "Please install rpm first."
+  exit 1
 fi
 
 mkdir -p osc
