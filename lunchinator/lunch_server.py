@@ -12,7 +12,8 @@ from lunchinator import log_debug, log_info, log_critical, get_settings, log_exc
      
 import tarfile
 import platform
-from lunchinator.lunch_member_info import LunchMemberInfo
+from lunchinator.lunch_peers import LunchPeers
+import random
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -37,7 +38,6 @@ class lunch_server(object):
         self.update_request = False
         self.new_msg = False
         self.my_master = -1    
-        self._member_info = LunchMemberInfo()
         self.peer_ip = None  # the IP of the peer i contacted to be my master
         self.last_lunch_call = 0
         self.last_messages = []
@@ -45,8 +45,6 @@ class lunch_server(object):
         self.no_updates = False
         self.own_ip = ""
         self.messagesLock = Lock()
-        self.membersLock = Lock()
-        self.dontSendTo = set()
         self.unknown_cmd = ["HELO_REQUEST_INFO", "HELO_INFO"]
         
         self.exitCode = 0  
@@ -60,13 +58,14 @@ class lunch_server(object):
             return
         self.initialized = True
         
-        self._read_config()
-        
         if controller != None:
             self.controller = controller
         else:
             from lunchinator.lunch_server_controller import LunchServerController
             self.controller = LunchServerController()
+            
+        self._peers = LunchPeers(self.controller)
+        self._read_config()
 
         if self.get_plugins_enabled():  
             from iface_plugins import iface_called_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
@@ -128,14 +127,7 @@ class lunch_server(object):
                     except:
                         log_error("Received illegal data from %s, maybe wrong encoding" % ip)
                         continue
-                    if ip not in self._peer_timeout:
-                        self._peer_timeout[ip] = time()
-                        self._peerAppended(ip)
-                        if not ip.startswith("127."):
-                            if not self.knows_member(ip):
-                                self._append_member(ip, ip)
-                    else:
-                        self._peer_timeout[ip] = time()
+                    self._peers.seenPeer(ip)
                         
                     if self._check_group(daten, ip):
                         if daten.startswith("HELO"):
@@ -148,7 +140,7 @@ class lunch_server(object):
                         log_debug("Dropped a message from", ip, daten)
                 except socket.timeout:
                     # TODO only group members?
-                    if len(self._member_info)>1:                        
+                    if len(self._peers)>1:                        
                         if is_in_broadcast_mode:
                             is_in_broadcast_mode = False
                             log_warning("ending braodcast")
@@ -172,7 +164,7 @@ class lunch_server(object):
                             is_in_broadcast_mode = True
                             log_warning("seems like you are alone - broadcasting for others")
                         self._broadcast()
-                    # log_debug("Current Members:", self._member_info.get_all_members())
+                    # log_debug("Current Members:", self._peers.getActivePeers())
         except socket.error as e:
             # socket error messages may contain special characters, which leads to crashes on old python versions
             log_error(u"stopping lunchinator because of socket error:", convert_string(str(e)))
@@ -195,15 +187,15 @@ class lunch_server(object):
         self.call("HELO_REQUEST_INFO " + self._build_info_string())
                     
     def memberName(self, addr):
-        if addr in self._peer_info and u'name' in self._peer_info[addr]:
-            return self._peer_info[addr][u'name']
+        # TODO replace addr by ID
+        peerID = self._peers.getPeerID(addr)
+        if self._peers.getPeerInfo(peerID) != None and u'name' in self._peers.getPeerInfo(peerID):
+            return self._peers.getPeerInfo(peerID)[u'name']
         return addr
     
     def ipForMemberName(self, name):
-        for ip, infoDict in self._peer_info.iteritems():
-            if u'name' in infoDict and infoDict[u'name'] == name:
-                return ip
-        return None
+        # TODO replace name by ID if possible
+        return self._peers.ipForMemberName(name)
     
     def messagesCount(self):
         length = 0
@@ -232,10 +224,10 @@ class lunch_server(object):
         self.messagesLock.release()
         
     def lockMembers(self):
-        self.membersLock.acquire()
+        self._peers.lockMembers()
         
     def releaseMembers(self):
-        self.membersLock.release()
+        self._peers.releaseMembers()
                     
     def getMessages(self, begin=None):
         self.lockMessages()
@@ -259,14 +251,20 @@ class lunch_server(object):
     def set_plugins_enabled(self, enable):
         self._load_plugins = enable
     
-    def get_peer_info(self):  
-        return self._peer_info   
+    def get_peer_info(self):
+        # TODO replace by peers.getPeerInfo(peerID)
+        return self._peers.getPeerInfoDict()
+    
+    def getLunchPeers(self):
+        return self._peers
     
     def is_peer_ready(self, peer_addr):
-        if self._peer_info.has_key(peer_addr):
-            p = self._peer_info[peer_addr]
-            if p.has_key(u"next_lunch_begin") and p.has_key(u"next_lunch_end"):
-                return self.getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"]) > 0
+        peerID = self._peers.getPeerID(peer_addr)
+        if peerID != None:
+            p = self._peers.getPeerInfo(peerID)
+            if p != None:
+                if p.has_key(u"next_lunch_begin") and p.has_key(u"next_lunch_end"):
+                    return self.getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"]) > 0
         return False
         
     def getOwnIP(self):
@@ -333,9 +331,9 @@ class lunch_server(object):
             # send to client regardless of the dontSendTo state
             target = [client.strip()]
         elif 0 == len(hosts):
-            target = set(self.get_group_members()) - self.dontSendTo
+            target = self._peers.getSendTargets()
         else:
-            # send to all specified hosts regardless of the dontSendTo state
+            # send to all specified hosts regardless of groups or dontSendTo
             target = set(hosts)
         
         if 0 == len(target):
@@ -370,71 +368,19 @@ class lunch_server(object):
         self.controller.serverStopped(self.exitCode)
         
     def _read_config(self):              
-        if len(self._member_info) == 0:
+        if len(self._peers) == 0:
             self._init_members_from_file()
         if len(self.last_messages) == 0:
             self.last_messages = self._init_messages_from_file()
     
     def _updateMembersDict(self, otherDict, noLocal=True):
-        for ip, hostn in otherDict.items():
+        # TODO expect peer IDs in dict
+        for ip, peerName in otherDict.items():
             if noLocal and ip.startswith('127'):
                 continue
             
-            if not self._member_info.knowsMember(ip):
-                self._append_member(ip, hostn)
+            self._peers.peerNameReceived(None, ip, peerName)
         
-    def _memberAppended(self, ip):
-        self.controller.memberAppended(ip, self._peer_info[ip])
-    
-    def _memberUpdated(self, ip):
-        self.controller.memberUpdated(ip, self._peer_info[ip])
-    
-    def _memberRemoved(self, ip):
-        self.controller.memberRemoved(ip)
-    
-    def _peerAppended(self, ip):
-        self.controller.peerAppended(ip)
-        
-    def _append_member(self, ip, hostn, inform=True):
-        # insert name into info dict
-        memberInfo = {}
-        if ip in self._peer_info:
-            memberInfo = self._peer_info[ip]
-        memberInfo[u'name'] = hostn
-        
-        self.lockMembers()
-        didAppend = False
-        didUpdate = False
-        try:
-            self._peer_info[ip] = memberInfo
-            if not ip in self._member_info:
-                self._all_members.append(ip)
-                if inform:
-                    didAppend = True
-            elif inform:
-                didUpdate = True
-        finally:
-            self.releaseMembers()
-            
-        if didAppend:
-            self._memberAppended(ip)
-        if didUpdate:
-            self._memberUpdated(ip)
-            
-    
-    def _remove_member(self, ip):
-        didRemove = False        
-        self.lockMembers()
-        try:
-            if ip in self._member_info:
-                self._all_members.remove(ip)
-                didRemove = True
-        finally:
-            self.releaseMembers()
-            
-        if didRemove:
-            self._memberRemoved(ip)
-            
     def _init_members_from_file(self):
         members = []
         if os.path.exists(get_settings().get_members_file()):
@@ -445,17 +391,17 @@ class lunch_server(object):
                         continue
                     try:
                         ip = unicode(socket.gethostbyname(hostn))
-                        self._append_member(ip, hostn, False)
+                        self._peers.peerNameReceived(None, ip, hostn, inform=False)
                     except:
                         log_warning("cannot find host specified in members_file by %s with name %s" % (get_settings().get_members_file(), hostn))
         return members
     
     def _write_members_to_file(self):
         try:
-            if len(self._member_info) > 1:
+            if len(self._peers) > 1:
                 with codecs.open(get_settings().get_members_file(), 'w', 'utf-8') as f:
                     f.truncate()
-                    for m in self._member_info:
+                    for m in self._peers:
                         f.write(m + "\n")
         except:
             log_exception("Could not write all members to %s" % (get_settings().get_members_file()))
@@ -516,9 +462,15 @@ class lunch_server(object):
         
     def _createMembersDict(self):
         membersDict = {}
-        for ip in self._member_info:
-            if ip in self._peer_info and u'name' in self._peer_info[ip]:
-                membersDict[ip] = self._peer_info[ip][u'name']
+        # TODO only group members?
+        for peerID in self._peers.getActivePeers():
+            ip = self._peers.getIPOfPeer(peerID)
+            if ip == None:
+                # should not happen
+                continue
+            # TODO add peer ID to dict
+            if self._peers.getPeerInfo(peerID) != None and u'name' in self._peers.getPeerInfo(peerID):
+                membersDict[ip] = self._peers.getPeerInfo(peerID)[u'name']
             else:
                 membersDict[ip] = ip
         return membersDict
@@ -544,12 +496,9 @@ class lunch_server(object):
             # accept anything as long as i do not have a group
             return True
             
-        return self.is_member_in_my_group(addr)
+        peerID = self._peers.getPeerID(addr)
+        return peerID != None and self._peers.isMemberInMyGroup(peerID)
         
-    def is_member_in_my_group(self, ip):
-        return ip in self._peer_info and \
-            self._peer_info[ip].has_key("group") and\
-            self._peer_info[ip]["group"] == get_settings().get_group()
         
     def _incoming_call(self, msg, addr):
         mtime = localtime()
@@ -575,35 +524,13 @@ class lunch_server(object):
                 else:
                     log_debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)" % (t, m, msg, strftime("%H:%M:%S", localtime(timenum + get_settings().get_mute_timeout()))))
       
-    def _update_peer_info(self, ip, newInfo, requestAvatar=True):            
-        peer_group = newInfo["group"] if newInfo.has_key("group") else ""     
-        peer_name = newInfo["name"] if newInfo.has_key("name") else ip
-        own_group = get_settings().get_group()       
-        
-        group_unchanged = self._peer_info.has_key(ip) and self._peer_info[ip].has_key("group") and self._peer_info[ip] == peer_group
-        self.lockMembers()
-        try:
-            self._peer_info[ip] = newInfo
-        finally:
-            self.releaseMembers()
-        
-        if group_unchanged:
-            if peer_group == own_group:
-                self._memberUpdated(ip)
-        else:
-            if peer_group not in self._peer_groups:
-                self._peer_groups.add(peer_group)
-                self.controller.groupAppended(peer_group, self._peer_groups)
-            if peer_group == own_group:
-                self._append_member(ip, peer_name)
-                self._memberUpdated(ip)
-            else:
-                self._remove_member(ip)
+    def _update_peer_info(self, ip, newInfo, requestAvatar=True):   
+        peerID = self._peers.updatePeerInfo(ip, newInfo)
             
         if requestAvatar:
             # Request avatar if not there yet
-            if self._peer_info[ip].has_key("avatar"):
-                if not os.path.exists(get_settings().get_avatar_dir() + "/" + self._peer_info[ip]["avatar"]):
+            if u"avatar" in self._peers.getPeerInfo(peerID):
+                if not os.path.exists(get_settings().get_avatar_dir() + "/" + self._peers.getPeerInfo(peerID)[u"avatar"]):
                     self.call("HELO_REQUEST_AVATAR " + str(self.controller.getOpenTCPPort(ip)), client=ip)     
       
     def _incoming_event(self, data, ip):   
@@ -634,13 +561,7 @@ class lunch_server(object):
                                     
             elif cmd.startswith("HELO_LEAVE"):
                 # the sender tells me, that he is going
-                if ip in self._member_info:
-                    self.lockMembers()
-                    try:
-                        self._all_members.remove(ip)
-                    finally:
-                        self.releaseMembers()
-                    self._memberRemoved(ip)
+                self._peers.memberLeft(ip)
                 self.call("HELO_DICT " + json.dumps(self._createMembersDict()), client=ip)
                
             elif cmd.startswith("HELO_AVATAR"):
@@ -651,8 +572,9 @@ class lunch_server(object):
                 if len(values) > 1:
                     tcp_port = int(values[1].strip())
                 file_name = ""
-                if self._peer_info[ip].has_key("avatar"):
-                    file_name = os.path.join(get_settings().get_avatar_dir(), self._peer_info[ip]["avatar"])
+                peerID = self._peers.getPeerID(ip)
+                if self._peers.getPeerInfo(peerID) != None and u"avatar" in self._peers.getPeerInfo(peerID):
+                    file_name = os.path.join(get_settings().get_avatar_dir(), self._peers.getPeerInfo(peerID)["avatar"])
                 else:
                     log_error("%s tried to send his avatar, but I don't know where to safe it" % (ip))
                 
@@ -703,8 +625,8 @@ class lunch_server(object):
                 self.controller.sendFile(ip, fileToSend.getvalue(), other_tcp_port, True)
             elif "HELO" == cmd:
                 # someone tells me his name
-                didKnowMember = ip in self._member_info
-                self._append_member(ip, value) 
+                didKnowMember = self._peers.knowsIP(ip)
+                self._peers.peerNameReceived(None, ip, value)
                 if not didKnowMember:
                     self.call("HELO_INFO " + self._build_info_string(), client=ip)
             elif cmd not in self.unknown_cmd:
@@ -726,33 +648,32 @@ class lunch_server(object):
                     
     def _remove_inactive_members(self):
         try:
-            # TODO rename get_peer_timeout
-            membersToRemove = self._member_info.getTimedOutMembers(get_settings.get_peer_timeout())
+            membersToRemove = self._peers.getTimedOutMembers(get_settings().get_peer_timeout())
                     
             log_debug("Removing inactive members:", membersToRemove)
             self.lockMembers()
             try:
                 for ip in membersToRemove:
                     self._memberRemoved(ip)
-                self._member_info.removeMembers(membersToRemove)
+                self._peers.removeMembers(membersToRemove)
             finally:
                 self.releaseMembers()
         except:
-            log_exception("Something went wrong while trying to clean up the _all_members-list")
+            log_exception("Something went wrong while trying to clean up the list of active members")
             
     def _call_for_dict(self):
         '''ask for the dictionary and send over own information'''
         try:
-            if len(self._member_info) > self.peer_nr:
-                self.call("HELO_REQUEST_DICT " + self._build_info_string(), client=self.get_all_members()[self.peer_nr])
-            if len(self.get_all_members()) > 0:
-                self.peer_nr = (self.peer_nr + 1) % len(self.get_all_members())
+            if len(self._peers.getActivePeers()) > 0:
+                # request from random peer
+                randPeerID = random.sample(self._peers.getActivePeers(), 1)[0]
+                self.call("HELO_REQUEST_DICT " + self._build_info_string(), client=self._peers.getIPOfPeer(randPeerID))
         except:
             log_exception("Something went wrong while trying to send a call to the new master")
     
     def _determineOwnIP(self):  
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      
-        for m in self.get_all_members():
+        for m in self._peers.getActivePeers():
             try:
                 # connect to UDF discard port 9
                 s.connect((m, 9))
@@ -761,7 +682,8 @@ class lunch_server(object):
             except:
                 log_debug("While getting own IP, problem to connect to", m)
                 continue
-        log_debug("Found my IP:", self.own_ip)
+        if self.own_ip:
+            log_debug("Found my IP:", self.own_ip)
         s.close()
     
     def _broadcast(self):

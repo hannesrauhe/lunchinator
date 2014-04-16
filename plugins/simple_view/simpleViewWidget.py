@@ -50,7 +50,7 @@ class SimpleViewWidget(QWidget):
         return self.colorMap[addr]
             
     def updateWidgets(self):
-        members = get_server().get_members()
+        members = get_server().getLunchPeers().getGroupPeers()
         memText = "%d people online<br />"%len(members)
         memToolTip = ""
         

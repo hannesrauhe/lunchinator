@@ -288,7 +288,7 @@ class MembersWidget(QWidget):
         if self.dropdown_members_model == None:
             return
         
-        members = set(get_server().get_members())
+        members = set(get_server().getLunchPeers().getGroupPeers())
         for m_ip in members:
             m_name = get_server().memberName(m_ip)
             if not m_ip in self.dropdown_members_dict:

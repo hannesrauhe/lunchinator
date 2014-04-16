@@ -131,8 +131,9 @@ class LunchCLIModule(object):
         get_server().lockMembers()
         lunchmembers = None
         try:
-            lunchmemberNames = set((get_server().memberName(ip).replace(u" ", u"\\ ") for ip in get_server().get_members() if get_server().memberName(ip).replace(u" ", u"\\ ").startswith(prefix)))
-            lunchmembers = list(lunchmemberNames.union((ip for ip in get_server().get_members() if ip.startswith(prefix))))
+            # TODO replace by get_peers()
+            lunchmemberNames = set((get_server().memberName(ip).replace(u" ", u"\\ ") for ip in get_server().getLunchPeers().getGroupPeers() if get_server().memberName(ip).replace(u" ", u"\\ ").startswith(prefix)))
+            lunchmembers = list(lunchmemberNames.union((ip for ip in get_server().getLunchPeers().getGroupPeers() if ip.startswith(prefix))))
         finally:
             get_server().releaseMembers()
         return lunchmembers if lunchmembers != None else []

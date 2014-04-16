@@ -153,17 +153,14 @@ class MembersTableModel(TableModelBase):
         self.lastSeenColIndex = 3
         self.sendToColIndex = 4
         
-        self.nameKey= u'name'
+        self.nameKey = u'name'
         self.lunchBeginKey = u"next_lunch_begin"
         self.lunchEndKey = u"next_lunch_end"
         
         # Called before server is running, no need to lock here
-        infoDicts = self.dataSource.get_peer_info()
-        for ip in self.dataSource.get_members():
-            infoDict = None
-            if ip in infoDicts:
-                infoDict = infoDicts[ip]
-            self.appendContentRow(ip, infoDict)
+        for peerID in self.dataSource:
+            infoDict = dataSource.getPeerInfo(peerID)
+            self.appendContentRow(peerID, infoDict)
             
         self.itemChanged.connect(self.itemChangedSlot)
 
@@ -177,7 +174,7 @@ class MembersTableModel(TableModelBase):
             item.setText(ip)
         
         
-    def removeRow(self, row, parent = QModelIndex()):
+    def removeRow(self, row, parent=QModelIndex()):
         # ensure no timer is active after a row has been removed
         item = self.item(row, self.lunchTimeColIndex)
         timer = item.data(self.LUNCH_TIME_TIMER_ROLE)
@@ -192,11 +189,11 @@ class MembersTableModel(TableModelBase):
             oldTimer.stop()
             oldTimer.deleteLater()
         if self.lunchBeginKey in infoDict and self.lunchEndKey in infoDict:
-            item.setText(infoDict[self.lunchBeginKey]+"-"+infoDict[self.lunchEndKey])
+            item.setText(infoDict[self.lunchBeginKey] + "-" + infoDict[self.lunchEndKey])
             beginTime = datetime.strptime(infoDict[self.lunchBeginKey], "%H:%M")
             beginTime = beginTime.replace(year=2000)
             item.setData(QVariant(time.mktime(beginTime.timetuple())), self.SORT_ROLE)
-            timeDifference = get_server().getTimeDifference(infoDict[self.lunchBeginKey],infoDict[self.lunchEndKey])
+            timeDifference = get_server().getTimeDifference(infoDict[self.lunchBeginKey], infoDict[self.lunchEndKey])
             if timeDifference > 0:
                 item.setData(QColor(0, 255, 0), Qt.DecorationRole)
             else:
@@ -210,10 +207,11 @@ class MembersTableModel(TableModelBase):
         else:
             item.setData(QVariant(-1), self.SORT_ROLE)
         
-    def _updateLastSeenItem(self, ip, _, item):
+    def _updateLastSeenItem(self, peerID, _, item):
         intValue = -1
-        if ip in self.dataSource.get_member_timeout():
-            intValue = int(time.time()-self.dataSource.get_member_timeout()[ip])
+        timeout = self.dataSource.getTimeout(peerID)
+        if timeout != None:
+            intValue = int(time.time() - timeout)
         item.setData(QVariant(intValue), Qt.DisplayRole)
     
     def _updateSendToItem(self, ip, _, item):
@@ -243,11 +241,10 @@ class ExtendedMembersModel(TableModelBase):
         super(ExtendedMembersModel, self).__init__(dataSource, None)
         self.headerNames = []
         self.mutex = QMutex()
-        self.updateModel(self.dataSource.get_peer_info())
+        self.updateModel(self.dataSource.getPeerInfoDict())
     
-    """ may be called concurrently """
     @pyqtSlot(dict)
-    def updateModel(self, member_info, update = False, prepend = False):
+    def updateModel(self, member_info, update=False, prepend=False):
         table_headers = set()
         table_headers.add(u"ip") 
         for infodict in member_info.itervalues():
@@ -271,6 +268,7 @@ class ExtendedMembersModel(TableModelBase):
             else:
                 self.appendContentRow(ip, member_info[ip])
     
+    """ may be called concurrently """
     def callItemInitializer(self, column, key, data, item):
         headerName = self.headerNames[column]
         text = ""

@@ -30,7 +30,7 @@ class maintainer_gui(QTabWidget):
         self.info_table.setAlternatingRowColors(True)
         self.info_table.setIndentation(0)
         
-        self.info_table_model = ExtendedMembersModel(get_server())
+        self.info_table_model = ExtendedMembersModel(get_server().getLunchPeers())
         proxyModel = QSortFilterProxyModel(self.info_table)
         proxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
         proxyModel.setDynamicSortFilter(True)

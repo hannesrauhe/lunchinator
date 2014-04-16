@@ -45,7 +45,7 @@ class members_table(iface_gui_plugin):
         self.membersTable = TableWidget(parent, "Add Host", self.addHostClicked, sortedColumn=2, placeholderText="Enter hostname")
         
         # initialize members table
-        self.membersModel = MembersTableModel(get_server())
+        self.membersModel = MembersTableModel(get_server().getLunchPeers())
         self.membersProxyModel = QSortFilterProxyModel(self.membersTable)
         self.membersProxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
         self.membersProxyModel.setSortRole(MembersTableModel.SORT_ROLE)
