@@ -1,13 +1,19 @@
 # -*- mode: python -*-
-a = Analysis(['../start_lunchinator.py',
-              '../plugins/members_table/__init__.py',
-              '../plugins/simple_view/__init__.py',
-              '../plugins/remote_pictures/__init__.py',
-              '../plugins/remote_pictures/remote_pictures_gui.py',
-              '../plugins/online_update/__init__.py',
-              '../plugins/lunch_button.py'],
-             pathex=['.'],
-             hiddenimports=['SimpleHTTPServer', 'sqlite3', 'dbapi2', 'cgi', 'csv', 'Queue', 'netrc'],
+
+import os
+anaFiles = ["../start_lunchinator.py"]
+anaFiles.extend(aFile for aFile in os.listdir("../plugins") if os.path.isfile(aFile) and aFile.endswith(".py"))
+for aFile in os.listdir("../plugins"):
+    aFile = os.path.join("../plugins", aFile)
+    if aFile.endswith(".py"):
+        anaFiles.append(aFile)
+    if os.path.isdir(aFile):
+        if os.path.exists(os.path.join(aFile, "__init__.py")):
+            anaFiles.append(os.path.join(aFile, "__init__.py"))
+        
+a = Analysis(anaFiles,
+             pathex=['..'],
+             #hiddenimports=['cgi', 'netrc'],
              hookspath=None,
              runtime_hooks=None)
 pyz = PYZ(a.pure)

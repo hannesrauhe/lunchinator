@@ -3,18 +3,20 @@ from lunchinator.lunch_settings import lunch_settings
 from lunchinator.iface_plugins import iface_general_plugin
 from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
 from lunchinator.utilities import getValidQtParent, displayNotification, \
-    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC
+    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, which
 from lunchinator.download_thread import DownloadThread
 from lunchinator.shell_thread import ShellThread
 import urllib2, sys, os, contextlib, subprocess
 import tempfile
 from functools import partial
 from xml.etree import ElementTree
+from online_update.gitUpdate import gitUpdate
     
 class online_update(iface_general_plugin):
     def __init__(self):
         super(online_update, self).__init__()
-        self.options = [(("check_url", "update URL"), "http://update.lunchinator.de")]
+        self.hidden_options = {"check_url": "http://update.lunchinator.de"}
+        self._git_updater = None
         self._avail_version = 0
         self._statusLabel = None
         self._progressBar = None
@@ -34,11 +36,14 @@ class online_update(iface_general_plugin):
                 os.environ["PATH"] += ":/usr/local/bin"
         
         
-        # check for GPG
-        if self._has_gpg():
-            self.check_for_update()
-        else:
-            self._set_status("GPG not installed or not working properly.")
+        self._git_updater = gitUpdate()
+        if not self._git_updater.has_git():
+            self._git_updater = None
+            # check for GPG
+            if self._has_gpg():
+                self.check_for_update()
+            else:
+                self._set_status("GPG not installed or not working properly.")
         
     def _has_gpg(self):
         gpg, _key = getGPG()
@@ -51,13 +56,13 @@ class online_update(iface_general_plugin):
         iface_general_plugin.deactivate(self)
     
     def create_options_widget(self, parent):
+        if self._git_updater:
+            return self._git_updater.create_options_widget(parent)
+        
         from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, QVBoxLayout, QLabel, QSizePolicy, QPushButton, QTextEdit, QProgressBar
        
-        # embed the standard options widget first:
-        widget = QWidget(parent)    
-        w = super(online_update, self).create_options_widget(widget)    
+        widget = QWidget(parent)
         layout = QVBoxLayout(widget)
-        layout.addWidget(w)
         
         # now add the new stuff
         versionLabel = QLabel("Installed Version: " + get_settings().get_commit_count())
@@ -79,11 +84,7 @@ class online_update(iface_general_plugin):
         self._installButton.clicked.connect(self.install_update)
         self._installButton.setEnabled(self._install_ready)
         layout.addWidget(self._installButton)
-        
-        self._versionLabel = QTextEdit("")
-        self._update_version_label()
-        layout.addWidget(self._versionLabel)
-        
+                
         widget.setMaximumHeight(widget.sizeHint().height())
         widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         
@@ -97,9 +98,9 @@ class online_update(iface_general_plugin):
         
     def getCheckURLBase(self):
         if getPlatform() == PLATFORM_WINDOWS:
-            return self.options["check_url"] + "/win/"
+            return self.hidden_options["check_url"] + "/win/"
         elif getPlatform() == PLATFORM_MAC:
-            return self.options["check_url"] + "/mac/"
+            return self.hidden_options["check_url"] + "/mac/"
         else:
             return None  # TODO
         
@@ -225,7 +226,6 @@ class online_update(iface_general_plugin):
                     path = newPath
                 
                 if path == None or not os.path.exists(os.path.join(path, "Contents", "MacOS", "Lunchinator")):
-                    log_error("Could not find application bundle. Cannot update.")
                     self._set_status("Could not find application bundle. Cannot update.", True)
                 else:
                     pid = os.fork()
@@ -255,11 +255,11 @@ class online_update(iface_general_plugin):
             self._progress_holder = progress
             
     def _update_version_label(self):
-        if self._version_info and self._versionLabel:
+        if self._version_info and self._statusLabel:
             vstr = "Online Version Info:\n"
             for k, v in self._version_info.iteritems():
                 vstr += str(k) + ":" + str(v) + "\n"
-            self._versionLabel.setText(vstr)       
+            self._statusLabel.setToolTip(vstr)       
             
     def _verify_signature(self, signedString):
         gpg, _keyid = getGPG()

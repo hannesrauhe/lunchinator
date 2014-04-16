@@ -5,18 +5,20 @@ from lunchinator import get_server, convert_string, log_exception
 class CLIOptionHandling(LunchCLIModule):
     def getOptionCategories(self):
         try:
-            for pluginInfo in get_server().plugin_manager.getAllPlugins():
-                if pluginInfo.plugin_object.is_activated:
-                    if pluginInfo.plugin_object.has_options():
-                        yield (pluginInfo.name, pluginInfo.description)
+            if get_server().get_plugins_enabled():
+                for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                    if pluginInfo.plugin_object.is_activated:
+                        if pluginInfo.plugin_object.has_options():
+                            yield (pluginInfo.name, pluginInfo.description)
         except:
             log_exception("while collecting option categories")
             
     def getPluginObject(self, cat):
         cat = cat.upper()
-        for pluginInfo in get_server().plugin_manager.getAllPlugins():
-            if pluginInfo.plugin_object.is_activated and pluginInfo.name.upper() == cat:
-                return pluginInfo.plugin_object
+        if get_server().get_plugins_enabled():
+            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                if pluginInfo.plugin_object.is_activated and pluginInfo.name.upper() == cat:
+                    return pluginInfo.plugin_object
         return None
             
     def getOptionsOfCategory(self, cat):

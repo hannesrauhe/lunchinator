@@ -43,8 +43,19 @@ then
   exit -1
 fi
 
+source determine_version.sh
+
 # version has to be located besides setup.py
-git rev-list HEAD --count > ../version
+echo "$VERSION" >../version
+
+function generate_changelog() {
+  echo "$(git cat-file -p $(git rev-parse $(git tag | head)) | tail -n +6)" |
+  while read line 
+  do
+    dch -a "$line"
+  done
+  sed -i -e '/automatically created by stdeb/d' debian/changelog
+}
 
 for dist in "${dists[@]}"
 do
@@ -56,8 +67,17 @@ do
   popd
   py2dsc --suite=${dist} --dist-dir=deb_${dist} dist/Lunchinator*
   pushd deb_${dist}/lunchinator-*
-  echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light" >>debian/*.postinst
-  echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark" >>debian/*.postinst
+  POSTINST="debian/postinst"
+  if [ -f debian/*.postinst ]
+  then
+    POSTINST=debian/*.postinst
+  else
+    echo '#DEBHELPER#' > $POSTINST
+  fi
+  echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light" >>$POSTINST
+  echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark" >>$POSTINST
+	echo "pip install requests requests-oauthlib oauthlib python-twitter python-gnupg yapsy" >> $POSTINST
+  generate_changelog
   debuild -S 2>&1 | tee ../../${dist}.log
   if $PUBLISH
   then

@@ -41,9 +41,10 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
         
         get_server().initialize(self)
         
-        for pluginInfo in get_server().plugin_manager.getAllPlugins():
-            if pluginInfo.plugin_object.is_activated:
-                self.addModule(pluginInfo.plugin_object)
+        if get_server().get_plugins_enabled():
+            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                if pluginInfo.plugin_object.is_activated:
+                    self.addModule(pluginInfo.plugin_object)
                 
         self.exitCode = 0
         # if serverStopped is called, we can determine if it was a regular exit.

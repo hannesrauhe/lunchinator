@@ -11,41 +11,26 @@ class lunch_settings(object):
         if cls._instance == None:
             cls._instance = cls()
         return cls._instance
-    
-    def runGitCommand(self, args, path=None, quiet=True):
-        if path == None:
-            path = self.get_main_package_path()
         
-        call = ["git", "--no-pager", "--git-dir=" + path + "/.git", "--work-tree=" + path]
-        call = call + args
-        
-        fh = subprocess.PIPE    
-        if quiet:
-            fh = open(os.path.devnull, "w")
-        p = subprocess.Popen(call, stdout=fh, stderr=fh)
-        pOut, pErr = p.communicate()
-        retCode = p.returncode
-        return retCode, pOut, pErr
-    
-    def getGitCommandResult(self, args, path=None, quiet=True):
-        retCode, _, __ = self.runGitCommand(args, path, quiet)
-        return retCode
-    
     def _findMainPackagePath(self):
         path = os.path.realpath(__file__) 
         while os.path.dirname(path) != path:
             if os.path.exists(os.path.join(path, 'lunchinator', '__init__.py')):
                 return path
             path = os.path.dirname(path)
+        if hasattr(sys, "_MEIPASS"):  #pyinstaller, only for Windows
+            return sys._MEIPASS
         return None
     
-    def _findResourcesPath(self, defaultPath):
+    def _findResourcesPath(self, defaultPath):    
         possibilities = [defaultPath, "/usr/share/lunchinator", "/usr/local/share/lunchinator"]
+        if hasattr(sys, "_MEIPASS"): #pyinstaller            
+            possibilities = [os.path.dirname(sys.executable)] + possibilities
         for poss in possibilities:
             if os.path.exists(os.path.join(poss, "images", "lunchinator.png")):
                 return poss
         return None
-    
+
     def __init__(self):
         '''unchangeable for now'''
         self._main_config_dir = MAIN_CONFIG_DIR
@@ -77,7 +62,6 @@ class lunch_settings(object):
         self._group = u""
         self._avatar_file = u""    
         self._tcp_port = 50001
-        self._auto_update = True   
         self._default_lunch_begin = u"12:15"
         self._default_lunch_end = u"12:45"
         self._alarm_begin_time = u"11:30"
@@ -104,33 +88,11 @@ class lunch_settings(object):
         self.read_config_from_hd()
         
         try:
-            _, self._version, __ = self.runGitCommand(["log", "-1"], self.get_main_package_path(), quiet=False)
-            for line in self._version.splitlines():
-                if line.startswith("Date:"):
-                    self._version_short = unicode(line[5:].strip())            
-        except:
-            log_exception("git log could not be executed correctly - version information not available")
-        
-        try:    
-            revListArgs = ["rev-list", "HEAD", "--count"]
-            ret, cco, _ = self.runGitCommand(revListArgs, self.get_main_package_path(), quiet=False)
-            if ret:
-                # something went wrong, get out of here!
-                raise False
-            self._commit_count = cco.strip()
-            
-            if os.path.exists(self._external_plugin_dir):
-                retCode, cco, __ = self.runGitCommand(revListArgs, self._external_plugin_dir, quiet=False)
-                if retCode == 0:
-                    self._commit_count_plugins = cco.strip()
-        except:
             version_file = self.get_resource("version")
-            if os.path.exists(version_file):
-                log_info("git rev_list not available, using version file info instead")
-                with contextlib.closing(open(version_file, "r")) as vfh:
-                    self._commit_count = vfh.read()
-            else:
-                log_exception("git rev-list could not be executed correctly - commit count information not available")
+            with contextlib.closing(open(version_file, "r")) as vfh:
+                self._commit_count = vfh.read().strip()
+        except Exception, e:
+            log_error("version file missing, no version information")
             
     def read_config_from_hd(self): 
         self._config_file.read(self._main_config_dir + '/settings.cfg')
@@ -139,7 +101,6 @@ class lunch_settings(object):
         self._group = self.read_value_from_config_file(self._group, "general", "group")
         self._tcp_port = self.read_value_from_config_file(self._tcp_port, "general", "tcp_port")
         
-        self._auto_update = self.read_value_from_config_file(self._auto_update, "general", "auto_update")
         self._default_lunch_begin = self.read_value_from_config_file(self._default_lunch_begin, "general", "default_lunch_begin")
         self._default_lunch_end = self.read_value_from_config_file(self._default_lunch_end, "general", "default_lunch_end")
         self._alarm_begin_time = self.read_value_from_config_file(self._alarm_begin_time, "general", "alarm_begin_time")
@@ -184,36 +145,6 @@ class lunch_settings(object):
     def write_config_to_hd(self):
         with codecs.open(self._main_config_dir + '/settings.cfg', 'w', 'utf-8') as f: 
             self._config_file.write(f)
-        
-    def getCanUpdate(self, repo):
-        if self.getGitCommandResult(["rev-parse"], repo) != 0:
-            return (False, "'%s' is no git repository" % repo)
-        
-        if self.getGitCommandResult(["diff", "--name-only", "--exit-code", "--quiet"], repo) != 0:
-            return (False, "There are unstaged changes")
-        
-        if self.getGitCommandResult(["diff", "--cached", "--exit-code", "--quiet"], repo) != 0:
-            return (False, "There are staged, uncommitted changes")
-        
-        _, branch, __ = self.runGitCommand(["symbolic-ref", "HEAD"], repo, quiet=False)
-        if "master" not in branch:
-            return (False, "The selected branch is not the master branch")
-        
-        if self.getGitCommandResult(["log", "origin/master..HEAD", "--exit-code", "--quiet"]) != 0:
-            return (False, "There are unpushed commits on the master branch")
-        
-        return (True, None)
-    
-    def getCanUpdateMain(self):
-        return self.getCanUpdate(self.get_main_package_path())
-        
-    def getCanUpdatePlugins(self):
-        return self.getCanUpdate(self._main_config_dir + "/plugins/")
-    
-    def get_auto_update_enabled(self):
-        return self._auto_update
-    def set_auto_update_enabled(self, enable):
-        self._auto_update = enable
     
     def get_main_package_path(self):
         return self._main_package_path
@@ -285,11 +216,6 @@ class lunch_settings(object):
         return self._group
     def set_group(self, value):
         self._group = value
-    
-    def get_auto_update(self):
-        return self._auto_update
-    def set_auto_update(self, new_value):
-        self._auto_update = new_value
       
     def get_avatar_dir(self):
         return self._avatar_dir

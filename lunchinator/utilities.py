@@ -2,7 +2,6 @@ import subprocess,sys,ctypes
 from lunchinator import log_exception, get_server, log_warning, log_debug,\
     get_settings, log_error
 import os
-from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
 import threading
 import contextlib
 
@@ -46,7 +45,8 @@ def displayNotification(name,msg,icon=None):
             log_debug(call)
             subprocess.call(call, stdout=fh, stderr=fh)
         elif myPlatform == PLATFORM_WINDOWS:
-            get_server().controller.statusicon.showMessage(name,msg)
+            if hasattr(get_server().controller, "statusicon"):
+                get_server().controller.statusicon.showMessage(name,msg)
     except:
         log_exception("error displaying notification")
         
@@ -156,6 +156,9 @@ def getValidQtParent():
     raise Exception("Could not find a valid QObject instance")
     
 def processPluginCall(ip, call):
+    if not get_server().get_plugins_enabled():
+        return
+    from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
     member_info = {}
     if get_server().get_peer_info().has_key(ip):
         member_info = get_server().get_peer_info()[ip]
@@ -190,16 +193,19 @@ def which(program):
 def getBinary(name, altLocation = ""):
     if getPlatform() == PLATFORM_WINDOWS:
         name += ".exe"
-        
-    gbinary = which(name)
-    if not gbinary:
-        gbinary = get_settings().get_resource(altLocation, name)
-    if not os.path.isfile(gbinary):
+    try:
+        if altLocation:
+            gbinary = get_settings().get_resource(altLocation, name)
+    except:
+        altLocation=""
+         
+    if not altLocation:
+        gbinary = which(name)
+    
+    if not gbinary or not os.path.isfile(gbinary):
         return None   
     
-    if getPlatform() == PLATFORM_WINDOWS:
-        gbinary = "\""+gbinary+"\""
-    return gbinary
+    return os.path.realpath(gbinary)
 
 def _findLunchinatorKeyID(gpg, secret):
     # use key from keyring as default
@@ -212,8 +218,8 @@ def _findLunchinatorKeyID(gpg, secret):
 def getGPG(secret=False):
     """ Returns tuple (GPG instance, keyid) """
     
-    from gnupg.gnupg import GPG
-    gbinary = getBinary("gpg", "gnupg")
+    from gnupg import GPG
+    gbinary = getBinary("gpg", "bin")
     if not gbinary:
         log_error("GPG not found")
         return None, None
@@ -221,9 +227,15 @@ def getGPG(secret=False):
     ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
     
     try:
-        gpg = GPG(gbinary,ghome)
+        gpg = None
+        if getPlatform() == PLATFORM_WINDOWS:
+            gpg = GPG("\""+gbinary+"\"",ghome)
+        else:
+            gpg = GPG(gbinary,ghome)
+        if not gpg.encoding:
+            gpg.encoding = 'utf-8'
     except Exception, e:
-        log_error("GPG not working: "+str(e))
+        log_exception("GPG not working: "+str(e))
         return None, None
     
     # use key from keyring as default

@@ -7,4 +7,5 @@ Comment=It's the Lunchinator.
 Exec=lunchinator
 Icon=lunchinator
 Terminal=false
-Categories=Utilities;Application
+Categories=Utilitiy;TimeUtility;Internet;InstantMessaging
+X-SuSE-translate=false

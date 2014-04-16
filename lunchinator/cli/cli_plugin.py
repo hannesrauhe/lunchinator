@@ -10,15 +10,16 @@ class CLIPluginHandling(LunchCLIModule):
     def getPluginNames(self, listActivated, listDeactivated, category = None):
         try:
             plugins = None
-            if category == None:
-                plugins = get_server().plugin_manager.getAllPlugins()
-            else:
-                plugins = get_server().plugin_manager.getPluginsOfCategory(category)
-            
-            for pluginInfo in plugins:
-                if pluginInfo.plugin_object.is_activated and listActivated or\
-                        not pluginInfo.plugin_object.is_activated and listDeactivated:
-                    yield (pluginInfo.name, pluginInfo.description, pluginInfo.categories)
+            if get_server().get_plugins_enabled():
+                if category == None:
+                    plugins = get_server().plugin_manager.getAllPlugins()
+                else:
+                    plugins = get_server().plugin_manager.getPluginsOfCategory(category)
+                
+                for pluginInfo in plugins:
+                    if pluginInfo.plugin_object.is_activated and listActivated or\
+                            not pluginInfo.plugin_object.is_activated and listDeactivated:
+                        yield (pluginInfo.name, pluginInfo.description, pluginInfo.categories)
         except:
             log_exception("while collecting option categories")
             

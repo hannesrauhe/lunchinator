@@ -2,15 +2,8 @@
 <?eclipse-pydev version="1.0"?><pydev_project>
 <pydev_pathproperty name="org.python.pydev.PROJECT_SOURCE_PATH">
 <path>/lunchinator</path>
-<path>/lunchinator/bin</path>
 <path>/lunchinator/lunchinator</path>
 <path>/lunchinator/plugins</path>
-<path>/lunchinator/plugins/avatar</path>
-<path>/lunchinator/plugins/bug_report</path>
-<path>/lunchinator/plugins/maintainer</path>
-<path>/lunchinator/plugins/rot13</path>
-<path>/lunchinator/plugins/tdtnotify</path>
-<path>/lunchinator/plugins/twitter_status</path>
 </pydev_pathproperty>
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_VERSION">python 2.7</pydev_property>
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_INTERPRETER">Default</pydev_property>
@@ -18,7 +11,5 @@
 <path>${USER_HOME}/.lunchinator/plugins</path>
 </pydev_pathproperty>
 <pydev_variables_property name="org.python.pydev.PROJECT_VARIABLE_SUBSTITUTION">
-<key>USER_HOME</key>
-<value>C:\Users\d054203</value>
 </pydev_variables_property>
 </pydev_project>
