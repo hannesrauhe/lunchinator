@@ -11,7 +11,7 @@ a = Analysis(['..\\\\start_lunchinator.py',
 			'..\\\\lunchinator\\\\shell_thread.py', 
 			'..\\\\plugins\\\\simple_view\\\\simpleViewWidget.py'],
              pathex=['.','lunchinator'],
-             hiddenimports=['cgi', 'netrc'],
+             hiddenimports=['netrc'],
              hookspath=None,
              runtime_hooks=None)
 pyz = PYZ(a.pure)
