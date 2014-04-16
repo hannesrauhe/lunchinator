@@ -3,15 +3,16 @@
 
 from time import strftime, localtime, time, mktime, gmtime
 from datetime import datetime
-import socket,sys,os,json,codecs,contextlib
+import socket, sys, os, json, codecs, contextlib
 from threading import Lock
 from cStringIO import StringIO
 
-from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning,\
+from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string
      
 import tarfile
 import platform
+from lunchinator.lunch_member_info import LunchMemberInfo
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -36,20 +37,17 @@ class lunch_server(object):
         self.update_request = False
         self.new_msg = False
         self.my_master = -1    
-        self.peer_nr=0 #the number of the peer i contacted to be my master
-        self.last_lunch_call=0
+        self._member_info = LunchMemberInfo()
+        self.peer_ip = None  # the IP of the peer i contacted to be my master
+        self.last_lunch_call = 0
         self.last_messages = []
-        self._members = []
-        self._peer_timeout = {}
-        self._peer_info = {}
         self.plugin_manager = None
         self.no_updates = False
         self.own_ip = ""
         self.messagesLock = Lock()
         self.membersLock = Lock()
         self.dontSendTo = set()
-        self.unknown_cmd = ["HELO_REQUEST_INFO","HELO_INFO"]
-        self._peer_groups = set()
+        self.unknown_cmd = ["HELO_REQUEST_INFO", "HELO_INFO"]
         
         self.exitCode = 0  
         
@@ -57,7 +55,7 @@ class lunch_server(object):
     """ -------------------------- CALLED FROM MAIN THREAD -------------------------------- """
         
     """Initialize Lunch Server with a specific controller"""
-    def initialize(self, controller = None):
+    def initialize(self, controller=None):
         if self.initialized:
             return
         self.initialized = True
@@ -80,7 +78,7 @@ class lunch_server(object):
             ])
             self.plugin_manager = PluginManagerSingleton.get()
             self.plugin_manager.app = self
-            self.plugin_manager.setConfigParser(get_settings().get_config_file(),get_settings().write_config_to_hd)
+            self.plugin_manager.setConfigParser(get_settings().get_config_file(), get_settings().write_config_to_hd)
             self.plugin_manager.setPluginPlaces(get_settings().get_plugin_dirs())
             categoriesFilter = {
                "general" : iface_general_plugin,
@@ -105,10 +103,10 @@ class lunch_server(object):
     '''listening method - should be started in its own thread'''    
     def start_server(self):
         self.initialize()
-        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"),"Starting the lunch notifier service")
+        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"), "Starting the lunch notifier service")
         self.running = True
-        self.my_master=-1 #the peer i use as master
-        announce_name=-1 #how often did I announce my name
+        self.my_master = -1  # the peer i use as master
+        announce_name = -1  # how often did I announce my name
         
         self._determineOwnIP()
         
@@ -120,66 +118,66 @@ class lunch_server(object):
             s.settimeout(5.0)
             self.controller.initDone()
             while self.running:
-                if self.new_msg and (time()-mktime(self.getMessage(0)[0]))>(get_settings().get_reset_icon_time()*60):
-                    self.new_msg=False
+                if self.new_msg and (time() - mktime(self.getMessage(0)[0])) > (get_settings().get_reset_icon_time() * 60):
+                    self.new_msg = False
                 try:
                     daten, addr = s.recvfrom(1024)
                     ip = unicode(addr[0])
                     try:
                         daten = daten.decode('utf-8')
                     except:
-                        log_error("Received illegal data from %s, maybe wrong encoding"%ip)
+                        log_error("Received illegal data from %s, maybe wrong encoding" % ip)
                         continue
                     if ip not in self._peer_timeout:
-                        self._peer_timeout[ip]=time() 
+                        self._peer_timeout[ip] = time()
                         self._peerAppended(ip)
-                    else:
-                        self._peer_timeout[ip]=time()
-                        
-                    if self._check_group(daten,ip):
                         if not ip.startswith("127."):
-                            if not ip in self._members:
+                            if not self.knows_member(ip):
                                 self._append_member(ip, ip)
-                            
+                    else:
+                        self._peer_timeout[ip] = time()
+                        
+                    if self._check_group(daten, ip):
                         if daten.startswith("HELO"):
-                            #simple infrastructure protocol messages starting with HELO''' 
+                            # simple infrastructure protocol messages starting with HELO''' 
                             self._incoming_event(daten, ip)                            
                         else:  
-                            #simple message                          
-                            self._incoming_call(daten,ip)
+                            # simple message                          
+                            self._incoming_call(daten, ip)
                     else:
-                        log_debug("Dropped a message from",ip,daten)
+                        log_debug("Dropped a message from", ip, daten)
                 except socket.timeout:
-                    if len(self._members)>1:                        
+                    # TODO only group members?
+                    if len(self._member_info)>1:                        
                         if is_in_broadcast_mode:
                             is_in_broadcast_mode = False
                             log_warning("ending braodcast")
                             
                         if not len(self.own_ip):
                             self._determineOwnIP()
-                        if announce_name==-1:
-                            #first start
-                            self.call("HELO_REQUEST_INFO "+self._build_info_string())
-                        if announce_name==10:
-                            #it's time to announce my name again and switch the master
-                            self.call("HELO "+get_settings().get_user_name())
-                            announce_name=0
+                        if announce_name == -1:
+                            # first start
+                            self.call("HELO_REQUEST_INFO " + self._build_info_string())
+                        if announce_name == 10:
+                            # it's time to announce my name again and switch the master
+                            self.call("HELO " + get_settings().get_user_name())
+                            announce_name = 0
                             self._remove_inactive_members()
                             self._call_for_dict()
                         else:
-                            #just wait for the next time when i have to announce my name
-                            announce_name+=1
+                            # just wait for the next time when i have to announce my name
+                            announce_name += 1
                     else:
                         if not is_in_broadcast_mode:
                             is_in_broadcast_mode = True
                             log_warning("seems like you are alone - broadcasting for others")
                         self._broadcast()
-                    #log_debug("Current Members:", self._members)
+                    # log_debug("Current Members:", self._member_info.get_all_members())
         except socket.error as e:
-            #socket error messages may contain special characters, which leads to crashes on old python versions
+            # socket error messages may contain special characters, which leads to crashes on old python versions
             log_error(u"stopping lunchinator because of socket error:", convert_string(str(e)))
         except:
-            log_exception("stopping - Critical error: %s"%str(sys.exc_info())) 
+            log_exception("stopping - Critical error: %s" % str(sys.exc_info())) 
         finally: 
             try:
                 self.call("HELO_LEAVE bye")
@@ -190,11 +188,11 @@ class lunch_server(object):
             
     
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
-    def changeGroup(self,newgroup):
-        log_info("Changing Group: %s -> %s"%(get_settings().get_group(),newgroup))
+    def changeGroup(self, newgroup):
+        log_info("Changing Group: %s -> %s" % (get_settings().get_group(), newgroup))
         get_settings().set_group(newgroup)
         self.call("HELO_LEAVE Changing Group")
-        self.call("HELO_REQUEST_INFO "+self._build_info_string())
+        self.call("HELO_REQUEST_INFO " + self._build_info_string())
                     
     def memberName(self, addr):
         if addr in self._peer_info and u'name' in self._peer_info[addr]:
@@ -246,26 +244,14 @@ class lunch_server(object):
             if not begin:  
                 messages = self.last_messages[:]
             else:
-                for mtime,addr,msg in self.last_messages:                    
-                    if mtime>=gmtime(begin):
-                        messages.append([mtime,addr,msg])
+                for mtime, addr, msg in self.last_messages:                    
+                    if mtime >= gmtime(begin):
+                        messages.append([mtime, addr, msg])
                     else:
                         break
         finally:
             self.releaseMessages()
         return messages
-            
-    def get_groups(self):  
-        return self._peer_groups
-    
-    def get_members(self):  
-        return self._members
-
-    def get_member_timeout(self):  
-        return self._peer_timeout    
-    
-    def get_peer_timeout(self):  
-        return self._peer_timeout    
     
     def get_plugins_enabled(self):
         return self._load_plugins
@@ -276,11 +262,11 @@ class lunch_server(object):
     def get_peer_info(self):  
         return self._peer_info   
     
-    def is_peer_ready(self,peer_addr):
+    def is_peer_ready(self, peer_addr):
         if self._peer_info.has_key(peer_addr):
             p = self._peer_info[peer_addr]
             if p.has_key(u"next_lunch_begin") and p.has_key(u"next_lunch_end"):
-                return self.getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"])>0
+                return self.getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"]) > 0
         return False
         
     def getOwnIP(self):
@@ -310,7 +296,7 @@ class lunch_server(object):
         log_exception("getDBConnection: DB Connections plugin not yet loaded")
         return None        
         
-    def getTimeDifference(self,begin,end):
+    def getTimeDifference(self, begin, end):
         """ calculates the correlation of now and the specified lunch dates
         negative value: now is before begin, seconds until begin
         positive value: now is after begin but before end, seconds until end
@@ -319,18 +305,18 @@ class lunch_server(object):
         try:
             now = datetime.now()
             begin = datetime.strptime(begin, "%H:%M")
-            begin = begin.replace(year = now.year, month = now.month, day = now.day)
+            begin = begin.replace(year=now.year, month=now.month, day=now.day)
             end = datetime.strptime(end, "%H:%M")
-            end = end.replace(year = now.year, month = now.month, day = now.day)
+            end = end.replace(year=now.year, month=now.month, day=now.day)
             
             if now < begin:
                 # now is before begin
                 td = begin - now
-                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**3
+                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
                 return -1 if millis == 0 else -millis
             elif now < end:
                 td = end - now
-                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**3
+                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
                 return 1 if millis == 0 else millis
             else:
                 # now is after end
@@ -339,21 +325,21 @@ class lunch_server(object):
             log_exception("don't know how to handle time span")
             return False;
         
-    def call(self,msg,client='',hosts=[]):
+    def call(self, msg, client='', hosts=[]):
         self.initialize()
         
         target = None
         if client:
             # send to client regardless of the dontSendTo state
             target = [client.strip()]
-        elif 0==len(hosts):
-            target = set(self._members) - self.dontSendTo
+        elif 0 == len(hosts):
+            target = set(self.get_group_members()) - self.dontSendTo
         else:
             # send to all specified hosts regardless of the dontSendTo state
             target = set(hosts)
         
-        if 0==len(target):
-            log_error("Cannot send message, no peers connected, no peer found in _members file")
+        if 0 == len(target):
+            log_error("Cannot send message, no peers connected, no peer found in members file")
 
         i = 0
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
@@ -362,7 +348,7 @@ class lunch_server(object):
                 try:
                     log_debug("Sending", msg, "to", ip.strip())
                     s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
-                    i+=1
+                    i += 1
                 except:
                     # only warning message; happens sometimes if the host is not reachable
                     log_warning("Message %s could not be delivered to %s: %s" % (s, ip, str(sys.exc_info()[0])))
@@ -372,29 +358,29 @@ class lunch_server(object):
         return i
         
     '''short for the call function above for backward compatibility'''
-    def call_all_members(self,msg):        
+    def call_all_members(self, msg):        
         self.call(msg)   
             
     """ ---------------------- PRIVATE -------------------------------- """
     
     def _finish(self):
-        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"),"Stopping the lunch notifier service")
+        log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"), "Stopping the lunch notifier service")
         self._write_members_to_file()
         self._write_messages_to_file()
         self.controller.serverStopped(self.exitCode)
         
     def _read_config(self):              
-        if len(self._members)==0:
+        if len(self._member_info) == 0:
             self._init_members_from_file()
-        if len(self.last_messages)==0:
-            self.last_messages=self._init_messages_from_file()
+        if len(self.last_messages) == 0:
+            self.last_messages = self._init_messages_from_file()
     
-    def _updateMembersDict(self, otherDict, noLocal = True):
+    def _updateMembersDict(self, otherDict, noLocal=True):
         for ip, hostn in otherDict.items():
             if noLocal and ip.startswith('127'):
                 continue
             
-            if not ip in self._members:
+            if not self._member_info.knowsMember(ip):
                 self._append_member(ip, hostn)
         
     def _memberAppended(self, ip):
@@ -409,7 +395,7 @@ class lunch_server(object):
     def _peerAppended(self, ip):
         self.controller.peerAppended(ip)
         
-    def _append_member(self, ip, hostn, inform = True):
+    def _append_member(self, ip, hostn, inform=True):
         # insert name into info dict
         memberInfo = {}
         if ip in self._peer_info:
@@ -421,8 +407,8 @@ class lunch_server(object):
         didUpdate = False
         try:
             self._peer_info[ip] = memberInfo
-            if not ip in self._members:
-                self._members.append(ip)
+            if not ip in self._member_info:
+                self._all_members.append(ip)
                 if inform:
                     didAppend = True
             elif inform:
@@ -440,8 +426,8 @@ class lunch_server(object):
         didRemove = False        
         self.lockMembers()
         try:
-            if ip in self._members:
-                self._members.remove(ip)
+            if ip in self._member_info:
+                self._all_members.remove(ip)
                 didRemove = True
         finally:
             self.releaseMembers()
@@ -452,7 +438,7 @@ class lunch_server(object):
     def _init_members_from_file(self):
         members = []
         if os.path.exists(get_settings().get_members_file()):
-            with codecs.open(get_settings().get_members_file(),'r','utf-8') as f:    
+            with codecs.open(get_settings().get_members_file(), 'r', 'utf-8') as f:    
                 for hostn in f.readlines():
                     hostn = hostn.strip()
                     if len(hostn) == 0:
@@ -461,46 +447,46 @@ class lunch_server(object):
                         ip = unicode(socket.gethostbyname(hostn))
                         self._append_member(ip, hostn, False)
                     except:
-                        log_warning("cannot find host specified in members_file by %s with name %s"%(get_settings().get_members_file(),hostn))
+                        log_warning("cannot find host specified in members_file by %s with name %s" % (get_settings().get_members_file(), hostn))
         return members
     
     def _write_members_to_file(self):
         try:
-            if len(self._members)>1:
-                with codecs.open(get_settings().get_members_file(),'w','utf-8') as f:
+            if len(self._member_info) > 1:
+                with codecs.open(get_settings().get_members_file(), 'w', 'utf-8') as f:
                     f.truncate()
-                    for m in self._members:
-                        f.write(m+"\n")
+                    for m in self._member_info:
+                        f.write(m + "\n")
         except:
-            log_exception("Could not write _members to %s"%(get_settings().get_members_file()))
+            log_exception("Could not write all members to %s" % (get_settings().get_members_file()))
             
     def _init_messages_from_file(self):
         messages = []
         if os.path.exists(get_settings().get_messages_file()):
             try:
-                with codecs.open(get_settings().get_messages_file(),'r','utf-8') as f:    
+                with codecs.open(get_settings().get_messages_file(), 'r', 'utf-8') as f:    
                     tmp_msg = json.load(f)
                     for m in tmp_msg:
-                        messages.append([localtime(m[0]),m[1],m[2]])
+                        messages.append([localtime(m[0]), m[1], m[2]])
             except:
-                log_exception("Could not read messages file %s,but it seems to exist"%(get_settings().get_messages_file()))
+                log_exception("Could not read messages file %s,but it seems to exist" % (get_settings().get_messages_file()))
         return messages
     
     def _write_messages_to_file(self):
         try:
-            if self.messagesCount()>0:
-                with codecs.open(get_settings().get_messages_file(),'w','utf-8') as f:
+            if self.messagesCount() > 0:
+                with codecs.open(get_settings().get_messages_file(), 'w', 'utf-8') as f:
                     f.truncate()
                     msg = []
                     self.messagesLock.acquire()
                     try:
                         for m in self.last_messages:
-                            msg.append([mktime(m[0]),m[1],m[2]])
+                            msg.append([mktime(m[0]), m[1], m[2]])
                     finally:
                         self.messagesLock.release()
-                    json.dump(msg,f)
+                    json.dump(msg, f)
         except:
-            log_exception("Could not write messages to %s: %s"%(get_settings().get_messages_file(), sys.exc_info()[0]))    
+            log_exception("Could not write messages to %s: %s" % (get_settings().get_messages_file(), sys.exc_info()[0]))    
     
     def _build_info_string(self):
         from lunchinator.utilities import getPlatform, PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS
@@ -530,66 +516,71 @@ class lunch_server(object):
         
     def _createMembersDict(self):
         membersDict = {}
-        for ip in self._members:
+        for ip in self._member_info:
             if ip in self._peer_info and u'name' in self._peer_info[ip]:
                 membersDict[ip] = self._peer_info[ip][u'name']
             else:
                 membersDict[ip] = ip
         return membersDict
     
-    '''checks message for group commands, return false if peer is not in group'''
-    def _check_group(self,data,addr):
+    def _check_group(self, data, addr):
+        '''checks message for group commands, return false if peer is not in group'''
         if addr.startswith("127."):
             return True        
         own_group = get_settings().get_group()
         
         try:
             if " " in data:
-                (cmd, value) = data.split(" ",1)
+                (cmd, value) = data.split(" ", 1)
                 if cmd.startswith("HELO_INFO"):
                     self._update_peer_info(addr, json.loads(value), requestAvatar=False)
                 elif cmd.startswith("HELO_REQUEST_INFO"):
                     self._update_peer_info(addr, json.loads(value), requestAvatar=False)
-                    self.call("HELO_INFO "+self._build_info_string(), client=addr)
+                    self.call("HELO_INFO " + self._build_info_string(), client=addr)
         except:
-            log_exception("was not able to parse Info from",data,addr)
+            log_exception("was not able to parse Info from", data, addr)
         
-        if len(own_group)==0:
-            #accept anything as long as i do not have a group
+        if len(own_group) == 0:
+            # accept anything as long as i do not have a group
             return True
             
-        return self._peer_info.has_key(addr) and self._peer_info[addr].has_key("group") and self._peer_info[addr]["group"] == own_group
+        return self.is_member_in_my_group(addr)
         
-    def _incoming_call(self,msg,addr):
+    def is_member_in_my_group(self, ip):
+        return ip in self._peer_info and \
+            self._peer_info[ip].has_key("group") and\
+            self._peer_info[ip]["group"] == get_settings().get_group()
+        
+    def _incoming_call(self, msg, addr):
         mtime = localtime()
         
         t = strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8")
         m = self.memberName(addr)
             
-        log_info("%s: [%s] %s" % (t,m,msg))
+        log_info("%s: [%s] %s" % (t, m, msg))
         
-        self._insertMessage(mtime,addr,msg)
-        self.controller.messagePrepended(mtime,addr,msg)
+        self._insertMessage(mtime, addr, msg)
+        self.controller.messagePrepended(mtime, addr, msg)
         self.new_msg = True
         self._write_messages_to_file()
         
         if not msg.startswith("ignore"):
             self.controller.processMessage(msg, addr)
             
-            if get_settings().get_lunch_trigger() in msg.lower() and 0<self.getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
+            if get_settings().get_lunch_trigger() in msg.lower() and 0 < self.getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
                 timenum = mktime(mtime)
                 if timenum - self.last_lunch_call > get_settings().get_mute_timeout():
                     self.last_lunch_call = timenum
                     self.controller.processLunchCall(msg, addr)
                 else:
-                    log_debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)"%(t,m,msg,strftime("%H:%M:%S", localtime(timenum + get_settings().get_mute_timeout()))))
+                    log_debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)" % (t, m, msg, strftime("%H:%M:%S", localtime(timenum + get_settings().get_mute_timeout()))))
       
-    def _update_peer_info(self, ip, newInfo, requestAvatar = True):            
+    def _update_peer_info(self, ip, newInfo, requestAvatar=True):            
         peer_group = newInfo["group"] if newInfo.has_key("group") else ""     
         peer_name = newInfo["name"] if newInfo.has_key("name") else ip
         own_group = get_settings().get_group()       
         
-        group_unchanged = self._peer_info.has_key(ip) and self._peer_info[ip].has_key("group") and self._peer_info[ip]==peer_group
+        group_unchanged = self._peer_info.has_key(ip) and self._peer_info[ip].has_key("group") and self._peer_info[ip] == peer_group
         self.lockMembers()
         try:
             self._peer_info[ip] = newInfo
@@ -597,105 +588,105 @@ class lunch_server(object):
             self.releaseMembers()
         
         if group_unchanged:
-            if peer_group==own_group:
+            if peer_group == own_group:
                 self._memberUpdated(ip)
         else:
             if peer_group not in self._peer_groups:
                 self._peer_groups.add(peer_group)
                 self.controller.groupAppended(peer_group, self._peer_groups)
-            if peer_group==own_group:
+            if peer_group == own_group:
                 self._append_member(ip, peer_name)
                 self._memberUpdated(ip)
             else:
                 self._remove_member(ip)
             
         if requestAvatar:
-            #Request avatar if not there yet
+            # Request avatar if not there yet
             if self._peer_info[ip].has_key("avatar"):
-                if not os.path.exists(get_settings().get_avatar_dir()+"/"+self._peer_info[ip]["avatar"]):
-                    self.call("HELO_REQUEST_AVATAR "+str(self.controller.getOpenTCPPort(ip)),client=ip)     
+                if not os.path.exists(get_settings().get_avatar_dir() + "/" + self._peer_info[ip]["avatar"]):
+                    self.call("HELO_REQUEST_AVATAR " + str(self.controller.getOpenTCPPort(ip)), client=ip)     
       
-    def _incoming_event(self,data,ip):   
+    def _incoming_event(self, data, ip):   
         if ip.startswith("127."):
-            #stop command is only allowed from localhost :-)
+            # stop command is only allowed from localhost :-)
             if data.startswith("HELO_STOP"):
-                log_info("Got Stop Command from localhost: %s"%data)
+                log_info("Got Stop Command from localhost: %s" % data)
                 self.running = False
-                self.exitCode = EXIT_CODE_STOP #run_forever script will stop
-            #only stop command is allowed from localhost, returning here
+                self.exitCode = EXIT_CODE_STOP  # run_forever script will stop
+            # only stop command is allowed from localhost, returning here
             return     
                 
         try:        
-            (cmd, value) = data.split(" ",1)
+            (cmd, value) = data.split(" ", 1)
                 
             if cmd.startswith("HELO_REQUEST_DICT"):
                 self._update_peer_info(ip, json.loads(value))
-                self.call("HELO_DICT "+json.dumps(self._createMembersDict()),client=ip)                   
+                self.call("HELO_DICT " + json.dumps(self._createMembersDict()), client=ip)                   
                 
             elif cmd.startswith("HELO_DICT"):
-                #the master send me the list of _members - yeah
+                # the master send me the list of all members - yeah
                 ext_members = json.loads(value)
                 self._updateMembersDict(ext_members)
-                if self.my_master==-1:
-                    self.call("HELO_REQUEST_INFO "+self._build_info_string())
+                if self.my_master == -1:
+                    self.call("HELO_REQUEST_INFO " + self._build_info_string())
                     
                 self.my_master = ip
                                     
             elif cmd.startswith("HELO_LEAVE"):
-                #the sender tells me, that he is going
-                if ip in self._members:
+                # the sender tells me, that he is going
+                if ip in self._member_info:
                     self.lockMembers()
                     try:
-                        self._members.remove(ip)
+                        self._all_members.remove(ip)
                     finally:
                         self.releaseMembers()
                     self._memberRemoved(ip)
-                self.call("HELO_DICT "+json.dumps(self._createMembersDict()),client=ip)
+                self.call("HELO_DICT " + json.dumps(self._createMembersDict()), client=ip)
                
             elif cmd.startswith("HELO_AVATAR"):
-                #someone wants to send me his pic via TCP
+                # someone wants to send me his pic via TCP
                 values = value.split()
-                file_size=int(values[0].strip())
-                tcp_port = 0 # 0 means we must guess the port
+                file_size = int(values[0].strip())
+                tcp_port = 0  # 0 means we must guess the port
                 if len(values) > 1:
                     tcp_port = int(values[1].strip())
-                file_name=""
+                file_name = ""
                 if self._peer_info[ip].has_key("avatar"):
-                    file_name=os.path.join(get_settings().get_avatar_dir(), self._peer_info[ip]["avatar"])
+                    file_name = os.path.join(get_settings().get_avatar_dir(), self._peer_info[ip]["avatar"])
                 else:
-                    log_error("%s tried to send his avatar, but I don't know where to safe it"%(ip))
+                    log_error("%s tried to send his avatar, but I don't know where to safe it" % (ip))
                 
                 if len(file_name):
-                    self.controller.receiveFile(ip,file_size,file_name,tcp_port)
+                    self.controller.receiveFile(ip, file_size, file_name, tcp_port)
                 
             elif cmd.startswith("HELO_REQUEST_AVATAR"):
-                #someone wants my pic 
+                # someone wants my pic 
                 other_tcp_port = get_settings().get_tcp_port()
                 
                 try:                    
-                    other_tcp_port=int(value.strip())
+                    other_tcp_port = int(value.strip())
                 except:
-                    log_exception("%s requested avatar, I could not parse the port from value %s, using standard %d"%(str(ip),str(value),other_tcp_port))
+                    log_exception("%s requested avatar, I could not parse the port from value %s, using standard %d" % (str(ip), str(value), other_tcp_port))
                     
-                fileToSend = get_settings().get_avatar_dir()+"/"+get_settings().get_avatar_file()
+                fileToSend = get_settings().get_avatar_dir() + "/" + get_settings().get_avatar_file()
                 if os.path.exists(fileToSend):
                     fileSize = os.path.getsize(fileToSend)
-                    log_info("Sending file of size %d to %s : %d"%(fileSize,str(ip),other_tcp_port))
+                    log_info("Sending file of size %d to %s : %d" % (fileSize, str(ip), other_tcp_port))
                     self.call("HELO_AVATAR %s" % fileSize, ip)
                     # TODO in a future release, send TCP port
-                    #self.call("HELO_AVATAR %s %s" % (fileSize, other_tcp_port), ip)
-                    self.controller.sendFile(ip,fileToSend, other_tcp_port)
+                    # self.call("HELO_AVATAR %s %s" % (fileSize, other_tcp_port), ip)
+                    self.controller.sendFile(ip, fileToSend, other_tcp_port)
                 else:
-                    log_error("Want to send file %s, but cannot find it"%(fileToSend))   
+                    log_error("Want to send file %s, but cannot find it" % (fileToSend))   
                 
             elif cmd.startswith("HELO_REQUEST_LOGFILE"):
-                #someone wants my logfile 
+                # someone wants my logfile 
                 other_tcp_port = get_settings().get_tcp_port()
                 try:                
-                    (oport, _) = value.split(" ",1)    
-                    other_tcp_port=int(oport.strip())
+                    (oport, _) = value.split(" ", 1)    
+                    other_tcp_port = int(oport.strip())
                 except:
-                    log_exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0"%(str(ip),str(value),other_tcp_port))
+                    log_exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0" % (str(ip), str(value), other_tcp_port))
                 
                 fileToSend = StringIO()
                 with contextlib.closing(tarfile.open(mode='w:gz', fileobj=fileToSend)) as tarWriter:
@@ -707,76 +698,70 @@ class lunch_server(object):
                         logIndex = logIndex + 1
                 
                 fileSize = fileToSend.tell()
-                log_info("Sending file of size %d to %s : %d"%(fileSize,str(ip),other_tcp_port))
-                self.call("HELO_LOGFILE_TGZ %d %d" %(fileSize, other_tcp_port), ip)
-                self.controller.sendFile(ip,fileToSend.getvalue(), other_tcp_port, True)
-            elif "HELO"==cmd:
-                #someone tells me his name
-                didKnowMember = ip in self._members
+                log_info("Sending file of size %d to %s : %d" % (fileSize, str(ip), other_tcp_port))
+                self.call("HELO_LOGFILE_TGZ %d %d" % (fileSize, other_tcp_port), ip)
+                self.controller.sendFile(ip, fileToSend.getvalue(), other_tcp_port, True)
+            elif "HELO" == cmd:
+                # someone tells me his name
+                didKnowMember = ip in self._member_info
                 self._append_member(ip, value) 
                 if not didKnowMember:
-                    self.call("HELO_INFO "+self._build_info_string(),client=ip)
+                    self.call("HELO_INFO " + self._build_info_string(), client=ip)
             elif cmd not in self.unknown_cmd:
-                #Report unknown commands once
+                # Report unknown commands once
                 self.unknown_cmd.append(cmd)
-                log_info("received unknown command from %s: %s with value %s"%(ip,cmd,value))        
+                log_info("received unknown command from %s: %s with value %s" % (ip, cmd, value))        
             
-            self.controller.processEvent(cmd,value,ip)
+            self.controller.processEvent(cmd, value, ip)
         except:
-            log_exception("Unexpected error while handling HELO call: %s"%(str(sys.exc_info())))
-            log_critical("The data received was: %s"%data)
+            log_exception("Unexpected error while handling HELO call: %s" % (str(sys.exc_info())))
+            log_critical("The data received was: %s" % data)
     
-    def _insertMessage(self, mtime,addr,msg):
+    def _insertMessage(self, mtime, addr, msg):
         self.messagesLock.acquire()
         try:
-            self.last_messages.insert(0,[mtime,addr,msg])
+            self.last_messages.insert(0, [mtime, addr, msg])
         finally:
             self.messagesLock.release()
                     
     def _remove_inactive_members(self):
         try:
-            indicesToRemove = []
-            for memberIndex, ip in enumerate(self._members):
-                if ip in self._peer_timeout:
-                    if time()-self._peer_timeout[ip]>get_settings().get_peer_timeout():
-                        indicesToRemove.append(memberIndex)
-                else:
-                    indicesToRemove.append(memberIndex)
+            # TODO rename get_peer_timeout
+            membersToRemove = self._member_info.getTimedOutMembers(get_settings.get_peer_timeout())
                     
-            log_debug("Removing inactive _members: %s (%s)" %([self._members[i] for i in indicesToRemove], indicesToRemove))
-            for memberIndex in reversed(indicesToRemove):
-                self._memberRemoved(self._members[memberIndex])
+            log_debug("Removing inactive members:", membersToRemove)
             self.lockMembers()
             try:
-                for memberIndex in reversed(indicesToRemove):
-                    del self._members[memberIndex]
+                for ip in membersToRemove:
+                    self._memberRemoved(ip)
+                self._member_info.removeMembers(membersToRemove)
             finally:
                 self.releaseMembers()
         except:
-            log_exception("Something went wrong while trying to clean up the _members-list")
+            log_exception("Something went wrong while trying to clean up the _all_members-list")
             
-    '''ask for the dictionary and send over own information'''
     def _call_for_dict(self):
+        '''ask for the dictionary and send over own information'''
         try:
-            if len(self._members)>self.peer_nr:
-                self.call("HELO_REQUEST_DICT "+self._build_info_string(),client=self._members[self.peer_nr])
-            if len(self._members) > 0:
-                self.peer_nr=(self.peer_nr+1) % len(self._members)
+            if len(self._member_info) > self.peer_nr:
+                self.call("HELO_REQUEST_DICT " + self._build_info_string(), client=self.get_all_members()[self.peer_nr])
+            if len(self.get_all_members()) > 0:
+                self.peer_nr = (self.peer_nr + 1) % len(self.get_all_members())
         except:
             log_exception("Something went wrong while trying to send a call to the new master")
     
     def _determineOwnIP(self):  
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      
-        for m in self._members:
+        for m in self.get_all_members():
             try:
-                #connect to UDF discard port 9
-                s.connect((m,9))
+                # connect to UDF discard port 9
+                s.connect((m, 9))
                 self.own_ip = unicode(s.getsockname()[0])
                 break
             except:
-                log_debug("While getting own IP, problem to connect to",m)
+                log_debug("While getting own IP, problem to connect to", m)
                 continue
-        log_debug("Found my IP:",self.own_ip)
+        log_debug("Found my IP:", self.own_ip)
         s.close()
     
     def _broadcast(self):
@@ -784,7 +769,7 @@ class lunch_server(object):
             s_broad = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            s_broad.sendto('HELO_REQUEST_INFO '+self._build_info_string(), ('255.255.255.255', 50000))
+            s_broad.sendto('HELO_REQUEST_INFO ' + self._build_info_string(), ('255.255.255.255', 50000))
             s_broad.close()
         except:
             log_exception("Problem while broadcasting")
