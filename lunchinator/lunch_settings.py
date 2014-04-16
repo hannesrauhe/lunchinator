@@ -13,16 +13,16 @@ class lunch_settings(object):
         return cls._instance
         
     def _findMainPackagePath(self):
-        if hasattr(sys, "_MEIPASS"):  #pyinstaller
-            return sys._MEIPASS
         path = os.path.realpath(__file__) 
         while os.path.dirname(path) != path:
             if os.path.exists(os.path.join(path, 'lunchinator', '__init__.py')):
                 return path
             path = os.path.dirname(path)
+        if hasattr(sys, "_MEIPASS"):  #pyinstaller, only for Windows
+            return sys._MEIPASS
         return None
     
-    def _findResourcesPath(self, defaultPath):        
+    def _findResourcesPath(self, defaultPath):    
         possibilities = [defaultPath, "/usr/share/lunchinator", "/usr/local/share/lunchinator"]
         if hasattr(sys, "_MEIPASS"): #pyinstaller            
             possibilities = [os.path.dirname(sys.executable)] + possibilities
