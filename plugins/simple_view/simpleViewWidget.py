@@ -24,7 +24,8 @@ class SimpleViewWidget(QWidget):
         
         sendLayout = QHBoxLayout()
         sendMessageField = QLineEdit(self)
-        sendMessageField.setPlaceholderText("optional Message")
+        if hasattr(sendMessageField, "setPlaceholderText"):
+            sendMessageField.setPlaceholderText("optional Message")
         lunchButton = LunchButton(parent, sendMessageField)
         
         sendLayout.addWidget(sendMessageField)
