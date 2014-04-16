@@ -1,7 +1,8 @@
 # -*- mode: python -*-
 a = Analysis(['..\\\\start_lunchinator.py', 
-			'..\\\\lunchinator\\\\start_lunchinator.py',
-			'..\\\\lunchinator\\\\lunch_settings.py',
+            '..\\\\plugins\\\\db_SQLite\\\\__init__.py',
+            '..\\\\plugins\\\\twitter_lunch\\\\__init__.py',
+            '..\\\\plugins\\\\lunch_http.py', 
 			'..\\\\plugins\\\\members_table\\\\__init__.py', 
 			'..\\\\plugins\\\\remote_pictures\\\\__init__.py', 
 			'..\\\\plugins\\\\online_update\\\\__init__.py', 
@@ -10,7 +11,7 @@ a = Analysis(['..\\\\start_lunchinator.py',
 			'..\\\\lunchinator\\\\shell_thread.py', 
 			'..\\\\plugins\\\\simple_view\\\\simpleViewWidget.py'],
              pathex=['.','lunchinator'],
-             hiddenimports=['SimpleHTTPServer', 'sqlite3', 'dbapi2', 'cgi', 'Queue', 'netrc'],
+             hiddenimports=['cgi', 'netrc'],
              hookspath=None,
              runtime_hooks=None)
 pyz = PYZ(a.pure)

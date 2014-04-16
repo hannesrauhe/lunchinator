@@ -36,7 +36,10 @@ class gitUpdate(object):
         return widget
     
     def has_git(self):
-        return self.getGitCommandResult(["rev-parse"]) == 0
+        try:
+            return self.getGitCommandResult(["rev-parse"]) == 0
+        except:
+            return None
         
     def install_update(self):
         shutil.copy(UPDATE_SCRIPT, UPDATE_SCRIPT_EXEC_PATH)
@@ -76,7 +79,7 @@ class gitUpdate(object):
 # 
     def runGitCommand(self, args, path = None, quiet = True):
         if path == None:
-            path = get_settings().get_resource(".")
+            path = get_settings().get_main_package_path()
          
         call = ["git","--no-pager","--git-dir="+path+"/.git","--work-tree="+path]
         call = call + args
