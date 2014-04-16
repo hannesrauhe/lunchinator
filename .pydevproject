@@ -11,7 +11,5 @@
 <path>${USER_HOME}/.lunchinator/plugins</path>
 </pydev_pathproperty>
 <pydev_variables_property name="org.python.pydev.PROJECT_VARIABLE_SUBSTITUTION">
-<key>USER_HOME</key>
-<value>/Users/Corny</value>
 </pydev_variables_property>
 </pydev_project>
