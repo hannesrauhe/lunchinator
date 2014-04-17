@@ -338,7 +338,14 @@ class lunch_server(object):
         except:
             log_exception("don't know how to handle time span")
             return False;
-        
+    
+    '''An info call informs a peer about my name etc...
+    by default to every peer'''
+    def call_info(self, peers=[]):
+        if 0 == len(peers):
+            peers = self._peer_info.keys()
+        return self.call("HELO_INFO " + self._build_info_string(), hosts=peers)  
+    
     def call(self, msg, client='', hosts=[]):
         self.initialize()
         

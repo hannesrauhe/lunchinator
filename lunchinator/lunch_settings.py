@@ -194,8 +194,14 @@ class lunch_settings(object):
     def get_next_lunch_begin(self):
         return self._next_lunch_begin
     
+    def set_next_lunch_begin(self, time):
+        self._next_lunch_begin = time
+        
     def get_next_lunch_end(self):
         return self._next_lunch_end
+    
+    def set_next_lunch_end(self, time):
+        self._next_lunch_end = time
     
     def get_log_file(self):
         return self._log_file

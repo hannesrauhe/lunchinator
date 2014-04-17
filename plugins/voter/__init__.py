@@ -1,5 +1,5 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import get_server, log_exception, log_error
+from lunchinator import get_server, get_settings, log_exception, log_error
 from PyQt4.QtGui import QTreeView, QWidget, QSortFilterProxyModel, QSizePolicy, QTableWidgetItem, QPushButton, QPalette, QColor
 from PyQt4.QtCore import Qt, QTime
 from ui_voter import Ui_Voter
@@ -57,6 +57,8 @@ class voter(iface_gui_plugin):
     def send_vote(self, place, time):
         vote_call = "HELO_VOTE "+json.dumps({"place": unicode(place), "time": unicode(time)})
         get_server().call(vote_call)
+        get_settings().set_next_lunch_begin(unicode(time))
+        get_server().call_info()
 
 class voterWidget(QWidget):
     def __init__(self, parent, vote_clicked_callable):
