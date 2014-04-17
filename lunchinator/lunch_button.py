@@ -12,6 +12,8 @@ class LunchButton(QPushButton):
         self.setIconSize(QSize(64, 64))
         self.clicked.connect(self.callForLunch)
         self.sendMessageField = msgfield
+        if self.sendMessageField:
+            self.sendMessageField.returnPressed.connect(self.callForLunch)
         
     def callForLunch(self):
         optmsg = ""
