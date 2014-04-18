@@ -31,9 +31,15 @@ then
       
   # ensure pip does not install into current package
   pushd "$HOME"
-  $SUDO "pip install $@"
+  $SUDO pip install $@
+  if [ $? <> 1 ]
+  then
+    echo "Installation with pip failed, trying again with easy_install"
+    $SUDO easy_install $@
+  fi
+  EXITST=$?
   popd
-  exit $?
+  exit $EXITST
 else
   # unknown OS
 	exit 1

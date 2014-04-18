@@ -266,6 +266,7 @@ class lunch_server(object):
         log_exception("getDBConnection: DB Connections plugin not yet loaded")
         return None        
         
+
     def call(self, msg, client='', hosts=[]):
         self.initialize()
         
