@@ -247,11 +247,11 @@ class MembersWidget(QWidget):
         
     def get_selected_log_member(self):
         member = str(self.dropdown_members.currentText())
-        if member == None or len(member) == 0:
+        if not member:
             return None
         
         if "(" in member:
-            # member contains name, extract IP
+            # member contains name, extract ID
             member = member[member.rfind("(")+1:member.rfind(")")]
             
         return member
@@ -277,11 +277,11 @@ class MembersWidget(QWidget):
         if member != None:
             get_server().call("HELO_UPDATE from GUI",member)
     
-    def get_dropdown_member_text(self, m_ip, m_name):
-        if m_ip == m_name:
-            return m_ip
+    def get_dropdown_member_text(self, peerID, m_name):
+        if peerID == m_name:
+            return peerID
         else:
-            return "%s (%s)" % (m_name.strip(), m_ip.strip())
+            return "%s (%s)" % (m_name.strip(), peerID.strip())
     
     def update_dropdown_members(self):
         self.updateMemberInformation()
@@ -461,8 +461,9 @@ class MembersWidget(QWidget):
 
         with get_peers():
             memberInformation = None
-            if self.get_selected_log_member() in get_server().get_peer_info():
-                memberInformation = copy.deepcopy(get_server().get_peer_info()[self.get_selected_log_member()])
+            infoDict = get_peers().getPeerInfo(self.get_selected_log_member())
+            if infoDict != None:
+                memberInformation = copy.deepcopy(infoDict)
             
         if memberInformation == None:
             self.memberInformationTable.setColumnCount(0)

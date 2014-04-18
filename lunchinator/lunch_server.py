@@ -234,10 +234,6 @@ class lunch_server(object):
     def set_plugins_enabled(self, enable):
         self._load_plugins = enable
     
-    def get_peer_info(self):
-        # TODO replace by peers.getPeerInfo(peerID)
-        return self._peers.getPeerInfoDict()
-    
     def getLunchPeers(self):
         """Deprecated. Use lunchinator.get_peers()"""
         return self._peers
