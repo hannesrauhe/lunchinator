@@ -1,9 +1,7 @@
 import subprocess,sys,ctypes
 from lunchinator import log_exception, log_warning, log_debug,\
     get_settings, log_error
-import os
-import threading
-import contextlib
+import os, threading, contextlib, socket
 from datetime import datetime
 
 PLATFORM_OTHER = -1
@@ -293,3 +291,22 @@ def getTimeDifference(begin, end):
     except:
         log_exception("don't know how to handle time span")
         return False
+    
+'''for the external IP a connection to someone has to be opened briefly
+   therefore a list of possible peers is needed'''
+def determineOwnIP(peers):  
+    own_ip = None
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      
+    for m in peers:
+        try:
+            # connect to UDF discard port 9
+            s.connect((m, 9))
+            own_ip = unicode(s.getsockname()[0])
+            break
+        except:
+            log_debug("While getting own IP, problem to connect to", m)
+            continue
+    if own_ip:
+        log_debug("Found my IP:", own_ip)
+    s.close()
+    return own_ip

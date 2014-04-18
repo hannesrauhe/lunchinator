@@ -8,6 +8,7 @@ from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string
+from lunchinator.utilities import determineOwnIP
      
 import tarfile
 import platform
@@ -42,7 +43,7 @@ class lunch_server(object):
         self.last_messages = []
         self.plugin_manager = None
         self.no_updates = False
-        self.own_ip = ""
+        self.own_ip = None
         self.messagesLock = Lock()
         self.unknown_cmd = ["HELO_REQUEST_INFO", "HELO_INFO"]
         
@@ -106,7 +107,7 @@ class lunch_server(object):
         self.my_master = -1  # the peer i use as master
         announce_name = -1  # how often did I announce my name
         
-        self._determineOwnIP()
+        self.own_ip = determineOwnIP()
         
         is_in_broadcast_mode = False
         
@@ -144,8 +145,8 @@ class lunch_server(object):
                             is_in_broadcast_mode = False
                             log_warning("ending braodcast")
                             
-                        if not len(self.own_ip):
-                            self._determineOwnIP()
+                        if not self.own_ip:
+                            self.own_ip = self._determineOwnIP()
                         if announce_name == -1:
                             # first start
                             self.call("HELO_REQUEST_INFO " + self._build_info_string())
@@ -579,21 +580,6 @@ class lunch_server(object):
                 self.call("HELO_REQUEST_DICT " + self._build_info_string(), client=self._peers.getIPOfPeer(randPeerID))
         except:
             log_exception("Something went wrong while trying to send a call to the new master")
-    
-    def _determineOwnIP(self):  
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      
-        for m in self._peers.getActivePeers():
-            try:
-                # connect to UDF discard port 9
-                s.connect((m, 9))
-                self.own_ip = unicode(s.getsockname()[0])
-                break
-            except:
-                log_debug("While getting own IP, problem to connect to", m)
-                continue
-        if self.own_ip:
-            log_debug("Found my IP:", self.own_ip)
-        s.close()
     
     def _broadcast(self):
         try:
