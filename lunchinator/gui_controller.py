@@ -25,11 +25,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _menu = None
     # ---- SIGNALS ----------------
     _initDone = pyqtSignal()
-    memberAppendedSignal = pyqtSignal(unicode, dict)
-    memberUpdatedSignal = pyqtSignal(unicode, dict)
-    memberRemovedSignal = pyqtSignal(unicode)
+    peerAppendedSignal = pyqtSignal(unicode, dict)
+    peerUpdatedSignal = pyqtSignal(unicode, dict)
+    peerRemovedSignal = pyqtSignal(unicode)
     messagePrependedSignal = pyqtSignal(time.struct_time, list)
-    peerAppendedSignal = pyqtSignal(unicode)
     groupAppendedSignal = pyqtSignal(unicode, set)
     _sendFile = pyqtSignal(unicode, bytearray, int, bool)
     _receiveFile = pyqtSignal(unicode, int, unicode, int)
@@ -208,17 +207,14 @@ class LunchinatorGuiController(QObject, LunchServerController):
             self.serverThread.finished.disconnect(self.serverFinishedUnexpectedly)
             self._updateRequested.emit()    
         
-    def peerAppended(self, ip):
-        self.peerAppendedSignal.emit(ip)
-        
-    def memberAppended(self, ip, infoDict):
-        self.memberAppendedSignal.emit(ip, infoDict)
+    def peerAppended(self, ip, infoDict):
+        self.peerAppendedSignal.emit(ip, infoDict)
     
-    def memberUpdated(self, ip, infoDict):
-        self.memberUpdatedSignal.emit(ip, infoDict)
+    def peerUpdated(self, ip, infoDict):
+        self.peerUpdatedSignal.emit(ip, infoDict)
     
-    def memberRemoved(self, ip):
-        self.memberRemovedSignal.emit(ip)
+    def peerRemoved(self, ip):
+        self.peerRemovedSignal.emit(ip)
     
     def messagePrepended(self, messageTime, senderIP, messageText):
         self.messagePrependedSignal.emit(messageTime, [senderIP, messageText])

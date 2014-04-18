@@ -2,7 +2,6 @@
 # coding=utf-8
 
 from time import strftime, localtime, time, mktime, gmtime
-from datetime import datetime
 import socket, sys, os, json, codecs, contextlib
 from threading import Lock
 from cStringIO import StringIO
@@ -154,7 +153,7 @@ class lunch_server(object):
                             # it's time to announce my name again and switch the master
                             self.call("HELO " + get_settings().get_user_name())
                             announce_name = 0
-                            self._remove_inactive_members()
+                            self._remove_inactive_peers()
                             self._call_for_dict()
                         else:
                             # just wait for the next time when i have to announce my name
@@ -185,17 +184,6 @@ class lunch_server(object):
         get_settings().set_group(newgroup)
         self.call("HELO_LEAVE Changing Group")
         self.call("HELO_REQUEST_INFO " + self._build_info_string())
-                    
-    def memberName(self, addr):
-        # TODO replace addr by ID
-        peerID = self._peers.getPeerID(addr)
-        if self._peers.getPeerInfo(peerID) != None and u'name' in self._peers.getPeerInfo(peerID):
-            return self._peers.getPeerInfo(peerID)[u'name']
-        return addr
-    
-    def ipForMemberName(self, name):
-        # TODO replace name by ID if possible
-        return self._peers.ipForMemberName(name)
     
     def messagesCount(self):
         length = 0
@@ -216,19 +204,14 @@ class lunch_server(object):
         return message
     
     def lockMessages(self):
-        log_debug("Getting Messages with lock")
+        # this is annoying
+        #log_debug("Getting Messages with lock")
         self.messagesLock.acquire()
         
     def releaseMessages(self):
-        log_debug("lock released")
+        #log_debug("lock released")
         self.messagesLock.release()
         
-    def lockMembers(self):
-        self._peers.lockMembers()
-        
-    def releaseMembers(self):
-        self._peers.releaseMembers()
-                    
     def getMessages(self, begin=None):
         self.lockMessages()
         messages = []
@@ -256,18 +239,11 @@ class lunch_server(object):
         return self._peers.getPeerInfoDict()
     
     def getLunchPeers(self):
+        """Deprecated. Use lunchinator.get_peers()"""
         return self._peers
-    
-    def is_peer_ready(self, peer_addr):
-        peerID = self._peers.getPeerID(peer_addr)
-        if peerID != None:
-            p = self._peers.getPeerInfo(peerID)
-            if p != None:
-                if p.has_key(u"next_lunch_begin") and p.has_key(u"next_lunch_end"):
-                    return self.getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"]) > 0
-        return False
         
     def getOwnIP(self):
+        # TODO replace by getOwnID if possible
         return self.own_ip
     
     def getAvailableDBConnections(self):
@@ -294,35 +270,6 @@ class lunch_server(object):
         log_exception("getDBConnection: DB Connections plugin not yet loaded")
         return None        
         
-    def getTimeDifference(self, begin, end):
-        """ calculates the correlation of now and the specified lunch dates
-        negative value: now is before begin, seconds until begin
-        positive value: now is after begin but before end, seconds until end
-         0: now is after end
-        """
-        try:
-            now = datetime.now()
-            begin = datetime.strptime(begin, "%H:%M")
-            begin = begin.replace(year=now.year, month=now.month, day=now.day)
-            end = datetime.strptime(end, "%H:%M")
-            end = end.replace(year=now.year, month=now.month, day=now.day)
-            
-            if now < begin:
-                # now is before begin
-                td = begin - now
-                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
-                return -1 if millis == 0 else -millis
-            elif now < end:
-                td = end - now
-                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
-                return 1 if millis == 0 else millis
-            else:
-                # now is after end
-                return 0
-        except:
-            log_exception("don't know how to handle time span")
-            return False;
-        
     def call(self, msg, client='', hosts=[]):
         self.initialize()
         
@@ -331,6 +278,7 @@ class lunch_server(object):
             # send to client regardless of the dontSendTo state
             target = [client.strip()]
         elif 0 == len(hosts):
+            # TODO determine whether to send to everyone or only to members
             target = self._peers.getSendTargets()
         else:
             # send to all specified hosts regardless of groups or dontSendTo
@@ -363,17 +311,15 @@ class lunch_server(object):
     
     def _finish(self):
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"), "Stopping the lunch notifier service")
-        self._write_members_to_file()
+        self._peers.finish()
         self._write_messages_to_file()
         self.controller.serverStopped(self.exitCode)
         
     def _read_config(self):              
-        if len(self._peers) == 0:
-            self._init_members_from_file()
         if len(self.last_messages) == 0:
             self.last_messages = self._init_messages_from_file()
     
-    def _updateMembersDict(self, otherDict, noLocal=True):
+    def _updatePeersDict(self, otherDict, noLocal=True):
         # TODO expect peer IDs in dict
         for ip, peerName in otherDict.items():
             if noLocal and ip.startswith('127'):
@@ -381,31 +327,6 @@ class lunch_server(object):
             
             self._peers.peerNameReceived(None, ip, peerName)
         
-    def _init_members_from_file(self):
-        members = []
-        if os.path.exists(get_settings().get_members_file()):
-            with codecs.open(get_settings().get_members_file(), 'r', 'utf-8') as f:    
-                for hostn in f.readlines():
-                    hostn = hostn.strip()
-                    if len(hostn) == 0:
-                        continue
-                    try:
-                        ip = unicode(socket.gethostbyname(hostn))
-                        self._peers.peerNameReceived(None, ip, hostn, inform=False)
-                    except:
-                        log_warning("cannot find host specified in members_file by %s with name %s" % (get_settings().get_members_file(), hostn))
-        return members
-    
-    def _write_members_to_file(self):
-        try:
-            if len(self._peers) > 1:
-                with codecs.open(get_settings().get_members_file(), 'w', 'utf-8') as f:
-                    f.truncate()
-                    for m in self._peers:
-                        f.write(m + "\n")
-        except:
-            log_exception("Could not write all members to %s" % (get_settings().get_members_file()))
-            
     def _init_messages_from_file(self):
         messages = []
         if os.path.exists(get_settings().get_messages_file()):
@@ -460,8 +381,8 @@ class lunch_server(object):
         self.controller.extendMemberInfo(info_d)
         return json.dumps(info_d)      
         
-    def _createMembersDict(self):
-        membersDict = {}
+    def _createPeersDict(self):
+        peersDict = {}
         # TODO only group members?
         for peerID in self._peers.getActivePeers():
             ip = self._peers.getIPOfPeer(peerID)
@@ -470,17 +391,16 @@ class lunch_server(object):
                 continue
             # TODO add peer ID to dict
             if self._peers.getPeerInfo(peerID) != None and u'name' in self._peers.getPeerInfo(peerID):
-                membersDict[ip] = self._peers.getPeerInfo(peerID)[u'name']
+                peersDict[ip] = self._peers.getPeerInfo(peerID)[u'name']
             else:
-                membersDict[ip] = ip
-        return membersDict
+                peersDict[ip] = ip
+        return peersDict
     
     def _check_group(self, data, addr):
         '''checks message for group commands, return false if peer is not in group'''
         if addr.startswith("127."):
-            return True        
-        own_group = get_settings().get_group()
-        
+            return True
+                
         try:
             if " " in data:
                 (cmd, value) = data.split(" ", 1)
@@ -492,19 +412,16 @@ class lunch_server(object):
         except:
             log_exception("was not able to parse Info from", data, addr)
         
-        if len(own_group) == 0:
-            # accept anything as long as i do not have a group
-            return True
-            
         peerID = self._peers.getPeerID(addr)
-        return peerID != None and self._peers.isMemberInMyGroup(peerID)
+        return peerID != None and self._peers.isMember(peerID)
         
         
     def _incoming_call(self, msg, addr):
         mtime = localtime()
         
         t = strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8")
-        m = self.memberName(addr)
+        peerID = self._peers.getPeerID(addr)
+        m = self._peers.getPeerName(peerID)
             
         log_info("%s: [%s] %s" % (t, m, msg))
         
@@ -516,7 +433,8 @@ class lunch_server(object):
         if not msg.startswith("ignore"):
             self.controller.processMessage(msg, addr)
             
-            if get_settings().get_lunch_trigger() in msg.lower() and 0 < self.getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
+            from lunchinator.utilities import getTimeDifference
+            if get_settings().get_lunch_trigger() in msg.lower() and 0 < getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
                 timenum = mktime(mtime)
                 if timenum - self.last_lunch_call > get_settings().get_mute_timeout():
                     self.last_lunch_call = timenum
@@ -548,12 +466,12 @@ class lunch_server(object):
                 
             if cmd.startswith("HELO_REQUEST_DICT"):
                 self._update_peer_info(ip, json.loads(value))
-                self.call("HELO_DICT " + json.dumps(self._createMembersDict()), client=ip)                   
+                self.call("HELO_DICT " + json.dumps(self._createPeersDict()), client=ip)                   
                 
             elif cmd.startswith("HELO_DICT"):
                 # the master send me the list of all members - yeah
                 ext_members = json.loads(value)
-                self._updateMembersDict(ext_members)
+                self._updatePeersDict(ext_members)
                 if self.my_master == -1:
                     self.call("HELO_REQUEST_INFO " + self._build_info_string())
                     
@@ -561,8 +479,8 @@ class lunch_server(object):
                                     
             elif cmd.startswith("HELO_LEAVE"):
                 # the sender tells me, that he is going
-                self._peers.memberLeft(ip)
-                self.call("HELO_DICT " + json.dumps(self._createMembersDict()), client=ip)
+                self._peers.peerLeft(ip)
+                self.call("HELO_DICT " + json.dumps(self._createPeersDict()), client=ip)
                
             elif cmd.startswith("HELO_AVATAR"):
                 # someone wants to send me his pic via TCP
@@ -646,18 +564,12 @@ class lunch_server(object):
         finally:
             self.messagesLock.release()
                     
-    def _remove_inactive_members(self):
+    def _remove_inactive_peers(self):
         try:
-            membersToRemove = self._peers.getTimedOutMembers(get_settings().get_peer_timeout())
-                    
-            log_debug("Removing inactive members:", membersToRemove)
-            self.lockMembers()
-            try:
-                for ip in membersToRemove:
-                    self._memberRemoved(ip)
-                self._peers.removeMembers(membersToRemove)
-            finally:
-                self.releaseMembers()
+            peersToRemove = self._peers.getTimedOutPeers(get_settings().get_peer_timeout())
+            log_debug("Removing inactive peers:", peersToRemove)
+            with self._peers:
+                self._peers.removePeers(peersToRemove)
         except:
             log_exception("Something went wrong while trying to clean up the list of active members")
             

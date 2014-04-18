@@ -3,7 +3,9 @@ from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
 import time
 from functools import partial
 from datetime import datetime
-from lunchinator import log_exception, convert_string, get_settings, get_server
+from lunchinator import log_exception, convert_string, get_settings, get_server,\
+    get_peers
+from lunchinator.utilities import getTimeDifference
 
 class TableModelBase(QStandardItemModel):
     KEY_ROLE = Qt.UserRole + 1
@@ -193,7 +195,7 @@ class MembersTableModel(TableModelBase):
             beginTime = datetime.strptime(infoDict[self.lunchBeginKey], "%H:%M")
             beginTime = beginTime.replace(year=2000)
             item.setData(QVariant(time.mktime(beginTime.timetuple())), self.SORT_ROLE)
-            timeDifference = get_server().getTimeDifference(infoDict[self.lunchBeginKey], infoDict[self.lunchEndKey])
+            timeDifference = getTimeDifference(infoDict[self.lunchBeginKey], infoDict[self.lunchEndKey])
             if timeDifference > 0:
                 item.setData(QColor(0, 255, 0), Qt.DecorationRole)
             else:
@@ -310,7 +312,8 @@ class MessagesTableModel(TableModelBase):
         item.setData(QVariant(time.mktime(mTime)), self.SORT_ROLE)
     
     def _updateSenderItem(self, _, m, item):
-        data = QVariant(self.dataSource.memberName(convert_string(m[0])))
+        ip = convert_string(m[0])
+        data = QVariant(get_peers().getPeerName(get_peers().getPeerID(ip)))
         item.setData(data, Qt.DisplayRole)
     
     def _updateMessageItem(self, _, m, item):
@@ -321,9 +324,6 @@ class MessagesTableModel(TableModelBase):
     
     @pyqtSlot()
     def updateSenders(self):
-        self.dataSource.lockMembers()
-        try:
+        with get_peers():
             for row, aMsg in enumerate(self.dataSource.getMessages()):
                 self.updateItem(aMsg[0], [aMsg[1], aMsg[2]], row, 1)
-        finally:
-            self.dataSource.releaseMembers()

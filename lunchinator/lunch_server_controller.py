@@ -10,16 +10,13 @@ class LunchServerController(object):
     def initDone(self):
         pass
         
-    def peerAppended(self, ip):
-        pass
-        
-    def memberAppended(self, ip, infoDict):
+    def peerAppended(self, ip, infoDict):
         pass
     
-    def memberUpdated(self, ip, infoDict):
+    def peerUpdated(self, ip, infoDict):
         pass
     
-    def memberRemoved(self, ip):
+    def peerRemoved(self, ip):
         pass    
         
     def groupAppended(self, group, peer_groups):

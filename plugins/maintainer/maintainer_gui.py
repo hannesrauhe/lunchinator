@@ -1,4 +1,4 @@
-from lunchinator import get_server
+from lunchinator import get_server, get_peers
 from lunchinator.table_models import ExtendedMembersModel
 from PyQt4.QtGui import QTreeView, QTabWidget, QSortFilterProxyModel, QSizePolicy
 from PyQt4.QtCore import Qt
@@ -30,7 +30,7 @@ class maintainer_gui(QTabWidget):
         self.info_table.setAlternatingRowColors(True)
         self.info_table.setIndentation(0)
         
-        self.info_table_model = ExtendedMembersModel(get_server().getLunchPeers())
+        self.info_table_model = ExtendedMembersModel(get_peers())
         proxyModel = QSortFilterProxyModel(self.info_table)
         proxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
         proxyModel.setDynamicSortFilter(True)

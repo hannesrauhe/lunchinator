@@ -1,9 +1,10 @@
 import subprocess,sys,ctypes
-from lunchinator import log_exception, get_server, log_warning, log_debug,\
+from lunchinator import log_exception, log_warning, log_debug,\
     get_settings, log_error
 import os
 import threading
 import contextlib
+from datetime import datetime
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -45,6 +46,7 @@ def displayNotification(name,msg,icon=None):
             log_debug(call)
             subprocess.call(call, stdout=fh, stderr=fh)
         elif myPlatform == PLATFORM_WINDOWS:
+            from lunchinator import get_server
             if hasattr(get_server().controller, "statusicon"):
                 get_server().controller.statusicon.showMessage(name,msg)
     except:
@@ -149,6 +151,7 @@ def setValidQtParent(parent):
 
 def getValidQtParent():
     from PyQt4.QtCore import QObject
+    from lunchinator import get_server
     if isinstance(get_server().controller, QObject):
         return get_server().controller
     elif isinstance(qtParent, QObject):
@@ -156,6 +159,7 @@ def getValidQtParent():
     raise Exception("Could not find a valid QObject instance")
     
 def processPluginCall(ip, call):
+    from lunchinator import get_server
     if not get_server().get_plugins_enabled():
         return
     from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
@@ -258,3 +262,31 @@ def getGPG(secret=False):
     
     return gpg, keyid
 
+def getTimeDifference(begin, end):
+    """ calculates the correlation of now and the specified lunch dates
+    negative value: now is before begin, seconds until begin
+    positive value: now is after begin but before end, seconds until end
+     0: now is after end
+    """
+    try:
+        now = datetime.now()
+        begin = datetime.strptime(begin, "%H:%M")
+        begin = begin.replace(year=now.year, month=now.month, day=now.day)
+        end = datetime.strptime(end, "%H:%M")
+        end = end.replace(year=now.year, month=now.month, day=now.day)
+        
+        if now < begin:
+            # now is before begin
+            td = begin - now
+            millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
+            return -1 if millis == 0 else -millis
+        elif now < end:
+            td = end - now
+            millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
+            return 1 if millis == 0 else millis
+        else:
+            # now is after end
+            return 0
+    except:
+        log_exception("don't know how to handle time span")
+        return False

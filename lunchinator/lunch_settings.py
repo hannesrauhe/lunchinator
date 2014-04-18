@@ -34,7 +34,8 @@ class lunch_settings(object):
     def __init__(self):
         '''unchangeable for now'''
         self._main_config_dir = MAIN_CONFIG_DIR
-        self._members_file = self.get_config("lunch_members.cfg")
+        self._members_file = self.get_config("lunch_members.cfg") # DEPRECATED, use peers_file
+        self._peers_file = self.get_config("lunch_peers.cfg")
         self._messages_file = self.get_config("messages")
         self._log_file = self.get_config("lunchinator.log")
         self._avatar_dir = self.get_config("avatars")
@@ -176,7 +177,11 @@ class lunch_settings(object):
     def get_config_file(self):
         return self._config_file
     
+    def get_peers_file(self):
+        return self._peers_file
+    
     def get_members_file(self):
+        """Deprecated: Use get_peers_file"""
         return self._members_file
     
     def get_messages_file(self):

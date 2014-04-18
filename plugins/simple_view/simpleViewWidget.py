@@ -4,7 +4,7 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, \
                         QLineEdit
 from PyQt4.QtCore import QTimer, Qt
-from lunchinator import get_server
+from lunchinator import get_server, get_peers
 from time import mktime,time
 from lunchinator.lunch_button import LunchButton
             
@@ -42,25 +42,25 @@ class SimpleViewWidget(QWidget):
         self.timer.timeout.connect(self.updateWidgets)
         self.timer.start(1000)
         
-    def getMemberColor(self,addr):
-        if not self.colorMap.has_key(addr):
-            self.colorMap[addr] = self.colors[self.colorCounter]
+    def getMemberColor(self,peerID):
+        if not self.colorMap.has_key(peerID):
+            self.colorMap[peerID] = self.colors[self.colorCounter]
             self.colorCounter = (self.colorCounter+1) % len(self.colors)
         
-        return self.colorMap[addr]
+        return self.colorMap[peerID]
             
     def updateWidgets(self):
-        members = get_server().getLunchPeers().getGroupPeers()
+        members = get_peers().getMembers()
         memText = "%d people online<br />"%len(members)
         memToolTip = ""
         
         readyMembers = []
         notReadyMembers = []
-        for m in members:
-            if get_server().is_peer_ready(m):
-                readyMembers.append(get_server().memberName(m))
+        for peerID in members:
+            if get_peers().isPeerReady(peerID):
+                readyMembers.append(get_peers().getPeerName(peerID))
             else:
-                notReadyMembers.append(get_server().memberName(m))
+                notReadyMembers.append(get_peers().getPeerName(peerID))
                 
         memToolTip += "<span style='color:green'>%s</span><br />"%", ".join(readyMembers) if len(readyMembers) else ""
         memToolTip += "<span style='color:red'>%s</span>"%", ".join(notReadyMembers) if len(notReadyMembers) else ""
@@ -71,8 +71,9 @@ class SimpleViewWidget(QWidget):
         
         msgTexts=""
         for timest,addr,msg in get_server().getMessages(time()-(180*60)):
-            member = get_server().memberName(addr)
-            color = self.getMemberColor(addr)
+            peerID = get_peers().getPeerID(addr)
+            member = get_peers().getPeerName(peerID)
+            color = self.getMemberColor(peerID)
             msgTexts+="<span style='color:#%s'><b>%s</b> \
                         <i>[%d sec]</i>: %s</span><br />\n"%(color,member,time()-mktime(timest),msg)
                         

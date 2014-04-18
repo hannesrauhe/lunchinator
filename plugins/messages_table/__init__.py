@@ -26,9 +26,9 @@ class messages_table(iface_gui_plugin):
         iface_gui_plugin.destroy_widget(self)
         
         get_server().controller.messagePrependedSignal.disconnect(self.messagesModel.externalRowPrepended)
-        get_server().controller.memberAppendedSignal.disconnect(self.updateSendersInMessagesTable)
-        get_server().controller.memberUpdatedSignal.disconnect(self.updateSendersInMessagesTable)
-        get_server().controller.memberRemovedSignal.disconnect(self.updateSendersInMessagesTable)
+        get_server().controller.peerAppendedSignal.disconnect(self.updateSendersInMessagesTable)
+        get_server().controller.peerUpdatedSignal.disconnect(self.updateSendersInMessagesTable)
+        get_server().controller.peerRemovedSignal.disconnect(self.updateSendersInMessagesTable)
         self.messagesModel = None
         self.messagesProxyModel = None
         self.messagesTable = None
@@ -51,9 +51,9 @@ class messages_table(iface_gui_plugin):
         self.messagesTable.setModel(self.messagesProxyModel)
         
         get_server().controller.messagePrependedSignal.connect(self.messagesModel.externalRowPrepended)
-        get_server().controller.memberAppendedSignal.connect(self.updateSendersInMessagesTable)
-        get_server().controller.memberUpdatedSignal.connect(self.updateSendersInMessagesTable)
-        get_server().controller.memberRemovedSignal.connect(self.updateSendersInMessagesTable)
+        get_server().controller.peerAppendedSignal.connect(self.updateSendersInMessagesTable)
+        get_server().controller.peerUpdatedSignal.connect(self.updateSendersInMessagesTable)
+        get_server().controller.peerRemovedSignal.connect(self.updateSendersInMessagesTable)
         
         return self.messagesTable
     

@@ -1,7 +1,7 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import log_exception, get_settings, log_error, convert_string,\
-    log_warning, get_server, log_debug
-import urllib2,sys,tempfile,csv,contextlib,os
+    log_warning, get_server, log_debug, get_peers
+import urllib2,sys,tempfile,csv,contextlib,os,socket
 from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator.download_thread import DownloadThread
 from StringIO import StringIO
@@ -104,19 +104,33 @@ class remote_pictures(iface_gui_plugin):
         else:
             log_debug("Remote Pics: Downloaded this url before, won't do it again:",url)
             
-    def _generatePeerList(self, listStr):
+    def _generateIPList(self, listStr):
         for aPeer in listStr.split(";;"):
-            ip = get_server().ipForMemberName(aPeer.strip())
-            if ip != None:
-                yield ip
+            aPeer = aPeer.strip()
+            
+            peerID = None
+            if get_peers().knowsID(aPeer):
+                # is a peer ID
+                peerID = aPeer
             else:
-                yield aPeer.strip()
+                # check if it is a peer name
+                peerID = get_server().getIDForPeerName(aPeer)
+                if peerID == None:
+                    # might be hostname or IP
+                    ip = socket.gethostbyname(aPeer)
+                    if ip:
+                        yield ip
+                    
+            if peerID != None:
+                # yield each IP for this peer ID 
+                for ip in get_peers().getAllIPsOfPeer(peerID):
+                    yield ip
             
     def generateTrustedIPs(self):
-        return self._generatePeerList(self.options['trusted_peers'])
+        return self._generateIPList(self.options['trusted_peers'])
                 
     def generateUntrustedIPs(self):
-        return self._generatePeerList(self.options['untrusted_peers'])
+        return self._generateIPList(self.options['untrusted_peers'])
             
     def _appendListOption(self, o, new_v):
         old_val = self.options[o]
@@ -130,9 +144,11 @@ class remote_pictures(iface_gui_plugin):
             
     def process_event(self,cmd,value,ip,_info):
         if cmd=="HELO_REMOTE_PIC":
+            peerID = get_peers().getPeerID(ip)
             trustPolicy = self.options['trust_policy']
             reject = True
             if trustPolicy == u"Local":
+                # TODO use ownID()
                 if ip == u"127.0.0.1" or ip == get_server().own_ip:
                     reject = False
             elif trustPolicy == "Everybody":
@@ -144,7 +160,7 @@ class remote_pictures(iface_gui_plugin):
                     from PyQt4.QtGui import QMessageBox
                     box = QMessageBox(QMessageBox.Question,
                                       "Accept Picture",
-                                      "%s wants to send you a picture. Do you want to accept pictures from this member?" % get_server().memberName(ip),
+                                      "%s wants to send you a picture. Do you want to accept pictures from this member?" % get_peers().getPeerName(peerID),
                                       QMessageBox.Yes | QMessageBox.YesToAll | QMessageBox.No | QMessageBox.NoToAll,
                                       self.gui)
                     box.setDefaultButton(QMessageBox.No)
@@ -152,18 +168,18 @@ class remote_pictures(iface_gui_plugin):
                     box.button(QMessageBox.YesToAll).setText(u"Yes, Always")
                     res = box.exec_()
                     if res == QMessageBox.NoToAll:
-                        self._appendListOption(u"untrusted_peers", ip)
+                        self._appendListOption(u"untrusted_peers", peerID)
                     elif res == QMessageBox.YesToAll:
-                        self._appendListOption(u"trusted_peers", ip)
+                        self._appendListOption(u"trusted_peers", peerID)
                         reject = False
                     elif res == QMessageBox.Yes:
                         reject = False
                     
             if reject:
-                log_debug("Rejecting remote picture from %s (%s)" % (ip, get_server().memberName(ip)))
+                log_debug("Rejecting remote picture from %s (%s)" % (ip, get_peers().getPeerID(peerID)))
                 return
             else:
-                log_debug("Accepting remote picture from %s (%s)" % (ip, get_server().memberName(ip)))
+                log_debug("Accepting remote picture from %s (%s)" % (ip, get_peers().getPeerID(peerID)))
             
             with contextlib.closing(StringIO(value.encode('utf-8'))) as strIn:
                 reader = csv.reader(strIn, delimiter = ' ', quotechar = '"')

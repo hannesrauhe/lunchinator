@@ -1,5 +1,5 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import log_exception, get_settings, get_server
+from lunchinator import log_exception, get_settings, get_server, get_peers
 import urllib2,sys
     
 class members_table(iface_gui_plugin):
@@ -28,9 +28,9 @@ class members_table(iface_gui_plugin):
         
         self.timeoutTimer.timeout.disconnect(self.updateTimeoutsInMembersTables)
         self.timeoutTimer.stop()
-        get_server().controller.memberAppendedSignal.disconnect(self.membersModel.externalRowAppended)
-        get_server().controller.memberUpdatedSignal.disconnect(self.membersModel.externalRowUpdated)
-        get_server().controller.memberRemovedSignal.disconnect(self.membersModel.externalRowRemoved)
+        get_server().controller.peerAppendedSignal.disconnect(self.membersModel.externalRowAppended)
+        get_server().controller.peerUpdatedSignal.disconnect(self.membersModel.externalRowUpdated)
+        get_server().controller.peerRemovedSignal.disconnect(self.membersModel.externalRowRemoved)
         self.membersTable = None
         self.membersModel = None
         self.membersProxyModel = None
@@ -45,7 +45,7 @@ class members_table(iface_gui_plugin):
         self.membersTable = TableWidget(parent, "Add Host", self.addHostClicked, sortedColumn=2, placeholderText="Enter hostname")
         
         # initialize members table
-        self.membersModel = MembersTableModel(get_server().getLunchPeers())
+        self.membersModel = MembersTableModel(get_peers())
         self.membersProxyModel = QSortFilterProxyModel(self.membersTable)
         self.membersProxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
         self.membersProxyModel.setSortRole(MembersTableModel.SORT_ROLE)
@@ -58,9 +58,9 @@ class members_table(iface_gui_plugin):
         self.timeoutTimer.timeout.connect(self.updateTimeoutsInMembersTables)
         self.timeoutTimer.start(1000)  
         
-        get_server().controller.memberAppendedSignal.connect(self.membersModel.externalRowAppended)
-        get_server().controller.memberUpdatedSignal.connect(self.membersModel.externalRowUpdated)
-        get_server().controller.memberRemovedSignal.connect(self.membersModel.externalRowRemoved)
+        get_server().controller.peerAppendedSignal.connect(self.membersModel.externalRowAppended)
+        get_server().controller.peerUpdatedSignal.connect(self.membersModel.externalRowUpdated)
+        get_server().controller.peerRemovedSignal.connect(self.membersModel.externalRowRemoved)
         
         return self.membersTable
     
