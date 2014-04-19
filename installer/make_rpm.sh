@@ -74,6 +74,8 @@ source determine_version.sh
 echo $VERSION > ../version
 
 export dist=
+# if this is run on Ubuntu, have setup.py know this is not for Ubuntu.
+export __notubuntu=1
 pushd ..
 python setup.py sdist --dist-dir=installer/osc/home:${OBSUSERNAME}/lunchinator
 python setup.py bdist_rpm --spec-only --dist-dir=installer/osc/home:${OBSUSERNAME}/lunchinator

@@ -76,7 +76,6 @@ do
   fi
   echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light" >>$POSTINST
   echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark" >>$POSTINST
-	echo "pip install requests requests-oauthlib oauthlib python-twitter python-gnupg yapsy" >> $POSTINST
   generate_changelog
   debuild -S 2>&1 | tee ../../${dist}.log
   if $PUBLISH
