@@ -91,7 +91,7 @@ def checkDependencies(noPlugins, gui = False):
                 # install only Yapsy
                 deps = ['yapsy']
             elif res == QMessageBox.YesToAll:
-                deps = ['yapsy', 'pil', 'pysqlite', 'requests', 'requests-oauthlib', 'oauthlib', 'python-twitter', 'python-gnupg']
+                deps = ['yapsy', 'requests', 'requests-oauthlib', 'oauthlib', 'python-twitter', 'python-gnupg']
             
             result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + deps)
             
