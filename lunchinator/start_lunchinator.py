@@ -93,25 +93,27 @@ def checkDependencies(noPlugins, gui = False):
             elif res == QMessageBox.YesToAll:
                 deps = ['yapsy', 'pil', 'pysqlite', 'requests', 'requests-oauthlib', 'oauthlib', 'python-twitter', 'python-gnupg']
             
-            if subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + deps) == 0:
-                try:
-                    import yapsy
+            result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + deps)
+            
+            try:
+                import yapsy
+                if result == 0:
                     QMessageBox.information(None,
                                             "Success",
                                             "Dependencies were installed successfully.",
                                             buttons=QMessageBox.Ok,
                                             defaultButton=QMessageBox.Ok)
-                    return True
-                except:
-                    pass
+                else:
+                    QMessageBox.warning(None,
+                                        "Errors during installation",
+                                        "There were errors during installation, but Lunchinator might work anyways. If you experience problems with some plugins, try to install the required libraries manually using pip.")
+                return True
+            except:
                 QMessageBox.critical(None,
                                      "Error installing dependencies",
                                      "There was an error, the dependencies could not be installed. Continuing without plugins.")
                 log_error("Dependencies could not be installed.")
-                return False
-            else:
-                log_error("Yapsy not installed (run sudo pip install yapsy) -- continuing without plugins")
-                return False
+            return False
 
 def startLunchinator():    
     (options, _args) = parse_args()
