@@ -16,12 +16,16 @@ def _get_version(version_info, branch = ""):
     if branch:
         main += "-" + branch
 
-    sub = ''
+    if os.getenv("dist"):
+        sub = '.' + os.getenv("dist")
+    else:
+        sub = ''
+
     if version_info[3] == 'alpha' and version_info[4] == 0:
-        sub = '.dev'
+        sub += '.dev'
     elif version_info[3] != 'final':
         mapping = {'alpha': 'a', 'beta': 'b', 'rc': 'c'}
-        sub = mapping[version_info[3]] + str(version_info[4])
+        sub += mapping[version_info[3]] + str(version_info[4])
 
     return str(main + sub)
 
