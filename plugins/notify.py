@@ -8,7 +8,7 @@ class Notify(iface_called_plugin):
         super(Notify, self).__init__()
         self.options = [((u"icon_file", u"Icon if no avatar"),get_settings().get_resource("images", "mini_breakfast.png")),
                         ((u"audio_file", u"Audio File for Lunch Messages",self.audioFileChanged), get_settings().get_resource("sounds", "sonar.wav")),
-                        ((u"open_optival_drive", "Open Optical Drive on Lunc"), True)]
+                        ((u"open_optival_drive", "Open Optical Drive on Lunch"), True)]
         
     def activate(self):
         iface_called_plugin.activate(self)
