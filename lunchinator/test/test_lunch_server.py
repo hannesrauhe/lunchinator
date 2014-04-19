@@ -1,4 +1,4 @@
-from lunch_server import lunch_server
+from lunchinator.lunch_server import lunch_server
 import thread
 
 if __name__ == "__main__":

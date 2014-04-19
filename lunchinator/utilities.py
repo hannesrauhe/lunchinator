@@ -294,7 +294,11 @@ def getTimeDifference(begin, end):
     
 '''for the external IP a connection to someone has to be opened briefly
    therefore a list of possible peers is needed'''
-def determineOwnIP(peers):  
+def determineOwnIP(peers):
+    if 0 == len(peers):
+        log_debug("Cannot determine IP if there is no peer given")
+        return None
+    
     own_ip = None
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      
     for m in peers:

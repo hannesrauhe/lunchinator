@@ -1,5 +1,5 @@
 """Base class for Lunch Server Controller classes"""
-from lunchinator import get_server, get_settings, log_info
+from lunchinator import get_server, get_settings, log_info, log_error
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall
 
@@ -10,6 +10,13 @@ class LunchServerController(object):
     def initDone(self):
         pass
         
+    def memberAppended(self, ip, infoDict):
+        log_error("IMPLEMENT memberAppended - remove this message")
+        pass
+        
+    def groupAppended(self, group, peer_groups):
+        pass
+        
     def peerAppended(self, ip, infoDict):
         pass
     
@@ -18,9 +25,6 @@ class LunchServerController(object):
     
     def peerRemoved(self, ip):
         pass    
-        
-    def groupAppended(self, group, peer_groups):
-        pass
     
     def messagePrepended(self, messageTime, senderIP, messageText):
         pass
