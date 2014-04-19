@@ -47,7 +47,7 @@ class LunchPeers(object):
                 self._members.add(ip)            
             self._controller.memberAppended(ip, self.getPeerInfo(ip))
         
-    def removeMembers(self, toRemove = None):
+    def removeMembers(self, toRemove=None):
         if toRemove == None:
             self._members.clear()
             
@@ -120,6 +120,8 @@ class LunchPeers(object):
             self._peer_info[ip].update(newInfo)
             self._controller.peerUpdated(ip, self._peer_info[ip])
         
+        log_debug("%s has new info: %s" % (ip, self._peer_info[ip]))
+            
         own_group = get_settings().get_group()       
         
         if ip not in self._members and 0 == len(own_group):
@@ -153,9 +155,9 @@ class LunchPeers(object):
                 if time() - self._peer_timeout[ip] > 300:
                     m2remove.append(ip)
             
-            
-            log_debug("Removing inactive members:", m2remove)
-            self.removeMembers(m2remove)    
+            if len(m2remove):
+                log_debug("Removing inactive members:", m2remove)
+                self.removeMembers(m2remove)    
                 
             p2remove = []                       
             for ip in self._peer_timeout:
@@ -163,8 +165,9 @@ class LunchPeers(object):
                 if time() - self._peer_timeout[ip] > 10000:
                     p2remove.append(ip)
                 
-            log_debug("Removing inactive peers:", p2remove)
-            self.removePeers(p2remove)
+            if len(p2remove):
+                log_debug("Removing inactive peers:", p2remove)
+                self.removePeers(p2remove)
         except:
             log_exception("Something went wrong while trying to clean up the list of active members")
             
@@ -185,7 +188,7 @@ class LunchPeers(object):
                         continue
                     try:
                         ip = unicode(socket.gethostbyname(hostn))
-                        self.createPeer(ip, {u"name:":unicode(hostn)})
+                        self.createPeer(ip, {u"name":unicode(hostn)})
                     except:
                         log_warning("cannot find host specified in members_file by %s with name %s" % (p_file, hostn))
     
@@ -195,7 +198,7 @@ class LunchPeers(object):
                 with codecs.open(get_settings().get_peers_file(), 'w', 'utf-8') as f:
                     f.truncate()
                     for ip in self._peer_info.keys():
-                        f.write(u"%s" % (ip))
+                        f.write(u"%s\n" % (ip))
         except:
             log_exception("Could not write all members to %s" % (get_settings().get_peers_file()))    
         
