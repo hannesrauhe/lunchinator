@@ -67,15 +67,6 @@ do
   popd
   py2dsc --suite=${dist} --dist-dir=deb_${dist} dist/Lunchinator*
   pushd deb_${dist}/lunchinator-*
-  POSTINST="debian/postinst"
-  if [ -f debian/*.postinst ]
-  then
-    POSTINST=debian/*.postinst
-  else
-    echo '#DEBHELPER#' > $POSTINST
-  fi
-  echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light" >>$POSTINST
-  echo "gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark" >>$POSTINST
   generate_changelog
   debuild -S 2>&1 | tee ../../${dist}.log
   if $PUBLISH
