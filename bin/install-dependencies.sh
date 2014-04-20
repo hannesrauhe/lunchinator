@@ -31,12 +31,12 @@ then
       
   # ensure pip does not install into current package
   pushd "$HOME"
-  if ! $SUDO pip install $@
+  if ! type pip &>/dev/null || ! $SUDO pip install $@
   then
-    # error. check if at least, yapsy was installed
+    # error or pip not available. check if at least, yapsy was installed
     if ! python -c 'import yapsy' &>/dev/null
     then
-      # yapsy is not installed - try again
+      # yapsy is not installed - try again with easy_install
       echo "Installation with pip failed, trying again with easy_install"
       $SUDO easy_install $@
       EXITST=$?
