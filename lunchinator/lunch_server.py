@@ -12,6 +12,7 @@ from lunchinator import log_debug, log_info, log_critical, get_settings, log_exc
      
 import tarfile
 import platform
+from lunch_settings import lunch_settings
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -281,6 +282,10 @@ class lunch_server(object):
         if self._peer_info.has_key(peer_addr):
             p = self._peer_info[peer_addr]
             if p.has_key(u"next_lunch_begin") and p.has_key(u"next_lunch_end"):
+                diff = self.getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"])
+                if diff == None:
+                    # illegal format, just assume ready
+                    return True
                 return self.getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"]) > 0
         return False
         
@@ -312,16 +317,28 @@ class lunch_server(object):
         return None        
         
     def getTimeDifference(self, begin, end):
-        """ calculates the correlation of now and the specified lunch dates
+        """
+        calculates the correlation of now and the specified lunch dates
         negative value: now is before begin, seconds until begin
         positive value: now is after begin but before end, seconds until end
          0: now is after end
+        Returns None if the time format is invalid. 
         """
         try:
+            try:
+                begin = datetime.strptime(begin, lunch_settings.LUNCH_TIME_FORMAT)
+            except ValueError:
+                # this is called repeatedly, so only debug
+                log_debug("Unsupported time format:", begin)
+                return None
+            try:
+                end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
+            except ValueError:
+                log_debug("Unsupported time format:", end)
+                return None
+            
             now = datetime.now()
-            begin = datetime.strptime(begin, "%H:%M")
             begin = begin.replace(year=now.year, month=now.month, day=now.day)
-            end = datetime.strptime(end, "%H:%M")
             end = end.replace(year=now.year, month=now.month, day=now.day)
             
             if now < begin:
@@ -338,7 +355,7 @@ class lunch_server(object):
                 return 0
         except:
             log_exception("don't know how to handle time span")
-            return False;
+            return None
     
     '''An info call informs a peer about my name etc...
     by default to every peer'''
@@ -584,7 +601,8 @@ class lunch_server(object):
         if not msg.startswith("ignore"):
             self.controller.processMessage(msg, addr)
             
-            if get_settings().get_lunch_trigger() in msg.lower() and 0 < self.getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
+            diff = self.getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time())
+            if diff == None or get_settings().get_lunch_trigger() in msg.lower() and 0 < diff:
                 timenum = mktime(mtime)
                 if timenum - self.last_lunch_call > get_settings().get_mute_timeout():
                     self.last_lunch_call = timenum
