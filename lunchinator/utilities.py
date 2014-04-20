@@ -163,8 +163,9 @@ def processPluginCall(ip, call):
         return
     from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
     
-    peerID = get_peers().getPeerID(ip)
-    member_info = get_peers().getPeerInfo(peerID)
+#     peerID = get_peers().getPeerID(ip)
+#     member_info = get_peers().getPeerInfo(peerID)
+    member_info = get_peers().getPeerInfo(ip)
     if member_info == None:
         member_info = {}
     
