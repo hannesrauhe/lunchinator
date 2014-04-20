@@ -403,7 +403,7 @@ class lunch_server(object):
             # i add every entry and assume, the member is in my group
             # i will still ask the member itself 
             for m_ip, m_name in ext_members.iteritems():
-                self._peers.createPeer(m_ip, {u"name":m_name, u"group":self.own_group})
+                self._peers.createPeer(m_ip, {u"name":m_name, u"group":get_settings().get_group()})
 
         elif cmd == "HELO_LEAVE":
             self._peers.removeMembers(ip)
