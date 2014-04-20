@@ -50,6 +50,7 @@ class LunchPeers(object):
     def removeMembers(self, toRemove=None):
         if toRemove == None:
             self._members.clear()
+            return
             
         if type(toRemove) != set:
             toRemove = set(toRemove)
@@ -101,7 +102,11 @@ class LunchPeers(object):
     def isPeerReady(self, ip):
         p = self.getPeerInfo(ip)
         if p and p.has_key(u"next_lunch_begin") and p.has_key(u"next_lunch_end"):
-            return getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"]) > 0
+            diff = getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"])
+            if diff == None:
+                # illegal format, just assume ready
+                return True
+            return diff > 0
         return False
     
     def createPeer(self, ip, info={}):        

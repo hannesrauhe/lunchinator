@@ -1,6 +1,7 @@
 import subprocess,sys,ctypes
 from lunchinator import log_exception, log_warning, log_debug,\
     get_settings, log_error
+from lunch_settings import lunch_settings
 import os, threading, contextlib, socket
 from datetime import datetime
 
@@ -264,33 +265,45 @@ def getGPG(secret=False):
     return gpg, keyid
 
 def getTimeDifference(begin, end):
-    """ calculates the correlation of now and the specified lunch dates
-    negative value: now is before begin, seconds until begin
-    positive value: now is after begin but before end, seconds until end
-     0: now is after end
-    """
-    try:
-        now = datetime.now()
-        begin = datetime.strptime(begin, "%H:%M")
-        begin = begin.replace(year=now.year, month=now.month, day=now.day)
-        end = datetime.strptime(end, "%H:%M")
-        end = end.replace(year=now.year, month=now.month, day=now.day)
-        
-        if now < begin:
-            # now is before begin
-            td = begin - now
-            millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
-            return -1 if millis == 0 else -millis
-        elif now < end:
-            td = end - now
-            millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
-            return 1 if millis == 0 else millis
-        else:
-            # now is after end
-            return 0
-    except:
-        log_exception("don't know how to handle time span")
-        return False
+        """
+        calculates the correlation of now and the specified lunch dates
+        negative value: now is before begin, seconds until begin
+        positive value: now is after begin but before end, seconds until end
+         0: now is after end
+        Returns None if the time format is invalid. 
+        """
+        try:
+            try:
+                begin = datetime.strptime(begin, lunch_settings.LUNCH_TIME_FORMAT)
+            except ValueError:
+                # this is called repeatedly, so only debug
+                log_debug("Unsupported time format:", begin)
+                return None
+            try:
+                end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
+            except ValueError:
+                log_debug("Unsupported time format:", end)
+                return None
+            
+            now = datetime.now()
+            begin = begin.replace(year=now.year, month=now.month, day=now.day)
+            end = end.replace(year=now.year, month=now.month, day=now.day)
+            
+            if now < begin:
+                # now is before begin
+                td = begin - now
+                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
+                return -1 if millis == 0 else -millis
+            elif now < end:
+                td = end - now
+                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
+                return 1 if millis == 0 else millis
+            else:
+                # now is after end
+                return 0
+        except:
+            log_exception("don't know how to handle time span")
+            return None
     
 '''for the external IP a connection to someone has to be opened briefly
    therefore a list of possible peers is needed'''

@@ -1,9 +1,11 @@
-import sys, os, getpass, ConfigParser, types, subprocess, logging, codecs, contextlib
+import sys, os, getpass, ConfigParser, types, logging, codecs, contextlib
 
 '''integrate the cli-parser into the default_config sooner or later'''
-from lunchinator import log_exception, log_warning, log_error, log_info, setLoggingLevel, convert_string, MAIN_CONFIG_DIR
+from lunchinator import log_exception, log_error, setLoggingLevel, convert_string, MAIN_CONFIG_DIR
+from datetime import datetime
     
 class lunch_settings(object):
+    LUNCH_TIME_FORMAT="%H:%M"
     _instance = None
     
     @classmethod
@@ -92,7 +94,7 @@ class lunch_settings(object):
             version_file = self.get_resource("version")
             with contextlib.closing(open(version_file, "r")) as vfh:
                 self._commit_count = vfh.read().strip()
-        except Exception, e:
+        except Exception:
             log_error("version file missing, no version information")
             
     def read_config_from_hd(self): 
@@ -102,10 +104,10 @@ class lunch_settings(object):
         self._group = self.read_value_from_config_file(self._group, "general", "group")
         self._tcp_port = self.read_value_from_config_file(self._tcp_port, "general", "tcp_port")
         
-        self._default_lunch_begin = self.read_value_from_config_file(self._default_lunch_begin, "general", "default_lunch_begin")
-        self._default_lunch_end = self.read_value_from_config_file(self._default_lunch_end, "general", "default_lunch_end")
-        self._alarm_begin_time = self.read_value_from_config_file(self._alarm_begin_time, "general", "alarm_begin_time")
-        self._alarm_end_time = self.read_value_from_config_file(self._alarm_end_time, "general", "alarm_end_time")
+        self.set_default_lunch_begin(self.read_value_from_config_file(self._default_lunch_begin, "general", "default_lunch_begin"))
+        self.set_default_lunch_end(self.read_value_from_config_file(self._default_lunch_end, "general", "default_lunch_end"))
+        self.set_alarm_begin_time(self.read_value_from_config_file(self._alarm_begin_time, "general", "alarm_begin_time"))
+        self.set_alarm_end_time(self.read_value_from_config_file(self._alarm_end_time, "general", "alarm_end_time"))
         
         self._peer_timeout = self.read_value_from_config_file(self._peer_timeout, "general", "peer_timeout")
         self._mute_timeout = self.read_value_from_config_file(self._mute_timeout, "general", "mute_timeout")
@@ -196,18 +198,6 @@ class lunch_settings(object):
     def get_commit_count_plugins(self):
         return self._commit_count_plugins
     
-    def get_next_lunch_begin(self):
-        return self._next_lunch_begin
-    
-    def set_next_lunch_begin(self, time):
-        self._next_lunch_begin = time
-        
-    def get_next_lunch_end(self):
-        return self._next_lunch_end
-    
-    def set_next_lunch_end(self, time):
-        self._next_lunch_end = time
-    
     def get_log_file(self):
         return self._log_file
     
@@ -243,25 +233,53 @@ class lunch_settings(object):
     def get_avatar(self):
         return self._avatar_file
     
+    def _check_lunch_time(self, new_value, old_value):
+        if new_value == old_value:
+            return new_value
+        try:
+            time = datetime.strptime(new_value, lunch_settings.LUNCH_TIME_FORMAT)
+            if time:
+                return new_value
+        except:
+            pass
+        log_error("Illegal time format:", new_value)
+        return old_value
+    
     def get_default_lunch_begin(self):
         return self._default_lunch_begin
     def set_default_lunch_begin(self, new_value):
-        self._default_lunch_begin = convert_string(new_value)
+        new_value = convert_string(new_value)
+        self._default_lunch_begin = self._check_lunch_time(new_value, self._default_lunch_begin)
     
     def get_default_lunch_end(self):
         return self._default_lunch_end
     def set_default_lunch_end(self, new_value):
-        self._default_lunch_end = convert_string(new_value)
+        new_value = convert_string(new_value)
+        self._default_lunch_end = self._check_lunch_time(new_value, self._default_lunch_end)
+    
+    def get_next_lunch_begin(self):
+        return self._next_lunch_begin
+    def set_next_lunch_begin(self, time):
+        time = convert_string(time)
+        self._next_lunch_begin = self._check_lunch_time(time, self._next_lunch_begin)
+        
+    def get_next_lunch_end(self):
+        return self._next_lunch_end
+    def set_next_lunch_end(self, time):
+        time = convert_string(time)
+        self._next_lunch_end = self._check_lunch_time(time, self._next_lunch_end)
     
     def get_alarm_begin_time(self):
         return self._alarm_begin_time
     def set_alarm_begin_time(self, new_value):
-        self._alarm_begin_time = convert_string(new_value)
+        new_value = convert_string(new_value)
+        self._alarm_begin_time = self._check_lunch_time(new_value, self._alarm_begin_time)
     
     def get_alarm_end_time(self):
         return self._alarm_end_time
     def set_alarm_end_time(self, new_value):
-        self._alarm_end_time = convert_string(new_value)
+        new_value = convert_string(new_value)
+        self._alarm_end_time = self._check_lunch_time(new_value, self._alarm_end_time)
     
     def get_mute_timeout(self):
         return self._mute_timeout

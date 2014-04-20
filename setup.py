@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from __future__ import with_statement
-import os
+import os, platform
 from distutils.core import setup
 from distutils.command import install
 
@@ -16,12 +16,16 @@ def _get_version(version_info, branch = ""):
     if branch:
         main += "-" + branch
 
-    sub = ''
+    if os.getenv("dist"):
+        sub = '.' + os.getenv("dist")
+    else:
+        sub = ''
+
     if version_info[3] == 'alpha' and version_info[4] == 0:
-        sub = '.dev'
+        sub += '.dev'
     elif version_info[3] != 'final':
         mapping = {'alpha': 'a', 'beta': 'b', 'rc': 'c'}
-        sub = mapping[version_info[3]] + str(version_info[4])
+        sub += mapping[version_info[3]] + str(version_info[4])
 
     return str(main + sub)
 
@@ -70,7 +74,8 @@ data_files = [('share/lunchinator/sounds', ['sounds/sonar.wav']),
               ('share/lunchinator', ['lunchinator_pub_0x17F57DC2.asc', 'version']),
               ('share/icons/hicolor/scalable/apps', ['images/lunchinator.svg']),
               ('share/applications', ['installer/lunchinator.desktop'])]
-if os.getenv('dist'):
+# ensure icons are installed only on ubuntu
+if not os.getenv("__notubuntu") and platform.dist()[0] == "Ubuntu":
     data_files.append(('share/icons/ubuntu-mono-dark/status/24', ['images/white/lunchinator.svg', 'images/lunchinatorred.svg']))
     data_files.append(('share/icons/ubuntu-mono-light/status/24', ['images/black/lunchinator.svg', 'images/lunchinatorred.svg']))
 data_files.extend([("share/lunchinator/" + dp, [os.path.join(dp, fn) for fn in fns if not fn.endswith('.pyc')]) for dp, _, fns in os.walk('plugins')])

@@ -4,7 +4,8 @@ import time
 from functools import partial
 from datetime import datetime
 from lunchinator import log_exception, convert_string, get_settings, get_server,\
-    get_peers
+    get_peers, log_debug
+from lunch_settings import lunch_settings
 from lunchinator.utilities import getTimeDifference
 
 class TableModelBase(QStandardItemModel):
@@ -191,21 +192,25 @@ class MembersTableModel(TableModelBase):
             oldTimer.stop()
             oldTimer.deleteLater()
         if self.lunchBeginKey in infoDict and self.lunchEndKey in infoDict:
-            item.setText(infoDict[self.lunchBeginKey] + "-" + infoDict[self.lunchEndKey])
-            beginTime = datetime.strptime(infoDict[self.lunchBeginKey], "%H:%M")
-            beginTime = beginTime.replace(year=2000)
-            item.setData(QVariant(time.mktime(beginTime.timetuple())), self.SORT_ROLE)
-            timeDifference = getTimeDifference(infoDict[self.lunchBeginKey], infoDict[self.lunchEndKey])
-            if timeDifference > 0:
-                item.setData(QColor(0, 255, 0), Qt.DecorationRole)
-            else:
-                item.setData(QColor(255, 0, 0), Qt.DecorationRole)
-                
-            if timeDifference != 0:
-                timer = QTimer(item.model())
-                timer.timeout.connect(partial(self._updateLunchTimeItem, ip, infoDict, item))
-                timer.setSingleShot(True)
-                timer.start(abs(timeDifference))
+            item.setText(infoDict[self.lunchBeginKey]+"-"+infoDict[self.lunchEndKey])
+            try:
+                beginTime = datetime.strptime(infoDict[self.lunchBeginKey], lunch_settings.LUNCH_TIME_FORMAT)
+                beginTime = beginTime.replace(year=2000)
+                item.setData(QVariant(time.mktime(beginTime.timetuple())), self.SORT_ROLE)
+                timeDifference = getTimeDifference(infoDict[self.lunchBeginKey],infoDict[self.lunchEndKey])
+                if timeDifference != None:
+                    if timeDifference > 0:
+                        item.setData(QColor(0, 255, 0), Qt.DecorationRole)
+                    else:
+                        item.setData(QColor(255, 0, 0), Qt.DecorationRole)
+                    
+                    if timeDifference != 0:
+                        timer = QTimer(item.model())
+                        timer.timeout.connect(partial(self._updateLunchTimeItem, ip, infoDict, item))
+                        timer.setSingleShot(True)
+                        timer.start(abs(timeDifference))
+            except ValueError:
+                log_debug("Ignoring illegal lunch time:", infoDict[self.lunchBeginKey])
         else:
             item.setData(QVariant(-1), self.SORT_ROLE)
         

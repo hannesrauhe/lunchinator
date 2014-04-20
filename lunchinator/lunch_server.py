@@ -164,7 +164,7 @@ class lunch_server(object):
         get_settings().set_group(newgroup)
         self.call("HELO_LEAVE Changing Group")
         self._peers.removeMembers()
-        self.call_request_info(peers)
+        self.call_request_info()
                
     def messagesCount(self):
         length = 0
@@ -241,8 +241,8 @@ class lunch_server(object):
         if pluginInfo and pluginInfo.plugin_object.is_activated:
             return pluginInfo.plugin_object.getDBConnection(name)
         log_exception("getDBConnection: DB Connections plugin not yet loaded")
-        return None    
-    
+        return None        
+        
     def getLunchPeers(self):
         return self._peers 
     
@@ -510,7 +510,8 @@ class lunch_server(object):
             self.controller.processMessage(msg, ip)
             
             from lunchinator.utilities import getTimeDifference
-            if get_settings().get_lunch_trigger() in msg.lower() and 0 < getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time()):
+            diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time())
+            if diff == None or get_settings().get_lunch_trigger() in msg.lower() and 0 < diff:
                 timenum = mktime(mtime)
                 if timenum - self.last_lunch_call > get_settings().get_mute_timeout():
                     self.last_lunch_call = timenum
