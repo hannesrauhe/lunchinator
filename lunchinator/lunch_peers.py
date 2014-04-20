@@ -120,7 +120,7 @@ class LunchPeers(object):
             self._peer_info[ip].update(newInfo)
             self._controller.peerUpdated(ip, self._peer_info[ip])
         
-        log_debug("%s has new info: %s" % (ip, self._peer_info[ip]))
+        log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
             
         own_group = get_settings().get_group()       
         

@@ -410,7 +410,7 @@ class lunch_server(object):
             
         elif cmd == "HELO":
             # this is just a ping with the members name
-            self._peers.updatePeerInfo(ip, {u"name":""})     
+            self._peers.updatePeerInfo(ip, {u"name":value})     
             
         else:
             r_value = False 
