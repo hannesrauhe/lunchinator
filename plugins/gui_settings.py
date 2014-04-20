@@ -20,15 +20,21 @@ class gui_settings(iface_general_plugin):
         self.options = []
         self.force_activation = True
         for o in option_names:
-            methodname = "get_"+o[0]
-            if hasattr(get_settings(), methodname): 
-                _member = getattr(get_settings(), methodname)
-                self.options.append((o, _member()))
-            else:
-                log_warning("settings has no attribute called '%s'" % o)
+            val = self._get_option_value(o[0])
+            if val != None:
+                self.options.append((o, val))
                 
     def save_options_widget_data(self):
         self.save_data()
+        
+    def _get_option_value(self, oname):
+        methodname = "get_"+oname
+        if hasattr(get_settings(), methodname): 
+            _member = getattr(get_settings(), methodname)
+            return _member()
+        else:
+            log_warning("settings has no attribute called '%s'" % oname)
+        return None
         
     def set_option_value(self, o, new_v):
         # override category as "general"
@@ -40,6 +46,8 @@ class gui_settings(iface_general_plugin):
             _member(self.options[o])
         else:
             log_warning("settings has no setter for '%s'" % o)
+        
+        return self._get_option_value(o)
             
-    def change_group(self, key, value):
+    def change_group(self, _key, value):
         get_server().changeGroup(unicode(value))

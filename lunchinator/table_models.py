@@ -4,6 +4,7 @@ import time
 from functools import partial
 from datetime import datetime
 from lunchinator import log_exception, convert_string, get_settings, get_server
+from lunch_settings import lunch_settings
 
 class TableModelBase(QStandardItemModel):
     KEY_ROLE = Qt.UserRole + 1
@@ -193,7 +194,7 @@ class MembersTableModel(TableModelBase):
             oldTimer.deleteLater()
         if self.lunchBeginKey in infoDict and self.lunchEndKey in infoDict:
             item.setText(infoDict[self.lunchBeginKey]+"-"+infoDict[self.lunchEndKey])
-            beginTime = datetime.strptime(infoDict[self.lunchBeginKey], "%H:%M")
+            beginTime = datetime.strptime(infoDict[self.lunchBeginKey], lunch_settings.LUNCH_TIME_FORMAT)
             beginTime = beginTime.replace(year=2000)
             item.setData(QVariant(time.mktime(beginTime.timetuple())), self.SORT_ROLE)
             timeDifference = get_server().getTimeDifference(infoDict[self.lunchBeginKey],infoDict[self.lunchEndKey])

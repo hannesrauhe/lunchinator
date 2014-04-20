@@ -226,11 +226,12 @@ class lunch_server(object):
         return message
     
     def lockMessages(self):
-        log_debug("Getting Messages with lock")
+        # this is annoying
+        #log_debug("Getting Messages with lock")
         self.messagesLock.acquire()
         
     def releaseMessages(self):
-        log_debug("lock released")
+        #log_debug("lock released")
         self.messagesLock.release()
         
     def lockMembers(self):

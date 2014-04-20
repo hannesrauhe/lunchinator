@@ -209,7 +209,7 @@ class iface_plugin(IPlugin):
                     # callback returned modified value
                     new_v = mod_v 
             targetDict[o]=new_v
-            self.set_option_value(o, new_v)
+            new_v = self.set_option_value(o, new_v)
         self._displayOptionValue(o, new_v)
             
     def register_option_callback(self, o, callback):
@@ -272,7 +272,9 @@ class iface_plugin(IPlugin):
             self.set_option(o, new_v, False)
         
     def set_option_value(self, o, new_v):
+        """Checks the new value, stores it and returns the value that was stored."""
         self.setConfigOption(o,str(new_v))
+        return new_v
         
     def save_options_widget_data(self):
         self.save_data()
