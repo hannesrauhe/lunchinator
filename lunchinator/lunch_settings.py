@@ -5,7 +5,8 @@ from lunchinator import log_exception, log_error, setLoggingLevel, convert_strin
 from datetime import datetime
     
 class lunch_settings(object):
-    LUNCH_TIME_FORMAT="%H:%M"
+    LUNCH_TIME_FORMAT = "%H:%M"
+    LUNCH_TIME_FORMAT_QT = "HH:mm"
     _instance = None
     
     @classmethod
@@ -253,12 +254,16 @@ class lunch_settings(object):
         self._default_lunch_end = self._check_lunch_time(new_value, self._default_lunch_end)
     
     def get_next_lunch_begin(self):
+        if not self._next_lunch_begin:
+            return self.get_default_lunch_begin()
         return self._next_lunch_begin
     def set_next_lunch_begin(self, time):
         time = convert_string(time)
         self._next_lunch_begin = self._check_lunch_time(time, self._next_lunch_begin)
         
     def get_next_lunch_end(self):
+        if not self._next_lunch_end:
+            return self.get_default_lunch_end()
         return self._next_lunch_end
     def set_next_lunch_end(self, time):
         time = convert_string(time)

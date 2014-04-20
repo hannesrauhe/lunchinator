@@ -3,7 +3,8 @@ from lunchinator import get_server, log_exception, log_info, get_settings, \
     log_error, convert_string, log_warning
 import socket, os, time, subprocess
 import platform
-from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
+from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor,\
+    QDialog
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplication, QTimer
 from PyQt4 import QtCore
 from functools import partial
@@ -13,6 +14,7 @@ from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
+from lunchinator.timespan_input_dialog import TimespanInputDialog
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -313,6 +315,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
         anAction = menu.addAction('Show Lunchinator')
         anAction.triggered.connect(self.openWindowClicked)
         
+        anAction = menu.addAction(u"Change today's lunch time")
+        anAction.triggered.connect(self.changeNextLunchTime)
+        
+        menu.addSeparator()
+        
         anAction = menu.addAction('Settings')
         anAction.triggered.connect(self.openSettingsClicked)
         
@@ -401,6 +408,17 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.mainWindow.show()
         self.mainWindow.activateWindow()
         self.mainWindow.raise_()
+            
+    @pyqtSlot()
+    def changeNextLunchTime(self):
+        if self.mainWindow == None:
+            log_error("mainWindow is not initialized")
+            return
+        dialog = TimespanInputDialog(self.mainWindow, "Change Lunch Time", "When are you free for lunch today?", get_settings().get_next_lunch_begin(), get_settings().get_next_lunch_end())
+        dialog.exec_()
+        if dialog.result() == QDialog.Accepted:
+            get_settings().set_next_lunch_begin(dialog.getBeginTimeString())
+            get_settings().set_next_lunch_end(dialog.getEndTimeString())
             
     @pyqtSlot(bool)
     @pyqtSlot()
