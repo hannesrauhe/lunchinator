@@ -87,7 +87,10 @@ if $PUBLISH
 then
   pushd osc/home:${OBSUSERNAME}/lunchinator
   osc add Lunchinator.spec
-  osc add Lunchinator*${VERSION}*.tar.gz
+  for f in $(osc st | grep '^?' | sed -e 's/^?\s*//')
+  do
+    osc add "$f"
+  done
   osc commit
   popd
 fi
