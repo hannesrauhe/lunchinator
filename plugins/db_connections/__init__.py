@@ -20,34 +20,38 @@ class db_connections(iface_general_plugin):
                          get_settings().get_default_db_connection())]
         self.force_activation = True
 
-    ''' lazy plugin loading (not to be called in __init__ - plugins might not ba activated then) '''
+    ''' lazy plugin loading (not to be called in __init__ - plugins might not be activated then) '''
     def _init_plugin_objects(self):        
         if len(self.conn_plugins)==0:
             
+            self.conn_properties_lock.acquire()
             '''fill the only known property for now: the type of every connection
             and store the instance'''
-            for conn_name in get_settings().get_available_db_connections():
-                section_name = "DB Connection: "+str(conn_name)  
-                plugin_type = self.STANDARD_PLUGIN                      
-                plugin_type = get_settings().read_value_from_config_file(plugin_type,
-                                                                         section_name, 
-                                                                         "plugin_type")
-
-                p = self.plugin_manager.getPluginByName(plugin_type, "db")
-                if p and p.plugin_object.is_activated:
-                    self.conn_plugins[conn_name] = p.plugin_object
-                else:
-                    raise Exception("DB Connection %s requires plugin of type \
-                    %s which is not available"%(conn_name,plugin_type))
-                p_options = p.plugin_object.options
-                for k,v in p_options.items():
-                    '''this takes care of the option-type'''
-                    p_options[k] = get_settings().read_value_from_config_file(v,
-                                                                         section_name, 
-                                                                         k)
-                p_options["plugin_type"]=plugin_type
-                self.conn_properties_lock.acquire()
-                self.conn_properties[conn_name] = p_options
+            try:
+                for conn_name in get_settings().get_available_db_connections():
+                    section_name = "DB Connection: "+str(conn_name)  
+                    plugin_type = self.STANDARD_PLUGIN                      
+                    plugin_type = get_settings().read_value_from_config_file(plugin_type,
+                                                                             section_name, 
+                                                                             "plugin_type")
+    
+                    p = self.plugin_manager.getPluginByName(plugin_type, "db")
+                    if p and p.plugin_object.is_activated:
+                        self.conn_plugins[conn_name] = p.plugin_object
+                    else:
+                        raise Exception("DB Connection %s requires plugin of type \
+                        %s which is not available"%(conn_name,plugin_type))
+                    p_options = p.plugin_object.options
+                    for k,v in p_options.items():
+                        '''this takes care of the option-type'''
+                        p_options[k] = get_settings().read_value_from_config_file(v,
+                                                                                  section_name,
+                                                              k)
+                    p_options["plugin_type"]=plugin_type
+                    self.conn_properties[conn_name] = p_options.copy()
+            except:
+                raise
+            finally:
                 self.conn_properties_lock.release()              
                     
     def getProperties(self, conn_id):
@@ -135,3 +139,6 @@ class db_connections(iface_general_plugin):
         
         
         '''@todo release locks'''
+        
+    def discard_changes(self):
+        self.conn_options_widget.reset_connection_properties(self.conn_properties)

@@ -7,48 +7,61 @@ class DbConnOptions(QWidget):
     def __init__(self, parent, conn_properties):        
         super(DbConnOptions, self).__init__(parent)
         
-        self.conn_properties = deepcopy(conn_properties)
         self.plugin_manager = PluginManagerSingleton.get()
         self.available_types = {}
+        self.conn_properties = None
+        
         for dbplugin in self.plugin_manager.getPluginsOfCategory("db"):
             self.available_types[dbplugin.name] = dbplugin.plugin_object
                 
         lay = QGridLayout(self)
         
-        if len(self.available_types)==0:
-            lay.addWidget(QLabel("No DB plugin activated",parent),0,0, Qt.AlignRight)
+        if len(self.available_types) == 0:
+            lay.addWidget(QLabel("No DB plugin activated", parent), 0, 0, Qt.AlignRight)
             return
             
-        lay.addWidget(QLabel("Name: ",parent),0,0, Qt.AlignRight)        
+        lay.addWidget(QLabel("Name: ", parent), 0, 0, Qt.AlignRight)        
         self.nameCombo = QComboBox(parent)
-        lay.addWidget(self.nameCombo,0,1)
-        lay.addWidget(QLabel("Type: ",parent),1,0, Qt.AlignRight)
+        lay.addWidget(self.nameCombo, 0, 1)
+        lay.addWidget(QLabel("Type: ", parent), 1, 0, Qt.AlignRight)
         self.typeCombo = QComboBox(parent)
-        lay.addWidget(self.typeCombo,1,1)
+        lay.addWidget(self.typeCombo, 1, 1)
         self.conn_details = QStackedWidget(parent)
-        lay.addWidget(self.conn_details,2,0,1,2)        
+        lay.addWidget(self.conn_details, 2, 0, 1, 2)        
         newConnButton = QPushButton("New Connection", parent)
-        lay.addWidget(newConnButton,3,1)
+        lay.addWidget(newConnButton, 3, 1)
         
-        self.nameCombo.addItems(conn_properties.keys())
-        self.typeCombo.addItems(self.available_types.keys())
         for p in self.available_types.values():
             w = p.create_db_options_widget(parent)
             if not w:
-                w = QLabel("Plugin not activated",parent)
+                w = QLabel("Plugin not activated", parent)
             self.conn_details.addWidget(w)   
+            
+        self.typeCombo.addItems(self.available_types.keys())
         
+        self.reset_connection_properties(conn_properties)  
+        newConnButton.clicked.connect(self.new_conn)      
+        
+    def reset_connection_properties(self, conn_properties):
+        try:
+            self.nameCombo.currentIndexChanged.disconnect(self.name_changed)
+            self.typeCombo.currentIndexChanged.disconnect(self.type_changed)
+        except:
+            pass
+        
+        self.conn_properties = deepcopy(conn_properties)
+        self.nameCombo.clear()
+        self.nameCombo.addItems(self.conn_properties.keys())
+            
         type_name = self.conn_properties[str(self.nameCombo.currentText())]["plugin_type"]
         type_index = self.typeCombo.findText(type_name)
-        self.typeCombo.setCurrentIndex(type_index)     
+        self.typeCombo.setCurrentIndex(type_index)  
+        self.conn_details.setCurrentIndex(type_index)
         
-        newConnButton.clicked.connect(self.new_conn)
+        self.fill_conn_details()       
+        
         self.typeCombo.currentIndexChanged.connect(self.type_changed)
         self.nameCombo.currentIndexChanged.connect(self.name_changed)
-        
-        self.last_name = str(self.nameCombo.currentText())
-        self.last_type = str(self.typeCombo.currentText())
-        self.fill_conn_details()
     
     def store_conn_details(self):
         p = self.available_types[self.last_type]
@@ -79,10 +92,10 @@ class DbConnOptions(QWidget):
             self.typeCombo.setCurrentIndex(type_index)
     
     def new_conn(self):
-        new_conn_name = "Conn %d"%len(self.conn_properties)
+        new_conn_name = "Conn %d" % len(self.conn_properties)
         self.conn_properties[new_conn_name] = {"plugin_type" : str(self.typeCombo.currentText()) }
         self.nameCombo.addItem(new_conn_name)
-        self.nameCombo.setCurrentIndex(self.nameCombo.count()-1)
+        self.nameCombo.setCurrentIndex(self.nameCombo.count() - 1)
         
     def get_connection_properties(self):
         self.store_conn_details()
