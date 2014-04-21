@@ -12,7 +12,8 @@ from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
-from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC
+from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
+    getTimeDifference, getValidQtParent
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 from lunchinator.timespan_input_dialog import TimespanInputDialog
 
@@ -49,6 +50,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         log_info("Your PyQt version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
         
         self.resetIconTimer = None
+        self.resetNextLunchTimeTimer = None
         self.isIconHighlighted = True  # set to True s.t. first dehighlight can set the default icon
         
         self.exitCode = 0
@@ -430,6 +432,27 @@ class LunchinatorGuiController(QObject, LunchServerController):
             get_settings().set_next_lunch_begin(dialog.getBeginTimeString())
             get_settings().set_next_lunch_end(dialog.getEndTimeString())
             get_server().call_info()
+            
+            if self.resetNextLunchTimeTimer != None:
+                self.resetNextLunchTimeTimer.stop()
+                self.resetNextLunchTimeTimer.deleteLater()
+                
+            td = getTimeDifference(get_settings().get_next_lunch_begin(),
+                                   get_settings().get_next_lunch_end())
+            td2 = getTimeDifference(get_settings().get_default_lunch_begin(),
+                                    get_settings().get_default_lunch_end())
+            
+            if not td or abs(td) < abs(td2):
+                # reset after both periods are over. Otherwise, you'd be free for lunch two times.
+                td = td2
+            
+            self.resetNextLunchTimeTimer = QTimer(getValidQtParent())
+            self.resetNextLunchTimeTimer.timeout.connect(self._resetNextLunchTime)
+            self.resetNextLunchTimeTimer.setSingleShot(True)
+            self.resetNextLunchTimeTimer.start(abs(td) + 1000)
+            
+    def _resetNextLunchTime(self):
+        get_server().call_info()
             
     @pyqtSlot(bool)
     @pyqtSlot()

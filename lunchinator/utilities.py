@@ -262,26 +262,57 @@ def getGPG(secret=False):
     
     return gpg, keyid
 
+def getTimeDelta(end):
+    """
+    calculates the correlation of now and the specified time
+    positive value: now is before time, milliseconds until time
+    negative value: now is after time, milliseconds after time
+    Returns None if the time format is invalid. 
+    """
+    try:
+        from lunchinator.lunch_settings import lunch_settings
+        
+        try:
+            end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
+        except ValueError:
+            log_debug("Unsupported time format:", end)
+            return None
+        
+        # ignore begin
+        now = datetime.now()
+        end = end.replace(year=now.year, month=now.month, day=now.day)
+        
+        td = end - now
+        return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
+    
+    except:
+        log_exception("don't know how to handle time span")
+        return None
+    
+
 def getTimeDifference(begin, end):
     """
     calculates the correlation of now and the specified lunch dates
     negative value: now is before begin, seconds until begin
     positive value: now is after begin but before end, seconds until end
      0: now is after end
+    toEnd = True: always calculate seconds until end
     Returns None if the time format is invalid. 
     """
     try:
         from lunchinator.lunch_settings import lunch_settings
+        
+        try:
+            end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
+        except ValueError:
+            log_debug("Unsupported time format:", end)
+            return None
+        
         try:
             begin = datetime.strptime(begin, lunch_settings.LUNCH_TIME_FORMAT)
         except ValueError:
             # this is called repeatedly, so only debug
             log_debug("Unsupported time format:", begin)
-            return None
-        try:
-            end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
-        except ValueError:
-            log_debug("Unsupported time format:", end)
             return None
         
         now = datetime.now()

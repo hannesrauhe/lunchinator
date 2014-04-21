@@ -254,29 +254,29 @@ class lunch_settings(object):
         self._default_lunch_end = self._check_lunch_time(new_value, self._default_lunch_end)
     
     def get_next_lunch_begin(self):
-        from lunchinator.utilities import getTimeDifference
+        from lunchinator.utilities import getTimeDelta
         # return "next" times only if they aren't already over
         if self._next_lunch_begin:
-            diff = getTimeDifference(self._next_lunch_begin, self._next_lunch_end if self._next_lunch_end else self.get_default_lunch_end())
-            if diff != 0:
+            if self._next_lunch_end and getTimeDelta(self._next_lunch_end) > 0:
                 return self._next_lunch_begin
             else:
                 # reset
                 self._next_lunch_begin = None
+                self._next_lunch_end = None
         return self.get_default_lunch_begin()
     def set_next_lunch_begin(self, time):
         time = convert_string(time)
         self._next_lunch_begin = self._check_lunch_time(time, self._next_lunch_begin)
         
     def get_next_lunch_end(self):
-        from lunchinator.utilities import getTimeDifference
+        from lunchinator.utilities import getTimeDelta
         # return "next" times only if they aren't already over
         if self._next_lunch_end:
-            diff = getTimeDifference(self._next_lunch_begin if self._next_lunch_begin else self.get_default_lunch_begin(), self._next_lunch_end)
-            if diff != 0:
+            if getTimeDelta(self._next_lunch_end) > 0:
                 return self._next_lunch_end
             else:
                 # reset
+                self._next_lunch_begin = None
                 self._next_lunch_end = None
         return self.get_default_lunch_end()
     def set_next_lunch_end(self, time):
