@@ -33,6 +33,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     messagePrependedSignal = pyqtSignal(time.struct_time, list)
     peerAppendedSignal = pyqtSignal(unicode)
     groupAppendedSignal = pyqtSignal(unicode, set)
+    _performCall = pyqtSignal(unicode, unicode, list)
     _sendFile = pyqtSignal(unicode, bytearray, int, bool)
     _receiveFile = pyqtSignal(unicode, int, unicode, int)
     _processEvent = pyqtSignal(unicode, unicode, unicode)
@@ -69,6 +70,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         # connect private signals
         self._initDone.connect(self.initDoneSlot)
+        self._performCall.connect(self.performCallSlot)
         self._receiveFile.connect(self.receiveFileSlot)
         self._sendFile.connect(self.sendFileSlot)
         
@@ -199,6 +201,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     def initDone(self):
         self._initDone.emit()
+        
+    def call(self, msg, client, hosts):
+        self._performCall.emit(msg, client, hosts)
         
     def serverFinishedUnexpectedly(self):
         self.serverThread = None
@@ -346,6 +351,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
     @pyqtSlot()
     def initDoneSlot(self):
         pass
+    
+    @pyqtSlot(unicode, unicode, list)
+    def performCallSlot(self, msg, client, hosts):
+        get_server().perform_call(msg, client, hosts)
     
     @pyqtSlot()
     def updateRequested(self):

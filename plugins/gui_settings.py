@@ -9,6 +9,7 @@ class gui_settings(iface_general_plugin):
                         (u'group', u'Group Name', self.change_group),
                         (u"default_lunch_begin", u'Free for Lunch from'),
                         (u"default_lunch_end", u'Free for Lunch until'),
+                        (u"warn_if_members_not_ready", u"Warn if members are not ready for lunch"),
                         (u"alarm_begin_time", u"No Alarm before"),
                         (u"alarm_end_time", u"No Alarm after"),
                         (u"mute_timeout", u"Mute for x sec after Alarm"),

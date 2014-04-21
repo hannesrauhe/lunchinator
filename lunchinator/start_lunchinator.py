@@ -47,7 +47,7 @@ def sendMessage(msg, cli):
         msg = "lunch"
     
     get_server().set_plugins_enabled(False)
-    recv_nr=get_server().call(msg,client=cli)
+    recv_nr=get_server().perform_call(msg,client=cli)
     print "sent to",recv_nr,"clients"
     
 def handleInterrupt(lanschi, _signal, _frame):

@@ -10,6 +10,9 @@ class LunchServerController(object):
     def initDone(self):
         pass
         
+    def call(self, msg, client, hosts):
+        get_server().perform_call(msg, client, hosts)
+        
     def peerAppended(self, ip):
         pass
         

@@ -77,7 +77,7 @@ class lunch_settings(object):
         self._default_db_connection = u"Standard"
         self._available_db_connections = u"Standard"  # list separated by ;; (like yapsy)
         self._proxy = u""
-        
+        self._warn_if_members_not_ready = True
         
         self._next_lunch_begin = None
         self._next_lunch_end = None
@@ -282,6 +282,11 @@ class lunch_settings(object):
     def set_next_lunch_end(self, time):
         time = convert_string(time)
         self._next_lunch_end = self._check_lunch_time(time, self._next_lunch_end)
+    
+    def get_warn_if_members_not_ready(self):
+        return self._warn_if_members_not_ready
+    def set_warn_if_members_not_ready(self, new_value):
+        self._warn_if_members_not_ready = new_value
     
     def get_alarm_begin_time(self):
         return self._alarm_begin_time

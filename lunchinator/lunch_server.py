@@ -8,10 +8,12 @@ from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string
-from lunchinator.utilities import getTimeDifference
+from lunchinator.utilities import getTimeDifference, getValidQtParent
      
 import tarfile
 import platform
+from PyQt4.QtGui import QMessageBox
+import random
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -188,6 +190,73 @@ class lunch_server(object):
                 log_warning("Wasn't able to send the leave call and close the socket...")
             self._finish()            
             
+    def perform_call(self, msg, client, hosts):
+        """Called from main thread"""     
+        msg = convert_string(msg)
+        client = convert_string(client)
+        
+        target = None
+        if client:
+            # send to client regardless of the dontSendTo state
+            target = [client.strip()]
+        elif 0 == len(hosts):
+            # we're not on the lunchinator thread, so lock
+            self.lockMembers()
+            try:
+                target = set(self._members) - self.dontSendTo
+            finally:
+                self.releaseMembers()
+        else:
+            # send to all specified hosts regardless of the dontSendTo state
+            target = set(convert_string(h) for h in hosts)
+        
+        if 0 == len(target):
+            log_error("Cannot send message, no peers connected, no peer found in _members file")
+            
+        if get_settings().get_warn_if_members_not_ready() and not msg.startswith(u"HELO") and u"LUNCH" in msg.upper():
+            # check if everyone is ready
+            notReadyMembers = set()
+            self.lockMembers()
+            try:
+                for m in self.get_members():
+                    if not self.is_peer_ready(m):
+                        notReadyMembers.add(self.memberName(m))
+            finally:
+                self.releaseMembers()
+            
+            if notReadyMembers:
+                if len(notReadyMembers) == 1:
+                    warn = "%s is not ready for lunch." % iter(notReadyMembers).next()
+                elif len(notReadyMembers) == 2:
+                    it = iter(notReadyMembers)
+                    warn = "%s and %s are not ready for lunch." % (it.next(), it.next())
+                else:
+                    warn = "%s and %d others are not ready for lunch." % (random.sample(notReadyMembers, 1)[0], len(notReadyMembers) - 1)
+                warn = "WARNING: %s Send lunch call anyways?" % warn
+                result = QMessageBox.warning(None,
+                                             "Members not ready",
+                                             warn,
+                                             buttons=QMessageBox.Yes | QMessageBox.No,
+                                             defaultButton=QMessageBox.No)
+                if result == QMessageBox.No:
+                    return
+
+        i = 0
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
+        try:      
+            for ip in target:
+                try:
+                    log_debug("Sending", msg, "to", ip.strip())
+                    s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
+                    i += 1
+                except:
+                    # only warning message; happens sometimes if the host is not reachable
+                    log_warning("Message %s could not be delivered to %s: %s" % (s, ip, str(sys.exc_info()[0])))
+                    continue
+        finally:
+            s.close() 
+        return i
+            
     
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
     def changeGroup(self, newgroup):
@@ -286,7 +355,8 @@ class lunch_server(object):
                     # illegal format, just assume ready
                     return True
                 return getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"]) > 0
-        return False
+        # no information, just assume ready
+        return True
         
     def getOwnIP(self):
         return self.own_ip
@@ -315,44 +385,16 @@ class lunch_server(object):
         log_exception("getDBConnection: DB Connections plugin not yet loaded")
         return None        
         
-    '''An info call informs a peer about my name etc...
-    by default to every peer'''
     def call_info(self, peers=[]):
+        '''An info call informs a peer about my name etc...
+        by default to every peer'''
         if 0 == len(peers):
             peers = self._peer_info.keys()
         return self.call("HELO_INFO " + self._build_info_string(), hosts=peers)  
     
     def call(self, msg, client='', hosts=[]):
         self.initialize()
-        
-        target = None
-        if client:
-            # send to client regardless of the dontSendTo state
-            target = [client.strip()]
-        elif 0 == len(hosts):
-            target = set(self._members) - self.dontSendTo
-        else:
-            # send to all specified hosts regardless of the dontSendTo state
-            target = set(hosts)
-        
-        if 0 == len(target):
-            log_error("Cannot send message, no peers connected, no peer found in _members file")
-
-        i = 0
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
-        try:      
-            for ip in target:
-                try:
-                    log_debug("Sending", msg, "to", ip.strip())
-                    s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
-                    i += 1
-                except:
-                    # only warning message; happens sometimes if the host is not reachable
-                    log_warning("Message %s could not be delivered to %s: %s" % (s, ip, str(sys.exc_info()[0])))
-                    continue
-        finally:
-            s.close() 
-        return i
+        self.controller.call(msg, client, hosts)
         
     '''short for the call function above for backward compatibility'''
     def call_all_members(self, msg):        
@@ -486,7 +528,6 @@ class lunch_server(object):
             log_exception("Could not write messages to %s: %s" % (get_settings().get_messages_file(), sys.exc_info()[0]))    
     
     def _build_info_string(self):
-        print "call info"
         from lunchinator.utilities import getPlatform, PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS
         info_d = {u"avatar": get_settings().get_avatar_file(),
                    u"name": get_settings().get_user_name(),
