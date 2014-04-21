@@ -431,25 +431,19 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if dialog.result() == QDialog.Accepted:
             get_settings().set_next_lunch_begin(dialog.getBeginTimeString())
             get_settings().set_next_lunch_end(dialog.getEndTimeString())
-            get_server().call_info()
             
             if self.resetNextLunchTimeTimer != None:
                 self.resetNextLunchTimeTimer.stop()
                 self.resetNextLunchTimeTimer.deleteLater()
                 
-            td = getTimeDifference(get_settings().get_next_lunch_begin(),
-                                   get_settings().get_next_lunch_end())
-            td2 = getTimeDifference(get_settings().get_default_lunch_begin(),
-                                    get_settings().get_default_lunch_end())
-            
-            if not td or abs(td) < abs(td2):
-                # reset after both periods are over. Otherwise, you'd be free for lunch two times.
-                td = td2
-            
-            self.resetNextLunchTimeTimer = QTimer(getValidQtParent())
-            self.resetNextLunchTimeTimer.timeout.connect(self._resetNextLunchTime)
-            self.resetNextLunchTimeTimer.setSingleShot(True)
-            self.resetNextLunchTimeTimer.start(abs(td) + 1000)
+            td = get_settings().get_next_lunch_reset_time()
+            if td > 0:
+                self.resetNextLunchTimeTimer = QTimer(getValidQtParent())
+                self.resetNextLunchTimeTimer.timeout.connect(self._resetNextLunchTime)
+                self.resetNextLunchTimeTimer.setSingleShot(True)
+                self.resetNextLunchTimeTimer.start(abs(td) + 1000)
+                
+            get_server().call_info()
             
     def _resetNextLunchTime(self):
         get_server().call_info()

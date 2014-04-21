@@ -253,11 +253,22 @@ class lunch_settings(object):
         new_value = convert_string(new_value)
         self._default_lunch_end = self._check_lunch_time(new_value, self._default_lunch_end)
     
-    def get_next_lunch_begin(self):
+    def get_next_lunch_reset_time(self):
+        if self._next_lunch_end == None:
+            return None
+        
         from lunchinator.utilities import getTimeDelta
-        # return "next" times only if they aren't already over
+        # reset after next_lunch_end, but not before default_lunch_end
+        
+        tdn = getTimeDelta(self._next_lunch_end)
+        tdd = getTimeDelta(self.get_default_lunch_end())
+        
+        return max(tdn, tdd)
+        
+    def get_next_lunch_begin(self):
+        # reset "next" lunch times after they are over
         if self._next_lunch_begin:
-            if self._next_lunch_end and getTimeDelta(self._next_lunch_end) > 0:
+            if self._next_lunch_end and self.get_next_lunch_reset_time() > 0:
                 return self._next_lunch_begin
             else:
                 # reset
@@ -269,10 +280,9 @@ class lunch_settings(object):
         self._next_lunch_begin = self._check_lunch_time(time, self._next_lunch_begin)
         
     def get_next_lunch_end(self):
-        from lunchinator.utilities import getTimeDelta
-        # return "next" times only if they aren't already over
+        # reset "next" lunch times after they are over
         if self._next_lunch_end:
-            if getTimeDelta(self._next_lunch_end) > 0:
+            if self.get_next_lunch_reset_time() > 0:
                 return self._next_lunch_end
             else:
                 # reset
