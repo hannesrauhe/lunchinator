@@ -13,7 +13,7 @@ from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
-    getTimeDifference, getValidQtParent
+    getValidQtParent
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 from lunchinator.timespan_input_dialog import TimespanInputDialog
 
@@ -316,6 +316,13 @@ class LunchinatorGuiController(QObject, LunchServerController):
                     self.pluginActions.append(anAction)
         
         # main _menu
+        self._memberStatusAction = menu.addAction("")
+        self._memberStatusAction.setEnabled(False)
+        
+        self.memberStatusUpdateTimer = QTimer(self)
+        self.memberStatusUpdateTimer.timeout.connect(self._updateMemberStatus)
+        self.memberStatusUpdateTimer.start(5000)
+        
         anAction = menu.addAction('Call for lunch')
         anAction.triggered.connect(partial(self.sendMessageClicked, u'lunch', None))
         
@@ -337,6 +344,39 @@ class LunchinatorGuiController(QObject, LunchServerController):
         anAction.triggered.connect(self.quitClicked)
             
         return menu
+    
+    def _updateMemberStatus(self):
+        get_server().lockMembers()
+        try:
+            readyMembers = []
+            notReadyMembers = []
+            for m in get_server().get_members():
+                if get_server().is_peer_ready(m):
+                    readyMembers.append(get_server().memberName(m))
+                else:
+                    notReadyMembers.append(get_server().memberName(m))
+        finally:
+            get_server().releaseMembers()
+        
+        if not readyMembers and not notReadyMembers:
+            status = "No members."
+        elif not readyMembers:
+            status = "Nobody is ready for lunch."
+        elif not notReadyMembers:
+            status = "Everybody is ready for lunch."
+        else:
+            if len(readyMembers) == 1:
+                ready = "1 member"
+            else:
+                ready = "%d members" % len(readyMembers)
+                
+            if len(notReadyMembers) == 1:
+                notReady = "1 member"
+            else:
+                notReady = "%d members" % len(notReadyMembers)
+            
+            status = "%s ready, %s not ready for lunch." % (ready, notReady)
+        self._memberStatusAction.setText(status)
     
     def check_new_msgs(self):
         return get_server().new_msg
