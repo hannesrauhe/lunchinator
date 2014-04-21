@@ -2,7 +2,7 @@
 #@summary: This plugin is supposed to be the only one necessary for the core functionality of the lunchinator
 
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, \
-                        QLineEdit
+                        QLineEdit, QMenu, QInputDialog
 from PyQt4.QtCore import QTimer, Qt
 from lunchinator import get_server
 from time import mktime,time
@@ -81,6 +81,19 @@ class SimpleViewWidget(QWidget):
                         <i>[%d sec]</i>: %s</span><br />\n"%(color,member,time()-mktime(timest),msg)
                         
         self.msgview.setHtml(msgTexts)
+        
+    def create_menu(self, menuBar):
+        windowMenu = QMenu("Advanced", menuBar)
+        windowMenu.addAction("Manually add an IP", self.addMemberByIP)
+        return windowMenu
+    
+    def addMemberByIP(self):
+        hostn, button = QInputDialog.getText(None, "Manually add a member", "In rare cases the lunchinator might not be available to find another user.\n"+
+                             "You can enter an IP/hostname here to explicitly look there. Make sure that the Lunchinator is running on\n" +
+                             "the other machine and that you are in the same group.")
+        if button and len(hostn):
+            get_server().call_request_info([str(hostn)])
+        
         
 if __name__ == '__main__':        
     from lunchinator.iface_plugins import iface_gui_plugin

@@ -390,7 +390,14 @@ class lunch_server(object):
         by default to every peer'''
         if 0 == len(peers):
             peers = self._peer_info.keys()
-        return self.call("HELO_INFO " + self._build_info_string(), hosts=peers)  
+        return self.call("HELO_INFO " + self._build_info_string(), hosts=peers) 
+        
+    def call_request_info(self, peers=[]):
+        '''An info call informs a peer about my name etc... and ask for his/hers
+        by default to every peer'''
+        if 0 == len(peers):
+            peers = self._peer_info.keys()
+        return self.call("HELO_REQUEST_INFO " + self._build_info_string(), hosts=peers)  
     
     def call(self, msg, client='', hosts=[]):
         self.initialize()

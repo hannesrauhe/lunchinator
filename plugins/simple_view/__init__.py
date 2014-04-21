@@ -4,6 +4,7 @@ from lunchinator import get_server, log_exception
 class simple_view(iface_gui_plugin):
     def __init__(self):
         super(simple_view, self).__init__()
+        self.w = None
         
     def activate(self):
         iface_gui_plugin.activate(self)
@@ -14,9 +15,10 @@ class simple_view(iface_gui_plugin):
     def create_widget(self, parent):
         from simple_view.simpleViewWidget import SimpleViewWidget
         
-        w = SimpleViewWidget(parent)
+        self.w = SimpleViewWidget(parent)
             
-        return w
+        return self.w
         
     def add_menu(self,menu):
-        pass
+        if self.w:
+            return self.w.create_menu(menu)

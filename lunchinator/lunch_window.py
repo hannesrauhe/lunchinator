@@ -91,6 +91,22 @@ class LunchinatorWindow(QMainWindow):
                 pluginMenu.addMenu(catMenu)
             
         menuBar.addMenu(pluginMenu)
+                
+        # add plugins
+        try:
+            if get_server().get_plugins_enabled():
+                for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
+                    if pluginInfo.plugin_object.is_activated:
+                        try:
+                            p = pluginInfo.plugin_object
+                            p_menu = p.add_menu(menuBar)
+                            if p_menu:
+                                menuBar.addMenu(p_menu)
+                        except:
+                            log_exception("while creating menu for plugin %s: %s"%(pluginInfo.name, str(sys.exc_info())))
+        except:
+            log_exception("while creating menu for plugins %s"%str(sys.exc_info()))
+        
             
     def lockDockWidgets(self):
         self.locked = True
