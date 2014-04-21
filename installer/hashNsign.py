@@ -1,4 +1,5 @@
 import logging, sys, os, hashlib, shutil
+import subprocess
 
 try:
     import lunchinator
@@ -28,11 +29,18 @@ fileToSign.close()
 fileHash = md.hexdigest()
 logging.info("Hash is %s" % fileHash)
 
-commitCount = lunch_settings.get_singleton_instance().get_commit_count()
+proc = subprocess.Popen(['git', 'rev-list', '--count', 'HEAD'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+commitCount, _perr = proc.communicate()
+commitCount = commitCount.strip()
+if not commitCount:
+    logging.error("Could not determine commit count.")
+    sys.exit(1)
+# commit count is actually version string
+versionString = lunch_settings.get_singleton_instance().get_commit_count()
 
 # create signed version.asc
 
-stringToSign = "Commit Count: %s\nInstaller Hash: %s\nURL: %s/%s" % (commitCount, fileHash, commitCount, os.path.basename(fileToSign.name))
+stringToSign = "Version: %s\nCommit Count: %s\nInstaller Hash: %s\nURL: %s/%s" % (versionString, commitCount, fileHash, versionString, os.path.basename(fileToSign.name))
 
 gpg, keyid = getGPG(secret=True)
 if not gpg or not keyid:
@@ -46,14 +54,14 @@ version_file.write(str(signedString))
 version_file.close()
 
 version_file = open(os.path.join(os.path.dirname(sys.argv[1]), "index.html"), "w")
-version_file.write('Download lunchinator: <a href="%s/%s">Version %s</a>' % (commitCount, os.path.basename(fileToSign.name), commitCount))
+version_file.write('Download lunchinator: <a href="%s/%s">Version %s</a>' % (versionString, os.path.basename(fileToSign.name), versionString))
 version_file.close()
 
 # moving files around
 
-installer_dir = os.path.join(os.path.dirname(sys.argv[1]), str(commitCount))
+installer_dir = os.path.join(os.path.dirname(sys.argv[1]), versionString)
 if not os.path.isdir(installer_dir):
     os.mkdir(installer_dir)
 
-shutil.copyfile(os.path.join(os.path.dirname(sys.argv[1]), "latest_version.asc"), os.path.join(os.path.dirname(sys.argv[1]), commitCount, "version.asc"))
-shutil.copyfile(sys.argv[1], os.path.join(os.path.dirname(sys.argv[1]), commitCount, os.path.basename(sys.argv[1])))
+shutil.copyfile(os.path.join(os.path.dirname(sys.argv[1]), "latest_version.asc"), os.path.join(os.path.dirname(sys.argv[1]), versionString, "version.asc"))
+shutil.copyfile(sys.argv[1], os.path.join(os.path.dirname(sys.argv[1]), versionString, os.path.basename(sys.argv[1])))
