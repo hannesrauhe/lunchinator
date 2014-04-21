@@ -37,14 +37,44 @@ class online_update(iface_general_plugin):
         
         
         self._git_updater = gitUpdate()
-        if not self._git_updater.has_git():
-            self._git_updater = None
-            # check for GPG
-            if self._has_gpg():
-                self.check_for_update()
-            else:
-                self._set_status("GPG not installed or not working properly.")
+        if self._git_updater.has_git():
+            return
         
+        self._git_updater = None
+        
+        if self._check_for_rpm_deb():
+            self._set_status("Updates for the lunchinator are managed by your OS. "+
+                             "You can deactivate the Auto Update plugin.")
+            return
+        
+        # check for GPG
+        if self._has_gpg():
+            self.check_for_update()
+        else:
+            self._set_status("GPG not installed or not working properly.")
+            
+        #TODO: schedule checking
+            
+    def _check_for_rpm_deb(self):
+        if getPlatform() != PLATFORM_LINUX:
+            return False
+         
+        call = ["dpkg", "-s", "lunchinator"]         
+        fh = open(os.path.devnull,"w")
+        p = subprocess.Popen(call,stdout=fh, stderr=fh)
+        retCode = p.returncode
+        if retCode == 0:
+            return True
+                
+        call = "rpm -qa | grep lunchinator"         
+        fh = open(os.path.devnull,"w")
+        p = subprocess.Popen(call,stdout=fh, stderr=fh, shell=True)
+        retCode = p.returncode
+        if retCode == 0:
+            return True
+        
+        return False        
+    
     def _has_gpg(self):
         gpg, _key = getGPG()
         return gpg != None
