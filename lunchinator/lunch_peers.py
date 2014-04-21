@@ -16,7 +16,7 @@ class LunchPeers(object):
         self.dontSendTo = set()  
         self._new_peers = set()  # peers I have to ask for info 
         
-        # todo: it's a mess, what looks do i need?
+        # todo: it's a mess, what locks do i need?
         self._peerLock = Lock()
         self._memberLock = Lock()
         
@@ -71,7 +71,7 @@ class LunchPeers(object):
         with self._peerLock:
             for ip in toRemove:
                 if ip in self._peer_info:
-                    self._peer_info.pop()
+                    self._peer_info.pop(ip)
                     self._controller.peerRemoved(ip)
     
     def getPeerInfo(self, ip):
@@ -122,7 +122,9 @@ class LunchPeers(object):
                 self._peer_info[ip] = dict({u"name":ip, 
                                             u"group":u"", 
                                             u"ID":unicode(len(self._peer_info))}.items() + info.items())
-            self._new_peers.add(ip)     
+            if not self._peer_timeout.has_key(ip):
+                self._peer_timeout[ip] = -1
+            self._new_peers.add(ip)
             self._controller.peerAppended(ip, self._peer_info[ip])
             
     def updatePeerInfo(self, ip, newInfo):        

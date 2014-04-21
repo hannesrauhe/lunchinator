@@ -362,6 +362,7 @@ class lunch_server(object):
         info_d = {u"avatar": get_settings().get_avatar_file(),
                    u"name": get_settings().get_user_name(),
                    u"group": get_settings().get_group(),
+                   u"ID": get_settings().get_ID(),
                    u"next_lunch_begin":get_settings().get_default_lunch_begin(),
                    u"next_lunch_end":get_settings().get_default_lunch_end(),
                    u"version":get_settings().get_version_short(),

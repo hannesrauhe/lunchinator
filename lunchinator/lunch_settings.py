@@ -1,4 +1,4 @@
-import sys, os, getpass, ConfigParser, types, logging, codecs, contextlib
+import sys, os, getpass, ConfigParser, types, logging, codecs, contextlib, uuid
 
 '''integrate the cli-parser into the default_config sooner or later'''
 from lunchinator import log_exception, log_error, setLoggingLevel, convert_string, MAIN_CONFIG_DIR
@@ -78,7 +78,7 @@ class lunch_settings(object):
         self._available_db_connections = u"Standard"  # list separated by ;; (like yapsy)
         self._proxy = u""
         
-        
+        self._ID = u""
         self._next_lunch_begin = None
         self._next_lunch_end = None
         
@@ -119,10 +119,15 @@ class lunch_settings(object):
         
         # not shown in settings-plugin - handled by avatar-plugin
         self._avatar_file = self.read_value_from_config_file(self._avatar_file, "general", "avatar_file")
-        self._available_db_connections = self.read_value_from_config_file(self._available_db_connections, "general", "available_db_connections")        
+        self._available_db_connections = self.read_value_from_config_file(self._available_db_connections, "general", "available_db_connections")
+        self._ID = self.read_value_from_config_file(self._ID, "general", "ID")        
         
         if self._user_name == "":
             self._user_name = getpass.getuser().decode()         
+        
+        if len(self._ID)==0:
+            self._ID = unicode(uuid.uuid4())
+            self._config_file.set('general', 'ID', self._ID )
         
         # apply proxy on start if given
         self._proxy = self.read_value_from_config_file(self._proxy, "general", "proxy")  
@@ -200,6 +205,9 @@ class lunch_settings(object):
     
     def get_log_file(self):
         return self._log_file
+    
+    def get_ID(self):
+        return self._ID
     
     # the rest is read from/written to the config file        
     def get_lunch_trigger(self):
