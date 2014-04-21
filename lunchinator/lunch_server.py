@@ -2,17 +2,16 @@
 # coding=utf-8
 
 from time import strftime, localtime, time, mktime, gmtime
-from datetime import datetime
 import socket, sys, os, json, codecs, contextlib
 from threading import Lock
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string
+from lunchinator.utilities import getTimeDifference
      
 import tarfile
 import platform
-from lunch_settings import lunch_settings
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -282,11 +281,11 @@ class lunch_server(object):
         if self._peer_info.has_key(peer_addr):
             p = self._peer_info[peer_addr]
             if p.has_key(u"next_lunch_begin") and p.has_key(u"next_lunch_end"):
-                diff = self.getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"])
+                diff = getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"])
                 if diff == None:
                     # illegal format, just assume ready
                     return True
-                return self.getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"]) > 0
+                return getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"]) > 0
         return False
         
     def getOwnIP(self):
@@ -316,47 +315,6 @@ class lunch_server(object):
         log_exception("getDBConnection: DB Connections plugin not yet loaded")
         return None        
         
-    def getTimeDifference(self, begin, end):
-        """
-        calculates the correlation of now and the specified lunch dates
-        negative value: now is before begin, seconds until begin
-        positive value: now is after begin but before end, seconds until end
-         0: now is after end
-        Returns None if the time format is invalid. 
-        """
-        try:
-            try:
-                begin = datetime.strptime(begin, lunch_settings.LUNCH_TIME_FORMAT)
-            except ValueError:
-                # this is called repeatedly, so only debug
-                log_debug("Unsupported time format:", begin)
-                return None
-            try:
-                end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
-            except ValueError:
-                log_debug("Unsupported time format:", end)
-                return None
-            
-            now = datetime.now()
-            begin = begin.replace(year=now.year, month=now.month, day=now.day)
-            end = end.replace(year=now.year, month=now.month, day=now.day)
-            
-            if now < begin:
-                # now is before begin
-                td = begin - now
-                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
-                return -1 if millis == 0 else -millis
-            elif now < end:
-                td = end - now
-                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
-                return 1 if millis == 0 else millis
-            else:
-                # now is after end
-                return 0
-        except:
-            log_exception("don't know how to handle time span")
-            return None
-    
     '''An info call informs a peer about my name etc...
     by default to every peer'''
     def call_info(self, peers=[]):
@@ -528,12 +486,13 @@ class lunch_server(object):
             log_exception("Could not write messages to %s: %s" % (get_settings().get_messages_file(), sys.exc_info()[0]))    
     
     def _build_info_string(self):
+        print "call info"
         from lunchinator.utilities import getPlatform, PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS
         info_d = {u"avatar": get_settings().get_avatar_file(),
                    u"name": get_settings().get_user_name(),
                    u"group": get_settings().get_group(),
-                   u"next_lunch_begin":get_settings().get_default_lunch_begin(),
-                   u"next_lunch_end":get_settings().get_default_lunch_end(),
+                   u"next_lunch_begin":get_settings().get_next_lunch_begin(),
+                   u"next_lunch_end":get_settings().get_next_lunch_end(),
                    u"version":get_settings().get_version_short(),
                    u"version_commit_count":get_settings().get_commit_count(),
                    u"version_commit_count_plugins":get_settings().get_commit_count_plugins(),
@@ -546,10 +505,6 @@ class lunch_server(object):
         elif getPlatform() == PLATFORM_MAC:
             info_d[u"os"] = u" ".join(aString if type(aString) in (str, unicode) else "[%s]" % " ".join(aString) for aString in platform.mac_ver())
             
-        if get_settings().get_next_lunch_begin():
-            info_d[u"next_lunch_begin"] = get_settings().get_next_lunch_begin()
-        if get_settings().get_next_lunch_end():
-            info_d[u"next_lunch_end"] = get_settings().get_next_lunch_end()
         self.controller.extendMemberInfo(info_d)
         return json.dumps(info_d)      
         
@@ -601,7 +556,7 @@ class lunch_server(object):
         if not msg.startswith("ignore"):
             self.controller.processMessage(msg, addr)
             
-            diff = self.getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time())
+            diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time())
             if diff == None or get_settings().get_lunch_trigger() in msg.lower() and 0 < diff:
                 timenum = mktime(mtime)
                 if timenum - self.last_lunch_call > get_settings().get_mute_timeout():

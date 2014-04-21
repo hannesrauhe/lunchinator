@@ -1,9 +1,10 @@
 import subprocess,sys,ctypes
-from lunchinator import log_exception, get_server, log_warning, log_debug,\
+from lunchinator import log_exception, log_warning, log_debug,\
     get_settings, log_error
 import os
 import threading
 import contextlib
+from datetime import datetime
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -45,6 +46,7 @@ def displayNotification(name,msg,icon=None):
             log_debug(call)
             subprocess.call(call, stdout=fh, stderr=fh)
         elif myPlatform == PLATFORM_WINDOWS:
+            from lunchinator import get_server
             if hasattr(get_server().controller, "statusicon"):
                 get_server().controller.statusicon.showMessage(name,msg)
     except:
@@ -148,6 +150,7 @@ def setValidQtParent(parent):
     qtParent = parent
 
 def getValidQtParent():
+    from lunchinator import get_server
     from PyQt4.QtCore import QObject
     if isinstance(get_server().controller, QObject):
         return get_server().controller
@@ -156,6 +159,7 @@ def getValidQtParent():
     raise Exception("Could not find a valid QObject instance")
     
 def processPluginCall(ip, call):
+    from lunchinator import get_server
     if not get_server().get_plugins_enabled():
         return
     from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
@@ -258,3 +262,45 @@ def getGPG(secret=False):
     
     return gpg, keyid
 
+def getTimeDifference(begin, end):
+    """
+    calculates the correlation of now and the specified lunch dates
+    negative value: now is before begin, seconds until begin
+    positive value: now is after begin but before end, seconds until end
+     0: now is after end
+    Returns None if the time format is invalid. 
+    """
+    try:
+        from lunchinator.lunch_settings import lunch_settings
+        try:
+            begin = datetime.strptime(begin, lunch_settings.LUNCH_TIME_FORMAT)
+        except ValueError:
+            # this is called repeatedly, so only debug
+            log_debug("Unsupported time format:", begin)
+            return None
+        try:
+            end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
+        except ValueError:
+            log_debug("Unsupported time format:", end)
+            return None
+        
+        now = datetime.now()
+        begin = begin.replace(year=now.year, month=now.month, day=now.day)
+        end = end.replace(year=now.year, month=now.month, day=now.day)
+        
+        if now < begin:
+            # now is before begin
+            td = begin - now
+            millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
+            return -1 if millis == 0 else -millis
+        elif now < end:
+            td = end - now
+            millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
+            return 1 if millis == 0 else millis
+        else:
+            # now is after end
+            return 0
+    except:
+        log_exception("don't know how to handle time span")
+        return None
+    

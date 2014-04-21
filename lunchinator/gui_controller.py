@@ -318,7 +318,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         anAction = menu.addAction(u"Change today's lunch time")
         anAction.triggered.connect(self.changeNextLunchTime)
         
-        menu.addSeparator()
+        if hasattr(menu, "addSeparator"):
+            menu.addSeparator()
         
         anAction = menu.addAction('Settings')
         anAction.triggered.connect(self.openSettingsClicked)
@@ -419,6 +420,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if dialog.result() == QDialog.Accepted:
             get_settings().set_next_lunch_begin(dialog.getBeginTimeString())
             get_settings().set_next_lunch_end(dialog.getEndTimeString())
+            get_server().call_info()
             
     @pyqtSlot(bool)
     @pyqtSlot()
@@ -453,7 +455,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                     pluginInfo.plugin_object.discard_changes()
         get_settings().write_config_to_hd()
             
-        get_server().call("HELO_INFO " + get_server()._build_info_string())        
+        get_server().call_info()      
 
     @pyqtSlot(unicode, bytearray, int, bool)
     def sendFileSlot(self, addr, fileToSend, other_tcp_port, isData):
