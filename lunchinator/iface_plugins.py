@@ -124,6 +124,9 @@ class iface_plugin(IPlugin):
     def _displayOptionValue(self, o, v):
         from PyQt4.QtCore import Qt
         
+        if not self.option_widgets:
+            # probably not initialized yet.
+            return
         e = self.option_widgets[o]
         if o in self.option_choice:
             currentIndex = 0

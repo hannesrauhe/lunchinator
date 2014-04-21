@@ -29,6 +29,8 @@ def checkBundleIdentifier(ident):
 
 # TODO: message groups for notification center
 def displayNotification(name,msg,icon=None):
+    if msg == None:
+        msg = u""
     myPlatform = getPlatform()
     try:
         if myPlatform == PLATFORM_LINUX:
