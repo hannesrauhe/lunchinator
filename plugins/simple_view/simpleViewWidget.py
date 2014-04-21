@@ -51,18 +51,21 @@ class SimpleViewWidget(QWidget):
         return self.colorMap[addr]
             
     def updateWidgets(self):
-        members = get_server().get_members()
-        memText = "%d people online<br />"%len(members)
+        get_server().lockMembers()
+        try:
+            members = get_server().get_members()
+            readyMembers = []
+            notReadyMembers = []
+            for m in members:
+                if get_server().is_peer_ready(m):
+                    readyMembers.append(get_server().memberName(m))
+                else:
+                    notReadyMembers.append(get_server().memberName(m))
+            memText = "%d people online<br />"%len(members)
+        finally:
+            get_server().releaseMembers()
+            
         memToolTip = ""
-        
-        readyMembers = []
-        notReadyMembers = []
-        for m in members:
-            if get_server().is_peer_ready(m):
-                readyMembers.append(get_server().memberName(m))
-            else:
-                notReadyMembers.append(get_server().memberName(m))
-                
         memToolTip += "<span style='color:green'>%s</span><br />"%", ".join(readyMembers) if len(readyMembers) else ""
         memToolTip += "<span style='color:red'>%s</span>"%", ".join(notReadyMembers) if len(notReadyMembers) else ""
         
