@@ -3,7 +3,7 @@ from lunchinator.lunch_settings import lunch_settings
 from lunchinator.iface_plugins import iface_general_plugin
 from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
 from lunchinator.utilities import getValidQtParent, displayNotification, \
-    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, which
+    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, PLATFORM_LINUX, which
 from lunchinator.download_thread import DownloadThread
 from lunchinator.shell_thread import ShellThread
 import urllib2, sys, os, contextlib, subprocess
