@@ -89,6 +89,12 @@ class LunchPeers(object):
         if ip in self._peer_info:
             return self._peer_info[ip][u'name']
         return None 
+    
+    def getPeerID(self, ip):
+        """Returns the name of the peer or None if not a peer"""
+        if ip in self._peer_info:
+            return self._peer_info[ip][u'ID']
+        return None 
      
     def getPeerGroup(self, ip):
         """Returns the name of the peer or None if not a peer"""
@@ -113,7 +119,9 @@ class LunchPeers(object):
         if ip not in self._peer_info:
             log_info("new peer: %s" % ip)
             with self._peerLock:
-                self._peer_info[ip] = dict({u"name":ip, u"group":u""}.items() + info.items())
+                self._peer_info[ip] = dict({u"name":ip, 
+                                            u"group":u"", 
+                                            u"ID":unicode(len(self._peer_info))}.items() + info.items())
             self._new_peers.add(ip)     
             self._controller.peerAppended(ip, self._peer_info[ip])
             
@@ -189,11 +197,15 @@ class LunchPeers(object):
                 for line in f.readlines():
                     line = line.split()
                     hostn = line[0].strip()
+                    peerId = unicode(hostn)
+                    if len(line)>1:
+                        peerId = unicode(line[1].strip())
+                        
                     if not hostn:
                         continue
                     try:
                         ip = unicode(socket.gethostbyname(hostn))
-                        self.createPeer(ip, {u"name":unicode(hostn)})
+                        self.createPeer(ip, {u"name":unicode(hostn), u"ID":peerId})
                     except:
                         log_warning("cannot find host specified in members_file by %s with name %s" % (p_file, hostn))
     
@@ -203,7 +215,7 @@ class LunchPeers(object):
                 with codecs.open(get_settings().get_peers_file(), 'w', 'utf-8') as f:
                     f.truncate()
                     for ip in self._peer_info.keys():
-                        f.write(u"%s\n" % (ip))
+                        f.write(u"%s\t%s\n" % (ip, self.getPeerID(ip)))
         except:
             log_exception("Could not write all members to %s" % (get_settings().get_peers_file()))    
         
