@@ -8,11 +8,10 @@ from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string
-from lunchinator.utilities import getTimeDifference, getValidQtParent
+from lunchinator.utilities import getTimeDifference
      
 import tarfile
 import platform
-from PyQt4.QtGui import QMessageBox
 import random
 
 EXIT_CODE_ERROR = 1
@@ -225,6 +224,7 @@ class lunch_server(object):
                 self.releaseMembers()
             
             if notReadyMembers:
+                    
                 if len(notReadyMembers) == 1:
                     warn = "%s is not ready for lunch." % iter(notReadyMembers).next()
                 elif len(notReadyMembers) == 2:
@@ -232,14 +232,18 @@ class lunch_server(object):
                     warn = "%s and %s are not ready for lunch." % (it.next(), it.next())
                 else:
                     warn = "%s and %d others are not ready for lunch." % (random.sample(notReadyMembers, 1)[0], len(notReadyMembers) - 1)
-                warn = "WARNING: %s Send lunch call anyways?" % warn
-                result = QMessageBox.warning(None,
-                                             "Members not ready",
-                                             warn,
-                                             buttons=QMessageBox.Yes | QMessageBox.No,
-                                             defaultButton=QMessageBox.No)
-                if result == QMessageBox.No:
-                    return
+                try:
+                    from PyQt4.QtGui import QMessageBox
+                    warn = "WARNING: %s Send lunch call anyways?" % warn
+                    result = QMessageBox.warning(None,
+                                                 "Members not ready",
+                                                 warn,
+                                                 buttons=QMessageBox.Yes | QMessageBox.No,
+                                                 defaultButton=QMessageBox.No)
+                    if result == QMessageBox.No:
+                        return
+                except:
+                    print "WARNING: %s" % warn
 
         i = 0
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
