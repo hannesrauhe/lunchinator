@@ -1,9 +1,0 @@
-[Core]
-Name = Peers
-Module = peers_table
-
-[Documentation]
-Author = Hannes Rauhe, Cornelius Ratsch
-Version = 0.1
-Website = http://www.lunchinator.de
-Description = Display all IPs where a lunchinator is running

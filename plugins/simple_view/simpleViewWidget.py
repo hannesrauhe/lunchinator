@@ -4,7 +4,7 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, \
                         QLineEdit, QMenu, QInputDialog
 from PyQt4.QtCore import QTimer, Qt
-from lunchinator import get_server
+from lunchinator import get_server, log_info
 from time import mktime,time
 from lunchinator.lunch_button import LunchButton
             
@@ -54,7 +54,6 @@ class SimpleViewWidget(QWidget):
         if not self.isVisible():
             return True
         
-        print "DON"
         get_server().lockMembers()
         try:
             members = get_server().get_members()
@@ -101,7 +100,10 @@ class SimpleViewWidget(QWidget):
             get_server().call_request_info([str(hostn)])
         
     def finish(self):
-        self.timer.timeout.disconnect()
+        try:
+            self.timer.timeout.disconnect()
+        except:
+            log_info("Simple View: was not able to disconnect timer")
         
 if __name__ == '__main__':        
     from lunchinator.iface_plugins import iface_gui_plugin

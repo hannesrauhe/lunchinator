@@ -17,8 +17,7 @@ class panic_button_listener(Thread):
     def findButton(self):
         for bus in usb.busses():
             for dev in bus.devices:
-                #TODO (Hannes): read from options
-                if dev.idVendor == 0x1d34 and dev.idProduct == 0x000d:
+                if dev.idVendor == self.idVendor and dev.idProduct == self.idProduct:
                     return dev
         return None
                 
