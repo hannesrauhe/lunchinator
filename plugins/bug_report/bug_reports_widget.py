@@ -1,5 +1,5 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QMessageBox
-from PyQt4.QtCore import pyqtSlot, QThread, Qt, QVariant
+from PyQt4.QtCore import pyqtSlot, QThread, Qt, QVariant, QSize
 from lunchinator import log_error, log_debug, log_warning
 from lunchinator.download_thread import DownloadThread
 from lunchinator.table_models import TableModelBase
@@ -36,12 +36,15 @@ class IssuesComboModel(TableModelBase):
         item.setData(QVariant(issue.title), Qt.DisplayRole)
         
 class BugReportsWidget(QWidget):
+    PREFERRED_WIDTH  = 400
+    PREFERRED_HEIGHT = 150
+    
     def __init__(self, parent, mt):
         super(BugReportsWidget, self).__init__(parent)
         self.mt = mt
         
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+#         layout.setContentsMargins(0, 0, 0, 0)
         
         self.entry = QTextEdit(self)
         
@@ -154,5 +157,29 @@ class BugReportsWidget(QWidget):
         
     def display_report(self):
         if self.dropdown_reports.currentIndex()>=0:
-            self.entry.setText(self.selectedIssue().description)
+            self.entry.setText(self.selectedIssue().description)    
+
+    def sizeHint(self):
+        return QSize(self.PREFERRED_WIDTH, self.PREFERRED_HEIGHT)
+
+if __name__ == '__main__':
+    import os
+    class maintainer_wrapper(object):
+        reports = []
+        options = {u"github_token":"", u"repo_user":u"hannesrauhe", u"repo_name":u"lunchinator"}
+        def __init__(self):
+            tokenPath = os.path.join(os.path.expanduser("~"), ".github_token")
+            if os.path.exists(tokenPath):
+                with open(tokenPath) as tokenFile:
+                    token = tokenFile.readline()
+                    self.options[u"github_token"] = token
+            
+        def getBugsFromDB(self, _):
+            return []
+        
+        def set_option(self, option, newValue, convert = True):
+            print "set %s to '%s' (%s), convert: %s" % (option, newValue, type(newValue), convert)
+        
+    from lunchinator.iface_plugins import iface_gui_plugin
+    iface_gui_plugin.run_standalone(lambda window : BugReportsWidget(window, maintainer_wrapper()))
             
