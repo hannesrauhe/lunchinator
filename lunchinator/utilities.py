@@ -5,6 +5,8 @@ import os
 import threading
 import contextlib
 from datetime import datetime
+from lunchinator.git import GitHandler
+import lunchinator
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -337,3 +339,52 @@ def getTimeDifference(begin, end):
         log_exception("don't know how to handle time span")
         return None
     
+def getApplicationBundle():
+    """Determines the path to the Mac application bundle"""
+    path = os.path.abspath(sys.argv[0])
+    while not path.endswith(".app"):
+        newPath = os.path.dirname(path)
+        if newPath == path:
+            path = None
+            break
+        path = newPath
+    
+    if path == None or not os.path.exists(os.path.join(path, "Contents", "MacOS", "Lunchinator")):
+        return None
+    return path
+    
+def stopWithCommand(args):
+    from lunchinator import get_server
+    if getPlatform() in (PLATFORM_LINUX, PLATFORM_MAC):
+        #somehow fork() is not safe on Mac OS. I guess this will do fine on Linux, too. 
+        subprocess.Popen(['nohup'] + args, close_fds=True)
+        get_server().call("HELO_STOP restart", client="127.0.0.1")
+    elif getPlatform() == PLATFORM_WINDOWS:
+        subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
+        get_server().call("HELO_STOP restart", client="127.0.0.1")
+    else:
+        log_error("Restart not yet implemented for your OS.")
+    
+def restart():
+    """Tries to restart the Lunchinator"""
+    
+    args = None
+    if getPlatform() == PLATFORM_MAC:
+        restartScript = get_settings().get_resource("bin", "restart.sh")
+        # Git or Application bundle?
+        bundlePath = getApplicationBundle()
+        if bundlePath:
+            args = [restartScript, str(os.getpid()), "open " + bundlePath]
+    
+    if args == None:
+        gitHandler = GitHandler()
+        if getPlatform() in (PLATFORM_MAC, PLATFORM_LINUX):
+            if gitHandler.has_git():
+                args = [restartScript, str(os.getpid()), "nohup %s %s" % (sys.executable, " ".join(sys.argv))]
+            else:
+                log_error("Unsupported configuration. Cannot restart.")
+        else:
+            log_error("Restart not yet implemented for your OS.")
+    
+    if args != None:
+        stopWithCommand(args)

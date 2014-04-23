@@ -2,14 +2,14 @@
 #
 #this script is used to start the lunchinator in all its flavors
 
-import platform, os, sys, subprocess
+import platform, sys, subprocess
 import signal
 from functools import partial
 from optparse import OptionParser
-from lunchinator import log_info, log_warning, log_error, get_settings,\
+from lunchinator import log_info, log_error, get_settings,\
     get_server, log_exception
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
-from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS
+from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS, restart
     
 def parse_args():
     usage = "usage: %prog [options]"
@@ -94,6 +94,11 @@ def checkDependencies(noPlugins, gui = False):
                 deps = ['yapsy', 'requests', 'requests-oauthlib', 'oauthlib', 'python-twitter', 'python-gnupg']
             
             result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + deps)
+            
+            if result == EXIT_CODE_UPDATE:
+                # need to restart
+                restart()
+                return
             
             try:
                 import yapsy

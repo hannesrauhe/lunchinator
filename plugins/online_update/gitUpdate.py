@@ -1,13 +1,17 @@
 from lunchinator import get_settings, get_server, log_info, log_error
 from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS
 import subprocess, os, shutil, sys
+from lunchinator.git import GitHandler
 
 UPDATE_SCRIPT = get_settings().get_resource("bin","updateViaGit.py")
 UPDATE_SCRIPT_EXEC_PATH = os.path.join(get_settings().get_main_config_dir(),"updateViaGit.py")
 
-class gitUpdate(object):        
+class gitUpdate(object):
+    def __init__(self):
+        self._gitHandler = GitHandler()
+        
     def create_options_widget(self,parent):
-        from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, QVBoxLayout, QLabel, QSizePolicy, QPushButton, QTextEdit, QProgressBar
+        from PyQt4.QtGui import QWidget, QVBoxLayout, QLabel, QSizePolicy, QPushButton
        
         widget = QWidget(parent)
         layout = QVBoxLayout(widget)
@@ -34,12 +38,9 @@ class gitUpdate(object):
         widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         
         return widget
-    
+        
     def has_git(self):
-        try:
-            return self.getGitCommandResult(["rev-parse"]) == 0
-        except:
-            return None
+        return self._gitHandler.has_git()
         
     def install_update(self):
         shutil.copy(UPDATE_SCRIPT, UPDATE_SCRIPT_EXEC_PATH)
@@ -57,7 +58,7 @@ class gitUpdate(object):
         
 #     def git_version_info(self):
 #         try:
-#             _, self._version, __ = self.runGitCommand(["log", "-1"], self._lunchdir, quiet=False)
+#             _, self._version, __ = self._gitHandler.runGitCommand(["log", "-1"], self._lunchdir, quiet=False)
 #             for line in self._version.splitlines():
 #                 if line.startswith("Date:"):
 #                     self._version_short = unicode(line[5:].strip())            
@@ -66,51 +67,33 @@ class gitUpdate(object):
 #         
 #         try:    
 #             revListArgs = ["rev-list", "HEAD", "--count"]
-#             ret, cco, _ = self.runGitCommand(revListArgs, self._lunchdir, quiet=False)
+#             ret, cco, _ = self._gitHandler.runGitCommand(revListArgs, self._lunchdir, quiet=False)
 #             if ret:
 #                 # something went wrong, get out of here!
 #                 raise False
 #             self._commit_count = cco.strip()
 #             
 #             if os.path.exists(self._external_plugin_dir):
-#                 retCode, cco, __ = self.runGitCommand(revListArgs, self._external_plugin_dir, quiet=False)
+#                 retCode, cco, __ = self._gitHandler.runGitCommand(revListArgs, self._external_plugin_dir, quiet=False)
 #                 if retCode == 0:
 #                     self._commit_count_plugins = cco.strip()
 # 
-    def runGitCommand(self, args, path = None, quiet = True):
-        if path == None:
-            path = get_settings().get_main_package_path()
-         
-        call = ["git","--no-pager","--git-dir="+path+"/.git","--work-tree="+path]
-        call = call + args
-         
-        fh = subprocess.PIPE    
-        if quiet:
-            fh = open(os.path.devnull,"w")
-        p = subprocess.Popen(call,stdout=fh, stderr=fh)
-        pOut, pErr = p.communicate()
-        retCode = p.returncode
-        return retCode, pOut, pErr
-     
-    def getGitCommandResult(self, args, path = None, quiet = True):
-        retCode, _, __ = self.runGitCommand(args, path, quiet)
-        return retCode
          
     def canGitUpdate(self, repo=None):
-        if self.getGitCommandResult(["rev-parse"], repo) != 0:
+        if self._gitHandler.getGitCommandResult(["rev-parse"], repo) != 0:
             return (False, "'%s' is no git repository" % repo)
          
-        if self.getGitCommandResult(["diff","--name-only","--exit-code","--quiet"], repo) != 0:
+        if self._gitHandler.getGitCommandResult(["diff","--name-only","--exit-code","--quiet"], repo) != 0:
             return (False, "There are unstaged changes")
          
-        if self.getGitCommandResult(["diff","--cached","--exit-code","--quiet"], repo) != 0:
+        if self._gitHandler.getGitCommandResult(["diff","--cached","--exit-code","--quiet"], repo) != 0:
             return (False, "There are staged, uncommitted changes")
          
-        _, branch, __ = self.runGitCommand(["symbolic-ref","HEAD"], repo, quiet=False)
+        _, branch, __ = self._gitHandler.runGitCommand(["symbolic-ref","HEAD"], repo, quiet=False)
         if "master" not in branch:
             return (False, "The selected branch is not the master branch")
          
-        if self.getGitCommandResult(["log","origin/master..HEAD","--exit-code","--quiet"]) != 0:
+        if self._gitHandler.getGitCommandResult(["log","origin/master..HEAD","--exit-code","--quiet"]) != 0:
             return (False, "There are unpushed commits on the master branch")
         
         return (True, None)

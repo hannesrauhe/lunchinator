@@ -3,7 +3,8 @@ from lunchinator.lunch_settings import lunch_settings
 from lunchinator.iface_plugins import iface_general_plugin
 from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
 from lunchinator.utilities import getValidQtParent, displayNotification, \
-    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, PLATFORM_LINUX, which
+    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, PLATFORM_LINUX, which,\
+    getApplicationBundle, stopWithCommand
 from lunchinator.download_thread import DownloadThread
 from lunchinator.shell_thread import ShellThread
 import urllib2, sys, os, contextlib, subprocess
@@ -242,30 +243,14 @@ class online_update(iface_general_plugin):
         if os.path.isfile(self._local_installer_file):
             if getPlatform() == PLATFORM_WINDOWS:
                 self._set_status("Starting Installer")
-                args = [self._local_installer_file, "/SILENT"]
-                subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
-                get_server().call("HELO_STOP installer_update", client="127.0.0.1")
+                stopWithCommand([self._local_installer_file, "/SILENT"])
             elif getPlatform() == PLATFORM_MAC:
-                # find app bundle path
-                path = os.path.abspath(sys.argv[0])
-                while not path.endswith(".app"):
-                    newPath = os.path.dirname(path)
-                    if newPath == path:
-                        path = None
-                        break
-                    path = newPath
-                
-                if path == None or not os.path.exists(os.path.join(path, "Contents", "MacOS", "Lunchinator")):
+                path = getApplicationBundle()
+                if path == None:
                     self._set_status("Could not find application bundle. Cannot update.", True)
                 else:
-                    pid = os.fork()
-                    if pid != 0:
-                        # new process
-                        installer = get_settings().get_resource("bin", "mac_installer.sh")
-                        args = [installer, self._local_installer_file, path, str(os.getpid())]
-                        subprocess.Popen(args)
-                    else:
-                        get_server().call("HELO_STOP installer_update", client="127.0.0.1")
+                    installer = get_settings().get_resource("bin", "mac_installer.sh")
+                    stopWithCommand([installer, self._local_installer_file, path, str(os.getpid())])
         else:
             log_error("This platform does not support updates (yet).")
     
