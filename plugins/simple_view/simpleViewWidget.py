@@ -51,6 +51,10 @@ class SimpleViewWidget(QWidget):
         return self.colorMap[addr]
             
     def updateWidgets(self):
+        if not self.isVisible():
+            return True
+        
+        print "DON"
         get_server().lockMembers()
         try:
             members = get_server().get_members()
@@ -96,6 +100,8 @@ class SimpleViewWidget(QWidget):
         if button and len(hostn):
             get_server().call_request_info([str(hostn)])
         
+    def finish(self):
+        self.timer.timeout.disconnect()
         
 if __name__ == '__main__':        
     from lunchinator.iface_plugins import iface_gui_plugin
