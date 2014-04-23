@@ -1,7 +1,7 @@
 from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplication, QMenu, QKeySequence, QIcon
 from PyQt4.QtCore import Qt, QSettings, QVariant, QEvent
 from lunchinator import get_settings, get_server, log_exception, convert_string
-import sys, os
+import sys
 from StringIO import StringIO
 import traceback
 
@@ -28,11 +28,14 @@ class LunchinatorWindow(QMainWindow):
         
         self.pluginNameToDockWidget = {}
         self.objectNameToPluginName = {}
+        self.pluginNameToMenus = {}
         self.settings = QSettings(get_settings().get_config("gui_settings.ini"), QSettings.IniFormat)
         
         savedGeometry = self.settings.value("geometry", None)
         savedState = self.settings.value("state", None)
         self.locked = self.settings.value("locked", QVariant(False)).toBool()
+        
+        self._prepareMenuBar()
         
         if savedState == None:
             # first run, create initial state
@@ -65,48 +68,32 @@ class LunchinatorWindow(QMainWindow):
         # prevent from closing twice
         self.closed = False
             
+            
+    def _prepareMenuBar(self):
+        self.windowMenu = QMenu("Window", self.menuBar())
+        self.menuBar().addMenu(self.windowMenu)
+        
+        self.pluginMenu = QMenu("PlugIns", self.menuBar())
+        self.menuBar().addMenu(self.pluginMenu)
+        
     def createMenuBar(self, pluginActions):
-        menuBar = self.menuBar()
-        
-        windowMenu = QMenu("Window", menuBar)
-        windowMenu.addAction("Lock Widgets", self.lockDockWidgets)
-        windowMenu.addAction("Unlock Widgets", self.unlockWidgets)
-        windowMenu.addSeparator()
-        windowMenu.addAction("Settings", self.guiHandler.openSettingsClicked)
-        windowMenu.addSeparator()
-        windowMenu.addAction("Close Window", self.close, QKeySequence(QKeySequence.Close))
-        windowMenu.addAction("Exit Lunchinator", self.guiHandler.quit)
-        menuBar.addMenu(windowMenu)
-        
-        pluginMenu = QMenu("PlugIns", menuBar)
+        self.windowMenu.addAction("Lock Widgets", self.lockDockWidgets)
+        self.windowMenu.addAction("Unlock Widgets", self.unlockWidgets)
+        self.windowMenu.addSeparator()
+        self.windowMenu.addAction("Settings", self.guiHandler.openSettingsClicked)
+        self.windowMenu.addSeparator()
+        self.windowMenu.addAction("Close Window", self.close, QKeySequence(QKeySequence.Close))
+        self.windowMenu.addAction("Exit Lunchinator", self.guiHandler.quit)
         
         if type(pluginActions) == list:
             for anAction in pluginActions:
-                pluginMenu.addAction(anAction)
+                self.pluginMenu.addAction(anAction)
         elif type(pluginActions) == dict:
             for cat, actionList in sorted(pluginActions.iteritems(), key = lambda aTuple : aTuple[0]):
-                catMenu = QMenu(cat, pluginMenu)
+                catMenu = QMenu(cat, self.pluginMenu)
                 for anAction in actionList:
                     catMenu.addAction(anAction)
-                pluginMenu.addMenu(catMenu)
-            
-        menuBar.addMenu(pluginMenu)
-                
-        # add plugins
-        try:
-            if get_server().get_plugins_enabled():
-                for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
-                    if pluginInfo.plugin_object.is_activated:
-                        try:
-                            p = pluginInfo.plugin_object
-                            p_menu = p.add_menu(menuBar)
-                            if p_menu:
-                                menuBar.addMenu(p_menu)
-                        except:
-                            log_exception("while creating menu for plugin %s: %s"%(pluginInfo.name, str(sys.exc_info())))
-        except:
-            log_exception("while creating menu for plugins %s"%str(sys.exc_info()))
-        
+                self.pluginMenu.addMenu(catMenu)
             
     def lockDockWidgets(self):
         self.locked = True
@@ -148,6 +135,15 @@ class LunchinatorWindow(QMainWindow):
         dockWidget.setWidget(newWidget)
         self.pluginNameToDockWidget[name] = dockWidget
         self.objectNameToPluginName[convert_string(dockWidget.objectName())] = name.decode()
+        
+        try:
+            menus = po.create_menus(self.menuBar())
+            if menus:
+                self.pluginNameToMenus[name] = menus
+                for aMenu in menus:
+                    self.menuBar().addMenu(aMenu)
+        except:
+            log_exception("while creating menu for plugin %s: %s" % (name, str(sys.exc_info())))
 
         widgetToTabify = None
         if not noTabs:
@@ -181,6 +177,10 @@ class LunchinatorWindow(QMainWindow):
         del self.objectNameToPluginName[convert_string(dockWidget.objectName())]
         del self.pluginNameToDockWidget[name]
         dockWidget.close()
+        if name in self.pluginNameToMenus:
+            for aMenu in self.pluginNameToMenus[name]:
+                self.menuBar().removeAction(aMenu.menuAction())
+            del self.pluginNameToMenus[name]
          
     def setVisible(self, visible):
         if visible:

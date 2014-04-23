@@ -19,6 +19,8 @@ class simple_view(iface_gui_plugin):
             
         return self.w
         
-    def add_menu(self,menu):
+    def create_menus(self, menuBar):
         if self.w:
-            return self.w.create_menu(menu)
+            menu = self.w.create_menu(menuBar)
+            return [menu]
+            
