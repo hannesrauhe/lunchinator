@@ -15,7 +15,6 @@ from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
     getValidQtParent
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
-from lunchinator.timespan_input_dialog import TimespanInputDialog
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -466,6 +465,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if self.mainWindow == None:
             log_error("mainWindow is not initialized")
             return
+        from lunchinator.timespan_input_dialog import TimespanInputDialog
         dialog = TimespanInputDialog(self.mainWindow, "Change Lunch Time", "When are you free for lunch today?", get_settings().get_next_lunch_begin(), get_settings().get_next_lunch_end())
         dialog.exec_()
         if dialog.result() == QDialog.Accepted:
