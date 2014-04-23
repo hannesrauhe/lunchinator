@@ -347,6 +347,11 @@ class lunch_server(object):
     def get_peer_info(self):  
         return self._peer_info   
     
+    def is_peer_readyness_known(self, peer_addr):
+        return peer_addr in self._peer_info and \
+               u"next_lunch_begin" in self._peer_info[peer_addr] and \
+               u"next_lunch_end"  in self._peer_info[peer_addr]
+    
     def is_peer_ready(self, peer_addr):
         if self._peer_info.has_key(peer_addr):
             p = self._peer_info[peer_addr]

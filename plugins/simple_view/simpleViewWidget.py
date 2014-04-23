@@ -57,6 +57,8 @@ class SimpleViewWidget(QWidget):
             readyMembers = []
             notReadyMembers = []
             for m in members:
+                if not get_server().is_peer_readyness_known(m):
+                    continue
                 if get_server().is_peer_ready(m):
                     readyMembers.append(get_server().memberName(m))
                 else:

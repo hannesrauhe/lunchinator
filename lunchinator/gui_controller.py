@@ -350,6 +350,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
             readyMembers = []
             notReadyMembers = []
             for m in get_server().get_members():
+                if not get_server().is_peer_readyness_known(m):
+                    continue
                 if get_server().is_peer_ready(m):
                     readyMembers.append(get_server().memberName(m))
                 else:
