@@ -315,7 +315,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                     self.pluginActions.append(anAction)
         
         # main _menu
-        self._memberStatusAction = menu.addAction("")
+        self._memberStatusAction = menu.addAction("Initializing...")
         self._memberStatusAction.setEnabled(False)
         
         self.memberStatusUpdateTimer = QTimer(self)
