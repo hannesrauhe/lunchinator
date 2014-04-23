@@ -1,4 +1,5 @@
 #!/bin/bash
+EXIT_RESTART=2
 
 if [ $(uname) == "Darwin" ]
 then
