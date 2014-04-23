@@ -282,29 +282,26 @@ class lunch_server(object):
     
     def messagesCount(self):
         length = 0
-        self.messagesLock.acquire()
+        self.lockMessages()
         try:
             length = len(self.last_messages)
         finally:
-            self.messagesLock.release()
+            self.releaseMessages()
         return length
     
     def getMessage(self, index):
         message = None
-        self.messagesLock.acquire()
+        self.lockMessages()
         try:
             message = self.last_messages[index]
         finally:
-            self.messagesLock.release()
+            self.releaseMessages()
         return message
     
     def lockMessages(self):
-        # this is annoying
-        #log_debug("Getting Messages with lock")
         self.messagesLock.acquire()
         
     def releaseMessages(self):
-        #log_debug("lock released")
         self.messagesLock.release()
         
     def lockMembers(self):
@@ -528,12 +525,12 @@ class lunch_server(object):
                 with codecs.open(get_settings().get_messages_file(), 'w', 'utf-8') as f:
                     f.truncate()
                     msg = []
-                    self.messagesLock.acquire()
+                    self.lockMessages()
                     try:
                         for m in self.last_messages:
                             msg.append([mktime(m[0]), m[1], m[2]])
                     finally:
-                        self.messagesLock.release()
+                        self.releaseMessages()
                     json.dump(msg, f)
         except:
             log_exception("Could not write messages to %s: %s" % (get_settings().get_messages_file(), sys.exc_info()[0]))    
@@ -760,11 +757,11 @@ class lunch_server(object):
             log_critical("The data received was: %s" % data)
     
     def _insertMessage(self, mtime, addr, msg):
-        self.messagesLock.acquire()
+        self.lockMessages()
         try:
             self.last_messages.insert(0, [mtime, addr, msg])
         finally:
-            self.messagesLock.release()
+            self.releaseMessages()
                     
     def _remove_inactive_members(self):
         try:
