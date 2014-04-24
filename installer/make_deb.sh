@@ -49,7 +49,7 @@ source determine_version.sh
 echo "$VERSION" >../version
 
 function generate_changelog() {
-  echo "$(git cat-file -p $(git rev-parse $(git tag | head)) | tail -n +6)" |
+  echo "$(git cat-file -p $(git rev-parse $(git tag | head -n 1)) | tail -n +6)" |
   while read line 
   do
     dch -a "$line"

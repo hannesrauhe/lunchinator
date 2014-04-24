@@ -25,6 +25,7 @@ class gitUpdate(object):
         layout.addWidget(self._statusLabel)
         
         self._checkButton = QPushButton("Check for new Version", parent)
+        self._checkButton.setVisible(False) # doesn't work anyway (TODO)
 #         self._checkButton.clicked.connect(self.check_for_update)
         
         layout.addWidget(self._checkButton)

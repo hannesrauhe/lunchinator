@@ -7,12 +7,11 @@ from lunchinator.utilities import getValidQtParent, displayNotification, \
     getApplicationBundle, stopWithCommand
 from lunchinator.download_thread import DownloadThread
 from lunchinator.shell_thread import ShellThread
-import urllib2, sys, os, contextlib, subprocess
+import urllib2, sys, os, contextlib, subprocess, json
 import tempfile
 from functools import partial
 from xml.etree import ElementTree
 from online_update.gitUpdate import gitUpdate
-from PyQt4.QtCore import QTimer
     
 class online_update(iface_general_plugin):
     CHECK_INTERVAL = 12 * 60 * 60 * 1000 # check twice a day
@@ -32,8 +31,10 @@ class online_update(iface_general_plugin):
         self._install_ready = False
         self._installButton = None
         self._scheduleTimer = None
+        self._changeLog = None
     
     def activate(self):
+        from PyQt4.QtCore import QTimer
         iface_general_plugin.activate(self)
         if getPlatform() == PLATFORM_MAC:
             # check if /usr/local/bin is in PATH
@@ -100,38 +101,50 @@ class online_update(iface_general_plugin):
         if self._git_updater:
             return self._git_updater.create_options_widget(parent)
         
-        from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, QVBoxLayout, QLabel, QSizePolicy, QPushButton, QTextEdit, QProgressBar
+        from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, \
+                                QVBoxLayout, QLabel, QSizePolicy, QPushButton, \
+                                QTextEdit, QProgressBar, QStackedWidget
+        from PyQt4.QtCore import Qt
        
         widget = QWidget(parent)
         layout = QVBoxLayout(widget)
         
         # now add the new stuff
         versionLabel = QLabel("Installed Version: " + get_settings().get_commit_count())
-        layout.addWidget(versionLabel)
+        layout.addWidget(versionLabel, 0)
         
         self._statusLabel = QLabel("Status: " + self._status_holder)
-        layout.addWidget(self._statusLabel)
+        layout.addWidget(self._statusLabel, 0)
         
         self._progressBar = QProgressBar(parent)
         self._progressBar.setVisible(self._progress_holder)
-        layout.addWidget(self._progressBar)
+        layout.addWidget(self._progressBar, 0)
         
         self._checkButton = QPushButton("Check for Update", parent)
         self._checkButton.clicked.connect(self.check_for_update)
         
-        layout.addWidget(self._checkButton)
+        layout.addWidget(self._checkButton, 0)
         
         self._installButton = QPushButton("Install Update and Restart", parent)
         self._installButton.clicked.connect(self.install_update)
         self._installButton.setEnabled(self._install_ready)
-        layout.addWidget(self._installButton)
-                
-        widget.setMaximumHeight(widget.sizeHint().height())
-        widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
+        layout.addWidget(self._installButton, 0)
+        
+        self._bottomWidget = QStackedWidget(parent)
+        self._bottomWidget.addWidget(QWidget(self._bottomWidget))
+        self._changeLog = QTextEdit(self._bottomWidget)
+        self._changeLog.setReadOnly(True)
+        self._bottomWidget.addWidget(self._changeLog)
+        layout.addWidget(self._bottomWidget, 1)
+        
+        widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         
         self._setInteractive(True)
         
         return widget  
+        
+    def _setChangelogVisible(self, v):
+        self._bottomWidget.setCurrentIndex(1 if v else 0)
         
     def _downloadProgressChanged(self, _t, prog):
         if self._progressBar != None:
@@ -284,7 +297,7 @@ class online_update(iface_general_plugin):
             vstr = "Online Version Info:\n"
             for k, v in self._version_info.iteritems():
                 vstr += str(k) + ":" + str(v) + "\n"
-            self._statusLabel.setToolTip(vstr)       
+            self._statusLabel.setToolTip(vstr)      
             
     def _verify_signature(self, signedString):
         gpg, _keyid = getGPG()
@@ -368,7 +381,24 @@ class online_update(iface_general_plugin):
         
         self._installer_url = self.getCheckURLBase() + self._version_info["URL"]
         self._local_installer_file = os.path.join(get_settings().get_main_config_dir(), self._installer_url.rsplit('/', 1)[1])
+        
+        if u"Change Log" in self._version_info:
+            from PyQt4.QtGui import QTextCursor, QTextListFormat
+            self._changeLog.clear()
+            document = self._changeLog.document()
+            document.setIndentWidth(20)
+            cursor = QTextCursor(document)
             
+            cursor.insertText("Changes:\n")
+        
+            listFormat = QTextListFormat()
+            listFormat.setStyle(QTextListFormat.ListDisc)
+            cursor.insertList(listFormat)
+        
+            log = json.loads(self._version_info[u"Change Log"])
+            cursor.insertText("\n".join(log))
+            self._setChangelogVisible(True)
+        
         if self._version_info["Commit Count"] > int(get_settings().get_commit_count()):
             get_server().controller.notifyUpdates()
             

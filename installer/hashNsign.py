@@ -1,5 +1,5 @@
 import logging, sys, os, hashlib, shutil
-import subprocess
+import json
 
 try:
     import lunchinator
@@ -11,6 +11,7 @@ except:
             break
         path = os.path.dirname(path)
     
+from lunchinator.git import GitHandler
 from lunchinator.lunch_settings import lunch_settings
 from lunchinator.utilities import getGPG
 
@@ -29,18 +30,28 @@ fileToSign.close()
 fileHash = md.hexdigest()
 logging.info("Hash is %s" % fileHash)
 
-proc = subprocess.Popen(['git', 'rev-list', '--count', 'HEAD'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-commitCount, _perr = proc.communicate()
-commitCount = commitCount.strip()
+gitHandler = GitHandler()
+commitCount = gitHandler.getCommitCount(path=path)
 if not commitCount:
     logging.error("Could not determine commit count.")
     sys.exit(1)
 # commit count is actually version string
 versionString = lunch_settings.get_singleton_instance().get_commit_count()
 
-# create signed version.asc
+changeLog = gitHandler.getLatestChangeLog(path=path)
+if changeLog:
+    changeLog = json.dumps(changeLog)
 
-stringToSign = "Version: %s\nCommit Count: %s\nInstaller Hash: %s\nURL: %s/%s" % (versionString, commitCount, fileHash, versionString, os.path.basename(fileToSign.name))
+# create signed version.asc
+versionInfo = ["Version: " + versionString,
+               "Commit Count: " + commitCount,
+               "Installer Hash: " + fileHash,
+               "URL: %s/%s" % (versionString, os.path.basename(fileToSign.name))]
+
+if changeLog:
+    versionInfo.append("Change Log: " + changeLog)
+
+stringToSign = "\n".join(versionInfo)
 
 gpg, keyid = getGPG(secret=True)
 if not gpg or not keyid:

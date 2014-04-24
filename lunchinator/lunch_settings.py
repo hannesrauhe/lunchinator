@@ -43,7 +43,7 @@ class lunch_settings(object):
         self._avatar_dir = self.get_config("avatars")
         self._version = u"unknown"
         self._version_short = u"unknown"
-        self._commit_count = "0"
+        self._commit_count = None
         self._commit_count_plugins = "-1"
         self._main_package_path = self._findMainPackagePath()
         if self._main_package_path == None:
@@ -89,13 +89,6 @@ class lunch_settings(object):
             
         self._config_file = ConfigParser.SafeConfigParser()
         self.read_config_from_hd()
-        
-        try:
-            version_file = self.get_resource("version")
-            with contextlib.closing(open(version_file, "r")) as vfh:
-                self._commit_count = vfh.read().strip()
-        except Exception:
-            log_error("version file missing, no version information")
             
     def read_config_from_hd(self): 
         self._config_file.read(self._main_config_dir + '/settings.cfg')
@@ -189,6 +182,20 @@ class lunch_settings(object):
         return self._version_short
     
     def get_commit_count(self):
+        if not self._commit_count:
+            from lunchinator.git import GitHandler
+            try:
+                version_file = self.get_resource("version")
+                with contextlib.closing(open(version_file, "r")) as vfh:
+                    self._commit_count = vfh.read().strip()
+            except Exception:
+                gitHandler = GitHandler()
+                if gitHandler.has_git():
+                    commit_count = gitHandler.getCommitCount()
+                    if commit_count:
+                        self._commit_count = commit_count
+                else:
+                    log_error("version file missing, no version information")
         return self._commit_count
     
     def get_commit_count_plugins(self):
