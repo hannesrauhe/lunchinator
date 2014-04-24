@@ -29,26 +29,34 @@ class _lunchinator_logger:
             if not os.path.exists(MAIN_CONFIG_DIR ):
                 os.makedirs(MAIN_CONFIG_DIR )
             log_file = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
-                
-            cls.logfileHandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
-            cls.logfileHandler.setFormatter(_log_formatter())
-            cls.logfileHandler.setLevel(logging.DEBUG)
+            
+            try:
+                cls.logfileHandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
+                cls.logfileHandler.setFormatter(_log_formatter())
+                cls.logfileHandler.setLevel(logging.DEBUG)
+            except:
+                pass
             
             cls.streamHandler = logging.StreamHandler()
             cls.streamHandler.setFormatter(logging.Formatter("[%(levelname)7s] %(message)s"))
             
             cls.lunch_logger = logging.getLogger("LunchinatorLogger")
             cls.lunch_logger.setLevel(logging.DEBUG)
-            cls.lunch_logger.addHandler(cls.logfileHandler)
+            if cls.logfileHandler:
+                cls.lunch_logger.addHandler(cls.logfileHandler)
             cls.lunch_logger.addHandler(cls.streamHandler)
             
             yapsi_logger = logging.getLogger('yapsy')
             yapsi_logger.setLevel(logging.WARNING)
-            yapsi_logger.addHandler(cls.logfileHandler)
+            if cls.logfileHandler:
+                yapsi_logger.addHandler(cls.logfileHandler)
             yapsi_logger.addHandler(cls.streamHandler)
             
-            if os.path.getsize(log_file) > 0:
+            if cls.logfileHandler and os.path.getsize(log_file) > 0:
                 cls.logfileHandler.doRollover()
+            
+            if not cls.logfileHandler:
+                cls.lunch_logger.error("Could not initialize log file handler. Only logging to console.")
         return cls.lunch_logger
 
 #initialize loggers
