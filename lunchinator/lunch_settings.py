@@ -244,7 +244,7 @@ class lunch_settings(object):
             if time:
                 return new_value
         except:
-            pass
+            log_error("Problem while checking the lunch time")
         log_error("Illegal time format:", new_value)
         return old_value
     
