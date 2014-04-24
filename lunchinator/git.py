@@ -1,6 +1,5 @@
 import subprocess
 import os
-from _imaging import path
 
 class GitHandler(object):
     def runGitCommand(self, args, path=None, quiet=True):
