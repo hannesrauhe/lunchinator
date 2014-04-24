@@ -29,38 +29,30 @@ class _lunchinator_logger:
             if not os.path.exists(MAIN_CONFIG_DIR ):
                 os.makedirs(MAIN_CONFIG_DIR )
             log_file = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
-            
-            try:
-                cls.logfileHandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
-                cls.logfileHandler.setFormatter(_log_formatter())
-                cls.logfileHandler.setLevel(logging.DEBUG)
-            except:
-                pass
+                
+            cls.logfileHandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
+            cls.logfileHandler.setFormatter(_log_formatter())
+            cls.logfileHandler.setLevel(logging.DEBUG)
             
             cls.streamHandler = logging.StreamHandler()
             cls.streamHandler.setFormatter(logging.Formatter("[%(levelname)7s] %(message)s"))
             
             cls.lunch_logger = logging.getLogger("LunchinatorLogger")
             cls.lunch_logger.setLevel(logging.DEBUG)
-            if cls.logfileHandler:
-                cls.lunch_logger.addHandler(cls.logfileHandler)
+            cls.lunch_logger.addHandler(cls.logfileHandler)
             cls.lunch_logger.addHandler(cls.streamHandler)
             
             yapsi_logger = logging.getLogger('yapsy')
             yapsi_logger.setLevel(logging.WARNING)
-            if cls.logfileHandler:
-                yapsi_logger.addHandler(cls.logfileHandler)
+            yapsi_logger.addHandler(cls.logfileHandler)
             yapsi_logger.addHandler(cls.streamHandler)
             
-            if cls.logfileHandler and os.path.getsize(log_file) > 0:
+            if os.path.getsize(log_file) > 0:
                 cls.logfileHandler.doRollover()
-            
-            if not cls.logfileHandler:
-                cls.lunch_logger.error("Could not initialize log file handler. Only logging to console.")
         return cls.lunch_logger
 
-#initialize loggers
-_lunchinator_logger.get_singleton_logger()
+def initialize_logger():
+    _lunchinator_logger.get_singleton_logger()
 
 def convert_string(string):
     import traceback

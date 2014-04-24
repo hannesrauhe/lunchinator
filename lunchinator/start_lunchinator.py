@@ -7,7 +7,7 @@ import signal
 from functools import partial
 from optparse import OptionParser
 from lunchinator import log_info, log_error, get_settings,\
-    get_server, log_exception
+    get_server, log_exception, initialize_logger
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
 from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS, restart
     
@@ -120,7 +120,9 @@ def checkDependencies(noPlugins, gui = False):
                 log_error("Dependencies could not be installed.")
             return False
 
-def startLunchinator():    
+def startLunchinator():
+    initialize_logger()
+    
     (options, _args) = parse_args()
     usePlugins = options.noPlugins
     if options.exitWithStopCode:
