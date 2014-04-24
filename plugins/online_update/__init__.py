@@ -12,8 +12,11 @@ import tempfile
 from functools import partial
 from xml.etree import ElementTree
 from online_update.gitUpdate import gitUpdate
+from PyQt4.QtCore import QTimer
     
 class online_update(iface_general_plugin):
+    CHECK_INTERVAL = 12 * 60 * 60 * 1000 # check twice a day
+    
     def __init__(self):
         super(online_update, self).__init__()
         self.hidden_options = {"check_url": "http://update.lunchinator.de"}
@@ -28,6 +31,7 @@ class online_update(iface_general_plugin):
         self._local_installer_file = None
         self._install_ready = False
         self._installButton = None
+        self._scheduleTimer = None
     
     def activate(self):
         iface_general_plugin.activate(self)
@@ -54,7 +58,9 @@ class online_update(iface_general_plugin):
         else:
             self._set_status("GPG not installed or not working properly.")
             
-        #TODO: schedule checking
+        self._scheduleTimer = QTimer(getValidQtParent())
+        self._scheduleTimer.timeout.connect(self.check_for_update)
+        self._scheduleTimer.start(online_update.CHECK_INTERVAL)
             
     def _check_for_rpm_deb(self):
         if getPlatform() != PLATFORM_LINUX:
@@ -84,6 +90,10 @@ class online_update(iface_general_plugin):
         return getPlatform() == PLATFORM_MAC    
     
     def deactivate(self):
+        if self._scheduleTimer != None:
+            self._scheduleTimer.stop()
+            self._scheduleTimer.deleteLater()
+        
         iface_general_plugin.deactivate(self)
     
     def create_options_widget(self, parent):
@@ -360,6 +370,8 @@ class online_update(iface_general_plugin):
         self._local_installer_file = os.path.join(get_settings().get_main_config_dir(), self._installer_url.rsplit('/', 1)[1])
             
         if self._version_info["Commit Count"] > int(get_settings().get_commit_count()):
+            get_server().controller.notifyUpdates()
+            
             # check if we already downloaded this version before
             if not self._check_hash():
                 self._set_status("New Version %d available, Downloading ..." % (self._version_info["Commit Count"]), progress=True)

@@ -1,3 +1,4 @@
+# coding: utf-8
 import sys, sip
 from lunchinator import get_server, log_exception, log_info, get_settings, \
     log_error, convert_string, log_warning
@@ -51,6 +52,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.resetIconTimer = None
         self.resetNextLunchTimeTimer = None
         self.isIconHighlighted = True  # set to True s.t. first dehighlight can set the default icon
+        self._updateAvailable = False
         
         self.exitCode = 0
         self.serverThread = None
@@ -264,6 +266,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processLunchCall.emit(msg, addr)
         
     """ ----------------- CALLED ON MAIN THREAD -------------------"""
+
+    def notifyUpdates(self):
+        self._updateAvailable = True
+        self._updateMemberStatus()
     
     def init_menu(self, parent):        
         # create the plugin submenu
@@ -318,6 +324,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._memberStatusAction = menu.addAction("Initializing...")
         self._memberStatusAction.setEnabled(False)
         
+        if hasattr(menu, "addSeparator"):
+            menu.addSeparator()
+            
         self.memberStatusUpdateTimer = QTimer(self)
         self.memberStatusUpdateTimer.timeout.connect(self._updateMemberStatus)
         self.memberStatusUpdateTimer.start(5000)
@@ -360,23 +369,25 @@ class LunchinatorGuiController(QObject, LunchServerController):
             get_server().releaseMembers()
         
         if not readyMembers and not notReadyMembers:
-            status = "No members."
+            status = u"No members."
         elif not readyMembers:
-            status = "Nobody is ready for lunch."
+            status = u"Nobody is ready for lunch."
         elif not notReadyMembers:
-            status = "Everybody is ready for lunch."
+            status = u"Everybody is ready for lunch."
         else:
             if len(readyMembers) == 1:
-                ready = "1 member"
+                ready = u"1 member"
             else:
-                ready = "%d members" % len(readyMembers)
+                ready = u"%d members" % len(readyMembers)
                 
             if len(notReadyMembers) == 1:
-                notReady = "1 member"
+                notReady = u"1 member"
             else:
-                notReady = "%d members" % len(notReadyMembers)
+                notReady = u"%d members" % len(notReadyMembers)
             
-            status = "%s ready, %s not ready for lunch." % (ready, notReady)
+            status = u"%s ready, %s not ready for lunch." % (ready, notReady)
+        if self._updateAvailable:
+            status = u"Update available – " + status
         self._memberStatusAction.setText(status)
     
     def check_new_msgs(self):
@@ -570,3 +581,4 @@ class LunchinatorGuiController(QObject, LunchServerController):
         msg = convert_string(msg)
         addr = convert_string(addr)
         processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
+
