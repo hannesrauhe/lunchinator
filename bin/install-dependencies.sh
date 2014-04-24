@@ -59,7 +59,7 @@ then
       # no errors
       EXITST=0
     fi
-  EOF
+EOF
   popd
   exit $EXITST
 else
