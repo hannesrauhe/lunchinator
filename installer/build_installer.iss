@@ -28,3 +28,6 @@ Name: "{app}\plugins"
 
 [Run]
 Filename: "{app}\lunchinator.exe"; WorkingDir: "{app}"; Flags: nowait postinstall
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}\*"
