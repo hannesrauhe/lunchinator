@@ -6,6 +6,8 @@ class PluginRepositories(object):
     def __init__(self, internalDir, externalRepos):
         self._internalDir = internalDir
         self._externalRepos = externalRepos
+        self._outdated = set()
+        self._upToDate = set()
         self._lock = Lock()
         
     def getPluginDirs(self):
@@ -21,21 +23,38 @@ class PluginRepositories(object):
 
     def checkForUpdates(self):
         """
-        Checks each repository for updates and returns a list of paths
+        Checks each repository for updates and returns a set of paths
         where updates are available.
         """
         with self._lock:
             # make a copy s.t. we don't have to lock the repos all the time
             repos = deepcopy(self._externalRepos)
             
-        outdated = []
+        outdated = set()
+        upToDate = set()
         gitHandler = GitHandler()
         for path, _active, autoUpdate in repos:
-            if autoUpdate and gitHandler.needsPull(path):
-                outdated.append(path)
+            if autoUpdate:
+                if gitHandler.needsPull(path):
+                    outdated.add(path)
+                else:
+                    upToDate.add(path)
                 
+        with self._lock:
+            self._outdated -= upToDate
+            self._outdated.update(outdated)
+            
+            self._upToDate -= outdated
+            self._upToDate.update(upToDate)
+            
         return outdated
-                    
+    
+    def isOutdated(self, path):
+        return path in self._outdated
+    
+    def isUpToDate(self, path):
+        return path in self._upToDate
+       
     def __enter__(self):
         return self._lock.__enter__()
     

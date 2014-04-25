@@ -20,6 +20,7 @@ class plugin_repositories(iface_general_plugin):
     PATH_COLUMN = 1
     ACTIVE_COLUMN = 0
     AUTO_UPDATE_COLUMN = 2
+    STATUS_COLUMN = 3
     
     def __init__(self):
         super(plugin_repositories, self).__init__()
@@ -45,7 +46,7 @@ class plugin_repositories(iface_general_plugin):
         from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, \
                                 QVBoxLayout, QLabel, QSizePolicy, QPushButton, \
                                 QTextEdit, QProgressBar, QStackedWidget, QTreeView, \
-                                QStandardItemModel
+                                QStandardItemModel, QHBoxLayout
         from PyQt4.QtCore import Qt
        
         widget = QWidget(parent)
@@ -58,11 +59,21 @@ class plugin_repositories(iface_general_plugin):
         self._initModel()
         self._reposTable.setModel(self._reposModel)
         
-        layout.addWidget(self._reposTable)
+        self._reposTable.setSelectionMode(QTreeView.MultiSelection)
+        self._reposTable.selectionModel().selectionChanged.connect(self._selectionChanged)
         
-        addButton = QPushButton("Add Repository...")
+        layout.addWidget(self._reposTable)
+
+        buttonLayout = QHBoxLayout()    
+        addButton = QPushButton("Add...")
         addButton.clicked.connect(partial(self._addRepository, widget))
-        layout.addWidget(addButton)
+        self._removeButton = QPushButton("Remove")
+        self._removeButton.setEnabled(False)
+        self._removeButton.clicked.connect(self._removeSelected)
+        buttonLayout.addWidget(addButton)
+        buttonLayout.addWidget(self._removeButton)
+        
+        layout.addLayout(buttonLayout)
         
         self._initRepositories()
         
@@ -70,6 +81,10 @@ class plugin_repositories(iface_general_plugin):
         self._reposTable.resizeColumnToContents(self.AUTO_UPDATE_COLUMN)
         self._reposTable.setColumnWidth(self.PATH_COLUMN, 150)
         return widget  
+    
+    def _selectionChanged(self, _sel, _desel):
+        selection = self._reposTable.selectionModel().selectedRows()
+        self._removeButton.setEnabled(len(selection) > 0)
     
     def _addRepository(self, parent):
         from plugin_repositories.add_repo_dialog import AddRepoDialog
@@ -85,7 +100,7 @@ class plugin_repositories(iface_general_plugin):
     def _initModel(self):
         from PyQt4.QtCore import QStringList
         self._reposModel.clear()
-        stringList = QStringList([u"Active", u"Path", u"Auto Update"])
+        stringList = QStringList([u"Active", u"Path", u"Auto Update", u"Status"])
         self._reposModel.setColumnCount(stringList.count())
         self._reposModel.setHorizontalHeaderLabels(stringList)
     
@@ -95,10 +110,20 @@ class plugin_repositories(iface_general_plugin):
         for path, active, auto_update in get_settings().get_plugin_repositories().getExternalRepositories():
             if os.path.isdir(path):
                 self._appendRepository(path, active, auto_update)
-             
+           
+    def _updateStatusItem(self, item, path):
+        from PyQt4.QtGui import QColor
+        from PyQt4.QtCore import Qt
+        if get_settings().get_plugin_repositories().isUpToDate(path):
+            item.setData(QColor(0, 255, 0), Qt.DecorationRole)
+        elif get_settings().get_plugin_repositories().isOutdated(path):
+            item.setData(QColor(127, 255, 127), Qt.DecorationRole)
+        else:
+            item.setData(None, Qt.DecorationRole)
+      
     def _appendRepository(self, path, active, autoUpdate, canAutoUpdate = None):
         from PyQt4.QtGui import QStandardItem
-        from PyQt4.QtCore import Qt, QSize
+        from PyQt4.QtCore import Qt
 
         activeItem = QStandardItem()
         activeItem.setEditable(False)
@@ -118,10 +143,21 @@ class plugin_repositories(iface_general_plugin):
             autoUpdateItem.setCheckState(Qt.Checked if autoUpdate else Qt.Unchecked)
             autoUpdateItem.setCheckable(True)
                 
-        self._reposModel.appendRow([activeItem, pathItem, autoUpdateItem])
+        statusItem = QStandardItem()
+        self._updateStatusItem(statusItem, path)
+                
+        self._reposModel.appendRow([activeItem, pathItem, autoUpdateItem, statusItem])
         
-    def _processUpdates(self, updatedRepos):
-        print updatedRepos
+    def _removeSelected(self):
+        selection = self._reposTable.selectionModel().selectedRows()
+        for index in selection:
+            self._reposModel.removeRow(index.row())
+        
+    def _processUpdates(self, _outdated):
+        from PyQt4.QtCore import Qt
+        for row in xrange(self._reposModel.rowCount()):
+            path = convert_string(self._reposModel.item(row, self.PATH_COLUMN).data(Qt.DisplayRole).toString())
+            self._updateStatusItem(self._reposModel.item(row, self.STATUS_COLUMN), path)
         
     def _checkForUpdates(self):
         AsyncCall(getValidQtParent(),

@@ -4,7 +4,6 @@ from PyQt4.QtGui import QDialog, QLabel, QVBoxLayout, QHBoxLayout,\
 from PyQt4.Qt import Qt
 from lunchinator import convert_string
 from lunchinator.git import GitHandler
-from _imaging import path
 import os
 
 class AddRepoDialog(QDialog):
