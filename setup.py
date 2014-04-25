@@ -56,7 +56,7 @@ version, version_info = compute_version()
 
 
 long_description = \
-'''This is the Lunchinator. It does lunch stuff.
+'''A tool to call your colleagues for lunch.
 
 Support
 =======
