@@ -168,6 +168,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             self.mainWindow.close()
         if self.serverThread != None and not sip.isdeleted(self.serverThread) and self.serverThread.isRunning():
             self.serverThread.finished.disconnect(self.serverFinishedUnexpectedly)
+            get_server().call("HELO_STOP shutdown", "127.0.0.1")
             get_server().running = False
             log_info("Waiting maximal 30s for server to stop...")
             # wait maximal 30s 

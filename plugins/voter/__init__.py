@@ -57,9 +57,11 @@ class voter(iface_gui_plugin):
     def send_vote(self, place, stime):
         vote_call = "HELO_VOTE "+json.dumps({"place": unicode(place), "time": unicode(stime.toString("hh:mm"))})
         get_server().call(vote_call)
-        get_settings().set_next_lunch_begin(stime.toString("hh:mm"))
+        
         etime = stime.addSecs(60*30)
         get_settings().set_next_lunch_end(etime.toString("hh:mm"))
+        get_settings().set_next_lunch_begin(stime.toString("hh:mm"))
+
         get_server().call_info()
 
 class voterWidget(QWidget):
