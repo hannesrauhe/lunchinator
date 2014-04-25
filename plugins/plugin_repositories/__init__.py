@@ -13,7 +13,6 @@ from functools import partial
 from xml.etree import ElementTree
 from online_update.gitUpdate import gitUpdate
 from lunchinator.git import GitHandler
-from _imaging import path
     
 class plugin_repositories(iface_general_plugin):
     CHECK_INTERVAL = 12 * 60 * 60 * 1000 # check twice a day

@@ -81,23 +81,7 @@ class gitUpdate(object):
 # 
          
     def canGitUpdate(self, repo=None):
-        if self._gitHandler.getGitCommandResult(["rev-parse"], repo) != 0:
-            return (False, "'%s' is no git repository" % repo)
-         
-        if self._gitHandler.getGitCommandResult(["diff","--name-only","--exit-code","--quiet"], repo) != 0:
-            return (False, "There are unstaged changes")
-         
-        if self._gitHandler.getGitCommandResult(["diff","--cached","--exit-code","--quiet"], repo) != 0:
-            return (False, "There are staged, uncommitted changes")
-         
-        _, branch, __ = self._gitHandler.runGitCommand(["symbolic-ref","HEAD"], repo, quiet=False)
-        if "master" not in branch:
-            return (False, "The selected branch is not the master branch")
-         
-        if self._gitHandler.getGitCommandResult(["log","origin/master..HEAD","--exit-code","--quiet"]) != 0:
-            return (False, "There are unpushed commits on the master branch")
-        
-        return (True, None)
+        return self._gitHandler.canGitUpdate(True, repo)
 #     
 #     def getCanUpdateMain(self):
 #         return self.getCanUpdate(self._lunchdir)

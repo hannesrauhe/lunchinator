@@ -46,3 +46,50 @@ class GitHandler(object):
             return out.split("\n")[5:]
         except:
             return None
+        
+    
+    def canGitUpdate(self, ensureMaster=False, path=None):
+        if self._gitHandler.getGitCommandResult(["rev-parse"], path) != 0:
+            return (False, "'%s' is no git repository" % path)
+         
+        if self._gitHandler.getGitCommandResult(["diff", "--name-only", "--exit-code", "--quiet"], path) != 0:
+            return (False, "There are unstaged changes")
+         
+        if self._gitHandler.getGitCommandResult(["diff", "--cached", "--exit-code", "--quiet"], path) != 0:
+            return (False, "There are staged, uncommitted changes")
+         
+        if ensureMaster:
+            _, branch, __ = self._gitHandler.runGitCommand(["symbolic-ref", "HEAD"], path, quiet=False)
+            if not branch.endswith("/master"):
+                return (False, "The selected branch is not the master branch")
+        
+        # get upstream branch
+        ref = self.getGitCommantOutput(["symbolic-ref", "-q", "HEAD"], path)
+        upstream = self.getGitCommantOutput(["for-each-ref", "--format='%(upstream:short)'", ref])
+        if self._gitHandler.getGitCommandResult(["log", "%s..HEAD" % upstream, "--exit-code", "--quiet"], path) != 0:
+            return (False, "There are unpushed commits on the branch")
+        
+        return (True, None)
+
+    def needsPull(self, path):
+        canUpdate, _reason = self.canGitUpdate(False, path)
+        if not canUpdate:
+            return False
+        
+        # update remotes
+        if self.getGitCommandResult(["remote", "update"], path) != 0:
+            return False
+        
+        local = self.getGitCommantOutput(["rev-parse", "@"])
+        remote = self.getGitCommantOutput(["rev-parse", "@{u}"])
+        base = self.getGitCommantOutput(["merge-base", "@", "@{u}"])
+        
+        if local == remote:
+            # up-to-date
+            return False
+        if local == base:
+            # can fast-forward
+            return True
+        
+        # need to push or diverged
+        return False
