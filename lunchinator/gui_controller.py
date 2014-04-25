@@ -475,31 +475,36 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.mainWindow.raise_()
             
     @pyqtSlot()
-    def changeNextLunchTime(self):
-        if self.mainWindow == None:
-            log_error("mainWindow is not initialized")
-            return
-        from lunchinator.timespan_input_dialog import TimespanInputDialog
-        dialog = TimespanInputDialog(self.mainWindow, "Change Lunch Time", "When are you free for lunch today?", get_settings().get_next_lunch_begin(), get_settings().get_next_lunch_end())
-        dialog.exec_()
-        if dialog.result() == QDialog.Accepted:
-            get_settings().set_next_lunch_begin(dialog.getBeginTimeString())
-            get_settings().set_next_lunch_end(dialog.getEndTimeString())
+    def changeNextLunchTime(self, begin = None, end = None):
+        if begin == None:
+            if self.mainWindow == None:
+                log_error("mainWindow is not initialized")
+                return
+            from lunchinator.timespan_input_dialog import TimespanInputDialog
+            dialog = TimespanInputDialog(self.mainWindow, "Change Lunch Time", "When are you free for lunch today?", get_settings().get_next_lunch_begin(), get_settings().get_next_lunch_end())
+            dialog.exec_()
+            if dialog.result() == QDialog.Accepted:
+                get_settings().set_next_lunch_time(dialog.getBeginTimeString(), dialog.getEndTimeString())
+            else:
+                return        
+        else:
+            get_settings().set_next_lunch_time(begin, end) 
             
-            if self.resetNextLunchTimeTimer != None:
-                self.resetNextLunchTimeTimer.stop()
-                self.resetNextLunchTimeTimer.deleteLater()
-                
-            td = get_settings().get_next_lunch_reset_time()
-            if td > 0:
-                self.resetNextLunchTimeTimer = QTimer(getValidQtParent())
-                self.resetNextLunchTimeTimer.timeout.connect(self._resetNextLunchTime)
-                self.resetNextLunchTimeTimer.setSingleShot(True)
-                self.resetNextLunchTimeTimer.start(abs(td) + 1000)
-                
-            get_server().call_info()
+        if self.resetNextLunchTimeTimer != None:
+            self.resetNextLunchTimeTimer.stop()
+            self.resetNextLunchTimeTimer.deleteLater()
+            
+        td = get_settings().get_next_lunch_reset_time()
+        if td > 0:
+            self.resetNextLunchTimeTimer = QTimer(getValidQtParent())
+            self.resetNextLunchTimeTimer.timeout.connect(self._resetNextLunchTime)
+            self.resetNextLunchTimeTimer.setSingleShot(True)
+            self.resetNextLunchTimeTimer.start(abs(td) + 1000)
+            
+        get_server().call_info()
             
     def _resetNextLunchTime(self):
+        get_settings().set_next_lunch_time(None, None)
         get_server().call_info()
             
     @pyqtSlot(bool)

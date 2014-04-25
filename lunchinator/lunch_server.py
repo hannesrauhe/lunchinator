@@ -390,6 +390,9 @@ class lunch_server(object):
             return pluginInfo.plugin_object.getDBConnection(name)
         log_exception("getDBConnection: DB Connections plugin not yet loaded")
         return None        
+    
+    def getController(self):
+        return self.controller
         
     def call_info(self, peers=[]):
         '''An info call informs a peer about my name etc...

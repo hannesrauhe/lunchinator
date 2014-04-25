@@ -259,6 +259,32 @@ class lunch_settings(object):
     def set_default_lunch_end(self, new_value):
         new_value = convert_string(new_value)
         self._default_lunch_end = self._check_lunch_time(new_value, self._default_lunch_end)
+        
+    def get_next_lunch_begin(self):
+        # reset "next" lunch times after they are over
+        if self._next_lunch_begin:
+            return self._next_lunch_begin
+        return self.get_default_lunch_begin()
+        
+    def get_next_lunch_end(self):
+        # reset "next" lunch times after they are over
+        if self._next_lunch_end:
+            if self.get_next_lunch_reset_time() > 0:
+                return self._next_lunch_end
+            else:
+                # reset
+                self._next_lunch_begin = None
+                self._next_lunch_end = None
+        return self.get_default_lunch_end()
+    
+    def set_next_lunch_time(self, begin_time, end_time):
+        if begin_time == None:
+            self._next_lunch_begin, self._next_lunch_end = None, None
+            
+        begin_time = convert_string(begin_time)
+        self._next_lunch_begin = self._check_lunch_time(begin_time, self._next_lunch_begin)
+        end_time = convert_string(end_time)
+        self._next_lunch_end = self._check_lunch_time(end_time, self._next_lunch_end)
     
     def get_next_lunch_reset_time(self):
         if self._next_lunch_end == None:
@@ -271,35 +297,6 @@ class lunch_settings(object):
         tdd = getTimeDelta(self.get_default_lunch_end())
         
         return max(tdn, tdd)
-        
-    def get_next_lunch_begin(self):
-        # reset "next" lunch times after they are over
-        if self._next_lunch_begin:
-            if self._next_lunch_end and self.get_next_lunch_reset_time() > 0:
-                return self._next_lunch_begin
-            else:
-                # reset
-                self._next_lunch_begin = None
-                self._next_lunch_end = None
-        return self.get_default_lunch_begin()
-    def set_next_lunch_begin(self, time):
-        time = convert_string(time)
-        self._next_lunch_begin = self._check_lunch_time(time, self._next_lunch_begin)
-        
-    def get_next_lunch_end(self):
-        # reset "next" lunch times after they are over
-        if self._next_lunch_end:
-            if self.get_next_lunch_reset_time() > 0:
-                return self._next_lunch_end
-            else:
-                # reset
-                self._next_lunch_begin = None
-                self._next_lunch_end = None
-        return self.get_default_lunch_end()
-    def set_next_lunch_end(self, time):
-        time = convert_string(time)
-        self._next_lunch_end = self._check_lunch_time(time, self._next_lunch_end)
-    
     def get_warn_if_members_not_ready(self):
         return self._warn_if_members_not_ready
     def set_warn_if_members_not_ready(self, new_value):
