@@ -13,6 +13,7 @@ from functools import partial
 from xml.etree import ElementTree
 from online_update.gitUpdate import gitUpdate
 from lunchinator.git import GitHandler
+from lunchinator.callables import AsyncCall
     
 class plugin_repositories(iface_general_plugin):
     CHECK_INTERVAL = 12 * 60 * 60 * 1000 # check twice a day
@@ -24,6 +25,22 @@ class plugin_repositories(iface_general_plugin):
         super(plugin_repositories, self).__init__()
         self._modified = False
     
+    def activate(self):
+        from PyQt4.QtCore import QTimer
+            
+        self._scheduleTimer = QTimer(getValidQtParent())
+        self._scheduleTimer.timeout.connect(self._checkForUpdates)
+        self._scheduleTimer.start(plugin_repositories.CHECK_INTERVAL)
+        
+        self._checkForUpdates()
+        
+    def deactivate(self):
+        if self._scheduleTimer != None:
+            self._scheduleTimer.stop()
+            self._scheduleTimer.deleteLater()
+        
+        iface_general_plugin.deactivate(self)
+        
     def create_options_widget(self, parent):
         from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, \
                                 QVBoxLayout, QLabel, QSizePolicy, QPushButton, \
@@ -102,6 +119,14 @@ class plugin_repositories(iface_general_plugin):
             autoUpdateItem.setCheckable(True)
                 
         self._reposModel.appendRow([activeItem, pathItem, autoUpdateItem])
+        
+    def _processUpdates(self, updatedRepos):
+        print updatedRepos
+        
+    def _checkForUpdates(self):
+        AsyncCall(getValidQtParent(),
+                  get_settings().get_plugin_repositories().checkForUpdates,
+                  self._processUpdates)()
         
     def discard_changes(self):
         self._initRepositories()

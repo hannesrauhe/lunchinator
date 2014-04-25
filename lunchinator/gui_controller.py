@@ -16,6 +16,7 @@ from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
     getValidQtParent
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
+from notification_center_qt import NotificationCenterQt
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -58,6 +59,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.serverThread = None
         self.running = True
         get_server().initialize(self)
+        
+        self._notificationCenter = NotificationCenterQt(self)
         
         self.pluginNameToMenuAction = {}
         
@@ -236,6 +239,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
     def groupAppended(self, group, peer_groups):
         self.groupAppendedSignal.emit(group, peer_groups)
+
+    def getNotificationCenter(self):
+        return self._notificationCenter
 
     def extendMemberInfo(self, infoDict):
         infoDict['pyqt_version'] = QtCore.PYQT_VERSION_STR

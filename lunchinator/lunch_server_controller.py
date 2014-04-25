@@ -2,10 +2,12 @@
 from lunchinator import get_server, get_settings, log_info
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall
+from lunchinator.notification_center import NotificationCenter
 
 class LunchServerController(object):
     def __init__(self):
         super(LunchServerController, self).__init__()
+        self._notificationCenter = NotificationCenter()
         
     def initDone(self):
         pass
@@ -64,6 +66,9 @@ class LunchServerController(object):
     def notifyUpdates(self):
         pass
 
+    def getNotificationCenter(self):
+        return self._notificationCenter
+    
     def serverStopped(self, _exit_code):
         get_settings().write_config_to_hd()
         if get_server().get_plugins_enabled():

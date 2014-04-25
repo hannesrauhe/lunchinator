@@ -126,3 +126,6 @@ import lunch_server
 
 def get_server():
     return lunch_server.lunch_server.get_singleton_server()
+
+def get_notification_center():
+    return get_server().getController().getNotificationCenter()

@@ -1,7 +1,6 @@
 from threading import Lock
 from copy import deepcopy
 from git import GitHandler
-from installer.hashNsign import path
 
 class PluginRepositories(object):
     def __init__(self, internalDir, externalRepos):

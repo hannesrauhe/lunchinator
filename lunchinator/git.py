@@ -1,5 +1,6 @@
 import subprocess
 import os
+from lunchinator import log_debug
 
 class GitHandler(object):
     def runGitCommand(self, args, path=None, quiet=True):
@@ -13,6 +14,7 @@ class GitHandler(object):
         fh = subprocess.PIPE    
         if quiet:
             fh = open(os.path.devnull, "w")
+        log_debug("Git call", call)
         p = subprocess.Popen(call, stdout=fh, stderr=fh)
         pOut, pErr = p.communicate()
         retCode = p.returncode
@@ -49,24 +51,24 @@ class GitHandler(object):
         
     
     def canGitUpdate(self, ensureMaster=False, path=None):
-        if self._gitHandler.getGitCommandResult(["rev-parse"], path) != 0:
+        if self.getGitCommandResult(["rev-parse"], path) != 0:
             return (False, "'%s' is no git repository" % path)
          
-        if self._gitHandler.getGitCommandResult(["diff", "--name-only", "--exit-code", "--quiet"], path) != 0:
+        if self.getGitCommandResult(["diff", "--name-only", "--exit-code", "--quiet"], path) != 0:
             return (False, "There are unstaged changes")
          
-        if self._gitHandler.getGitCommandResult(["diff", "--cached", "--exit-code", "--quiet"], path) != 0:
+        if self.getGitCommandResult(["diff", "--cached", "--exit-code", "--quiet"], path) != 0:
             return (False, "There are staged, uncommitted changes")
          
         if ensureMaster:
-            _, branch, __ = self._gitHandler.runGitCommand(["symbolic-ref", "HEAD"], path, quiet=False)
+            _, branch, __ = self.runGitCommand(["symbolic-ref", "HEAD"], path, quiet=False)
             if not branch.endswith("/master"):
                 return (False, "The selected branch is not the master branch")
         
         # get upstream branch
         ref = self.getGitCommantOutput(["symbolic-ref", "-q", "HEAD"], path)
-        upstream = self.getGitCommantOutput(["for-each-ref", "--format='%(upstream:short)'", ref])
-        if self._gitHandler.getGitCommandResult(["log", "%s..HEAD" % upstream, "--exit-code", "--quiet"], path) != 0:
+        upstream = self.getGitCommantOutput(["for-each-ref", "--format=%(upstream:short)", ref])
+        if self.getGitCommandResult(["log", "%s..HEAD" % upstream, "--exit-code", "--quiet"], path) != 0:
             return (False, "There are unpushed commits on the branch")
         
         return (True, None)
@@ -80,16 +82,18 @@ class GitHandler(object):
         if self.getGitCommandResult(["remote", "update"], path) != 0:
             return False
         
-        local = self.getGitCommantOutput(["rev-parse", "@"])
+        local = self.getGitCommantOutput(["rev-parse", "HEAD"])
         remote = self.getGitCommantOutput(["rev-parse", "@{u}"])
-        base = self.getGitCommantOutput(["merge-base", "@", "@{u}"])
+        base = self.getGitCommantOutput(["merge-base", "HEAD", "@{u}"])
         
         if local == remote:
             # up-to-date
+            log_debug("Repository", path, "up-to-date")
             return False
         if local == base:
             # can fast-forward
             return True
         
         # need to push or diverged
+        log_debug("Repository", path, "needs to be pushed or is diverged")
         return False
