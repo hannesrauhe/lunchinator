@@ -1,5 +1,6 @@
 #!/bin/bash
-EXIT_RESTART=2
+
+export EXIT_RESTART=2
 
 if [ $(uname) == "Darwin" ]
 then
@@ -33,33 +34,33 @@ then
   # ensure pip does not install into current package
   pushd "$HOME"
   
-  $SUDO bash <<EOF
-    if ! type pip &>/dev/null || ! $SUDO pip install $@
+  EXITST=$($SUDO bash <<EOF
+    if ! type pip &>/dev/null || ! pip install $@ 1>&2
     then
       # error or pip not available. check if at least, yapsy was installed
       if ! python -c 'import yapsy' &>/dev/null
       then
         # yapsy is not installed - try again with easy_install
-        echo "Installation with pip failed, trying again with easy_install"
-        $SUDO easy_install $@
+        echo "Installation with pip failed, trying again with easy_install" 1>&2
+        easy_install $@ 1>&2
         
         # check if easy_install installed at least yapsy
-        if ! python -c 'import yapsy' &>/dev/null
+        if python -c 'import yapsy' &>/dev/null
         then
           # yapsy was installed, need to restart lunchinator
-          EXITST=$EXIT_RESTART
+          echo $EXIT_RESTART
         else
-          EXITST=1
+          echo 1
         fi
       else
         # yapsy was installed. exit with 1 anyways to indicate error. 
-        EXITST=1
+        echo 1
       fi
     else
       # no errors
-      EXITST=0
+      echo 0
     fi
-EOF
+EOF)
   popd
   exit $EXITST
 else
