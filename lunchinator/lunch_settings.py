@@ -3,6 +3,8 @@ import sys, os, getpass, ConfigParser, types, logging, codecs, contextlib
 '''integrate the cli-parser into the default_config sooner or later'''
 from lunchinator import log_exception, log_error, setLoggingLevel, convert_string, MAIN_CONFIG_DIR
 from datetime import datetime
+import json
+from lunchinator.repositories import PluginRepositories
     
 class lunch_settings(object):
     LUNCH_TIME_FORMAT = "%H:%M"
@@ -51,13 +53,8 @@ class lunch_settings(object):
         self._resources_path = self._findResourcesPath(self._main_package_path)
         if self._resources_path == None:
             raise Exception("Could not determine path to the lunchinator resource files.")
-        self._internal_plugin_dir = self.get_resource("plugins")
-        self._external_plugin_dir = self.get_config("plugins")
-        self._plugin_dirs = [self._internal_plugin_dir, self._external_plugin_dir]
         
-        # insert plugin folders into path
-        for aDir in self._plugin_dirs:
-            sys.path.insert(0, aDir)
+        self._plugin_repos = None
         
         # configurable  
         self._lunch_trigger = u"lunch"
@@ -89,6 +86,11 @@ class lunch_settings(object):
             
         self._config_file = ConfigParser.SafeConfigParser()
         self.read_config_from_hd()
+        
+        # insert plugin folders into path
+        for aDir in self.get_plugin_dirs():
+            # TODO check first!
+            sys.path.insert(0, aDir)
             
     def read_config_from_hd(self): 
         self._config_file.read(self._main_config_dir + '/settings.cfg')
@@ -113,6 +115,17 @@ class lunch_settings(object):
         # not shown in settings-plugin - handled by avatar-plugin
         self._avatar_file = self.read_value_from_config_file(self._avatar_file, "general", "avatar_file")
         self._available_db_connections = self.read_value_from_config_file(self._available_db_connections, "general", "available_db_connections")        
+        
+        externalRepos = self.read_value_from_config_file(None, "general", "external_plugin_repos")
+        if externalRepos == None:
+            if os.path.isdir(self.get_config("plugins")):
+                externalRepos = [(self.get_config("plugins"), True, False)]  # active, but no auto update
+            else:
+                externalRepos = []
+        else:
+            externalRepos = json.loads(externalRepos)
+            
+        self._plugin_repos = PluginRepositories(self.get_resource("plugins"), externalRepos)
         
         if self._user_name == "":
             self._user_name = getpass.getuser().decode()         
@@ -139,6 +152,7 @@ class lunch_settings(object):
         return value
         
     def write_config_to_hd(self):
+        self.get_config_file().set('general', 'external_plugin_repos', json.dumps(self.get_plugin_repositories().getExternalRepositories()))
         with codecs.open(self._main_config_dir + '/settings.cfg', 'w', 'utf-8') as f: 
             self._config_file.write(f)
     
@@ -161,14 +175,11 @@ class lunch_settings(object):
         return unicode(os.path.join(self.get_main_config_dir(), *args))
     
     def get_plugin_dirs(self):
-        return self._plugin_dirs
+        return self._plugin_repos.getPluginDirs()
     
-    def get_internal_plugin_dir(self):
-        return self._internal_plugin_dir
-    
-    def get_external_plugin_dir(self):
-        return self._external_plugin_dir
-    
+    def get_plugin_repositories(self):
+        return self._plugin_repos
+
     def get_config_file(self):
         return self._config_file
     

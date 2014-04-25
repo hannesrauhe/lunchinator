@@ -1,0 +1,9 @@
+[Core]
+Name = Plugin Repositories
+Module = plugin_repositories
+
+[Documentation]
+Author = Cornelius Ratsch
+Version = 0.1
+Website = http://www.lunchinator.de
+Description = GUI for managing external plugin repositories
