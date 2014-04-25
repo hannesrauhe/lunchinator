@@ -212,7 +212,7 @@ class lunch_server(object):
         if 0 == len(target):
             log_error("Cannot send message, no peers connected, no peer found in _members file")
             
-        if get_settings().get_warn_if_members_not_ready() and not msg.startswith(u"HELO") and u"LUNCH" in msg.upper():
+        if get_settings().get_warn_if_members_not_ready() and not msg.startswith(u"HELO") and get_settings().get_lunch_trigger().upper() in msg.upper():
             # check if everyone is ready
             notReadyMembers = set()
             self.lockMembers()
@@ -390,6 +390,9 @@ class lunch_server(object):
             return pluginInfo.plugin_object.getDBConnection(name)
         log_exception("getDBConnection: DB Connections plugin not yet loaded")
         return None        
+    
+    def getController(self):
+        return self.controller
         
     def call_info(self, peers=[]):
         '''An info call informs a peer about my name etc...
