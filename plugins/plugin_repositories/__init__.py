@@ -43,7 +43,7 @@ class plugin_repositories(iface_general_plugin):
         iface_general_plugin.deactivate(self)
         
     def create_options_widget(self, parent):
-        from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, \
+        from PyQt4.QtGui import QStandardItem, QWidget, \
                                 QVBoxLayout, QLabel, QSizePolicy, QPushButton, \
                                 QTextEdit, QProgressBar, QStackedWidget, QTreeView, \
                                 QStandardItemModel, QHBoxLayout
@@ -70,8 +70,11 @@ class plugin_repositories(iface_general_plugin):
         self._removeButton = QPushButton("Remove")
         self._removeButton.setEnabled(False)
         self._removeButton.clicked.connect(self._removeSelected)
+        refreshButton = QPushButton("Check Status")
+        refreshButton.clicked.connect(partial(self._checkForUpdates, True))
         buttonLayout.addWidget(addButton)
         buttonLayout.addWidget(self._removeButton)
+        buttonLayout.addWidget(refreshButton)
         
         layout.addLayout(buttonLayout)
         
@@ -159,10 +162,10 @@ class plugin_repositories(iface_general_plugin):
             path = convert_string(self._reposModel.item(row, self.PATH_COLUMN).data(Qt.DisplayRole).toString())
             self._updateStatusItem(self._reposModel.item(row, self.STATUS_COLUMN), path)
         
-    def _checkForUpdates(self):
+    def _checkForUpdates(self, forced=False):
         AsyncCall(getValidQtParent(),
                   get_settings().get_plugin_repositories().checkForUpdates,
-                  self._processUpdates)()
+                  self._processUpdates)(forced)
         
     def discard_changes(self):
         self._initRepositories()

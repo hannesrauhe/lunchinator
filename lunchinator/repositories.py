@@ -21,10 +21,11 @@ class PluginRepositories(object):
         with self._lock:
             self._externalRepos = repos
 
-    def checkForUpdates(self):
+    def checkForUpdates(self, forced=False):
         """
         Checks each repository for updates and returns a set of paths
         where updates are available.
+        If forced==True, also repositories autoUpdate==False are checked.
         """
         with self._lock:
             # make a copy s.t. we don't have to lock the repos all the time
@@ -34,7 +35,7 @@ class PluginRepositories(object):
         upToDate = set()
         gitHandler = GitHandler()
         for path, _active, autoUpdate in repos:
-            if autoUpdate:
+            if forced or autoUpdate:
                 if gitHandler.needsPull(path):
                     outdated.add(path)
                 else:
