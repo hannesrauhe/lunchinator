@@ -17,6 +17,22 @@ eval set -- "$args"
 
 PUBLISH=false
 
+function clean() {
+  pushd osc/home:${OBSUSERNAME}/lunchinator &>/dev/null
+  for f in $(osc st | grep '^?' | sed -e 's/^?\s*//')
+  do
+    echo "Deleting ${f}"
+    rm "$f"
+  done
+  popd &>/dev/null
+}
+
+function update() {
+  pushd osc/home:${OBSUSERNAME}/lunchinator &>/dev/null
+  osc up
+  popd &>/dev/null
+}
+
 while [ $# -ge 1 ]; do
   case "$1" in
     --)
@@ -29,13 +45,7 @@ while [ $# -ge 1 ]; do
         shift
         ;;
     -c|--clean)
-        pushd osc/home:${OBSUSERNAME}/lunchinator &>/dev/null
-        for f in $(osc st | grep '^?' | sed -e 's/^?\s*//')
-        do
-          echo "Deleting ${f}"
-          rm "$f"
-        done
-        popd &>/dev/null
+        clean
         exit 0
         ;;
     -h)
@@ -64,9 +74,19 @@ if [ ! -d osc/home:${OBSUSERNAME} ]
 then
   echo "Checking out repository..."
   pushd osc
-  osc checkout home:${OBSUSERNAME}
+  if ! osc checkout home:${OBSUSERNAME}
+  then
+    popd
+    echo "Error checkout out repository."
+    rm -rf osc
+    exit 1
+  fi
   popd
 fi
+
+# make sure there are no unversioned files that are unintentionally checked in
+clean
+update
 
 source determine_version.sh
 

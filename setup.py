@@ -129,7 +129,7 @@ setup(
     version =       version,
     url =           'http://www.lunchinator.de',
     #download_url =  'http://path/tp/Lunchinator-%s.tar.gz' % version,
-    description =   'The Lunchinator.',
+    description =   'The Lunchinator',
     long_description = long_description,
     author =        'Hannes Rauhe, Cornelius Ratsch',
     author_email =  'info@lunchinator.de',
