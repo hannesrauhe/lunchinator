@@ -7,7 +7,7 @@ from threading import Lock
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
-    convert_string
+    convert_string, get_notification_center
 from lunchinator.utilities import getTimeDifference
      
 import tarfile
@@ -439,16 +439,16 @@ class lunch_server(object):
                 self._append_member(ip, hostn)
         
     def _memberAppended(self, ip):
-        self.controller.memberAppended(ip, self._peer_info[ip])
+        get_notification_center().emitMemberAppended(ip, self._peer_info[ip])
     
     def _memberUpdated(self, ip):
-        self.controller.memberUpdated(ip, self._peer_info[ip])
+        get_notification_center().emitMemberUpdated(ip, self._peer_info[ip])
     
     def _memberRemoved(self, ip):
-        self.controller.memberRemoved(ip)
+        get_notification_center().emitMemberRemoved(ip)
     
     def _peerAppended(self, ip):
-        self.controller.peerAppended(ip)
+        get_notification_center().emitPeerAppended(ip)
         
     def _append_member(self, ip, hostn, inform=True):
         # insert name into info dict
@@ -606,7 +606,7 @@ class lunch_server(object):
         log_info("%s: [%s] %s" % (t, m, msg))
         
         self._insertMessage(mtime, addr, msg)
-        self.controller.messagePrepended(mtime, addr, msg)
+        get_notification_center().emitMessagePrepended(mtime, addr, msg)
         self.new_msg = True
         self._write_messages_to_file()
         
@@ -640,7 +640,7 @@ class lunch_server(object):
         else:
             if peer_group not in self._peer_groups:
                 self._peer_groups.add(peer_group)
-                self.controller.groupAppended(peer_group, self._peer_groups)
+                get_notification_center().emitGroupAppended(peer_group, self._peer_groups)
             if peer_group == own_group:
                 self._append_member(ip, peer_name)
                 self._memberUpdated(ip)

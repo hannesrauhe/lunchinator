@@ -1,4 +1,5 @@
-from lunchinator import get_server, log_warning, convert_string
+from lunchinator import get_server, log_warning, convert_string,\
+    get_notification_center
 from lunchinator.lunch_settings import lunch_settings
 from lunchinator.iface_plugins import iface_general_plugin
 from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
@@ -83,6 +84,8 @@ class plugin_repositories(iface_general_plugin):
         self._reposTable.resizeColumnToContents(self.ACTIVE_COLUMN)
         self._reposTable.resizeColumnToContents(self.AUTO_UPDATE_COLUMN)
         self._reposTable.setColumnWidth(self.PATH_COLUMN, 150)
+        
+        get_notification_center().registerRepositoryUpdate(self._processUpdates)
         return widget  
     
     def _selectionChanged(self, _sel, _desel):
@@ -156,7 +159,11 @@ class plugin_repositories(iface_general_plugin):
         for index in selection:
             self._reposModel.removeRow(index.row())
         
-    def _processUpdates(self, _outdated):
+    def _checkForUpdatesFinished(self, outdated):
+        if len(outdated) > 0:
+            get_notification_center().emitRepositoryUpdate()
+        
+    def _processUpdates(self):
         from PyQt4.QtCore import Qt
         for row in xrange(self._reposModel.rowCount()):
             path = convert_string(self._reposModel.item(row, self.PATH_COLUMN).data(Qt.DisplayRole).toString())
@@ -165,7 +172,7 @@ class plugin_repositories(iface_general_plugin):
     def _checkForUpdates(self, forced=False):
         AsyncCall(getValidQtParent(),
                   get_settings().get_plugin_repositories().checkForUpdates,
-                  self._processUpdates)(forced)
+                  self._checkForUpdatesFinished)(forced)
         
     def discard_changes(self):
         self._initRepositories()

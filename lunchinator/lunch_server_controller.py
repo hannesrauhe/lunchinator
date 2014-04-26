@@ -7,33 +7,16 @@ from lunchinator.notification_center import NotificationCenter
 class LunchServerController(object):
     def __init__(self):
         super(LunchServerController, self).__init__()
-        self._notificationCenter = NotificationCenter()
+        NotificationCenter.setSingletonInstance(NotificationCenter())
         
     def initDone(self):
         pass
         
     def call(self, msg, client, hosts):
         get_server().perform_call(msg, client, hosts)
-        
-    def peerAppended(self, ip):
-        pass
-        
-    def memberAppended(self, ip, infoDict):
-        pass
-    
-    def memberUpdated(self, ip, infoDict):
-        pass
-    
-    def memberRemoved(self, ip):
-        pass    
-        
-    def groupAppended(self, group, peer_groups):
-        pass
-    
-    def messagePrepended(self, messageTime, senderIP, messageText):
-        pass
     
     def extendMemberInfo(self, _infoDict):
+        """Add some specific information to the info dictionary"""
         pass
     
     def getOpenTCPPort(self, _senderIP):
@@ -62,13 +45,7 @@ class LunchServerController(object):
     def processLunchCall(self, msg, addr):
         """ process a lunch call """
         processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
-    
-    def notifyUpdates(self):
-        pass
 
-    def getNotificationCenter(self):
-        return self._notificationCenter
-    
     def serverStopped(self, _exit_code):
         get_settings().write_config_to_hd()
         if get_server().get_plugins_enabled():

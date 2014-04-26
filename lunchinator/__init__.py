@@ -1,3 +1,4 @@
+from lunchinator.notification_center import NotificationCenter
 __all__ = ["gui_general", "lunch_settings", "lunch_server", "iface_plugins", "lunch_datathread"]
 
 import sys, os
@@ -122,10 +123,10 @@ def get_lunchinator_dir():
 def get_plugin_dirs():
     return get_settings().get_plugin_dirs()
 
+def get_notification_center():
+    return NotificationCenter.getSingletonInstance()
+
 import lunch_server
 
 def get_server():
     return lunch_server.lunch_server.get_singleton_server()
-
-def get_notification_center():
-    return get_server().getController().getNotificationCenter()

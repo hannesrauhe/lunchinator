@@ -1,7 +1,7 @@
 # coding: utf-8
 import sys, sip
 from lunchinator import get_server, log_exception, log_info, get_settings, \
-    log_error, convert_string, log_warning
+    log_error, convert_string, log_warning, get_notification_center
 import socket, os, time, subprocess
 import platform
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor,\
@@ -17,6 +17,7 @@ from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
     getValidQtParent, restart
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 from notification_center_qt import NotificationCenterQt
+from lunchinator.notification_center import NotificationCenter
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -29,12 +30,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _menu = None
     # ---- SIGNALS ----------------
     _initDone = pyqtSignal()
-    memberAppendedSignal = pyqtSignal(unicode, dict)
-    memberUpdatedSignal = pyqtSignal(unicode, dict)
-    memberRemovedSignal = pyqtSignal(unicode)
-    messagePrependedSignal = pyqtSignal(time.struct_time, list)
-    peerAppendedSignal = pyqtSignal(unicode)
-    groupAppendedSignal = pyqtSignal(unicode, set)
     _performCall = pyqtSignal(unicode, unicode, list)
     _sendFile = pyqtSignal(unicode, bytearray, int, bool)
     _receiveFile = pyqtSignal(unicode, int, unicode, int)
@@ -60,7 +55,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.running = True
         get_server().initialize(self)
         
-        self._notificationCenter = NotificationCenterQt(self)
+        NotificationCenter.setSingletonInstance(NotificationCenterQt(self))
         
         self.pluginNameToMenuAction = {}
         
@@ -74,6 +69,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         self.mainWindow.createMenuBar(self.pluginActions)
         
+        get_notification_center().connectApplicationUpdate(self.notifyUpdates)
+        
         # connect private signals
         self._initDone.connect(self.initDoneSlot)
         self._performCall.connect(self.performCallSlot)
@@ -85,7 +82,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processLunchCall.connect(self.processLunchCallSlot)
         self._updateRequested.connect(self.updateRequested)
         
-        self.messagePrependedSignal.connect(self.highlightIcon)
+        get_notification_center().connectMessagePrepended(self.highlightIcon)
         
         self.serverThread = LunchServerThread(self)
         self.serverThread.finished.connect(self.serverFinishedUnexpectedly)
@@ -221,27 +218,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if exitCode == EXIT_CODE_UPDATE:
             self.serverThread.finished.disconnect(self.serverFinishedUnexpectedly)
             self._updateRequested.emit()    
-        
-    def peerAppended(self, ip):
-        self.peerAppendedSignal.emit(ip)
-        
-    def memberAppended(self, ip, infoDict):
-        self.memberAppendedSignal.emit(ip, infoDict)
-    
-    def memberUpdated(self, ip, infoDict):
-        self.memberUpdatedSignal.emit(ip, infoDict)
-    
-    def memberRemoved(self, ip):
-        self.memberRemovedSignal.emit(ip)
-    
-    def messagePrepended(self, messageTime, senderIP, messageText):
-        self.messagePrependedSignal.emit(messageTime, [senderIP, messageText])
-        
-    def groupAppended(self, group, peer_groups):
-        self.groupAppendedSignal.emit(group, peer_groups)
-
-    def getNotificationCenter(self):
-        return self._notificationCenter
 
     def extendMemberInfo(self, infoDict):
         infoDict['pyqt_version'] = QtCore.PYQT_VERSION_STR
@@ -273,7 +249,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processLunchCall.emit(msg, addr)
         
     """ ----------------- CALLED ON MAIN THREAD -------------------"""
-
+    
     def notifyUpdates(self):
         self._updateAvailable = True
         self._updateMemberStatus()

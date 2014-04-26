@@ -1,5 +1,6 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import log_exception, get_settings, get_server
+from lunchinator import log_exception, get_settings, get_server,\
+    get_notification_center
 import urllib2,sys
     
 class members_table(iface_gui_plugin):
@@ -28,9 +29,9 @@ class members_table(iface_gui_plugin):
         
         self.timeoutTimer.timeout.disconnect(self.updateTimeoutsInMembersTables)
         self.timeoutTimer.stop()
-        get_server().controller.memberAppendedSignal.disconnect(self.membersModel.externalRowAppended)
-        get_server().controller.memberUpdatedSignal.disconnect(self.membersModel.externalRowUpdated)
-        get_server().controller.memberRemovedSignal.disconnect(self.membersModel.externalRowRemoved)
+        get_notification_center().disconnectMemberAppended(self.membersModel.externalRowAppended)
+        get_notification_center().disconnectMemberUpdated(self.membersModel.externalRowUpdated)
+        get_notification_center().disconnectMemberRemoved(self.membersModel.externalRowRemoved)
         self.membersTable = None
         self.membersModel = None
         self.membersProxyModel = None
@@ -58,9 +59,9 @@ class members_table(iface_gui_plugin):
         self.timeoutTimer.timeout.connect(self.updateTimeoutsInMembersTables)
         self.timeoutTimer.start(1000)  
         
-        get_server().controller.memberAppendedSignal.connect(self.membersModel.externalRowAppended)
-        get_server().controller.memberUpdatedSignal.connect(self.membersModel.externalRowUpdated)
-        get_server().controller.memberRemovedSignal.connect(self.membersModel.externalRowRemoved)
+        get_notification_center().connectMemberAppended(self.membersModel.externalRowAppended)
+        get_notification_center().connectMemberUpdated(self.membersModel.externalRowUpdated)
+        get_notification_center().connectMemberRemoved(self.membersModel.externalRowRemoved)
         
         return self.membersTable
     

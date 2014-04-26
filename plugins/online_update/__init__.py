@@ -1,4 +1,4 @@
-from lunchinator import get_server, log_warning
+from lunchinator import get_server, log_warning, get_notification_center
 from lunchinator.lunch_settings import lunch_settings
 from lunchinator.iface_plugins import iface_general_plugin
 from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
@@ -400,7 +400,7 @@ class online_update(iface_general_plugin):
             self._setChangelogVisible(True)
         
         if self._version_info["Commit Count"] > int(get_settings().get_commit_count()):
-            get_server().controller.notifyUpdates()
+            get_notification_center().emitApplicationUpdate()
             
             # check if we already downloaded this version before
             if not self._check_hash():

@@ -1,5 +1,6 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import log_exception, get_settings, get_server
+from lunchinator import log_exception, get_settings, get_server,\
+    get_notification_center
 import urllib2,sys
     
 class messages_table(iface_gui_plugin):
@@ -25,10 +26,10 @@ class messages_table(iface_gui_plugin):
     def destroy_widget(self):
         iface_gui_plugin.destroy_widget(self)
         
-        get_server().controller.messagePrependedSignal.disconnect(self.messagesModel.externalRowPrepended)
-        get_server().controller.memberAppendedSignal.disconnect(self.updateSendersInMessagesTable)
-        get_server().controller.memberUpdatedSignal.disconnect(self.updateSendersInMessagesTable)
-        get_server().controller.memberRemovedSignal.disconnect(self.updateSendersInMessagesTable)
+        get_notification_center().disconnectMessagePrepended(self.messagesModel.externalRowPrepended)
+        get_notification_center().disconnectMemberAppended(self.updateSendersInMessagesTable)
+        get_notification_center().disconnectMemberUpdated(self.updateSendersInMessagesTable)
+        get_notification_center().disconnectMemberRemoved(self.updateSendersInMessagesTable)
         self.messagesModel = None
         self.messagesProxyModel = None
         self.messagesTable = None
@@ -50,10 +51,10 @@ class messages_table(iface_gui_plugin):
         self.messagesProxyModel.setSourceModel(self.messagesModel)
         self.messagesTable.setModel(self.messagesProxyModel)
         
-        get_server().controller.messagePrependedSignal.connect(self.messagesModel.externalRowPrepended)
-        get_server().controller.memberAppendedSignal.connect(self.updateSendersInMessagesTable)
-        get_server().controller.memberUpdatedSignal.connect(self.updateSendersInMessagesTable)
-        get_server().controller.memberRemovedSignal.connect(self.updateSendersInMessagesTable)
+        get_notification_center().connectMessagePrepended(self.messagesModel.externalRowPrepended)
+        get_notification_center().connectMemberAppended(self.updateSendersInMessagesTable)
+        get_notification_center().connectMemberUpdated(self.updateSendersInMessagesTable)
+        get_notification_center().connectMemberRemoved(self.updateSendersInMessagesTable)
         
         return self.messagesTable
     
