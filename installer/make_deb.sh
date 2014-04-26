@@ -40,7 +40,25 @@ done
 if [ "$DEBFULLNAME" == "" ] || [ "$DEBEMAIL" == "" ]
 then
   echo "Please export DEBFULLNAME and DEBEMAIL to your environment."
-  exit -1
+  exit 1
+fi
+
+if ! type py2dsc &>/dev/null
+then
+  echo "Please install python-stdeb first."
+  exit 1
+fi
+
+if ! type dch &>/dev/null
+then
+  echo "Please install devscripts first."
+  exit 1
+fi
+
+if ! type lintian &>/dev/null
+then
+  echo "Please install lintian first."
+  exit 1
 fi
 
 source determine_version.sh
