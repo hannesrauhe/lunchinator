@@ -368,21 +368,17 @@ def stopWithCommand(args):
 def restart():
     """Tries to restart the Lunchinator"""
     
+    restartScript = get_settings().get_resource("bin", "restart.sh")
     args = None
     if getPlatform() == PLATFORM_MAC:
-        restartScript = get_settings().get_resource("bin", "restart.sh")
         # Git or Application bundle?
         bundlePath = getApplicationBundle()
         if bundlePath:
             args = [restartScript, str(os.getpid()), "open " + bundlePath]
     
     if args == None:
-        gitHandler = GitHandler()
         if getPlatform() in (PLATFORM_MAC, PLATFORM_LINUX):
-            if gitHandler.has_git():
-                args = [restartScript, str(os.getpid()), "nohup %s %s" % (sys.executable, " ".join(sys.argv))]
-            else:
-                log_error("Unsupported configuration. Cannot restart.")
+            args = [restartScript, str(os.getpid()), "%s %s" % (sys.executable, " ".join(sys.argv))]
         else:
             log_error("Restart not yet implemented for your OS.")
     

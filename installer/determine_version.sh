@@ -5,7 +5,7 @@ BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 if [ "$BRANCH" == "HEAD" ]
 then
   # detached state, get tag version
-  VERSION="$(git describe --tags)"
+  VERSION="$(git describe --tags --abbrev=0)"
   TAG=true
 else
   # building unstable version
