@@ -49,6 +49,18 @@ then
   exit 1
 fi
 
+VERS=$(python -c "from stdeb.util import PYTHON_ALL_MIN_VERS; print PYTHON_ALL_MIN_VERS")
+if [ $? -ne 0 ]
+then
+  echo "stdeb not installed correctly."
+  exit 1
+fi
+if [[ $VERS == 2.6.6* ]] || [[ $VERS == 2.7* ]]
+then
+  echo "stdeb has a too high python version hard coded (stdeb.util.PYTHON_ALL_MIN_VERS). The package will not work on Lucid."
+  exit 1
+fi
+
 if ! type dch &>/dev/null
 then
   echo "Please install devscripts first."
