@@ -24,6 +24,11 @@ function clean() {
     echo "Deleting ${f}"
     rm "$f"
   done
+  for f in $(osc st | grep '^M' | sed -e 's/^?\s*//')
+  do
+    echo "Reverting ${f}"
+    osc revert "$f"
+  done
   popd &>/dev/null
 }
 
