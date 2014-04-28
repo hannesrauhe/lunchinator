@@ -198,6 +198,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         get_settings().write_config_to_hd()
             
         self.exitCode = finalExitCode
+        # before exiting, process remaining events (e.g., pending messages like HELO_LEAVE)
+        QCoreApplication.processEvents()
         QCoreApplication.exit(finalExitCode)
         return finalExitCode
             
