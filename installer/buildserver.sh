@@ -63,8 +63,8 @@ then
 
   log "Building version $CUR_TAG"
 
-  log "executing './$1'"
-  if eval "./$1" 2>&1 | tee -a buildserver.log
+  log "executing './$1' --publish"
+  if eval "./$1 --publish" 2>&1 | tee -a buildserver.log
   then
     log "Successfully build version $CUR_TAG".
     echo "$CUR_TAG" >.last-tag
