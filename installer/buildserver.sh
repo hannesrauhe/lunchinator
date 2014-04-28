@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd $(dirname "$0")
+
 if [ $(uname) == "Darwin" ]
 then
   # ensure environment is fine (MacPorts and stuff)
@@ -11,29 +13,32 @@ function log() {
   echo "$@" | tee -a buildserver.log
 }
 
-log "---------- Starting build at $(date) ----------"
+function finish() {
+  log "---------- Finished build at $(date) ----------"
+  exit $1
+}
 
-cd $(dirname "$0")
+log "---------- Starting build at $(date) ----------"
 
 if [ "$1" == "" ]
 then
   log "No command provided. Aborting." 1>&2
-  exit 1
+  finish 1
 fi
 
 # update Git
 if ! git fetch
 then
   log "Fetch failed." 1>&2
-  exit 1
+  finish 1
 fi
 
 # get latest tag version
-CUR_TAG=$(git tag | head -n 1)
+CUR_TAG=$(git tag | tail -n 1)
 if [ $? != 0 ] || [ "$CUR_TAG" == "" ]
 then
   log "Could not determine latest tag version." 1>&2
-  exit 1
+  finish 1
 fi
 
 # get last build tag version
@@ -53,7 +58,7 @@ then
   if ! git checkout "$CUR_TAG"
   then
     log "Error checking out tag." 1>&2
-    exit 1
+    finish 1
   fi
 
   log "Building version $CUR_TAG"
@@ -71,4 +76,4 @@ else
   log "Versions identical, no need to build."
 fi
 
-log "---------- Finished build at $(date) ----------"
+finish 0
