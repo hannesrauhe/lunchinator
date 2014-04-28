@@ -140,6 +140,7 @@ class online_update(iface_general_plugin):
         widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         
         self._setInteractive(True)
+        self._updateChangeLog()
         
         return widget  
         
@@ -382,22 +383,7 @@ class online_update(iface_general_plugin):
         self._installer_url = self.getCheckURLBase() + self._version_info["URL"]
         self._local_installer_file = os.path.join(get_settings().get_main_config_dir(), self._installer_url.rsplit('/', 1)[1])
         
-        if u"Change Log" in self._version_info:
-            from PyQt4.QtGui import QTextCursor, QTextListFormat
-            self._changeLog.clear()
-            document = self._changeLog.document()
-            document.setIndentWidth(20)
-            cursor = QTextCursor(document)
-            
-            cursor.insertText("Changes:\n")
-        
-            listFormat = QTextListFormat()
-            listFormat.setStyle(QTextListFormat.ListDisc)
-            cursor.insertList(listFormat)
-        
-            log = json.loads(self._version_info[u"Change Log"])
-            cursor.insertText("\n".join(log))
-            self._setChangelogVisible(True)
+        self._updateChangeLog()
         
         if self._version_info["Commit Count"] > int(get_settings().get_commit_count()):
             get_server().controller.notifyUpdates()
@@ -415,6 +401,27 @@ class online_update(iface_general_plugin):
         else:
             self._set_status("No new version available")
         
+    def _updateChangeLog(self):
+        if self._changeLog == None:
+            return
+        
+        if u"Change Log" in self._version_info:
+            from PyQt4.QtGui import QTextCursor, QTextListFormat
+            self._changeLog.clear()
+            document = self._changeLog.document()
+            document.setIndentWidth(20)
+            cursor = QTextCursor(document)
+            
+            cursor.insertText("Changes:\n")
+        
+            listFormat = QTextListFormat()
+            listFormat.setStyle(QTextListFormat.ListDisc)
+            cursor.insertList(listFormat)
+        
+            log = json.loads(self._version_info[u"Change Log"])
+            cursor.insertText("\n".join(log))
+            self._setChangelogVisible(True)
+    
     def installer_downloaded(self, thread):
         try:
             # close the file object that keeps the downloaded data
