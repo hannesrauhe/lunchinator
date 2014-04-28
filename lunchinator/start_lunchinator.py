@@ -141,6 +141,7 @@ def startLunchinator():
         try:
             from lunchinator import lunch_cli
             get_server().set_plugins_enabled(usePlugins)
+            get_server().set_has_gui(False)
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
         except:
@@ -152,6 +153,7 @@ def startLunchinator():
         
     #    sys.settrace(trace)
         get_server().set_plugins_enabled(usePlugins)
+        get_server().set_has_gui(False)
         get_server().start_server()
         sys.exit(get_server().exitCode)
     else:    
