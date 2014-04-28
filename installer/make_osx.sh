@@ -55,8 +55,6 @@ EOF
 echo "*** copying python code into bundle ***"
 cp -r ../bin ../images ../lunchinator ../plugins ../sounds ../start_lunchinator.py  dist/Lunchinator.app/Contents
 cp $(which terminal-notifier) dist/Lunchinator.app/Contents/bin
-mkdir dist/Lunchinator.app/Contents/gnupg
-cp $(which gpg) dist/Lunchinator.app/Contents/gnupg
 
 echo "*** Creating tarball ***"
 cd dist
