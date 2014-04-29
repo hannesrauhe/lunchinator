@@ -30,14 +30,11 @@ fileToSign.close()
 fileHash = md.hexdigest()
 logging.info("Hash is %s" % fileHash)
 
-gitHandler = GitHandler()
-commitCount = gitHandler.getCommitCount(path=path)
-if not commitCount:
-    logging.error("Could not determine commit count.")
-    sys.exit(1)
 # commit count is actually version string
 versionString = lunch_settings.get_singleton_instance().get_commit_count()
+commitCount = versionString.split('.')[-1]
 
+gitHandler = GitHandler()
 changeLog = gitHandler.getLatestChangeLog(path=path)
 if changeLog:
     changeLog = json.dumps(changeLog)
