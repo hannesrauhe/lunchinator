@@ -87,6 +87,7 @@ do
   export dist
   rm -rf dist deb_${dist}
   pushd ..
+  export __isubuntu=1 #make sure setup.py builds for ubuntu
   python setup.py sdist --dist-dir=installer/dist
   popd
   py2dsc --suite=${dist} --dist-dir=deb_${dist} dist/Lunchinator*
