@@ -39,8 +39,9 @@ def displayNotification(name,msg,icon=None):
             subprocess.call(["notify-send","--icon="+icon, name, msg])
         elif myPlatform == PLATFORM_MAC:
             fh = open(os.path.devnull,"w")
-            exe = getBinary("terminal-notifier")
+            exe = getBinary("terminal-notifier", "bin")
             if not exe:
+                log_warning("terminal-notifier not found.")
                 return
             
             call = [exe, "-title", "Lunchinator: %s" % name, "-message", msg]

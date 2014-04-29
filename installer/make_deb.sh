@@ -45,7 +45,13 @@ fi
 
 if ! type py2dsc &>/dev/null
 then
-  echo "Please install python-stdeb first."
+  echo "Please install python-stdeb first, using pip. Do NOT install it via aptitude!"
+  exit 1
+fi
+
+if python -c "from stdeb.util import PYTHON_ALL_MIN_VERS; print PYTHON_ALL_MIN_VERS" &>/dev/null
+then
+  echo "Please uninstall python-stdeb via aptitude and install it via pip."
   exit 1
 fi
 

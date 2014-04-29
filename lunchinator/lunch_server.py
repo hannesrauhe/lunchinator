@@ -33,6 +33,7 @@ class lunch_server(object):
         self.controller = None
         self.initialized = False
         self._load_plugins = True
+        self._has_gui = True
         self.running = False
         self.update_request = False
         self.new_msg = False
@@ -212,7 +213,10 @@ class lunch_server(object):
         if 0 == len(target):
             log_error("Cannot send message, no peers connected, no peer found in _members file")
             
-        if get_settings().get_warn_if_members_not_ready() and not msg.startswith(u"HELO") and get_settings().get_lunch_trigger().upper() in msg.upper():
+        if self.has_gui() and \
+           get_settings().get_warn_if_members_not_ready() and \
+           not msg.startswith(u"HELO") and \
+           get_settings().get_lunch_trigger().upper() in msg.upper():
             # check if everyone is ready
             notReadyMembers = set()
             self.lockMembers()
@@ -343,6 +347,12 @@ class lunch_server(object):
     
     def set_plugins_enabled(self, enable):
         self._load_plugins = enable
+        
+    def has_gui(self):
+        return self._has_gui
+    
+    def set_has_gui(self, enable):
+        self._has_gui = enable
     
     def get_peer_info(self):  
         return self._peer_info   
@@ -550,7 +560,7 @@ class lunch_server(object):
                    u"group": get_settings().get_group(),
                    u"next_lunch_begin":get_settings().get_next_lunch_begin(),
                    u"next_lunch_end":get_settings().get_next_lunch_end(),
-                   u"version":get_settings().get_version_short(),
+                   u"version":get_settings().get_version(),
                    u"version_commit_count":get_settings().get_commit_count(),
                    u"version_commit_count_plugins":get_settings().get_commit_count_plugins(),
                    u"platform": sys.platform}

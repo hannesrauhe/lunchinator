@@ -33,7 +33,11 @@ class rot13(iface_gui_plugin):
         
         args = LunchCLIModule.getArguments(args)
         for aString in args:
-            print string.translate(aString, rot13)
+            try:
+                aString = aString.encode("utf-8")
+                print string.translate(aString, rot13)
+            except:
+                log_exception("Error encrypting string:", aString)
         
     def add_menu(self,menu):
         pass

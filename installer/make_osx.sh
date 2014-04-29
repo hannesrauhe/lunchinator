@@ -46,7 +46,8 @@ rm -rf build/ dist/
 echo "*** Building Application Bundle ***"
 pyinstaller -y -F -w lunchinator_osx.spec
 
-git rev-list HEAD --count > dist/Lunchinator.app/Contents/version
+cp ../version dist/Lunchinator.app/Contents
+git rev-list HEAD --count > dist/Lunchinator.app/Contents/commit_count
 cat > dist/Lunchinator.app/Contents/Resources/qt.conf <<EOF
 [paths]
 Plugins=MacOS/qt4_plugins
@@ -54,9 +55,7 @@ EOF
 
 echo "*** copying python code into bundle ***"
 cp -r ../bin ../images ../lunchinator ../plugins ../sounds ../start_lunchinator.py  dist/Lunchinator.app/Contents
-cp $(which terminal-notifier) dist/Lunchinator.app/Contents
-mkdir dist/Lunchinator.app/Contents/gnupg
-cp $(which gpg) dist/Lunchinator.app/Contents/gnupg
+cp $(which terminal-notifier) dist/Lunchinator.app/Contents/bin
 
 echo "*** Creating tarball ***"
 cd dist

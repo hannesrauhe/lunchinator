@@ -10,7 +10,8 @@ class simple_view(iface_gui_plugin):
         iface_gui_plugin.activate(self)
         
     def deactivate(self):
-        self.w.finish()
+        if self.w != None:
+            self.w.finish()
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):

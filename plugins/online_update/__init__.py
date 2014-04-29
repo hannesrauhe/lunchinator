@@ -110,7 +110,7 @@ class online_update(iface_general_plugin):
         layout = QVBoxLayout(widget)
         
         # now add the new stuff
-        versionLabel = QLabel("Installed Version: " + get_settings().get_commit_count())
+        versionLabel = QLabel("Installed Version: " + get_settings().get_version())
         layout.addWidget(versionLabel, 0)
         
         self._statusLabel = QLabel("Status: " + self._status_holder)
@@ -140,6 +140,7 @@ class online_update(iface_general_plugin):
         widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         
         self._setInteractive(True)
+        self._updateChangeLog()
         
         return widget  
         
@@ -329,14 +330,17 @@ class online_update(iface_general_plugin):
             self._set_status("Installer Hash wrong %s!=%s" % (fileHash, self._version_info["Installer Hash"]), True)
             return False
             
-        self._set_status("New version %d downloaded, ready to install" % self._version_info["Commit Count"])
+        self._set_status("New version %s downloaded, ready to install" % self._getDownloadedVersion())
         self._install_ready = True
         if self._installButton:
             self._installButton.setEnabled(self._install_ready)
         displayNotification("New Version Available", "Install via Update Plugin")
             
         return True
-        
+    
+    def _getDownloadedVersion(self):
+        if self._version_info != None:
+            return self._version_info[u"Version String"] if u"Version String" in self._version_info else self._version_info["Commit Count"]
         
     def version_info_downloaded(self, thread):
         try:
@@ -382,7 +386,33 @@ class online_update(iface_general_plugin):
         self._installer_url = self.getCheckURLBase() + self._version_info["URL"]
         self._local_installer_file = os.path.join(get_settings().get_main_config_dir(), self._installer_url.rsplit('/', 1)[1])
         
-        if u"Change Log" in self._version_info:
+        self._updateChangeLog()
+        
+        if self._hasNewVersion():
+            get_notification_center().emitApplicationUpdate()
+            
+            # check if we already downloaded this version before
+            if not self._check_hash():
+                self._set_status("New Version %s available, Downloading ..." % (self._getDownloadedVersion()), progress=True)
+                
+                installer_download = DownloadThread(getValidQtParent(), self._installer_url, target=open(self._local_installer_file, "wb"), progress=True)
+                installer_download.progressChanged.connect(self._downloadProgressChanged)
+                installer_download.success.connect(self.installer_downloaded)
+                installer_download.error.connect(self.error_while_downloading)
+                installer_download.finished.connect(installer_download.deleteLater)
+                installer_download.start()
+        else:
+            self._set_status("No new version available")
+        
+    def _hasNewVersion(self):
+        return self._version_info != None and \
+               self._version_info["Commit Count"] > int(get_settings().get_commit_count())
+    
+    def _updateChangeLog(self):
+        if self._changeLog == None:
+            return
+        
+        if self._hasNewVersion() and u"Change Log" in self._version_info:
             from PyQt4.QtGui import QTextCursor, QTextListFormat
             self._changeLog.clear()
             document = self._changeLog.document()
@@ -398,23 +428,7 @@ class online_update(iface_general_plugin):
             log = json.loads(self._version_info[u"Change Log"])
             cursor.insertText("\n".join(log))
             self._setChangelogVisible(True)
-        
-        if self._version_info["Commit Count"] > int(get_settings().get_commit_count()):
-            get_notification_center().emitApplicationUpdate()
-            
-            # check if we already downloaded this version before
-            if not self._check_hash():
-                self._set_status("New Version %d available, Downloading ..." % (self._version_info["Commit Count"]), progress=True)
-                
-                installer_download = DownloadThread(getValidQtParent(), self._installer_url, target=open(self._local_installer_file, "wb"), progress=True)
-                installer_download.progressChanged.connect(self._downloadProgressChanged)
-                installer_download.success.connect(self.installer_downloaded)
-                installer_download.error.connect(self.error_while_downloading)
-                installer_download.finished.connect(installer_download.deleteLater)
-                installer_download.start()
-        else:
-            self._set_status("No new version available")
-        
+    
     def installer_downloaded(self, thread):
         try:
             # close the file object that keeps the downloaded data
