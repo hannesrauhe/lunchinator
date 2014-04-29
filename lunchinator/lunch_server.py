@@ -560,7 +560,7 @@ class lunch_server(object):
                    u"group": get_settings().get_group(),
                    u"next_lunch_begin":get_settings().get_next_lunch_begin(),
                    u"next_lunch_end":get_settings().get_next_lunch_end(),
-                   u"version":get_settings().get_version_short(),
+                   u"version":get_settings().get_version(),
                    u"version_commit_count":get_settings().get_commit_count(),
                    u"version_commit_count_plugins":get_settings().get_commit_count_plugins(),
                    u"platform": sys.platform}

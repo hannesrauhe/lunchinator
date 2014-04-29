@@ -110,7 +110,7 @@ class online_update(iface_general_plugin):
         layout = QVBoxLayout(widget)
         
         # now add the new stuff
-        versionLabel = QLabel("Installed Version: " + get_settings().get_commit_count())
+        versionLabel = QLabel("Installed Version: " + get_settings().get_version())
         layout.addWidget(versionLabel, 0)
         
         self._statusLabel = QLabel("Status: " + self._status_holder)
@@ -330,14 +330,17 @@ class online_update(iface_general_plugin):
             self._set_status("Installer Hash wrong %s!=%s" % (fileHash, self._version_info["Installer Hash"]), True)
             return False
             
-        self._set_status("New version %d downloaded, ready to install" % self._version_info["Commit Count"])
+        self._set_status("New version %s downloaded, ready to install" % self._getDownloadedVersion())
         self._install_ready = True
         if self._installButton:
             self._installButton.setEnabled(self._install_ready)
         displayNotification("New Version Available", "Install via Update Plugin")
             
         return True
-        
+    
+    def _getDownloadedVersion(self):
+        if self._version_info != None:
+            return self._version_info[u"Version"] if u"Version" in self._version_info else self._version_info["Commit Count"]
         
     def version_info_downloaded(self, thread):
         try:
@@ -390,7 +393,7 @@ class online_update(iface_general_plugin):
             
             # check if we already downloaded this version before
             if not self._check_hash():
-                self._set_status("New Version %d available, Downloading ..." % (self._version_info["Commit Count"]), progress=True)
+                self._set_status("New Version %s available, Downloading ..." % (self._getDownloadedVersion()), progress=True)
                 
                 installer_download = DownloadThread(getValidQtParent(), self._installer_url, target=open(self._local_installer_file, "wb"), progress=True)
                 installer_download.progressChanged.connect(self._downloadProgressChanged)
@@ -404,7 +407,7 @@ class online_update(iface_general_plugin):
     def _hasNewVersion(self):
         return self._version_info != None and \
                self._version_info["Commit Count"] > int(get_settings().get_commit_count())
-        
+    
     def _updateChangeLog(self):
         if self._changeLog == None:
             return

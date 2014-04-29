@@ -46,7 +46,8 @@ rm -rf build/ dist/
 echo "*** Building Application Bundle ***"
 pyinstaller -y -F -w lunchinator_osx.spec
 
-git rev-list HEAD --count > dist/Lunchinator.app/Contents/version
+cp ../version dist/Lunchinator.app/Contents
+git rev-list HEAD --count > dist/Lunchinator.app/Contents/commit_count
 cat > dist/Lunchinator.app/Contents/Resources/qt.conf <<EOF
 [paths]
 Plugins=MacOS/qt4_plugins

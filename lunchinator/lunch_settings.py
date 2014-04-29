@@ -41,8 +41,7 @@ class lunch_settings(object):
         self._messages_file = self.get_config("messages")
         self._log_file = self.get_config("lunchinator.log")
         self._avatar_dir = self.get_config("avatars")
-        self._version = u"unknown"
-        self._version_short = u"unknown"
+        self._version = None
         self._commit_count = None
         self._commit_count_plugins = "-1"
         self._main_package_path = self._findMainPackagePath()
@@ -178,17 +177,25 @@ class lunch_settings(object):
     def get_messages_file(self):
         return self._messages_file
     
-    def get_version_short(self):
-        return self._version_short
-    
-    def get_commit_count(self):
-        if not self._commit_count:
-            from lunchinator.git import GitHandler
+    def get_version(self):
+        if not self._version:
             try:
                 version_file = self.get_resource("version")
                 with contextlib.closing(open(version_file, "r")) as vfh:
-                    self._commit_count = vfh.read().strip()
+                    self._version = vfh.read().strip()
             except Exception:
+                self._version = u"unknown"
+                
+        return self._version
+    
+    def get_commit_count(self):
+        if not self._commit_count:
+            try:
+                version_file = self.get_resource("commit_count")
+                with contextlib.closing(open(version_file, "r")) as vfh:
+                    self._commit_count = vfh.read().strip()
+            except:
+                from lunchinator.git import GitHandler
                 gitHandler = GitHandler()
                 if gitHandler.has_git():
                     commit_count = gitHandler.getCommitCount()
