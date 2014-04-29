@@ -1,4 +1,6 @@
-git rev-list HEAD --count > ..\\version
+for /f "tokens=*" %%a in ('git describe --tags --abbrev^=0') do set tagname=%varText%%%a
+for /f "tokens=*" %%a in ('git rev-list HEAD --count') do set commitcount=%varText%%%a
+echo %tagname%.%commitcount% > ..\\version
 
 C:\\Python27\\scripts\\pyinstaller.exe -y -F -w lunchinator.spec
 
