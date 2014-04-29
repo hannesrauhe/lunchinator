@@ -385,7 +385,7 @@ class online_update(iface_general_plugin):
         
         self._updateChangeLog()
         
-        if self._version_info["Commit Count"] > int(get_settings().get_commit_count()):
+        if self._hasNewVersion():
             get_server().controller.notifyUpdates()
             
             # check if we already downloaded this version before
@@ -401,11 +401,15 @@ class online_update(iface_general_plugin):
         else:
             self._set_status("No new version available")
         
+    def _hasNewVersion(self):
+        return self._version_info != None and \
+               self._version_info["Commit Count"] > int(get_settings().get_commit_count())
+        
     def _updateChangeLog(self):
         if self._changeLog == None:
             return
         
-        if u"Change Log" in self._version_info:
+        if self._hasNewVersion() and u"Change Log" in self._version_info:
             from PyQt4.QtGui import QTextCursor, QTextListFormat
             self._changeLog.clear()
             document = self._changeLog.document()
