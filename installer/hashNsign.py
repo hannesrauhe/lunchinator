@@ -39,7 +39,7 @@ if changeLog:
     changeLog = json.dumps(changeLog)
 
 # create signed version.asc
-versionInfo = ["Version: " + versionString,
+versionInfo = ["Version String: " + versionString,
                "Commit Count: " + commitCount,
                "Installer Hash: " + fileHash,
                "URL: %s/%s" % (versionString, os.path.basename(fileToSign.name))]

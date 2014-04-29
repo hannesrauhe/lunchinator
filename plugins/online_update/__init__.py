@@ -340,7 +340,7 @@ class online_update(iface_general_plugin):
     
     def _getDownloadedVersion(self):
         if self._version_info != None:
-            return self._version_info[u"Version"] if u"Version" in self._version_info else self._version_info["Commit Count"]
+            return self._version_info[u"Version String"] if u"Version String" in self._version_info else self._version_info["Commit Count"]
         
     def version_info_downloaded(self, thread):
         try:
