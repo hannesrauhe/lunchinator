@@ -41,7 +41,7 @@ class GitHandler(object):
     def getLatestChangeLog(self, path=None):
         try:
             tags = self.getGitCommantOutput(["tag"], path=path)
-            rev = self.getGitCommantOutput(["rev-parse", tags.split("\n")[0]], path=path)
+            rev = self.getGitCommantOutput(["rev-parse", tags.split("\n")[-1]], path=path)
             out = self.getGitCommantOutput(["cat-file", "-p", rev], path=path)
             return out.split("\n")[5:]
         except:
