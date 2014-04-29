@@ -30,8 +30,7 @@ fileToSign.close()
 fileHash = md.hexdigest()
 logging.info("Hash is %s" % fileHash)
 
-# commit count is actually version string
-versionString = lunch_settings.get_singleton_instance().get_commit_count()
+versionString = lunch_settings.get_singleton_instance().get_version()
 commitCount = versionString.split('.')[-1]
 
 gitHandler = GitHandler()
