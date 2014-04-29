@@ -53,7 +53,14 @@ log "Latest built tag: $PREV_TAG"
 # check if there is a new tag
 if [ "$CUR_TAG" != "$PREV_TAG" ]
 then
-  PREV_BRANCH=$(git symbolic-ref -q HEAD | cut -f 3 -d /)
+  PREV_BRANCH="$(git symbolic-ref -q HEAD | cut -f 3 -d /)"
+
+  function handler() {
+    log "SIGINT caught, checking out $PREV_BRANCH"
+    git checkout "$PREV_BRANCH"
+  }
+  trap handler SIGINT
+
   log "Checking out $CUR_TAG"
   if ! git checkout "$CUR_TAG"
   then
