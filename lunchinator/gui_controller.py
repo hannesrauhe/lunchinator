@@ -14,7 +14,7 @@ from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
-    getValidQtParent, restart
+    getValidQtParent
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 
 class LunchServerThread(QThread):
@@ -350,9 +350,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         anAction.triggered.connect(self.openSettingsClicked)
         
         menu.addMenu(plugin_menu)
-        
-        anAction = menu.addAction("Restart")
-        anAction.triggered.connect(restart)
         
         anAction = menu.addAction('Exit')
         anAction.triggered.connect(self.quitClicked)
