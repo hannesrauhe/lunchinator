@@ -2,7 +2,7 @@
 import sys, sip
 from lunchinator import get_server, log_exception, log_info, get_settings, \
     log_error, convert_string, log_warning, get_notification_center
-import socket, os, time, subprocess
+import socket, os, subprocess
 import platform
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor,\
     QDialog
@@ -49,13 +49,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.resetNextLunchTimeTimer = None
         self.isIconHighlighted = True  # set to True s.t. first dehighlight can set the default icon
         self._updateAvailable = False
+        self._installUpdatesAction = None
         
         self.exitCode = 0
         self.serverThread = None
         self.running = True
         get_server().initialize(self)
-        
-        NotificationCenter.setSingletonInstance(NotificationCenterQt(self))
         
         self.pluginNameToMenuAction = {}
         
@@ -70,6 +69,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.mainWindow.createMenuBar(self.pluginActions)
         
         get_notification_center().connectApplicationUpdate(self.notifyUpdates)
+        get_notification_center().connectRepositoryUpdate(self.notifyUpdates)
         
         # connect private signals
         self._initDone.connect(self.initDoneSlot)
@@ -88,6 +88,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.serverThread.finished.connect(self.serverFinishedUnexpectedly)
         self.serverThread.finished.connect(self.serverThread.deleteLater)
         self.serverThread.start()
+        
+    def _initNotificationCenter(self):
+        NotificationCenter.setSingletonInstance(NotificationCenterQt(self))
         
     def highlightIcon(self):
         if self.isIconHighlighted:
@@ -253,6 +256,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     """ ----------------- CALLED ON MAIN THREAD -------------------"""
     
     def notifyUpdates(self):
+        if self._installUpdatesAction != None:
+            self._installUpdatesAction.setVisible(True)
         self._updateAvailable = True
         self._updateMemberStatus()
     
@@ -332,6 +337,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
         anAction.triggered.connect(self.openSettingsClicked)
         
         menu.addMenu(plugin_menu)
+        
+        self._installUpdatesAction = menu.addAction("Install Updates and Relaunch")
+        self._installUpdatesAction.triggered.connect(get_notification_center().emitInstallUpdates)
+        self._installUpdatesAction.setVisible(self._updateAvailable)
         
         anAction = menu.addAction('Exit')
         anAction.triggered.connect(self.quitClicked)

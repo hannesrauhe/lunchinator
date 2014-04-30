@@ -7,6 +7,9 @@ from lunchinator.notification_center import NotificationCenter
 class LunchServerController(object):
     def __init__(self):
         super(LunchServerController, self).__init__()
+        self._initNotificationCenter()
+        
+    def _initNotificationCenter(self):
         NotificationCenter.setSingletonInstance(NotificationCenter())
         
     def initDone(self):

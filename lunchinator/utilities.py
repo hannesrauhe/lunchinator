@@ -5,8 +5,7 @@ import os
 import threading
 import contextlib
 from datetime import datetime
-from lunchinator.git import GitHandler
-import lunchinator
+import json
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -353,35 +352,61 @@ def getApplicationBundle():
     if path == None or not os.path.exists(os.path.join(path, "Contents", "MacOS", "Lunchinator")):
         return None
     return path
-    
-def stopWithCommand(args):
-    from lunchinator import get_server
+
+def spawnProcess(args):
     if getPlatform() in (PLATFORM_LINUX, PLATFORM_MAC):
         #somehow fork() is not safe on Mac OS. I guess this will do fine on Linux, too. 
         subprocess.Popen(['nohup'] + args, close_fds=True)
-        get_server().call("HELO_STOP restart", client="127.0.0.1")
     elif getPlatform() == PLATFORM_WINDOWS:
         subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
-        get_server().call("HELO_STOP restart", client="127.0.0.1")
     else:
-        log_error("Restart not yet implemented for your OS.")
-    
-def restart():
-    """Tries to restart the Lunchinator"""
-    
-    restartScript = get_settings().get_resource("bin", "restart.sh")
-    args = None
+        raise NotImplementedError("Process spawning not implemented for your OS.")
+
+def _getStartCommand():
     if getPlatform() == PLATFORM_MAC:
         # Git or Application bundle?
         bundlePath = getApplicationBundle()
         if bundlePath:
-            args = [restartScript, str(os.getpid()), "open " + bundlePath]
+            return ["open", bundlePath]
     
-    if args == None:
-        if getPlatform() in (PLATFORM_MAC, PLATFORM_LINUX):
-            args = [restartScript, str(os.getpid()), "%s %s" % (sys.executable, " ".join(sys.argv))]
-        else:
-            log_error("Restart not yet implemented for your OS.")
+    if getPlatform() in (PLATFORM_MAC, PLATFORM_LINUX):
+        args = ["nohup", sys.executable]
+        args.extend(sys.argv)
+        return args
+    elif getPlatform() == PLATFORM_WINDOWS:
+        return ["pythonw", os.path.join(get_settings().get_main_package_path(), "start_lunchinator.py")]
+    else:
+        log_error("Restart not yet implemented for your OS.")
+            
+    return None
     
-    if args != None:
-        stopWithCommand(args)
+def _getPythonInterpreter():
+    if getPlatform() == PLATFORM_WINDOWS:
+        return "pythonw"
+    return which("python")
+    
+def restartWithCommands(commands):
+    """
+    Restart Lunchinator and execute commands in background while it is stopped.
+    commands: lunchinator.commands.Commands instance
+    """
+    from lunchinator import get_server
+    try:
+        startCmd = _getStartCommand()
+        args = [_getPythonInterpreter(), get_settings().get_resource("bin", "restart.py"),
+                "--lunchinator-path", get_settings().get_main_package_path(),
+                "--start-cmd", json.dumps(startCmd),
+                "--pid", str(os.getpid())]
+        if commands != None:
+            args.extend(["--commands", commands.toString()])
+        
+        spawnProcess(args)
+        
+        get_server().call("HELO_STOP restart", client="127.0.0.1")
+    except:
+        log_exception("Error in stopWithCommands")
+    
+def restart():
+    """Restarts the Lunchinator"""
+    restartWithCommands(None)
+

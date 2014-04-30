@@ -207,9 +207,8 @@ class lunch_settings(object):
                     self._commit_count = vfh.read().strip()
             except:
                 from lunchinator.git import GitHandler
-                gitHandler = GitHandler()
-                if gitHandler.has_git():
-                    commit_count = gitHandler.getCommitCount()
+                if GitHandler.hasGit():
+                    commit_count = GitHandler.getCommitCount()
                     if commit_count:
                         self._commit_count = commit_count
                 else:

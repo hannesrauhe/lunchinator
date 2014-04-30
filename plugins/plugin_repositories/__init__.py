@@ -1,18 +1,8 @@
-from lunchinator import get_server, log_warning, convert_string,\
-    get_notification_center
-from lunchinator.lunch_settings import lunch_settings
-from lunchinator.iface_plugins import iface_general_plugin
-from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
-from lunchinator.utilities import getValidQtParent, displayNotification, \
-    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, PLATFORM_LINUX, which,\
-    getApplicationBundle, stopWithCommand
-from lunchinator.download_thread import DownloadThread
-from lunchinator.shell_thread import ShellThread
-import urllib2, sys, os, contextlib, subprocess, json
-import tempfile
+import os
 from functools import partial
-from xml.etree import ElementTree
-from online_update.gitUpdate import gitUpdate
+from lunchinator import convert_string, get_notification_center, get_settings
+from lunchinator.iface_plugins import iface_general_plugin
+from lunchinator.utilities import getValidQtParent
 from lunchinator.git import GitHandler
 from lunchinator.callables import AsyncCall
     
@@ -26,21 +16,14 @@ class plugin_repositories(iface_general_plugin):
     def __init__(self):
         super(plugin_repositories, self).__init__()
         self._modified = False
-    
-    def activate(self):
-        from PyQt4.QtCore import QTimer
-            
-        self._scheduleTimer = QTimer(getValidQtParent())
-        self._scheduleTimer.timeout.connect(self._checkForUpdates)
-        self._scheduleTimer.start(plugin_repositories.CHECK_INTERVAL)
+        self._reposTable = None
         
-        self._checkForUpdates()
+    def activate(self):
+        iface_general_plugin.activate(self)
+        get_notification_center().connectRepositoryUpdate(self._processUpdates)
         
     def deactivate(self):
-        if self._scheduleTimer != None:
-            self._scheduleTimer.stop()
-            self._scheduleTimer.deleteLater()
-        
+        get_notification_center().disconnectRepositoryUpdate(self._processUpdates)
         iface_general_plugin.deactivate(self)
         
     def create_options_widget(self, parent):
@@ -85,7 +68,6 @@ class plugin_repositories(iface_general_plugin):
         self._reposTable.resizeColumnToContents(self.AUTO_UPDATE_COLUMN)
         self._reposTable.setColumnWidth(self.PATH_COLUMN, 150)
         
-        get_notification_center().registerRepositoryUpdate(self._processUpdates)
         return widget  
     
     def _selectionChanged(self, _sel, _desel):
@@ -143,8 +125,7 @@ class plugin_repositories(iface_general_plugin):
         autoUpdateItem = QStandardItem()
         autoUpdateItem.setEditable(False)
         if canAutoUpdate == None:
-            gitHandler = GitHandler()
-            canAutoUpdate = gitHandler.has_git(path)
+            canAutoUpdate = GitHandler.hasGit(path)
         if canAutoUpdate:
             autoUpdateItem.setCheckState(Qt.Checked if autoUpdate else Qt.Unchecked)
             autoUpdateItem.setCheckable(True)
@@ -159,20 +140,17 @@ class plugin_repositories(iface_general_plugin):
         for index in selection:
             self._reposModel.removeRow(index.row())
         
-    def _checkForUpdatesFinished(self, outdated):
-        if len(outdated) > 0:
-            get_notification_center().emitRepositoryUpdate()
-        
     def _processUpdates(self):
-        from PyQt4.QtCore import Qt
-        for row in xrange(self._reposModel.rowCount()):
-            path = convert_string(self._reposModel.item(row, self.PATH_COLUMN).data(Qt.DisplayRole).toString())
-            self._updateStatusItem(self._reposModel.item(row, self.STATUS_COLUMN), path)
+        if self._reposTable != None:
+            from PyQt4.QtCore import Qt
+            for row in xrange(self._reposModel.rowCount()):
+                path = convert_string(self._reposModel.item(row, self.PATH_COLUMN).data(Qt.DisplayRole).toString())
+                self._updateStatusItem(self._reposModel.item(row, self.STATUS_COLUMN), path)
         
     def _checkForUpdates(self, forced=False):
+        # TODO error callback
         AsyncCall(getValidQtParent(),
-                  get_settings().get_plugin_repositories().checkForUpdates,
-                  self._checkForUpdatesFinished)(forced)
+                  get_settings().get_plugin_repositories().checkForUpdates)(forced)
         
     def discard_changes(self):
         self._initRepositories()

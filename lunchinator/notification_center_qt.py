@@ -3,13 +3,13 @@ import time
 
 class NotificationCenterQt(QObject):
     
-    _signalRepositoryUpdate = pyqtSignal()
+    _signalRepositoryUpdate = pyqtSignal(set)
     def connectRepositoryUpdate(self, callback):
         self._signalRepositoryUpdate.connect(callback)
     def disconnectRepositoryUpdate(self, callback):
         self._signalRepositoryUpdate.disconnect(callback)
-    def emitRepositoryUpdate(self):
-        self._signalRepositoryUpdate.emit()
+    def emitRepositoryUpdate(self, outdated):
+        self._signalRepositoryUpdate.emit(outdated)
 
     _signalApplicationUpdate = pyqtSignal()
     def connectApplicationUpdate(self, callback):
@@ -18,6 +18,14 @@ class NotificationCenterQt(QObject):
         self._signalApplicationUpdate.disconnect(callback)
     def emitApplicationUpdate(self):
         self._signalApplicationUpdate.emit()
+        
+    _signalInstallUpdate = pyqtSignal()
+    def connectInstallUpdates(self, callback):
+        self._signalInstallUpdate.connect(callback)
+    def disconnectInstallUpdates(self, callback):
+        self._signalInstallUpdate.disconnect(callback)
+    def emitInstallUpdates(self):
+        self._signalInstallUpdate.emit()
     
     _signalPeerAppended = pyqtSignal(unicode)
     def connectPeerAppended(self, callback):

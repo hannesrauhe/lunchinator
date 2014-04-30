@@ -112,6 +112,9 @@ def log_info(*s):
 def log_debug(*s):
     _get_logger().debug(_generate_string(*s))
 
+def get_notification_center():
+    return NotificationCenter.getSingletonInstance()
+
 import lunch_settings
 
 def get_settings():
@@ -122,9 +125,6 @@ def get_lunchinator_dir():
 
 def get_plugin_dirs():
     return get_settings().get_plugin_dirs()
-
-def get_notification_center():
-    return NotificationCenter.getSingletonInstance()
 
 import lunch_server
 

@@ -33,8 +33,7 @@ logging.info("Hash is %s" % fileHash)
 versionString = lunch_settings.get_singleton_instance().get_version()
 commitCount = versionString.split('.')[-1]
 
-gitHandler = GitHandler()
-changeLog = gitHandler.getLatestChangeLog(path=path)
+changeLog = GitHandler.getLatestChangeLog(path=path)
 if changeLog:
     changeLog = json.dumps(changeLog)
 

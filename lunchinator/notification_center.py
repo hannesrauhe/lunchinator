@@ -24,6 +24,9 @@ class NotificationCenter(object):
     
     @classmethod
     def getSingletonInstance(cls):
+        if cls._instance == None:
+            # fallback if it was not set from outside
+            cls._instance = NotificationCenter()
         return cls._instance
     
     @classmethod
@@ -60,7 +63,7 @@ class NotificationCenter(object):
     def disconnectRepositoryUpdate(self, callback):
         pass
     @_emitFunc
-    def emitRepositoryUpdate(self):
+    def emitRepositoryUpdate(self, outdated):
         pass
     
     @_connectFunc
@@ -71,6 +74,16 @@ class NotificationCenter(object):
         pass
     @_emitFunc
     def emitApplicationUpdate(self):
+        pass
+    
+    @_connectFunc
+    def connectInstallUpdates(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectInstallUpdates(self, callback):
+        pass
+    @_emitFunc
+    def emitInstallUpdates(self):
         pass
     
     @_connectFunc

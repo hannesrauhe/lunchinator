@@ -105,8 +105,7 @@ class AddRepoDialog(QDialog):
             self._setPath(path)
         
     def _checkPath(self):
-        gitHandler = GitHandler()
-        self._canAutoUpdate = gitHandler.has_git(self.getPath())
+        self._canAutoUpdate = GitHandler.hasGit(self.getPath())
         
         self.autoUpdateCheckBox.setEnabled(self._canAutoUpdate)
         if not self._canAutoUpdate:

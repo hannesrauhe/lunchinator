@@ -1,6 +1,7 @@
 from threading import Lock
 from copy import deepcopy
 from git import GitHandler
+from lunchinator import get_notification_center
 
 class PluginRepositories(object):
     def __init__(self, internalDir, externalRepos):
@@ -25,7 +26,7 @@ class PluginRepositories(object):
         """
         Checks each repository for updates and returns a set of paths
         where updates are available.
-        If forced==True, also repositories autoUpdate==False are checked.
+        If forced==True, also repositories with autoUpdate==False are checked.
         """
         with self._lock:
             # make a copy s.t. we don't have to lock the repos all the time
@@ -33,10 +34,9 @@ class PluginRepositories(object):
             
         outdated = set()
         upToDate = set()
-        gitHandler = GitHandler()
         for path, _active, autoUpdate in repos:
             if forced or autoUpdate:
-                if gitHandler.needsPull(path):
+                if GitHandler.needsPull(path):
                     outdated.add(path)
                 else:
                     upToDate.add(path)
@@ -48,7 +48,24 @@ class PluginRepositories(object):
             self._upToDate -= outdated
             self._upToDate.update(upToDate)
             
+        if outdated:
+            get_notification_center().emitRepositoryUpdate(outdated)
         return outdated
+
+    def areUpdatesAvailable(self):
+        return len(self._outdated) > 0
+    
+    def getOutdated(self):
+        return self._outdated
+    
+    def getUpToDate(self):
+        return self._upToDate
+    
+    def isAutoUpdateEnabled(self, path):
+        for repo in self.getExternalRepositories():
+            if repo[0] == path:
+                return repo[2]
+        return False
     
     def isOutdated(self, path):
         return path in self._outdated
