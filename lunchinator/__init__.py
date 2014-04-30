@@ -51,8 +51,10 @@ class _lunchinator_logger:
                 cls.logfileHandler.doRollover()
         return cls.lunch_logger
 
-#initialize loggers
-_lunchinator_logger.get_singleton_logger()
+def initialize_logger():
+    _lunchinator_logger.get_singleton_logger()
+    #initialize settings
+    get_settings().set_logging_level(get_settings().get_logging_level())
 
 def convert_string(string):
     import traceback
@@ -119,9 +121,6 @@ def get_lunchinator_dir():
 
 def get_plugin_dirs():
     return get_settings().get_plugin_dirs()
-
-#initialize settings
-get_settings().set_logging_level(get_settings().get_logging_level())
 
 import lunch_server
 

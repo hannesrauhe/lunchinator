@@ -5,7 +5,8 @@ from lunchinator import log_exception, log_error, setLoggingLevel, convert_strin
 from datetime import datetime
     
 class lunch_settings(object):
-    LUNCH_TIME_FORMAT="%H:%M"
+    LUNCH_TIME_FORMAT = "%H:%M"
+    LUNCH_TIME_FORMAT_QT = "HH:mm"
     _instance = None
     
     @classmethod
@@ -41,9 +42,8 @@ class lunch_settings(object):
         self._messages_file = self.get_config("messages")
         self._log_file = self.get_config("lunchinator.log")
         self._avatar_dir = self.get_config("avatars")
-        self._version = u"unknown"
-        self._version_short = u"unknown"
-        self._commit_count = "0"
+        self._version = None
+        self._commit_count = None
         self._commit_count_plugins = "-1"
         self._main_package_path = self._findMainPackagePath()
         if self._main_package_path == None:
@@ -77,6 +77,7 @@ class lunch_settings(object):
         self._default_db_connection = u"Standard"
         self._available_db_connections = u"Standard"  # list separated by ;; (like yapsy)
         self._proxy = u""
+        self._warn_if_members_not_ready = True        
         
         self._ID = u""
         self._next_lunch_begin = None
@@ -89,13 +90,6 @@ class lunch_settings(object):
             
         self._config_file = ConfigParser.SafeConfigParser()
         self.read_config_from_hd()
-        
-        try:
-            version_file = self.get_resource("version")
-            with contextlib.closing(open(version_file, "r")) as vfh:
-                self._commit_count = vfh.read().strip()
-        except Exception:
-            log_error("version file missing, no version information")
             
     def read_config_from_hd(self): 
         self._config_file.read(self._main_config_dir + '/settings.cfg')
@@ -194,10 +188,23 @@ class lunch_settings(object):
     def get_messages_file(self):
         return self._messages_file
     
-    def get_version_short(self):
-        return self._version_short
+    def get_version(self):
+        if not self._version:
+            try:
+                version_file = self.get_resource("version")
+                with contextlib.closing(open(version_file, "r")) as vfh:
+                    self._version = vfh.read().strip()
+                self._commit_count = self._version.split(".")[-1]
+            except Exception:
+                log_error("Error reading/parsing version file")
+                self._version = u"unknown.unknown"
+                self._commit_count = "unknown"
+                
+        return self._version
     
     def get_commit_count(self):
+        self.get_version()
+        
         return self._commit_count
     
     def get_commit_count_plugins(self):
@@ -249,7 +256,7 @@ class lunch_settings(object):
             if time:
                 return new_value
         except:
-            pass
+            log_error("Problem while checking the lunch time")
         log_error("Illegal time format:", new_value)
         return old_value
     
@@ -264,18 +271,48 @@ class lunch_settings(object):
     def set_default_lunch_end(self, new_value):
         new_value = convert_string(new_value)
         self._default_lunch_end = self._check_lunch_time(new_value, self._default_lunch_end)
-    
+        
     def get_next_lunch_begin(self):
-        return self._next_lunch_begin
-    def set_next_lunch_begin(self, time):
-        time = convert_string(time)
-        self._next_lunch_begin = self._check_lunch_time(time, self._next_lunch_begin)
+        # reset "next" lunch times after they are over
+        if self._next_lunch_begin:
+            return self._next_lunch_begin
+        return self.get_default_lunch_begin()
         
     def get_next_lunch_end(self):
-        return self._next_lunch_end
-    def set_next_lunch_end(self, time):
-        time = convert_string(time)
-        self._next_lunch_end = self._check_lunch_time(time, self._next_lunch_end)
+        # reset "next" lunch times after they are over
+        if self._next_lunch_end:
+            if self.get_next_lunch_reset_time() > 0:
+                return self._next_lunch_end
+            else:
+                # reset
+                self._next_lunch_begin = None
+                self._next_lunch_end = None
+        return self.get_default_lunch_end()
+    
+    def set_next_lunch_time(self, begin_time, end_time):
+        if begin_time == None:
+            self._next_lunch_begin, self._next_lunch_end = None, None
+            
+        begin_time = convert_string(begin_time)
+        self._next_lunch_begin = self._check_lunch_time(begin_time, self._next_lunch_begin)
+        end_time = convert_string(end_time)
+        self._next_lunch_end = self._check_lunch_time(end_time, self._next_lunch_end)
+    
+    def get_next_lunch_reset_time(self):
+        if self._next_lunch_end == None:
+            return None
+        
+        from lunchinator.utilities import getTimeDelta
+        # reset after next_lunch_end, but not before default_lunch_end
+        
+        tdn = getTimeDelta(self._next_lunch_end)
+        tdd = getTimeDelta(self.get_default_lunch_end())
+        
+        return max(tdn, tdd)
+    def get_warn_if_members_not_ready(self):
+        return self._warn_if_members_not_ready
+    def set_warn_if_members_not_ready(self, new_value):
+        self._warn_if_members_not_ready = new_value
     
     def get_alarm_begin_time(self):
         return self._alarm_begin_time

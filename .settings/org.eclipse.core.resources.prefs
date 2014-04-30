@@ -1,4 +1,5 @@
 eclipse.preferences.version=1
+encoding//lunchinator/gui_controller.py=utf-8
 encoding//lunchinator/lunch_server.py=utf-8
 encoding//plugins/lunch_menu_structured/__init__.py=utf-8
 encoding//plugins/lunch_menu_structured/lunch_menu_structured_gui.py=utf-8

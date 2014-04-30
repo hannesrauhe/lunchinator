@@ -1,4 +1,5 @@
 import logging, sys, os, hashlib, shutil
+import json
 
 try:
     import lunchinator
@@ -10,6 +11,7 @@ except:
             break
         path = os.path.dirname(path)
     
+from lunchinator.git import GitHandler
 from lunchinator.lunch_settings import lunch_settings
 from lunchinator.utilities import getGPG
 
@@ -28,11 +30,24 @@ fileToSign.close()
 fileHash = md.hexdigest()
 logging.info("Hash is %s" % fileHash)
 
-commitCount = lunch_settings.get_singleton_instance().get_commit_count()
+versionString = lunch_settings.get_singleton_instance().get_version()
+commitCount = versionString.split('.')[-1]
+
+gitHandler = GitHandler()
+changeLog = gitHandler.getLatestChangeLog(path=path)
+if changeLog:
+    changeLog = json.dumps(changeLog)
 
 # create signed version.asc
+versionInfo = ["Version String: " + versionString,
+               "Commit Count: " + commitCount,
+               "Installer Hash: " + fileHash,
+               "URL: %s/%s" % (versionString, os.path.basename(fileToSign.name))]
 
-stringToSign = "Commit Count: %s\nInstaller Hash: %s\nURL: %s/%s" % (commitCount, fileHash, commitCount, os.path.basename(fileToSign.name))
+if changeLog:
+    versionInfo.append("Change Log: " + changeLog)
+
+stringToSign = "\n".join(versionInfo)
 
 gpg, keyid = getGPG(secret=True)
 if not gpg or not keyid:
@@ -46,14 +61,14 @@ version_file.write(str(signedString))
 version_file.close()
 
 version_file = open(os.path.join(os.path.dirname(sys.argv[1]), "index.html"), "w")
-version_file.write('Download lunchinator: <a href="%s/%s">Version %s</a>' % (commitCount, os.path.basename(fileToSign.name), commitCount))
+version_file.write('Download lunchinator: <a href="%s/%s">Version %s</a>' % (versionString, os.path.basename(fileToSign.name), versionString))
 version_file.close()
 
 # moving files around
 
-installer_dir = os.path.join(os.path.dirname(sys.argv[1]), str(commitCount))
+installer_dir = os.path.join(os.path.dirname(sys.argv[1]), versionString)
 if not os.path.isdir(installer_dir):
     os.mkdir(installer_dir)
 
-shutil.copyfile(os.path.join(os.path.dirname(sys.argv[1]), "latest_version.asc"), os.path.join(os.path.dirname(sys.argv[1]), commitCount, "version.asc"))
-shutil.copyfile(sys.argv[1], os.path.join(os.path.dirname(sys.argv[1]), commitCount, os.path.basename(sys.argv[1])))
+shutil.copyfile(os.path.join(os.path.dirname(sys.argv[1]), "latest_version.asc"), os.path.join(os.path.dirname(sys.argv[1]), versionString, "version.asc"))
+shutil.copyfile(sys.argv[1], os.path.join(os.path.dirname(sys.argv[1]), versionString, os.path.basename(sys.argv[1])))

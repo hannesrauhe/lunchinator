@@ -7,7 +7,7 @@ AppVersion=0.1
 PrivilegesRequired=lowest
 AppId={{503677A7-7464-4740-A00D-213B0BB3B612}
 RestartIfNeededByRun=False
-DefaultDirName={localappdata}\Lunchinator
+DefaultDirName={userpf}\Lunchinator
 DisableWelcomePage=True
 DisableReadyPage=True
 OutputDir=.\win
@@ -28,3 +28,4 @@ Name: "{app}\plugins"
 
 [Run]
 Filename: "{app}\lunchinator.exe"; WorkingDir: "{app}"; Flags: nowait postinstall
+

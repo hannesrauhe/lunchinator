@@ -2,9 +2,9 @@
 #@summary: This plugin is supposed to be the only one necessary for the core functionality of the lunchinator
 
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, \
-                        QLineEdit
+                        QLineEdit, QMenu, QInputDialog
 from PyQt4.QtCore import QTimer, Qt
-from lunchinator import get_server, get_peers
+from lunchinator import get_server, get_peers, log_info
 from time import mktime,time
 from lunchinator.lunch_button import LunchButton
             
@@ -51,10 +51,13 @@ class SimpleViewWidget(QWidget):
         return self.colorMap[peerID]
             
     def updateWidgets(self):
+        if not self.isVisible():
+            return True        
+        
         members = get_peers().getMembers()
         memText = "%d people online<br />"%len(members)
         memToolTip = ""
-        
+
         readyMembers = []
         notReadyMembers = []
         for peerID in members:
@@ -79,6 +82,24 @@ class SimpleViewWidget(QWidget):
                         <i>[%d sec]</i>: %s</span><br />\n"%(color,member,time()-mktime(timest),msg)
                         
         self.msgview.setHtml(msgTexts)
+        
+    def create_menu(self, menuBar):
+        windowMenu = QMenu("Advanced", menuBar)
+        windowMenu.addAction("Manually add an IP", self.addMemberByIP)
+        return windowMenu
+    
+    def addMemberByIP(self):
+        hostn, button = QInputDialog.getText(None, "Manually add a member", "In rare cases the lunchinator might not be available to find another user.\n"+
+                             "You can enter an IP/hostname here to explicitly look there. Make sure that the Lunchinator is running on\n" +
+                             "the other machine and that you are in the same group.")
+        if button and len(hostn):
+            get_server().call_request_info([str(hostn)])
+        
+    def finish(self):
+        try:
+            self.timer.timeout.disconnect()
+        except:
+            log_info("Simple View: was not able to disconnect timer")
         
 if __name__ == '__main__':        
     from lunchinator.iface_plugins import iface_gui_plugin

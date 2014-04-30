@@ -54,11 +54,12 @@ class voter(iface_gui_plugin):
                 self.w.add_table_row(vote_place, vote_time)  
             
     
-    def send_vote(self, place, time):
-        vote_call = "HELO_VOTE "+json.dumps({"place": unicode(place), "time": unicode(time)})
+    def send_vote(self, place, stime):
+        vote_call = "HELO_VOTE "+json.dumps({"place": unicode(place), "time": unicode(stime.toString("hh:mm"))})
         get_server().call(vote_call)
-        get_settings().set_next_lunch_begin(unicode(time))
-        get_server().call_info()
+        
+        etime = stime.addSecs(60*30)
+        get_server().getController().changeNextLunchTime(stime.toString("hh:mm"), etime.toString("hh:mm"))
 
 class voterWidget(QWidget):
     def __init__(self, parent, vote_clicked_callable):
@@ -73,7 +74,7 @@ class voterWidget(QWidget):
         
     def vote_clicked(self):
         if self.ui.comboBox.currentText():
-            self.send_vote(self.ui.comboBox.currentText(), self.ui.timeEdit.text())
+            self.send_vote(self.ui.comboBox.currentText(), self.ui.timeEdit.time())
         
     def tablevote_clicked(self, row, column):
         vote_place = self.ui.tableWidget.item(row, 0).text()

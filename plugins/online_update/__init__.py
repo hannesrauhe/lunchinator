@@ -3,16 +3,19 @@ from lunchinator.lunch_settings import lunch_settings
 from lunchinator.iface_plugins import iface_general_plugin
 from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
 from lunchinator.utilities import getValidQtParent, displayNotification, \
-    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, which
+    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, PLATFORM_LINUX, which,\
+    getApplicationBundle, stopWithCommand
 from lunchinator.download_thread import DownloadThread
 from lunchinator.shell_thread import ShellThread
-import urllib2, sys, os, contextlib, subprocess
+import urllib2, sys, os, contextlib, subprocess, json
 import tempfile
 from functools import partial
 from xml.etree import ElementTree
 from online_update.gitUpdate import gitUpdate
     
 class online_update(iface_general_plugin):
+    CHECK_INTERVAL = 12 * 60 * 60 * 1000 # check twice a day
+    
     def __init__(self):
         super(online_update, self).__init__()
         self.hidden_options = {"check_url": "http://update.lunchinator.de"}
@@ -27,8 +30,11 @@ class online_update(iface_general_plugin):
         self._local_installer_file = None
         self._install_ready = False
         self._installButton = None
+        self._scheduleTimer = None
+        self._changeLog = None
     
     def activate(self):
+        from PyQt4.QtCore import QTimer
         iface_general_plugin.activate(self)
         if getPlatform() == PLATFORM_MAC:
             # check if /usr/local/bin is in PATH
@@ -37,14 +43,46 @@ class online_update(iface_general_plugin):
         
         
         self._git_updater = gitUpdate()
-        if not self._git_updater.has_git():
-            self._git_updater = None
-            # check for GPG
-            if self._has_gpg():
-                self.check_for_update()
-            else:
-                self._set_status("GPG not installed or not working properly.")
+        if self._git_updater.has_git():
+            return
         
+        self._git_updater = None
+        
+        if self._check_for_rpm_deb():
+            self._set_status("Updates for the lunchinator are managed by your OS. "+
+                             "You can deactivate the Auto Update plugin.")
+            return
+        
+        # check for GPG
+        if self._has_gpg():
+            self.check_for_update()
+        else:
+            self._set_status("GPG not installed or not working properly.")
+            
+        self._scheduleTimer = QTimer(getValidQtParent())
+        self._scheduleTimer.timeout.connect(self.check_for_update)
+        self._scheduleTimer.start(online_update.CHECK_INTERVAL)
+            
+    def _check_for_rpm_deb(self):
+        if getPlatform() != PLATFORM_LINUX:
+            return False
+         
+        call = ["dpkg", "-s", "lunchinator"]         
+        fh = open(os.path.devnull,"w")
+        p = subprocess.Popen(call,stdout=fh, stderr=fh)
+        retCode = p.returncode
+        if retCode == 0:
+            return True
+                
+        call = "rpm -qa | grep lunchinator"         
+        fh = open(os.path.devnull,"w")
+        p = subprocess.Popen(call,stdout=fh, stderr=fh, shell=True)
+        retCode = p.returncode
+        if retCode == 0:
+            return True
+        
+        return False        
+    
     def _has_gpg(self):
         gpg, _key = getGPG()
         return gpg != None
@@ -53,44 +91,61 @@ class online_update(iface_general_plugin):
         return getPlatform() == PLATFORM_MAC    
     
     def deactivate(self):
+        if self._scheduleTimer != None:
+            self._scheduleTimer.stop()
+            self._scheduleTimer.deleteLater()
+        
         iface_general_plugin.deactivate(self)
     
     def create_options_widget(self, parent):
         if self._git_updater:
             return self._git_updater.create_options_widget(parent)
         
-        from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, QVBoxLayout, QLabel, QSizePolicy, QPushButton, QTextEdit, QProgressBar
+        from PyQt4.QtGui import QStandardItemModel, QStandardItem, QWidget, \
+                                QVBoxLayout, QLabel, QSizePolicy, QPushButton, \
+                                QTextEdit, QProgressBar, QStackedWidget
+        from PyQt4.QtCore import Qt
        
         widget = QWidget(parent)
         layout = QVBoxLayout(widget)
         
         # now add the new stuff
-        versionLabel = QLabel("Installed Version: " + get_settings().get_commit_count())
-        layout.addWidget(versionLabel)
+        versionLabel = QLabel("Installed Version: " + get_settings().get_version())
+        layout.addWidget(versionLabel, 0)
         
         self._statusLabel = QLabel("Status: " + self._status_holder)
-        layout.addWidget(self._statusLabel)
+        layout.addWidget(self._statusLabel, 0)
         
         self._progressBar = QProgressBar(parent)
         self._progressBar.setVisible(self._progress_holder)
-        layout.addWidget(self._progressBar)
+        layout.addWidget(self._progressBar, 0)
         
         self._checkButton = QPushButton("Check for Update", parent)
         self._checkButton.clicked.connect(self.check_for_update)
         
-        layout.addWidget(self._checkButton)
+        layout.addWidget(self._checkButton, 0)
         
         self._installButton = QPushButton("Install Update and Restart", parent)
         self._installButton.clicked.connect(self.install_update)
         self._installButton.setEnabled(self._install_ready)
-        layout.addWidget(self._installButton)
-                
-        widget.setMaximumHeight(widget.sizeHint().height())
-        widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
+        layout.addWidget(self._installButton, 0)
+        
+        self._bottomWidget = QStackedWidget(parent)
+        self._bottomWidget.addWidget(QWidget(self._bottomWidget))
+        self._changeLog = QTextEdit(self._bottomWidget)
+        self._changeLog.setReadOnly(True)
+        self._bottomWidget.addWidget(self._changeLog)
+        layout.addWidget(self._bottomWidget, 1)
+        
+        widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         
         self._setInteractive(True)
+        self._updateChangeLog()
         
         return widget  
+        
+    def _setChangelogVisible(self, v):
+        self._bottomWidget.setCurrentIndex(1 if v else 0)
         
     def _downloadProgressChanged(self, _t, prog):
         if self._progressBar != None:
@@ -212,30 +267,14 @@ class online_update(iface_general_plugin):
         if os.path.isfile(self._local_installer_file):
             if getPlatform() == PLATFORM_WINDOWS:
                 self._set_status("Starting Installer")
-                args = [self._local_installer_file, "/SILENT"]
-                subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
-                get_server().call("HELO_STOP installer_update", client="127.0.0.1")
+                stopWithCommand([self._local_installer_file, "/SILENT"])
             elif getPlatform() == PLATFORM_MAC:
-                # find app bundle path
-                path = os.path.abspath(sys.argv[0])
-                while not path.endswith(".app"):
-                    newPath = os.path.dirname(path)
-                    if newPath == path:
-                        path = None
-                        break
-                    path = newPath
-                
-                if path == None or not os.path.exists(os.path.join(path, "Contents", "MacOS", "Lunchinator")):
+                path = getApplicationBundle()
+                if path == None:
                     self._set_status("Could not find application bundle. Cannot update.", True)
                 else:
-                    pid = os.fork()
-                    if pid != 0:
-                        # new process
-                        installer = get_settings().get_resource("bin", "mac_installer.sh")
-                        args = [installer, self._local_installer_file, path, str(os.getpid())]
-                        subprocess.Popen(args)
-                    else:
-                        get_server().call("HELO_STOP installer_update", client="127.0.0.1")
+                    installer = get_settings().get_resource("bin", "mac_installer.sh")
+                    stopWithCommand([installer, self._local_installer_file, path, str(os.getpid())])
         else:
             log_error("This platform does not support updates (yet).")
     
@@ -259,7 +298,7 @@ class online_update(iface_general_plugin):
             vstr = "Online Version Info:\n"
             for k, v in self._version_info.iteritems():
                 vstr += str(k) + ":" + str(v) + "\n"
-            self._statusLabel.setToolTip(vstr)       
+            self._statusLabel.setToolTip(vstr)      
             
     def _verify_signature(self, signedString):
         gpg, _keyid = getGPG()
@@ -291,14 +330,17 @@ class online_update(iface_general_plugin):
             self._set_status("Installer Hash wrong %s!=%s" % (fileHash, self._version_info["Installer Hash"]), True)
             return False
             
-        self._set_status("New version %d downloaded, ready to install" % self._version_info["Commit Count"])
+        self._set_status("New version %s downloaded, ready to install" % self._getDownloadedVersion())
         self._install_ready = True
         if self._installButton:
             self._installButton.setEnabled(self._install_ready)
         displayNotification("New Version Available", "Install via Update Plugin")
             
         return True
-        
+    
+    def _getDownloadedVersion(self):
+        if self._version_info != None:
+            return self._version_info[u"Version String"] if u"Version String" in self._version_info else self._version_info["Commit Count"]
         
     def version_info_downloaded(self, thread):
         try:
@@ -343,11 +385,15 @@ class online_update(iface_general_plugin):
         
         self._installer_url = self.getCheckURLBase() + self._version_info["URL"]
         self._local_installer_file = os.path.join(get_settings().get_main_config_dir(), self._installer_url.rsplit('/', 1)[1])
+        
+        self._updateChangeLog()
+        
+        if self._hasNewVersion():
+            get_server().controller.notifyUpdates()
             
-        if self._version_info["Commit Count"] > int(get_settings().get_commit_count()):
             # check if we already downloaded this version before
             if not self._check_hash():
-                self._set_status("New Version %d available, Downloading ..." % (self._version_info["Commit Count"]), progress=True)
+                self._set_status("New Version %s available, Downloading ..." % (self._getDownloadedVersion()), progress=True)
                 
                 installer_download = DownloadThread(getValidQtParent(), self._installer_url, target=open(self._local_installer_file, "wb"), progress=True)
                 installer_download.progressChanged.connect(self._downloadProgressChanged)
@@ -358,6 +404,31 @@ class online_update(iface_general_plugin):
         else:
             self._set_status("No new version available")
         
+    def _hasNewVersion(self):
+        return self._version_info != None and \
+               self._version_info["Commit Count"] > int(get_settings().get_commit_count())
+    
+    def _updateChangeLog(self):
+        if self._changeLog == None:
+            return
+        
+        if self._hasNewVersion() and u"Change Log" in self._version_info:
+            from PyQt4.QtGui import QTextCursor, QTextListFormat
+            self._changeLog.clear()
+            document = self._changeLog.document()
+            document.setIndentWidth(20)
+            cursor = QTextCursor(document)
+            
+            cursor.insertText("Changes:\n")
+        
+            listFormat = QTextListFormat()
+            listFormat.setStyle(QTextListFormat.ListDisc)
+            cursor.insertList(listFormat)
+        
+            log = json.loads(self._version_info[u"Change Log"])
+            cursor.insertText("\n".join(log))
+            self._setChangelogVisible(True)
+    
     def installer_downloaded(self, thread):
         try:
             # close the file object that keeps the downloaded data

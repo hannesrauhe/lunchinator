@@ -4,6 +4,12 @@ from lunchinator import log_exception, log_warning, log_debug,\
 from lunch_settings import lunch_settings
 import os, threading, contextlib, socket
 from datetime import datetime
+import os
+import threading
+import contextlib
+from datetime import datetime
+from lunchinator.git import GitHandler
+import lunchinator
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -28,14 +34,17 @@ def checkBundleIdentifier(ident):
 
 # TODO: message groups for notification center
 def displayNotification(name,msg,icon=None):
+    if msg == None:
+        msg = u""
     myPlatform = getPlatform()
     try:
         if myPlatform == PLATFORM_LINUX:
             subprocess.call(["notify-send","--icon="+icon, name, msg])
         elif myPlatform == PLATFORM_MAC:
             fh = open(os.path.devnull,"w")
-            exe = getBinary("terminal-notifier")
+            exe = getBinary("terminal-notifier", "bin")
             if not exe:
+                log_warning("terminal-notifier not found.")
                 return
             
             call = [exe, "-title", "Lunchinator: %s" % name, "-message", msg]
@@ -149,6 +158,7 @@ def setValidQtParent(parent):
     qtParent = parent
 
 def getValidQtParent():
+    from lunchinator import get_server
     from PyQt4.QtCore import QObject
     from lunchinator import get_server
     if isinstance(get_server().controller, QObject):
@@ -264,47 +274,6 @@ def getGPG(secret=False):
             keyid = _findLunchinatorKeyID(gpg, secret)
     
     return gpg, keyid
-
-def getTimeDifference(begin, end):
-        """
-        calculates the correlation of now and the specified lunch dates
-        negative value: now is before begin, seconds until begin
-        positive value: now is after begin but before end, seconds until end
-         0: now is after end
-        Returns None if the time format is invalid. 
-        """
-        try:
-            try:
-                begin = datetime.strptime(begin, lunch_settings.LUNCH_TIME_FORMAT)
-            except ValueError:
-                # this is called repeatedly, so only debug
-                log_debug("Unsupported time format:", begin)
-                return None
-            try:
-                end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
-            except ValueError:
-                log_debug("Unsupported time format:", end)
-                return None
-            
-            now = datetime.now()
-            begin = begin.replace(year=now.year, month=now.month, day=now.day)
-            end = end.replace(year=now.year, month=now.month, day=now.day)
-            
-            if now < begin:
-                # now is before begin
-                td = begin - now
-                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
-                return -1 if millis == 0 else -millis
-            elif now < end:
-                td = end - now
-                millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
-                return 1 if millis == 0 else millis
-            else:
-                # now is after end
-                return 0
-        except:
-            log_exception("don't know how to handle time span")
-            return None
     
 '''for the external IP a connection to someone has to be opened briefly
    therefore a list of possible peers is needed'''
@@ -328,3 +297,122 @@ def determineOwnIP(peers):
         log_debug("Found my IP:", own_ip)
     s.close()
     return own_ip
+
+def getTimeDelta(end):
+    """
+    calculates the correlation of now and the specified time
+    positive value: now is before time, milliseconds until time
+    negative value: now is after time, milliseconds after time
+    Returns None if the time format is invalid. 
+    """
+    try:
+        from lunchinator.lunch_settings import lunch_settings
+        
+        try:
+            end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
+        except ValueError:
+            log_debug("Unsupported time format:", end)
+            return None
+        
+        # ignore begin
+        now = datetime.now()
+        end = end.replace(year=now.year, month=now.month, day=now.day)
+        
+        td = end - now
+        return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
+    
+    except:
+        log_exception("don't know how to handle time span")
+        return None
+    
+
+def getTimeDifference(begin, end):
+    """
+    calculates the correlation of now and the specified lunch dates
+    negative value: now is before begin, seconds until begin
+    positive value: now is after begin but before end, seconds until end
+     0: now is after end
+    toEnd = True: always calculate seconds until end
+    Returns None if the time format is invalid. 
+    """
+    try:
+        from lunchinator.lunch_settings import lunch_settings
+        
+        try:
+            end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
+        except ValueError:
+            log_debug("Unsupported time format:", end)
+            return None
+        
+        try:
+            begin = datetime.strptime(begin, lunch_settings.LUNCH_TIME_FORMAT)
+        except ValueError:
+            # this is called repeatedly, so only debug
+            log_debug("Unsupported time format:", begin)
+            return None
+        
+        now = datetime.now()
+        begin = begin.replace(year=now.year, month=now.month, day=now.day)
+        end = end.replace(year=now.year, month=now.month, day=now.day)
+        
+        if now < begin:
+            # now is before begin
+            td = begin - now
+            millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
+            return -1 if millis == 0 else -millis
+        elif now < end:
+            td = end - now
+            millis = (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
+            return 1 if millis == 0 else millis
+        else:
+            # now is after end
+            return 0
+    except:
+        log_exception("don't know how to handle time span")
+        return None
+    
+def getApplicationBundle():
+    """Determines the path to the Mac application bundle"""
+    path = os.path.abspath(sys.argv[0])
+    while not path.endswith(".app"):
+        newPath = os.path.dirname(path)
+        if newPath == path:
+            path = None
+            break
+        path = newPath
+    
+    if path == None or not os.path.exists(os.path.join(path, "Contents", "MacOS", "Lunchinator")):
+        return None
+    return path
+    
+def stopWithCommand(args):
+    from lunchinator import get_server
+    if getPlatform() in (PLATFORM_LINUX, PLATFORM_MAC):
+        #somehow fork() is not safe on Mac OS. I guess this will do fine on Linux, too. 
+        subprocess.Popen(['nohup'] + args, close_fds=True)
+        get_server().call("HELO_STOP restart", client="127.0.0.1")
+    elif getPlatform() == PLATFORM_WINDOWS:
+        subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
+        get_server().call("HELO_STOP restart", client="127.0.0.1")
+    else:
+        log_error("Restart not yet implemented for your OS.")
+    
+def restart():
+    """Tries to restart the Lunchinator"""
+    
+    restartScript = get_settings().get_resource("bin", "restart.sh")
+    args = None
+    if getPlatform() == PLATFORM_MAC:
+        # Git or Application bundle?
+        bundlePath = getApplicationBundle()
+        if bundlePath:
+            args = [restartScript, str(os.getpid()), "open " + bundlePath]
+    
+    if args == None:
+        if getPlatform() in (PLATFORM_MAC, PLATFORM_LINUX):
+            args = [restartScript, str(os.getpid()), "%s %s" % (sys.executable, " ".join(sys.argv))]
+        else:
+            log_error("Restart not yet implemented for your OS.")
+    
+    if args != None:
+        stopWithCommand(args)

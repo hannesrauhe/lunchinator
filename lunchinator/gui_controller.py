@@ -1,9 +1,11 @@
+# coding: utf-8
 import sys, sip
 from lunchinator import get_server, log_exception, log_info, get_settings, \
     log_error, convert_string, log_warning
 import socket, os, time, subprocess
 import platform
-from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor
+from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor,\
+    QDialog
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplication, QTimer
 from PyQt4 import QtCore
 from functools import partial
@@ -11,7 +13,8 @@ from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
-from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC
+from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
+    getValidQtParent
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 
 class LunchServerThread(QThread):
@@ -30,6 +33,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     peerRemovedSignal = pyqtSignal(unicode)
     messagePrependedSignal = pyqtSignal(time.struct_time, list)
     groupAppendedSignal = pyqtSignal(unicode, set)
+    _performCall = pyqtSignal(unicode, set, set)
     _sendFile = pyqtSignal(unicode, bytearray, int, bool)
     _receiveFile = pyqtSignal(unicode, int, unicode, int)
     _processEvent = pyqtSignal(unicode, unicode, unicode)
@@ -45,7 +49,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         log_info("Your PyQt version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
         
         self.resetIconTimer = None
+        self.resetNextLunchTimeTimer = None
         self.isIconHighlighted = True  # set to True s.t. first dehighlight can set the default icon
+        self._updateAvailable = False
         
         self.exitCode = 0
         self.serverThread = None
@@ -66,6 +72,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         # connect private signals
         self._initDone.connect(self.initDoneSlot)
+        self._performCall.connect(self.performCallSlot)
         self._receiveFile.connect(self.receiveFileSlot)
         self._sendFile.connect(self.sendFileSlot)
         
@@ -160,6 +167,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             self.mainWindow.close()
         if self.serverThread != None and not sip.isdeleted(self.serverThread) and self.serverThread.isRunning():
             self.serverThread.finished.disconnect(self.serverFinishedUnexpectedly)
+            get_server().call("HELO_STOP shutdown", "127.0.0.1")
             get_server().running = False
             log_info("Waiting maximal 30s for server to stop...")
             # wait maximal 30s 
@@ -189,6 +197,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         get_settings().write_config_to_hd()
             
         self.exitCode = finalExitCode
+        # before exiting, process remaining events (e.g., pending messages like HELO_LEAVE)
+        QCoreApplication.processEvents()
         QCoreApplication.exit(finalExitCode)
         return finalExitCode
             
@@ -196,6 +206,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     def initDone(self):
         self._initDone.emit()
+        
+    def call(self, msg, client, hosts):
+        self._performCall.emit(msg, client, hosts)
         
     def serverFinishedUnexpectedly(self):
         self.serverThread = None
@@ -252,6 +265,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processLunchCall.emit(msg, addr)
         
     """ ----------------- CALLED ON MAIN THREAD -------------------"""
+
+    def notifyUpdates(self):
+        self._updateAvailable = True
+        self._updateMemberStatus()
     
     def init_menu(self, parent):        
         # create the plugin submenu
@@ -303,11 +320,27 @@ class LunchinatorGuiController(QObject, LunchServerController):
                     self.pluginActions.append(anAction)
         
         # main _menu
+        self._memberStatusAction = menu.addAction("Initializing...")
+        self._memberStatusAction.setEnabled(False)
+        
+        if hasattr(menu, "addSeparator"):
+            menu.addSeparator()
+            
+        self.memberStatusUpdateTimer = QTimer(self)
+        self.memberStatusUpdateTimer.timeout.connect(self._updateMemberStatus)
+        self.memberStatusUpdateTimer.start(5000)
+        
         anAction = menu.addAction('Call for lunch')
         anAction.triggered.connect(partial(self.sendMessageClicked, u'lunch', None))
         
         anAction = menu.addAction('Show Lunchinator')
         anAction.triggered.connect(self.openWindowClicked)
+        
+        anAction = menu.addAction(u"Change today's lunch time")
+        anAction.triggered.connect(self.changeNextLunchTime)
+        
+        if hasattr(menu, "addSeparator"):
+            menu.addSeparator()
         
         anAction = menu.addAction('Settings')
         anAction.triggered.connect(self.openSettingsClicked)
@@ -318,6 +351,43 @@ class LunchinatorGuiController(QObject, LunchServerController):
         anAction.triggered.connect(self.quitClicked)
             
         return menu
+    
+    def _updateMemberStatus(self):
+        get_server().lockMembers()
+        try:
+            readyMembers = []
+            notReadyMembers = []
+            for m in get_server().get_members():
+                if not get_server().is_peer_readyness_known(m):
+                    continue
+                if get_server().is_peer_ready(m):
+                    readyMembers.append(get_server().memberName(m))
+                else:
+                    notReadyMembers.append(get_server().memberName(m))
+        finally:
+            get_server().releaseMembers()
+        
+        if not readyMembers and not notReadyMembers:
+            status = u"No members."
+        elif not readyMembers:
+            status = u"Nobody is ready for lunch."
+        elif not notReadyMembers:
+            status = u"Everybody is ready for lunch."
+        else:
+            if len(readyMembers) == 1:
+                ready = u"1 member"
+            else:
+                ready = u"%d members" % len(readyMembers)
+                
+            if len(notReadyMembers) == 1:
+                notReady = u"1 member"
+            else:
+                notReady = u"%d members" % len(notReadyMembers)
+            
+            status = u"%s ready, %s not ready for lunch." % (ready, notReady)
+        if self._updateAvailable:
+            status = u"Update available – " + status
+        self._memberStatusAction.setText(status)
     
     def check_new_msgs(self):
         return get_server().new_msg
@@ -334,6 +404,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
     @pyqtSlot()
     def initDoneSlot(self):
         pass
+    
+    @pyqtSlot(unicode, unicode, list)
+    def performCallSlot(self, msg, peerIDs, peerIPs):
+        get_server()._perform_call(msg, peerIDs, peerIPs)
     
     @pyqtSlot()
     def updateRequested(self):
@@ -398,6 +472,39 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.mainWindow.activateWindow()
         self.mainWindow.raise_()
             
+    @pyqtSlot()
+    def changeNextLunchTime(self, begin = None, end = None):
+        if begin == None:
+            if self.mainWindow == None:
+                log_error("mainWindow is not initialized")
+                return
+            from lunchinator.timespan_input_dialog import TimespanInputDialog
+            dialog = TimespanInputDialog(self.mainWindow, "Change Lunch Time", "When are you free for lunch today?", get_settings().get_next_lunch_begin(), get_settings().get_next_lunch_end())
+            dialog.exec_()
+            if dialog.result() == QDialog.Accepted:
+                get_settings().set_next_lunch_time(dialog.getBeginTimeString(), dialog.getEndTimeString())
+            else:
+                return        
+        else:
+            get_settings().set_next_lunch_time(begin, end) 
+            
+        if self.resetNextLunchTimeTimer != None:
+            self.resetNextLunchTimeTimer.stop()
+            self.resetNextLunchTimeTimer.deleteLater()
+            
+        td = get_settings().get_next_lunch_reset_time()
+        if td > 0:
+            self.resetNextLunchTimeTimer = QTimer(getValidQtParent())
+            self.resetNextLunchTimeTimer.timeout.connect(self._resetNextLunchTime)
+            self.resetNextLunchTimeTimer.setSingleShot(True)
+            self.resetNextLunchTimeTimer.start(abs(td) + 1000)
+            
+        get_server().call_info()
+            
+    def _resetNextLunchTime(self):
+        get_settings().set_next_lunch_time(None, None)
+        get_server().call_info()
+            
     @pyqtSlot(bool)
     @pyqtSlot()
     def openSettingsClicked(self, _=None):
@@ -431,7 +538,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                     pluginInfo.plugin_object.discard_changes()
         get_settings().write_config_to_hd()
             
-        get_server().call("HELO_INFO " + get_server()._build_info_string())        
+        get_server().call_info()      
 
     @pyqtSlot(unicode, bytearray, int, bool)
     def sendFileSlot(self, addr, fileToSend, other_tcp_port, isData):
@@ -478,3 +585,4 @@ class LunchinatorGuiController(QObject, LunchServerController):
         msg = convert_string(msg)
         addr = convert_string(addr)
         processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
+

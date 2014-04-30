@@ -1,19 +1,16 @@
 #!/usr/bin/python
 # coding=utf-8
 
+
+import socket, sys, os, json, codecs, contextlib, tarfile, platform, random
 from time import strftime, localtime, time, mktime, gmtime
-import socket, sys, os, json, codecs, contextlib
 from threading import Lock
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string
-from lunchinator.utilities import determineOwnIP
-     
-import tarfile
-import platform
+from lunchinator.utilities import determineOwnIP, getTimeDifference
 from lunchinator.lunch_peers import LunchPeers
-import random
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -34,6 +31,7 @@ class lunch_server(object):
         self.controller = None
         self.initialized = False
         self._load_plugins = True
+        self._has_gui = True
         self.running = False
         self.new_msg = False
         self._peer_nr = 0
@@ -45,8 +43,6 @@ class lunch_server(object):
         
         self.exitCode = 0  
         
-    
-            
     """ -------------------------- CALLED FROM MAIN THREAD -------------------------------- """
         
     """Initialize Lunch Server with a specific controller"""
@@ -95,67 +91,40 @@ class lunch_server(object):
                     
         else:
             log_info("lunchinator initialised without plugins")
-
-    """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
-    def call(self, msg, peers=[]):
-        self.initialize()
-        
-        target = None
-        if type(peers) not in (set, list):
-            target = set(peers)
-        elif 0 == len(peers):
-            # send to members by default
-            target = self._peers.getMembers()
-        else:
-            # send to all specified hosts regardless of groups or dontSendTo
-            target = set(peers)
-        
-        if 0 == len(target):
-            log_error("Cannot send message, no peers connected, no peer found in members file")
-
-        i = 0
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
-        try:      
-            for ip in target:
-                try:
-                    log_debug("Sending", msg, "to", ip.strip())
-                    s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
-                    i += 1
-                except:
-                    # only warning message; happens sometimes if the host is not reachable
-                    log_warning("Message %s could not be delivered to %s: %s" % (s, ip, str(sys.exc_info()[0])))
-                    continue
-        finally:
-            s.close() 
-        return i
+       
             
-    '''An info call informs a peer about my name etc...
-    by default to every peer'''
+    """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
+    def call(self, msg, peerIDs=[], peerIPs=[]):
+        '''Sends a call to the given peers, specified by either there IDs or there IPs'''
+        self.initialize()        
+        self.controller.call(msg, set(peerIDs), set(peerIPs))
+                
     def call_info(self, peers=[]):
+        '''An info call informs a peer about my name etc...    by default to every peer'''
         if 0 == len(peers):
-            peers = self._peers.getPeers()
-        return self.call("HELO_INFO " + self._build_info_string(), peers)  
-    
-    '''Similar to a info call but also request information from the peer
-    by default to every/from every peer'''
+            peers = self._peers.getPeerIPs()
+        return self.call("HELO_INFO " + self._build_info_string(), peerIPs=peers)  
+  
     def call_request_info(self, peers=[]):
+        '''Similar to a info call but also request information from the peer
+        by default to every/from every peer'''
         if 0 == len(peers):
-            peers = self._peers.getPeers()
-        return self.call("HELO_REQUEST_INFO " + self._build_info_string(), peers)
+            peers = self._peers.getPeerIPs()
+        return self.call("HELO_REQUEST_INFO " + self._build_info_string(), peerIPs=peers)
     
-    '''One member at a time will get my list of peers'''
-    def call_dict(self, ip):        
+    def call_dict(self, ip):  
+        '''Sends the information about my peers to one peer at a time'''      
         peers_dict = {}
-        for ip in self._peers.getPeers():
+        for ip in self._peers.getPeerIPs():
             peers_dict[ip] = self._peers.getPeerName(ip)
-        self.call("HELO_DICT " + json.dumps(peers_dict), [ip]) 
+        self.call("HELO_DICT " + json.dumps(peers_dict), peerIPs=[ip]) 
         
-    '''round robin I ask every peer for his peers, but one by one.
-    (Sometimes the member asked is referred to as master)'''
     def call_request_dict(self):
-        peers = self._peers.getPeers()
+        '''round robin I ask every peer for his peers, but one by one.
+        (Sometimes the member asked is referred to as master)'''
+        peers = self._peers.getPeerIPs()
         if len(peers) > self._peer_nr:
-            self.call("HELO_REQUEST_DICT " + self._build_info_string(), [peers[self._peer_nr]])
+            self.call("HELO_REQUEST_DICT " + self._build_info_string(), peerIPs=[peers[self._peer_nr]])
         if len(peers):
             self._peer_nr = (self._peer_nr + 1) % len(peers)            
     
@@ -168,29 +137,26 @@ class lunch_server(object):
                
     def messagesCount(self):
         length = 0
-        self.messagesLock.acquire()
+        self.lockMessages()
         try:
             length = len(self.last_messages)
         finally:
-            self.messagesLock.release()
+            self.releaseMessages()
         return length
     
     def getMessage(self, index):
         message = None
-        self.messagesLock.acquire()
+        self.lockMessages()
         try:
             message = self.last_messages[index]
         finally:
-            self.messagesLock.release()
+            self.releaseMessages()
         return message
     
     def lockMessages(self):
-        # this is annoying
-        # log_debug("Getting Messages with lock")
         self.messagesLock.acquire()
         
     def releaseMessages(self):
-        # log_debug("lock released")
         self.messagesLock.release()
         
     def getMessages(self, begin=None):
@@ -214,6 +180,12 @@ class lunch_server(object):
     
     def set_plugins_enabled(self, enable):
         self._load_plugins = enable
+        
+    def has_gui(self):
+        return self._has_gui
+    
+    def set_has_gui(self, enable):
+        self._has_gui = enable 
         
     def getOwnIP(self):
         # TODO replace by getOwnID if possible
@@ -241,11 +213,14 @@ class lunch_server(object):
         if pluginInfo and pluginInfo.plugin_object.is_activated:
             return pluginInfo.plugin_object.getDBConnection(name)
         log_exception("getDBConnection: DB Connections plugin not yet loaded")
-        return None        
+        return None      
         
     def getLunchPeers(self):
         return self._peers 
     
+    def getController(self):
+        return self.controller
+
     '''listening method - should be started in its own thread'''    
     def start_server(self):
         self.initialize()
@@ -256,7 +231,7 @@ class lunch_server(object):
         cmd = ""
         value = ""
         
-        self.own_ip = determineOwnIP(self._peers.getPeers())
+        self.own_ip = determineOwnIP(self._peers.getPeerIPs())
         
         is_in_broadcast_mode = False
         
@@ -332,7 +307,7 @@ class lunch_server(object):
                             self.own_ip = determineOwnIP(self._peers.getPeers())
                         if announce_name == 0:
                             # it's time to announce my name again and switch the master
-                            self.call("HELO " + get_settings().get_user_name(), self._peers.getPeers())
+                            self.call("HELO " + get_settings().get_user_name(), peerIPs = self._peers.getPeerIPs())
                             self.call_request_dict()
                     else:
                         if not is_in_broadcast_mode:
@@ -356,6 +331,70 @@ class lunch_server(object):
             self._finish()          
 
     """ ---------------------- PRIVATE -------------------------------- """
+    def _perform_call(self, msg, peerIDs, peerIPs):
+        """Only the controller should invoke this method -> Called from main thread
+        both peerIDs and peerIPs should be sets"""     
+        msg = convert_string(msg)
+        target = []
+        
+        if len(peerIDs) == 0 and len(peerIPs) == 0:
+            target = self._peers.getPeerIPs()
+        else:
+            target = peerIPs
+            for pID in peerIDs:
+                pIP = self._peers.getPeerIP(pID)
+                if pIP:
+                    target.add(pIP)
+                else:
+                    log_warning("While calling: I do not know a peer with ID %s, ignoring "%pID)
+            
+        if 0 == len(target):            
+            log_error("Cannot send message, there is no peer given or none found")
+            
+        if self.has_gui() and \
+           get_settings().get_warn_if_members_not_ready() and \
+           not msg.startswith(u"HELO") and \
+           get_settings().get_lunch_trigger().upper() in msg.upper():
+            # check if everyone is ready
+            notReadyMembers =[ip for ip in target if self._peers.isPeerReadyByIP(ip)]
+            
+            if notReadyMembers:
+                    
+                if len(notReadyMembers) == 1:
+                    warn = "%s is not ready for lunch." % iter(notReadyMembers).next()
+                elif len(notReadyMembers) == 2:
+                    it = iter(notReadyMembers)
+                    warn = "%s and %s are not ready for lunch." % (it.next(), it.next())
+                else:
+                    warn = "%s and %d others are not ready for lunch." % (random.sample(notReadyMembers, 1)[0], len(notReadyMembers) - 1)
+                try:
+                    from PyQt4.QtGui import QMessageBox
+                    warn = "WARNING: %s Send lunch call anyways?" % warn
+                    result = QMessageBox.warning(None,
+                                                 "Members not ready",
+                                                 warn,
+                                                 buttons=QMessageBox.Yes | QMessageBox.No,
+                                                 defaultButton=QMessageBox.No)
+                    if result == QMessageBox.No:
+                        return
+                except:
+                    print "WARNING: %s" % warn
+
+        i = 0
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
+        try:      
+            for ip in target:
+                try:
+                    log_debug("Sending", msg, "to", ip.strip())
+                    s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
+                    i += 1
+                except:
+                    # only warning message; happens sometimes if the host is not reachable
+                    log_warning("Message %s could not be delivered to %s: %s" % (s, ip, str(sys.exc_info()[0])))
+                    continue
+        finally:
+            s.close() 
+        return i
     
     def _build_info_string(self):
         from lunchinator.utilities import getPlatform, PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS
@@ -365,7 +404,7 @@ class lunch_server(object):
                    u"ID": get_settings().get_ID(),
                    u"next_lunch_begin":get_settings().get_default_lunch_begin(),
                    u"next_lunch_end":get_settings().get_default_lunch_end(),
-                   u"version":get_settings().get_version_short(),
+                   u"version":get_settings().get_version(),
                    u"version_commit_count":get_settings().get_commit_count(),
                    u"version_commit_count_plugins":get_settings().get_commit_count_plugins(),
                    u"platform": sys.platform}
@@ -560,20 +599,21 @@ class lunch_server(object):
                 with codecs.open(get_settings().get_messages_file(), 'w', 'utf-8') as f:
                     f.truncate()
                     msg = []
-                    self.messagesLock.acquire()
+                    self.lockMessages()
                     try:
                         for m in self.last_messages:
                             msg.append([mktime(m[0]), m[1], m[2]])
                     finally:
-                        self.messagesLock.release()
+                        self.releaseMessages()
                     json.dump(msg, f)
         except:
             log_exception("Could not write messages to %s: %s" % (get_settings().get_messages_file(), sys.exc_info()[0])) 
             
+
     def _insertMessage(self, mtime, addr, msg):
-        self.messagesLock.acquire()
+        self.lockMessages()
         try:
             self.last_messages.insert(0, [mtime, addr, msg])
         finally:
-            self.messagesLock.release()
+            self.releaseMessages()
     

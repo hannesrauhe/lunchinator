@@ -27,6 +27,7 @@ class ServerThread(threading.Thread):
             get_server().running = False
         
     def stop(self):
+        get_server().call("HELO_STOP shutdown", "127.0.0.1")
         get_server().running = False
 
 class LunchCommandLineInterface(cmd.Cmd, LunchServerController):

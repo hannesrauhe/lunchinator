@@ -10,11 +10,13 @@ class panic_button(iface_general_plugin):
                       "idProduct":"0x000d",
                       "panic_msg":"lunch panic" }
         
-    def activate(self):
+    def activate(self):        
         from panic_button.panic_button_listener import panic_button_listener
         iface_general_plugin.activate(self)
         log_info("Starting panic button listener")
-        self.panic_thread = panic_button_listener(self.options["idVendor"],self.options["idProduct"],self.options["panic_msg"])
+        self.panic_thread = panic_button_listener(int(self.options["idVendor"], 0),
+                                                  int(self.options["idProduct"], 0),
+                                                  self.options["panic_msg"])
         self.panic_thread.start()
         
         

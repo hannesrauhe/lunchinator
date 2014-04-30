@@ -40,7 +40,31 @@ done
 if [ "$DEBFULLNAME" == "" ] || [ "$DEBEMAIL" == "" ]
 then
   echo "Please export DEBFULLNAME and DEBEMAIL to your environment."
-  exit -1
+  exit 1
+fi
+
+if ! type py2dsc &>/dev/null
+then
+  echo "Please install python-stdeb first, using pip. Do NOT install it via aptitude!"
+  exit 1
+fi
+
+if python -c "from stdeb.util import PYTHON_ALL_MIN_VERS; print PYTHON_ALL_MIN_VERS" &>/dev/null
+then
+  echo "Please uninstall python-stdeb via aptitude and install it via pip."
+  exit 1
+fi
+
+if ! type dch &>/dev/null
+then
+  echo "Please install devscripts first."
+  exit 1
+fi
+
+if ! type lintian &>/dev/null
+then
+  echo "Please install lintian first."
+  exit 1
 fi
 
 source determine_version.sh
@@ -49,7 +73,7 @@ source determine_version.sh
 echo "$VERSION" >../version
 
 function generate_changelog() {
-  echo "$(git cat-file -p $(git rev-parse $(git tag | head)) | tail -n +6)" |
+  echo "$(git cat-file -p $(git rev-parse $(git tag | head -n 1)) | tail -n +6)" |
   while read line 
   do
     dch -a "$line"
@@ -63,6 +87,7 @@ do
   export dist
   rm -rf dist deb_${dist}
   pushd ..
+  export __isubuntu=1 #make sure setup.py builds for ubuntu
   python setup.py sdist --dist-dir=installer/dist
   popd
   py2dsc --suite=${dist} --dist-dir=deb_${dist} dist/Lunchinator*

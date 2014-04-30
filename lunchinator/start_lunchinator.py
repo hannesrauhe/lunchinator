@@ -2,14 +2,14 @@
 #
 #this script is used to start the lunchinator in all its flavors
 
-import platform, os, sys, subprocess
+import platform, sys, subprocess
 import signal
 from functools import partial
 from optparse import OptionParser
-from lunchinator import log_info, log_warning, log_error, get_settings,\
-    get_server, log_exception
+from lunchinator import log_info, log_error, get_settings,\
+    get_server, log_exception, initialize_logger
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
-from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS
+from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS, restart
     
 def parse_args():
     usage = "usage: %prog [options]"
@@ -47,7 +47,7 @@ def sendMessage(msg, cli):
         msg = "lunch"
     
     get_server().set_plugins_enabled(False)
-    recv_nr=get_server().call(msg,client=cli)
+    recv_nr=get_server().perform_call(msg,client=cli)
     print "sent to",recv_nr,"clients"
     
 def handleInterrupt(lanschi, _signal, _frame):
@@ -95,6 +95,11 @@ def checkDependencies(noPlugins, gui = False):
             
             result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + deps)
             
+            if result == EXIT_CODE_UPDATE:
+                # need to restart
+                restart()
+                return
+            
             try:
                 import yapsy
                 if result == 0:
@@ -115,7 +120,9 @@ def checkDependencies(noPlugins, gui = False):
                 log_error("Dependencies could not be installed.")
             return False
 
-def startLunchinator():    
+def startLunchinator():
+    initialize_logger()
+    
     (options, _args) = parse_args()
     usePlugins = options.noPlugins
     if options.exitWithStopCode:
@@ -134,6 +141,7 @@ def startLunchinator():
         try:
             from lunchinator import lunch_cli
             get_server().set_plugins_enabled(usePlugins)
+            get_server().set_has_gui(False)
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
         except:
@@ -145,6 +153,7 @@ def startLunchinator():
         
     #    sys.settrace(trace)
         get_server().set_plugins_enabled(usePlugins)
+        get_server().set_has_gui(False)
         get_server().start_server()
         sys.exit(get_server().exitCode)
     else:    

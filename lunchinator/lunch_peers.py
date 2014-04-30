@@ -1,4 +1,5 @@
 import os, codecs, socket
+from copy import deepcopy
 from time import time
 from threading import Lock
 from lunchinator import get_settings, log_warning, log_exception, log_error, log_debug, log_info
@@ -8,19 +9,34 @@ class LunchPeers(object):
     def __init__(self, controller):
         self._controller = controller
         
-        self._members = set()  # members: peers that sent their info, are active and belong to my group
+        self._members = set()  #of PeerIDs members: peers that sent their info, are active and belong to my group
         self._peer_timeout = {}  # last seen timestamps
         self._peer_info = {}
         self._groups = set()
+        self._idToIp = {}
         
         self.dontSendTo = set()  
         self._new_peers = set()  # peers I have to ask for info 
         
-        # todo: it's a mess, what locks do i need?
-        self._peerLock = Lock()
-        self._memberLock = Lock()
+        self._lock()
         
         self._initPeersFromFile()  
+        
+    def addMemberByIP(self, ip):
+        self._lock.acquire()
+        try:
+            if ip in self._peer_info:
+                pInfo = deepcopy(self._peer_info[ip])
+                log_debug("Peer %s is a member" % ip)
+                self._members.add(pInfo[u"ID"])            
+                self._controller.memberAppended(pInfo[u"ID"], pInfo)
+        finally:
+            self._lock.release()
+            
+    
+    
+    
+    #TODO change starting from here: IDs / LOCKING
         
     # todo think about how to update group set (when to remove a group)    
     def getGroups(self):  
@@ -40,12 +56,6 @@ class LunchPeers(object):
         """Members are peers, that send their INFO, are in my group, and were active """
         return self._members    
     
-    def addMember(self, ip):
-        if ip in self._peer_info:
-            log_debug("Peer %s is a member" % ip)
-            with self._memberLock:
-                self._members.add(ip)            
-            self._controller.memberAppended(ip, self.getPeerInfo(ip))
         
     def removeMembers(self, toRemove=None):
         if toRemove == None:
@@ -74,17 +84,20 @@ class LunchPeers(object):
                     self._peer_info.pop(ip)
                     self._controller.peerRemoved(ip)
     
-    def getPeerInfo(self, ip):
+    def getPeerInfoByIP(self, ip):
         """Returns the info dictionary for a peer or None if the ID is unknown"""
         if ip in self._peer_info:
-            return self._peer_info[ip]
+            return deepcopy(self._peer_info[ip])
         return None
     
-    def getPeerInfoDict(self):
-        """Returns all data stored in one dict"""
-        return self._peer_info
+     
+    def getPeerGroupByIP(self, ip):
+        """Returns the name of the peer or None if not a peer"""
+        if ip in self._peer_info:
+            return self._peer_info[ip][u'group']
+        return None    
     
-    def getPeerName(self, ip):
+    def getPeerNameByIP(self, ip):
         """Returns the name of the peer or None if not a peer"""
         if ip in self._peer_info:
             return self._peer_info[ip][u'name']
@@ -95,17 +108,16 @@ class LunchPeers(object):
         if ip in self._peer_info:
             return self._peer_info[ip][u'ID']
         return None 
-     
-    def getPeerGroup(self, ip):
-        """Returns the name of the peer or None if not a peer"""
-        if ip in self._peer_info:
-            return self._peer_info[ip][u'group']
-        return None    
 
-    def getPeers(self):
+    
+    def getPeerInfoDict(self):
+        """Returns all data stored in one dict"""
+        return self._peer_info
+    
+    def getPeerIPs(self):
         return self._peer_info.keys()
     
-    def isPeerReady(self, ip):
+    def isPeerReadyByIP(self, ip):
         p = self.getPeerInfo(ip)
         if p and p.has_key(u"next_lunch_begin") and p.has_key(u"next_lunch_end"):
             diff = getTimeDifference(p[u"next_lunch_begin"], p[u"next_lunch_end"])

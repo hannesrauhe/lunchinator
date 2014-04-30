@@ -124,6 +124,9 @@ class iface_plugin(IPlugin):
     def _displayOptionValue(self, o, v):
         from PyQt4.QtCore import Qt
         
+        if not self.option_widgets:
+            # probably not initialized yet.
+            return
         e = self.option_widgets[o]
         if o in self.option_choice:
             currentIndex = 0
@@ -337,12 +340,13 @@ class iface_gui_plugin(iface_plugin):
         self.visible = True
         return None
     
-    """Called when the widget is hidden / closed. Ensure that create_widget restores the state."""
     def destroy_widget(self):
+        """Called when the widget is hidden / closed. Ensure that create_widget restores the state."""
         self.visible = False
     
-    def add_menu(self,menu):
-        pass    
+    def create_menus(self, _menuBar):
+        """Creates plugin specific menus and returns a list of QMenu objects"""
+        return None
     
     @classmethod
     def run_standalone(cls, factory):

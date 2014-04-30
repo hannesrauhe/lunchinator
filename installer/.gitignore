@@ -6,3 +6,4 @@
 /deb_*
 *.log
 /osc
+.last-tag

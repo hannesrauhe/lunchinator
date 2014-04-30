@@ -1,4 +1,4 @@
 exclude images/*.icns
 exclude images/mini_breakfast_by*
-global-exclude *.exe *.pyc
+global-exclude *.exe *.pyc *.pyo .gitignore
 include version lunchinator_pub_0x17F57DC2.asc stdeb.cfg copyright
