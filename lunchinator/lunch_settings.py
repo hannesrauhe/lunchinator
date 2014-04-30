@@ -183,26 +183,17 @@ class lunch_settings(object):
                 version_file = self.get_resource("version")
                 with contextlib.closing(open(version_file, "r")) as vfh:
                     self._version = vfh.read().strip()
+                self._commit_count = self._version.split(".")[-1]
             except Exception:
-                self._version = u"unknown"
+                log_error("Error reading/parsing version file")
+                self._version = u"unknown.unknown"
+                self._commit_count = "unknown"
                 
         return self._version
     
     def get_commit_count(self):
-        if not self._commit_count:
-            try:
-                version_file = self.get_resource("commit_count")
-                with contextlib.closing(open(version_file, "r")) as vfh:
-                    self._commit_count = vfh.read().strip()
-            except:
-                from lunchinator.git import GitHandler
-                gitHandler = GitHandler()
-                if gitHandler.has_git():
-                    commit_count = gitHandler.getCommitCount()
-                    if commit_count:
-                        self._commit_count = commit_count
-                else:
-                    log_error("version file missing, no version information")
+        self.get_version()
+        
         return self._commit_count
     
     def get_commit_count_plugins(self):
