@@ -1,8 +1,5 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 import urllib2
-import socket
-import errno
-from lunchinator import log_error
     
 class lunch_menu(iface_gui_plugin):
     def __init__(self):
@@ -21,13 +18,9 @@ class lunch_menu(iface_gui_plugin):
         textview.setLineWrapMode(QTextEdit.WidgetWidth)
         textview.setReadOnly(True)
         
-        try:
-            resp = urllib2.urlopen(self.options["url"])
-            txt = resp.read()
-            textview.setPlainText(txt)
-        except:
-            # TODO do this in background
-            log_error("Could not read lunch menu")
+        resp = urllib2.urlopen(self.options["url"])
+        txt = resp.read()
+        textview.setPlainText(txt)
         textview.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         return textview
     
