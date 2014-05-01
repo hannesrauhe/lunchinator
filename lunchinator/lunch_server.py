@@ -9,7 +9,7 @@ from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string
-from lunchinator.utilities import determineOwnIP, getTimeDifference
+from lunchinator.utilities import determineOwnIP
 from lunchinator.lunch_peers import LunchPeers
 
 EXIT_CODE_ERROR = 1
@@ -262,16 +262,16 @@ class lunch_server(object):
                         continue
                     
                     # first we save the timestamp of this contact, no matter what
-                    self._peers.seenPeer(ip)
+                    self._peers.seenIP(ip)
                     
                     # we also make sure, that there is a valid record for this ip,
                     # so we do not have to check this every time
-                    self._peers.createPeer(ip)
+                    self._peers.createPeerByIP(ip)
                     
                     # if there is no HELO in the beginning, it's just a message and 
                     # we handle it, if the peer is in our group
                     if not data.startswith("HELO"):
-                        if self._peers.isMember(ip):
+                        if self._peers.isMemberByIP(ip):
                             try:
                                 self._handle_incoming_message(ip, data)
                             except:
@@ -342,9 +342,9 @@ class lunch_server(object):
         else:
             target = peerIPs
             for pID in peerIDs:
-                pIP = self._peers.getPeerIP(pID)
-                if pIP:
-                    target.add(pIP)
+                pIPs = self._peers.getPeerIPs(pID)
+                if len(pIPs):
+                    target += pIPs
                 else:
                     log_warning("While calling: I do not know a peer with ID %s, ignoring "%pID)
             
@@ -427,14 +427,14 @@ class lunch_server(object):
         r_value = True
         
         if cmd == "HELO_INFO":
-            self._peers.updatePeerInfo(ip, json.loads(value))
+            self._peers.updatePeerInfoByIP(ip, json.loads(value))
 
         elif cmd == "HELO_REQUEST_INFO":
-            self._peers.updatePeerInfo(ip, json.loads(value))
+            self._peers.updatePeerInfoByIP(ip, json.loads(value))
             self.call_info()
                 
         elif cmd == "HELO_REQUEST_DICT":
-            self._peers.updatePeerInfo(ip, json.loads(value))   
+            self._peers.updatePeerInfoByIP(ip, json.loads(value))   
             self.call_dict(ip)           
 
         elif cmd == "HELO_DICT":
@@ -443,22 +443,25 @@ class lunch_server(object):
             # i add every entry and assume, the member is in my group
             # i will still ask the member itself 
             for m_ip, m_name in ext_members.iteritems():
-                self._peers.createPeer(m_ip, {u"name":m_name, u"group":get_settings().get_group()})
+                self._peers.createPeerByIp(m_ip, {u"name":m_name, u"group":get_settings().get_group()})
 
         elif cmd == "HELO_LEAVE":
-            self._peers.removeMembers(ip)
+            self._peers.removeMembersByIP(ip)
             
         elif cmd == "HELO":
             # this is just a ping with the members name
-            self._peers.updatePeerInfo(ip, {u"name":value})     
+            self._peers.updatePeerInfoByIP(ip, {u"name":value})     
             
         else:
             r_value = False 
             
+        # now it's the plugins' turn:
+        self.controller.processEvent(cmd, value, ip)
+            
         return r_value
 
     def requets_avatar(self, ip): 
-        info = self._peers.getPeerInfo(ip)
+        info = self._peers.getPeerInfoByIp(ip)
         if info and u"avatar" in info and not os.path.exists(os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])):
             self.call("HELO_REQUEST_AVATAR " + str(self.controller.getOpenTCPPort(ip)), client=ip)  
             return True
@@ -476,7 +479,7 @@ class lunch_server(object):
             if len(values) > 1:
                 tcp_port = int(values[1].strip())
             file_name = ""
-            info = self._peers.getPeerInfo(ip)
+            info = self._peers.getPeerInfoByIp(ip)
             if u"avatar" in info:
                 file_name = os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])
             else:

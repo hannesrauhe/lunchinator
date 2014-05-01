@@ -216,7 +216,7 @@ class MembersTableModel(TableModelBase):
         
     def _updateLastSeenItem(self, peerID, _, item):
         intValue = -1
-        timeout = self.dataSource.getTimeout(peerID)
+        timeout = self.dataSource.getIDLastSeen(peerID)
         if timeout != None:
             intValue = int(time.time() - timeout)
         item.setData(QVariant(intValue), Qt.DisplayRole)

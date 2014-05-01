@@ -288,7 +288,7 @@ class MembersWidget(QWidget):
         if self.dropdown_members_model == None:
             return
         
-        peers = set(get_peers().getPeers())
+        peers = set(get_peers())
         for peerID in peers:
             m_name = get_peers().getPeerName(peerID)
             if not peerID in self.dropdown_members_dict:

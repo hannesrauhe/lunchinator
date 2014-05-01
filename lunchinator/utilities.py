@@ -1,7 +1,6 @@
 import subprocess,sys,ctypes
 from lunchinator import log_exception, log_warning, log_debug,\
     get_settings, log_error
-from lunch_settings import lunch_settings
 import os, threading, contextlib, socket
 from datetime import datetime
 import os
@@ -173,11 +172,11 @@ def processPluginCall(ip, call):
         return
     from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
     
-#     peerID = get_peers().getPeerID(ip)
-#     member_info = get_peers().getPeerInfo(peerID)
-    member_info = get_peers().getPeerInfo(ip)
-    if member_info == None:
-        member_info = {}
+    peerID = get_peers().getPeerID(ip)
+    member_info = get_peers().getPeerInfo(peerID)
+#     member_info = get_peers().getPeerInfo(ip)
+#     if member_info == None:
+#         member_info = {}
     
     # called also contains gui plugins
     for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("called")+get_server().plugin_manager.getPluginsOfCategory("gui"):

@@ -353,19 +353,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         return menu
     
     def _updateMemberStatus(self):
-        get_server().lockMembers()
-        try:
-            readyMembers = []
-            notReadyMembers = []
-            for m in get_server().get_members():
-                if not get_server().is_peer_readyness_known(m):
-                    continue
-                if get_server().is_peer_ready(m):
-                    readyMembers.append(get_server().memberName(m))
-                else:
-                    notReadyMembers.append(get_server().memberName(m))
-        finally:
-            get_server().releaseMembers()
+        peers = get_server().getLunchPeers()
+        readyMembers = peers.getReadyMembers()
+        notReadyMembers = peers.getMembers() - readyMembers
         
         if not readyMembers and not notReadyMembers:
             status = u"No members."
