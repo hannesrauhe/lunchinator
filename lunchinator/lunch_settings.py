@@ -5,7 +5,7 @@ from lunchinator import log_exception, log_error, setLoggingLevel, convert_strin
 from datetime import datetime
 import json
 from lunchinator.repositories import PluginRepositories
-    
+
 class lunch_settings(object):
     LUNCH_TIME_FORMAT = "%H:%M"
     LUNCH_TIME_FORMAT_QT = "HH:mm"
