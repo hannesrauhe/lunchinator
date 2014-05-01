@@ -7,11 +7,11 @@ class RepoUpdateHandler(object):
         self._ui = None
     
     def activate(self):
-        get_notification_center().connectRepositoryUpdate(self._processOutdated)
+        get_notification_center().connectOutdatedRepositoriesChanged(self._processOutdated)
         self.checkForUpdates()
     
     def deactivate(self):
-        get_notification_center().disconnectRepositoryUpdate(self._processOutdated)
+        get_notification_center().disconnectOutdatedRepositoriesChanged(self._processOutdated)
     
     def checkForUpdates(self):
         AsyncCall(getValidQtParent(),
@@ -22,8 +22,10 @@ class RepoUpdateHandler(object):
         self._ui.checkForRepoUpdates.connect(self.checkForUpdates)
         self._updateRepoStatus()
         
-    def _getRepoStatus(self):
-        nOutdated = len(get_settings().get_plugin_repositories().getOutdated())
+    def _getRepoStatus(self, nOutdated=None):
+        if nOutdated == None:
+            with get_settings().get_plugin_repositories():
+                nOutdated = len(get_settings().get_plugin_repositories().getOutdated())
         if nOutdated == 0:
             status = "There are no repositories that can be updated."
         elif nOutdated == 1:
@@ -32,18 +34,22 @@ class RepoUpdateHandler(object):
             status = "%d plugin repositories can be updated." % nOutdated
         return status
         
-    def _updateRepoStatus(self): 
-        self._ui.setRepoStatus(self._getRepoStatus())
+    def _updateRepoStatus(self, nOutdated=None):
+        self._ui.setRepoStatus(self._getRepoStatus(nOutdated))
     
     def areUpdatesAvailable(self):
         return get_settings().get_plugin_repositories().areUpdatesAvailable()
     
-    def _processOutdated(self, _outdated):
-        displayNotification("Update(s) available", self._getRepoStatus())
-        if self._ui:
-            self._ui.repoUpdatesAvailable()
-            self._updateRepoStatus()
+    def _processOutdated(self):
+        with get_settings().get_plugin_repositories():
+            nOutdated = len(get_settings().get_plugin_repositories().getOutdated())
         
+        if nOutdated > 0:
+            displayNotification("Update(s) available", self._getRepoStatus())
+        if self._ui:
+            self._ui.setRepoUpdatesAvailable(nOutdated > 0)
+            self._updateRepoStatus(nOutdated)
+    
     def prepareInstallation(self, commands):
         toUpdate = get_settings().get_plugin_repositories().getOutdated()
         for path in toUpdate:

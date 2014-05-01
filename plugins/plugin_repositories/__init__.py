@@ -20,10 +20,10 @@ class plugin_repositories(iface_general_plugin):
         
     def activate(self):
         iface_general_plugin.activate(self)
-        get_notification_center().connectRepositoryUpdate(self._processUpdates)
+        get_notification_center().connectOutdatedRepositoriesChanged(self._processUpdates)
         
     def deactivate(self):
-        get_notification_center().disconnectRepositoryUpdate(self._processUpdates)
+        get_notification_center().disconnectOutdatedRepositoriesChanged(self._processUpdates)
         iface_general_plugin.deactivate(self)
         
     def create_options_widget(self, parent):
@@ -91,6 +91,10 @@ class plugin_repositories(iface_general_plugin):
         stringList = QStringList([u"Active", u"Path", u"Auto Update", u"Status"])
         self._reposModel.setColumnCount(stringList.count())
         self._reposModel.setHorizontalHeaderLabels(stringList)
+        self._reposModel.itemChanged.connect(self._itemChanged)
+    
+    def _itemChanged(self, _item):
+        self._modified = True
     
     def _initRepositories(self):
         self._modified = False
@@ -105,7 +109,7 @@ class plugin_repositories(iface_general_plugin):
         if get_settings().get_plugin_repositories().isUpToDate(path):
             item.setData(QColor(0, 255, 0), Qt.DecorationRole)
         elif get_settings().get_plugin_repositories().isOutdated(path):
-            item.setData(QColor(127, 255, 127), Qt.DecorationRole)
+            item.setData(QColor(255, 215, 0), Qt.DecorationRole)
         else:
             item.setData(None, Qt.DecorationRole)
       
@@ -161,8 +165,8 @@ class plugin_repositories(iface_general_plugin):
             repos = []
             for row in xrange(self._reposModel.rowCount()):
                 path = convert_string(self._reposModel.item(row, self.PATH_COLUMN).data(Qt.DisplayRole).toString())
-                active = self._reposModel.item(row, self.ACTIVE_COLUMN).checkState == Qt.Checked
-                autoUpdate = self._reposModel.item(row, self.AUTO_UPDATE_COLUMN).checkState == Qt.Checked
+                active = self._reposModel.item(row, self.ACTIVE_COLUMN).checkState() == Qt.Checked
+                autoUpdate = self._reposModel.item(row, self.AUTO_UPDATE_COLUMN).checkState() == Qt.Checked
                 repos.append((path, active, autoUpdate))
                 
             get_settings().get_plugin_repositories().setExternalRepositories(repos)

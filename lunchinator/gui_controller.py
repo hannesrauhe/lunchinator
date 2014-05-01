@@ -49,7 +49,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.resetNextLunchTimeTimer = None
         self.isIconHighlighted = True  # set to True s.t. first dehighlight can set the default icon
         self._updateAvailable = False
+        self._repoUpdates = 0
         self._installUpdatesAction = None
+        self._appUpdateStatusAction = None
+        self._repoUpdateStatusAction = None
         
         self.exitCode = 0
         self.serverThread = None
@@ -68,8 +71,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         self.mainWindow.createMenuBar(self.pluginActions)
         
-        get_notification_center().connectApplicationUpdate(self.notifyUpdates)
-        get_notification_center().connectRepositoryUpdate(self.notifyUpdates)
+        get_notification_center().connectApplicationUpdate(self._appUpdateAvailable)
+        get_notification_center().connectOutdatedRepositoriesChanged(self._outdatedReposChanged)
         
         # connect private signals
         self._initDone.connect(self.initDoneSlot)
@@ -255,10 +258,33 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
     """ ----------------- CALLED ON MAIN THREAD -------------------"""
     
-    def notifyUpdates(self):
-        if self._installUpdatesAction != None:
-            self._installUpdatesAction.setVisible(True)
+    def _updateRepoUpdateStatusAction(self):
+        status = ""
+        if self._repoUpdates == 1:
+            status = "1 plugin repository can be updated."
+        elif self._repoUpdates > 1:
+            status = "%d plugin repositories can be updated." % self._repoUpdates
+        self._repoUpdateStatusAction.setText(status)
+            
+        self._repoUpdateStatusAction.setVisible(self._repoUpdates > 0)
+    
+    def _appUpdateAvailable(self):
         self._updateAvailable = True
+        if self._appUpdateStatusAction != None:
+            self._appUpdateStatusAction.setVisible(True)
+        self.notifyUpdates()
+    
+    def _outdatedReposChanged(self):
+        with get_settings().get_plugin_repositories():
+            self._repoUpdates = len(get_settings().get_plugin_repositories().getOutdated())
+        if self._repoUpdateStatusAction != None:
+            self._updateRepoUpdateStatusAction()
+        self.notifyUpdates()
+    
+    def notifyUpdates(self):
+        hasUpdates = self._updateAvailable or self._repoUpdates > 0
+        if self._installUpdatesAction != None:
+            self._installUpdatesAction.setVisible(hasUpdates)
         self._updateMemberStatus()
     
     def init_menu(self, parent):        
@@ -338,6 +364,17 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         menu.addMenu(plugin_menu)
         
+        if hasattr(menu, "addSeparator"):
+            menu.addSeparator()
+        
+        self._appUpdateStatusAction = menu.addAction("Lunchinator can be updated.")
+        self._appUpdateStatusAction.setEnabled(False)
+        self._appUpdateStatusAction.setVisible(self._updateAvailable)
+        
+        self._repoUpdateStatusAction = menu.addAction("")
+        self._repoUpdateStatusAction.setEnabled(False)
+        self._updateRepoUpdateStatusAction()
+        
         self._installUpdatesAction = menu.addAction("Install Updates and Relaunch")
         self._installUpdatesAction.triggered.connect(get_notification_center().emitInstallUpdates)
         self._installUpdatesAction.setVisible(self._updateAvailable)
@@ -380,8 +417,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 notReady = u"%d members" % len(notReadyMembers)
             
             status = u"%s ready, %s not ready for lunch." % (ready, notReady)
-        if self._updateAvailable:
-            status = u"Update available – " + status
         self._memberStatusAction.setText(status)
     
     def check_new_msgs(self):

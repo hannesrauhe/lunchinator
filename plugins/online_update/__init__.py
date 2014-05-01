@@ -50,6 +50,7 @@ class online_update(iface_general_plugin):
         self._repoUpdateHandler.activate()
         
         get_notification_center().connectInstallUpdates(self.installUpdates)
+        get_notification_center().connectRepositoriesChanged(self._repoUpdateHandler.checkForUpdates)
             
         self._scheduleTimer = QTimer(getValidQtParent())
         self._scheduleTimer.timeout.connect(self.checkForUpdate)
@@ -60,12 +61,12 @@ class online_update(iface_general_plugin):
             self._scheduleTimer.stop()
             self._scheduleTimer.deleteLater()
             
+        get_notification_center().disconnectInstallUpdates(self.installUpdates)
+        get_notification_center().disconnectRepositoriesChanged(self._repoUpdateHandler.checkForUpdates)
+        
         self._appUpdateHandler.deactivate()
         self._repoUpdateHandler.deactivate()
-        
         iface_general_plugin.deactivate(self)
-        
-        get_notification_center().disconnectInstallUpdates(self.installUpdates)
     
     def create_options_widget(self, parent):
         ui = OnlineUpdateGUI(self._appUpdateHandler.getInstalledVersion(), parent)

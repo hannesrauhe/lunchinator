@@ -104,8 +104,8 @@ class OnlineUpdateGUI(QWidget):
     def appInstallReady(self):
         self._installUpdatesButton.setEnabled(True)
         
-    def repoUpdatesAvailable(self):
-        self._installUpdatesButton.setEnabled(True)
+    def setRepoUpdatesAvailable(self, avail):
+        self._installUpdatesButton.setEnabled(avail)
         
     def setRepoStatus(self, status):
         self._repoStatusLabel.setText(status)

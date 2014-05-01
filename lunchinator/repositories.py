@@ -4,6 +4,10 @@ from git import GitHandler
 from lunchinator import get_notification_center
 
 class PluginRepositories(object):
+    PATH_INDEX = 0
+    ACTIVE_INDEX = 1
+    AUTO_UPDATE_INDEX = 2
+    
     def __init__(self, internalDir, externalRepos):
         self._internalDir = internalDir
         self._externalRepos = externalRepos
@@ -13,14 +17,26 @@ class PluginRepositories(object):
         
     def getPluginDirs(self):
         with self._lock:
-            return [self._internalDir] + [tup[0] for tup in self._externalRepos]
+            return [self._internalDir] + [tup[self.PATH_INDEX] for tup in self._externalRepos]
     
     def getExternalRepositories(self):
         return self._externalRepos
     
     def setExternalRepositories(self, repos):
         with self._lock:
+            outDatedChanged = False
+            for newRepo in repos:
+                if not newRepo[self.AUTO_UPDATE_INDEX] and self.isAutoUpdateEnabled(newRepo[self.PATH_INDEX]):
+                    # don't want to auto update this repo any more
+                    if self.isOutdated(newRepo[self.PATH_INDEX]):
+                        outDatedChanged = True
+                        self._outdated.remove(newRepo[self.PATH_INDEX])
+                    if self.isUpToDate(newRepo[self.PATH_INDEX]):
+                        self._upToDate.remove(newRepo[self.PATH_INDEX])
             self._externalRepos = repos
+        if outDatedChanged:
+            get_notification_center().emitOutdatedRepositoriesChanged()
+        get_notification_center().emitRepositoriesChanged()
 
     def checkForUpdates(self, forced=False):
         """
@@ -49,7 +65,7 @@ class PluginRepositories(object):
             self._upToDate.update(upToDate)
             
         if outdated:
-            get_notification_center().emitRepositoryUpdate(outdated)
+            get_notification_center().emitOutdatedRepositoriesChanged()
         return outdated
 
     def areUpdatesAvailable(self):
