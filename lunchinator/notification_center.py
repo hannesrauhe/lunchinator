@@ -56,7 +56,6 @@ class NotificationCenter(object):
         for callback in self._callbacks[signal]:
             callback(*args, **kwargs)
     
-    
     @_connectFunc
     def connectOutdatedRepositoriesChanged(self, callback):
         pass
@@ -65,6 +64,16 @@ class NotificationCenter(object):
         pass
     @_emitFunc
     def emitOutdatedRepositoriesChanged(self):
+        pass
+    
+    @_connectFunc
+    def connectUpToDateRepositoriesChanged(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectUpToDateRepositoriesChanged(self, callback):
+        pass
+    @_emitFunc
+    def emitUpToDateRepositoriesChanged(self):
         pass
     
     @_connectFunc

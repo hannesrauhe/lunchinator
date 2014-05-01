@@ -11,6 +11,14 @@ class NotificationCenterQt(QObject):
     def emitOutdatedRepositoriesChanged(self):
         self._signalOutdatedRepositoriesChanged.emit()
         
+    _signalUpToDateRepositoriesChanged = pyqtSignal()
+    def connectUpToDateRepositoriesChanged(self, callback):
+        self._signalUpToDateRepositoriesChanged.connect(callback)
+    def disconnectUpToDateRepositoriesChanged(self, callback):
+        self._signalUpToDateRepositoriesChanged.disconnect(callback)
+    def emitUpToDateRepositoriesChanged(self):
+        self._signalUpToDateRepositoriesChanged.emit()
+        
     _signalRepositoriesChanged = pyqtSignal()
     def connectRepositoriesChanged(self, callback):
         self._signalRepositoriesChanged.connect(callback)

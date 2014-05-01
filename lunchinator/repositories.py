@@ -66,6 +66,8 @@ class PluginRepositories(object):
             
         if outdated:
             get_notification_center().emitOutdatedRepositoriesChanged()
+        if upToDate:
+            get_notification_center().emitUpToDateRepositoriesChanged()
         return outdated
 
     def areUpdatesAvailable(self):
