@@ -236,7 +236,7 @@ class LunchPeers(object):
              
                 for ip in self._IP_seen:
                     # todo: get_settings().get_peer_timeout():
-                    if time() - self._IP_seen[ip] > 10000:
+                    if ip in self._peer_info and time() - self._IP_seen[ip] > 10000:
                         pID = self._peer_info[ip][u"ID"]
                         self._removePeerIPfromID(pID, ip)
                         del self._peer_info[ip]
