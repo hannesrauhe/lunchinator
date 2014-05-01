@@ -75,7 +75,7 @@ data_files = [('share/lunchinator/sounds', ['sounds/sonar.wav']),
               ('share/icons/hicolor/scalable/apps', ['images/lunchinator.svg']),
               ('share/applications', ['installer/lunchinator.desktop'])]
 # ensure icons are installed only on ubuntu
-if not os.getenv("__notubuntu") and platform.dist()[0] == "Ubuntu":
+if os.getenv("__isubuntu") or (not os.getenv("__notubuntu") and platform.dist()[0] == "Ubuntu"):
     data_files.append(('share/icons/ubuntu-mono-dark/status/24', ['images/white/lunchinator.svg', 'images/lunchinatorred.svg']))
     data_files.append(('share/icons/ubuntu-mono-light/status/24', ['images/black/lunchinator.svg', 'images/lunchinatorred.svg']))
 data_files.extend([("share/lunchinator/" + dp, [os.path.join(dp, fn) for fn in fns if not fn.endswith('.pyc')]) for dp, _, fns in os.walk('plugins')])
