@@ -55,7 +55,7 @@ class plugin_repositories(iface_general_plugin):
         self._removeButton.setEnabled(False)
         self._removeButton.clicked.connect(self._removeSelected)
         refreshButton = QPushButton("Check Status")
-        refreshButton.clicked.connect(partial(self._checkForUpdates, True))
+        refreshButton.clicked.connect(self._checkForUpdates)
         buttonLayout.addWidget(addButton)
         buttonLayout.addWidget(self._removeButton)
         buttonLayout.addWidget(refreshButton)
