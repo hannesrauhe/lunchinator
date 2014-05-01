@@ -130,11 +130,10 @@ class LunchPeers(object):
             
         return None
     
-    def getPeerInfo(self, ip):
+    def getPeerInfo(self, pID):
         """Returns the info dictionary for a peer or None if the ID is unknown"""
         with self._lock:
-            if ip in self._peer_info:
-                return deepcopy(self._getPeerInfoByID(pID))
+            return deepcopy(self._getPeerInfoByID(pID))
             
         return None
         
@@ -148,7 +147,9 @@ class LunchPeers(object):
     def getPeerName(self, pID):
         """Returns the name of the peer or None if not a peer"""
         with self._lock:
-            return self._getPeerInfoByID(pID)[u'name']
+            i = self._getPeerInfoByID(pID)
+            if i:
+                return i[u'name']
         return None 
     
     def getPeerNameByIP(self, ip):
@@ -238,8 +239,9 @@ class LunchPeers(object):
                     if time() - self._IP_seen[ip] > 10000:
                         pID = self._peer_info[ip][u"ID"]
                         self._removePeerIPfromID(pID, ip)
+                        del self._peer_info[ip]
         except:
-            log_exception("Something went wrong while trying to clean up the list of active members")
+            log_exception("Something went wrong while trying to clean up the list of peers and members")
     
     def getPeerInfoDict(self):
         """Returns all data stored in the peerInfo dict"""
@@ -274,6 +276,8 @@ class LunchPeers(object):
             self._idToIp[pID].add(ip)   
             
     def _getPeerInfoByID(self, pID):
+        if pID not in self._idToIp:
+            return None
         recentIP = list(self._idToIp[pID])[0]
         return self._peer_info[recentIP]     
     

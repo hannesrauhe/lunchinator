@@ -13,8 +13,12 @@ class LunchServerController(object):
     def call(self, msg, peerIDs, peerIPs):
         get_server()._perform_call(msg, peerIDs, peerIPs)
         
-    def memberAppended(self, ip, infoDict):
+    def memberAppended(self, peerID, infoDict):
         log_error("IMPLEMENT memberAppended - remove this message")
+        pass
+    
+    def memberRemoved(self, peerID):
+        log_error("IMPLEMENT memberRemoved - remove this message")
         pass
         
     def groupAppended(self, group, peer_groups):

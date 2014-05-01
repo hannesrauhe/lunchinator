@@ -304,7 +304,7 @@ class lunch_server(object):
                             is_in_broadcast_mode = False
                             log_warning("ending braodcast")                            
                         if not self.own_ip:
-                            self.own_ip = determineOwnIP(self._peers.getPeers())
+                            self.own_ip = determineOwnIP(self._peers.getPeerIPs())
                         if announce_name == 0:
                             # it's time to announce my name again and switch the master
                             self.call("HELO " + get_settings().get_user_name(), peerIPs = self._peers.getPeerIPs())
@@ -443,7 +443,7 @@ class lunch_server(object):
             # i add every entry and assume, the member is in my group
             # i will still ask the member itself 
             for m_ip, m_name in ext_members.iteritems():
-                self._peers.createPeerByIp(m_ip, {u"name":m_name, u"group":get_settings().get_group()})
+                self._peers.createPeerByIP(m_ip, {u"name":m_name, u"group":get_settings().get_group()})
 
         elif cmd == "HELO_LEAVE":
             self._peers.removeMembersByIP(ip)
@@ -461,7 +461,7 @@ class lunch_server(object):
         return r_value
 
     def requets_avatar(self, ip): 
-        info = self._peers.getPeerInfoByIp(ip)
+        info = self._peers.getPeerInfoByIP(ip)
         if info and u"avatar" in info and not os.path.exists(os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])):
             self.call("HELO_REQUEST_AVATAR " + str(self.controller.getOpenTCPPort(ip)), client=ip)  
             return True
@@ -479,7 +479,7 @@ class lunch_server(object):
             if len(values) > 1:
                 tcp_port = int(values[1].strip())
             file_name = ""
-            info = self._peers.getPeerInfoByIp(ip)
+            info = self._peers.getPeerInfoByIP(ip)
             if u"avatar" in info:
                 file_name = os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])
             else:
