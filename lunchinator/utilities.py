@@ -403,7 +403,7 @@ def restartWithCommands(commands):
         
         spawnProcess(args)
         
-        get_server().get_controller().quit()
+        get_server().get_controller().shutdown()
     except:
         log_exception("Error in stopWithCommands")
     
