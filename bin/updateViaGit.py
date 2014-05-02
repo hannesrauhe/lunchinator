@@ -33,7 +33,8 @@ if __name__ == "__main__":
         sys.exit(1)
         
     if not console_output:
-        logging.basicConfig(filename='update.log',level=logging.DEBUG)
+        logfilepath = os.path.join(os.path.dirname(os.path.abspath(__file__)),'update.log')
+        logging.basicConfig(filename=logfilepath,level=logging.DEBUG)
     
     c, o, e = runGitCommand(["pull"],lunchbindir)
     if c==0:
