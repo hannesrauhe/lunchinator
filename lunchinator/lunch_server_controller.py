@@ -1,4 +1,5 @@
 """Base class for Lunch Server Controller classes"""
+import sys
 from lunchinator import get_server, get_settings, log_info
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall
@@ -17,6 +18,17 @@ class LunchServerController(object):
         
     def call(self, msg, client, hosts):
         get_server().perform_call(msg, client, hosts)
+    
+    def shutdown(self):
+        if get_server().is_running():
+            get_server().call("HELO_STOP shutdown", client="127.0.0.1")
+        else:
+            # server is not running. HELO_STOP will not have any effect.
+            self._coldShutdown()
+            
+    def _coldShutdown(self):
+        """Shutdown when server is not yet running"""
+        sys.exit(0)
     
     def extendMemberInfo(self, _infoDict):
         """Add some specific information to the info dictionary"""

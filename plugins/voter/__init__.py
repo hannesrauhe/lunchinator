@@ -59,7 +59,7 @@ class voter(iface_gui_plugin):
         get_server().call(vote_call)
         
         etime = stime.addSecs(60*30)
-        get_server().getController().changeNextLunchTime(stime.toString("hh:mm"), etime.toString("hh:mm"))
+        get_server().get_controller().changeNextLunchTime(stime.toString("hh:mm"), etime.toString("hh:mm"))
 
 class voterWidget(QWidget):
     def __init__(self, parent, vote_clicked_callable):

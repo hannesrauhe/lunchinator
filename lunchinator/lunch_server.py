@@ -267,6 +267,9 @@ class lunch_server(object):
             
     
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
+    def is_running(self):
+        return self.running
+    
     def changeGroup(self, newgroup):
         log_info("Changing Group: %s -> %s" % (get_settings().get_group(), newgroup))
         get_settings().set_group(newgroup)
@@ -401,7 +404,7 @@ class lunch_server(object):
         log_exception("getDBConnection: DB Connections plugin not yet loaded")
         return None        
     
-    def getController(self):
+    def get_controller(self):
         return self.controller
         
     def call_info(self, peers=[]):

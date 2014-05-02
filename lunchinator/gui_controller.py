@@ -167,6 +167,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if reason == QSystemTrayIcon.Trigger:
             self.statusicon.contextMenu().popup(QCursor.pos())
         
+    def _coldShutdown(self, exitCode=0):
+        # before exiting, process remaining events (e.g., pending messages like HELO_LEAVE)
+        QCoreApplication.processEvents()
+        QCoreApplication.exit(exitCode)
+        
     def quit(self, exitCode=0):
         if self.mainWindow != None:
             self.mainWindow.close()
@@ -202,9 +207,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         get_settings().write_config_to_hd()
             
         self.exitCode = finalExitCode
-        # before exiting, process remaining events (e.g., pending messages like HELO_LEAVE)
-        QCoreApplication.processEvents()
-        QCoreApplication.exit(finalExitCode)
+        
+        self._coldShutdown(finalExitCode)
         return finalExitCode
             
     """ ---------------- CALLED FROM LUNCH SERVER -----------------"""

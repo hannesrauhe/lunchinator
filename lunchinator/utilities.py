@@ -403,7 +403,7 @@ def restartWithCommands(commands):
         
         spawnProcess(args)
         
-        get_server().call("HELO_STOP restart", client="127.0.0.1")
+        get_server().get_controller().quit()
     except:
         log_exception("Error in stopWithCommands")
     
