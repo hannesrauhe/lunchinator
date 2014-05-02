@@ -40,9 +40,9 @@ class plugin_repositories(iface_general_plugin):
         
         return self._ui  
     
-    def _addRepository(self, parent):
+    def _addRepository(self):
         from plugin_repositories.add_repo_dialog import AddRepoDialog
-        dialog = AddRepoDialog(parent)
+        dialog = AddRepoDialog(self._ui)
         dialog.exec_()
         if dialog.result() == AddRepoDialog.Accepted:
             self._ui.appendRepository(dialog.getPath(),
