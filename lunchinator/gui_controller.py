@@ -14,7 +14,7 @@ from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
-    getValidQtParent
+    getValidQtParent, restart
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 from lunchinator.notification_center_qt import NotificationCenterQt
 from lunchinator.notification_center import NotificationCenter
@@ -140,8 +140,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 if result == QMessageBox.Yes:
                     if subprocess.call(['gksu', get_settings().get_resource('bin', 'install-lunch-icons.sh') + ' lunchinator']) == 0:
                         log_info("restarting after icons were installed")
-                        self.quit(EXIT_CODE_UPDATE)
-                        sys.exit(EXIT_CODE_UPDATE)
+                        restart()
                         return False
                     else:
                         QMessageBox.critical(self.mainWindow,
