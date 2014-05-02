@@ -14,6 +14,7 @@ class plugin_repositories(iface_general_plugin):
         self._modified = False
         self._statusHolder = None
         self._progressHolder = False
+        self.force_activation = True
         self._outdated = set()
         self._upToDate = set()
         
