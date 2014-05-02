@@ -99,6 +99,7 @@ class AddRepoDialog(QDialog):
     def _browse(self):
         fd = QFileDialog(self)
         fd.setOptions(QFileDialog.ShowDirsOnly)
+        fd.setFileMode(QFileDialog.Directory)
         fd.exec_()
         if fd.result() == QDialog.Accepted:
             path = fd.selectedFiles()[0]
