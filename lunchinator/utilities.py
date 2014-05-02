@@ -381,6 +381,7 @@ def _getStartCommand():
     return None
     
 def _getPythonInterpreter():
+    # sys.executable does not always return the python interpreter
     if getPlatform() == PLATFORM_WINDOWS:
         return "pythonw"
     return which("python")

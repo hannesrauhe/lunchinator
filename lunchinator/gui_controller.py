@@ -16,7 +16,7 @@ from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
     getValidQtParent
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
-from notification_center_qt import NotificationCenterQt
+from lunchinator.notification_center_qt import NotificationCenterQt
 from lunchinator.notification_center import NotificationCenter
 
 class LunchServerThread(QThread):
@@ -71,9 +71,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         self.mainWindow.createMenuBar(self.pluginActions)
         
-        get_notification_center().connectApplicationUpdate(self._appUpdateAvailable)
-        get_notification_center().connectOutdatedRepositoriesChanged(self._outdatedReposChanged)
-        
         # connect private signals
         self._initDone.connect(self.initDoneSlot)
         self._performCall.connect(self.performCallSlot)
@@ -85,6 +82,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processLunchCall.connect(self.processLunchCallSlot)
         self._updateRequested.connect(self.updateRequested)
         
+        get_notification_center().connectApplicationUpdate(self._appUpdateAvailable)
+        get_notification_center().connectOutdatedRepositoriesChanged(self._outdatedReposChanged)
         get_notification_center().connectMessagePrepended(self.highlightIcon)
         
         self.serverThread = LunchServerThread(self)

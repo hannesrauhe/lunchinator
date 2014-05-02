@@ -174,6 +174,7 @@ class lunch_settings(object):
         return unicode(os.path.join(self.get_main_config_dir(), *args))
     
     def get_plugin_dirs(self):
+        # getPluginDirs is thread safe
         return self._plugin_repos.getPluginDirs()
     
     def get_plugin_repositories(self):

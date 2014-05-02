@@ -1,4 +1,3 @@
-from lunchinator.notification_center import NotificationCenter
 __all__ = ["gui_general", "lunch_settings", "lunch_server", "iface_plugins", "lunch_datathread"]
 
 import sys, os
@@ -112,6 +111,7 @@ def log_info(*s):
 def log_debug(*s):
     _get_logger().debug(_generate_string(*s))
 
+from lunchinator.notification_center import NotificationCenter
 def get_notification_center():
     return NotificationCenter.getSingletonInstance()
 

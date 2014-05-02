@@ -1,6 +1,5 @@
 import subprocess
 import os
-from lunchinator import log_debug
 
 class GitHandler(object):
     @classmethod
@@ -15,12 +14,11 @@ class GitHandler(object):
         fh = subprocess.PIPE    
         if quiet:
             fh = open(os.path.devnull, "w")
-        log_debug("Git call", call)
         p = subprocess.Popen(call, stdout=fh, stderr=fh)
         pOut, pErr = p.communicate()
         retCode = p.returncode
         return retCode, pOut, pErr
-    
+
     @classmethod
     def getGitCommandResult(cls, args, path=None, quiet=True):
         retCode, _, __ = cls.runGitCommand(args, path, quiet)
@@ -94,7 +92,6 @@ class GitHandler(object):
         
         canUpdate, reason = cls.canGitUpdate(False, path)
         if not canUpdate:
-            log_debug("Repository", path, "cannot be updated:", reason)
             return False if not returnReason else (False, reason)
         
         # update remotes
@@ -107,14 +104,12 @@ class GitHandler(object):
         
         if local == remote:
             # up-to-date
-            log_debug("Repository", path, "up-to-date")
             return False if not returnReason else (False, "Repository is up-to-date.")
         if local == base:
             # can fast-forward
             return True if not returnReason else (True, None)
         
         # need to push or diverged
-        log_debug("Repository", path, "needs to be pushed or is diverged")
         return False if not returnReason else (False, "Repository contains unpushed commits or is diverged.")
     
     @classmethod
