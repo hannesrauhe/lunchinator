@@ -13,6 +13,7 @@ from lunchinator.utilities import getTimeDifference
 import tarfile
 import platform
 import random
+import errno
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -177,6 +178,9 @@ class lunch_server(object):
                             log_warning("seems like you are alone - broadcasting for others")
                         self._broadcast()
                     # log_debug("Current Members:", self._members)
+                except socket.error as e:
+                    if e.errno != errno.EINTR:
+                        raise
         except socket.error as e:
             # socket error messages may contain special characters, which leads to crashes on old python versions
             log_error(u"stopping lunchinator because of socket error:", convert_string(str(e)))
