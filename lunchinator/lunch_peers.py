@@ -223,11 +223,15 @@ class LunchPeers(object):
     def removeInactive(self):
         """1. members that haven't been seen for <memberTimeout> seconds are removed, 
         2. peers that haven't been seen for <peerTimeout> seconds or have never been seen 
-        are removed"""  
+        are removed
+        3. the new peers list is cleaned, you should try to call them before invoking this"""
+        
         log_debug("Removing inactive members and peers")      
         try:            
             with self._lock:
-                for mID in self._memberIDs:
+                #copy before changing members-list, cannot change while iterating
+                mIDs = deepcopy(self._memberIDs)
+                for mID in mIDs:
                     for ip in self._idToIp[mID]:       
                         # todo: get_settings().get_member_timeout():                 
                         if time() - self._IP_seen[ip] > 300:
@@ -240,6 +244,8 @@ class LunchPeers(object):
                         pID = self._peer_info[ip][u"ID"]
                         self._removePeerIPfromID(pID, ip)
                         del self._peer_info[ip]
+                        
+                self._new_peerIPs.clear()
         except:
             log_exception("Something went wrong while trying to clean up the list of peers and members")
     
@@ -247,6 +253,9 @@ class LunchPeers(object):
         """Returns all data stored in the peerInfo dict"""
         return deepcopy(self._peer_info)
             
+    def getNewPeerIPs(self):
+        return deepcopy(self._new_peerIPs)
+    
     # unlocked private operation:        
     def _checkInfoForReady(self, p_info):        
         if p_info and p_info.has_key(u"next_lunch_begin") and p_info.has_key(u"next_lunch_end"):

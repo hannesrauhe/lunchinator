@@ -99,18 +99,18 @@ class lunch_server(object):
         self.initialize()        
         self.controller.call(msg, set(peerIDs), set(peerIPs))
                 
-    def call_info(self, peers=[]):
+    def call_info(self, peerIPs=[]):
         '''An info call informs a peer about my name etc...    by default to every peer'''
-        if 0 == len(peers):
-            peers = self._peers.getPeerIPs()
-        return self.call("HELO_INFO " + self._build_info_string(), peerIPs=peers)  
+        if 0 == len(peerIPs):
+            peerIPs = self._peers.getPeerIPs()
+        return self.call("HELO_INFO " + self._build_info_string(), peerIPs=peerIPs)  
   
-    def call_request_info(self, peers=[]):
+    def call_request_info(self, peerIPs=[]):
         '''Similar to a info call but also request information from the peer
         by default to every/from every peer'''
-        if 0 == len(peers):
+        if 0 == len(peerIPs):
             peers = self._peers.getPeerIPs()
-        return self.call("HELO_REQUEST_INFO " + self._build_info_string(), peerIPs=peers)
+        return self.call("HELO_REQUEST_INFO " + self._build_info_string(), peerIPs=peerIPs)
     
     def call_dict(self, ip):  
         '''Sends the information about my peers to one peer at a time'''      
@@ -306,6 +306,8 @@ class lunch_server(object):
                         if not self.own_ip:
                             self.own_ip = determineOwnIP(self._peers.getPeerIPs())
                         if announce_name == 0:
+                            unknownPeers = self._peers.getNewPeerIPs()
+                            self.call_request_info(unknownPeers)
                             # it's time to announce my name again and switch the master
                             self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getPeerIPs())
                             self.call_request_dict()
