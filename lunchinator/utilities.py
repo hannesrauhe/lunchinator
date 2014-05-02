@@ -356,7 +356,8 @@ def getApplicationBundle():
 def spawnProcess(args):
     if getPlatform() in (PLATFORM_LINUX, PLATFORM_MAC):
         #somehow fork() is not safe on Mac OS. I guess this will do fine on Linux, too. 
-        subprocess.Popen(['nohup'] + args, close_fds=True)
+        fh = open(os.path.devnull, "w")
+        subprocess.Popen(['nohup'] + args, close_fds=True, stdout=fh, stderr=fh)
     elif getPlatform() == PLATFORM_WINDOWS:
         subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
     else:
