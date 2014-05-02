@@ -72,7 +72,7 @@ class plugin_repositories(iface_general_plugin):
                 outdated = None
                 upToDate = None
             self._ui.updateStatusItems(outdated, upToDate)
-            self._updateStatus(outdated)
+            self._setStatus(None)
         
     def _checkForUpdates(self):
         if self._ui.getTable().model().rowCount() == 0:
@@ -98,9 +98,6 @@ class plugin_repositories(iface_general_plugin):
                     upToDate.add(path)
         return outdated, upToDate
 
-    def _updateStatus(self, outdated):
-        self._setStatus("%d repositories are outdated." % len(outdated))
-        
     def _checkingError(self, msg):
         self._setStatus("Error: " + msg)
         

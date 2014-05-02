@@ -97,6 +97,16 @@ class NotificationCenter(object):
         pass
     
     @_connectFunc
+    def connectUpdatesDisabled(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectUpdatesDisabled(self, callback):
+        pass
+    @_emitFunc
+    def emitUpdatesDisabled(self):
+        pass
+    
+    @_connectFunc
     def connectInstallUpdates(self, callback):
         pass
     @_disconnectFunc

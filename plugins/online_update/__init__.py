@@ -61,6 +61,7 @@ class online_update(iface_general_plugin):
             self._scheduleTimer.stop()
             self._scheduleTimer.deleteLater()
             
+        get_notification_center().emitUpdatesDisabled()
         get_notification_center().disconnectInstallUpdates(self.installUpdates)
         get_notification_center().disconnectRepositoriesChanged(self._repoUpdateHandler.checkForUpdates)
         

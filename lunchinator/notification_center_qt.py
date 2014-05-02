@@ -35,6 +35,14 @@ class NotificationCenterQt(QObject):
     def emitApplicationUpdate(self):
         self._signalApplicationUpdate.emit()
         
+    _signalUpdatesDisabled = pyqtSignal()
+    def connectUpdatesDisabled(self, callback):
+        self._signalUpdatesDisabled.connect(callback)
+    def disconnectUpdatesDisabled(self, callback):
+        self._signalUpdatesDisabled.disconnect(callback)
+    def emitUpdatesDisabled(self):
+        self._signalUpdatesDisabled.emit()
+        
     _signalInstallUpdate = pyqtSignal()
     def connectInstallUpdates(self, callback):
         self._signalInstallUpdate.connect(callback)
