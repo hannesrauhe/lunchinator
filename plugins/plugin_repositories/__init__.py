@@ -14,6 +14,8 @@ class plugin_repositories(iface_general_plugin):
         self._modified = False
         self._statusHolder = None
         self._progressHolder = False
+        self._outdated = set()
+        self._upToDate = set()
         
     def activate(self):
         iface_general_plugin.activate(self)
@@ -61,20 +63,42 @@ class plugin_repositories(iface_general_plugin):
             if os.path.isdir(path):
                 self._ui.appendRepository(path, active, auto_update)
         
-    def _processUpdates(self):
+    def _processUpdates(self, aTuple=None):
         if self._ui != None:
-            self._ui.updateStatusItems()
-            self._updateStatus()
+            if aTuple:
+                outdated, upToDate = aTuple
+            else:
+                outdated = None
+                upToDate = None
+            self._ui.updateStatusItems(outdated, upToDate)
+            self._updateStatus(outdated)
         
-    def _checkForUpdates(self, forced=False):
+    def _checkForUpdates(self):
+        if self._ui.getTable().model().rowCount() == 0:
+            return
+        
         self._setStatus("Checking for updates...", True)
         AsyncCall(getValidQtParent(),
-                  get_settings().get_plugin_repositories().checkForUpdates,
-                  None,
-                  self._checkingError)(forced)
+                  self._checkAllRepositories,
+                  self._processUpdates,
+                  self._checkingError)()
         
-    def _updateStatus(self):
-        self._setStatus("%d repositories are outdated." % len(get_settings().get_plugin_repositories().getOutdated()))
+    def _checkAllRepositories(self):
+        from PyQt4.QtCore import Qt
+        model = self._ui.getTable().model()
+        outdated = set()
+        upToDate = set()
+        for row in xrange(model.rowCount()):
+            path = convert_string(model.item(row, PluginRepositoriesGUI.PATH_COLUMN).data(Qt.DisplayRole).toString())
+            if GitHandler.hasGit(path):
+                if GitHandler.needsPull(path):
+                    outdated.add(path)
+                else:
+                    upToDate.add(path)
+        return outdated, upToDate
+
+    def _updateStatus(self, outdated):
+        self._setStatus("%d repositories are outdated." % len(outdated))
         
     def _checkingError(self, msg):
         self._setStatus("Error: " + msg)

@@ -56,18 +56,23 @@ class PluginRepositoriesGUI(QWidget):
     def clear(self):
         self._initModel()
         
-    def _updateStatusItem(self, item, path):
-        if get_settings().get_plugin_repositories().isUpToDate(path):
+    def _updateStatusItem(self, item, path, outdated=None, upToDate=None):
+        # first check fresh results, then the ones from repositories
+        if upToDate and path in upToDate:
+            item.setData(QColor(0, 255, 0), Qt.DecorationRole)
+        elif outdated and path in outdated:
+            item.setData(QColor(255, 215, 0), Qt.DecorationRole)
+        elif get_settings().get_plugin_repositories().isUpToDate(path):
             item.setData(QColor(0, 255, 0), Qt.DecorationRole)
         elif get_settings().get_plugin_repositories().isOutdated(path):
             item.setData(QColor(255, 215, 0), Qt.DecorationRole)
         else:
             item.setData(None, Qt.DecorationRole)
         
-    def updateStatusItems(self):
+    def updateStatusItems(self, outdated=None, upToDate=None):
         for row in xrange(self._reposModel.rowCount()):
             path = convert_string(self._reposModel.item(row, self.PATH_COLUMN).data(Qt.DisplayRole).toString())
-            self._updateStatusItem(self._reposModel.item(row, self.STATUS_COLUMN), path)
+            self._updateStatusItem(self._reposModel.item(row, self.STATUS_COLUMN), path, outdated, upToDate)
         
     def _initModel(self):
         from PyQt4.QtCore import QStringList
