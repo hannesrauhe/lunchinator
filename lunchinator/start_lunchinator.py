@@ -132,7 +132,7 @@ def startLunchinator():
     elif options.stop:
         msg = "local"
         get_server().set_plugins_enabled(False)
-        get_server().call("HELO_STOP "+msg,client="127.0.0.1")
+        get_server().stop_server(stop_any=True)
         print "Sent stop command to local lunchinator"
     elif options.cli:
         usePlugins = checkDependencies(usePlugins)

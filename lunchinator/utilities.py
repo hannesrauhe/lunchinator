@@ -389,10 +389,10 @@ def stopWithCommand(args):
     if getPlatform() in (PLATFORM_LINUX, PLATFORM_MAC):
         #somehow fork() is not safe on Mac OS. I guess this will do fine on Linux, too. 
         subprocess.Popen(['nohup'] + args, close_fds=True)
-        get_server().call("HELO_STOP restart", client="127.0.0.1")
+        get_server().stop_server()
     elif getPlatform() == PLATFORM_WINDOWS:
         subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
-        get_server().call("HELO_STOP restart", client="127.0.0.1")
+        get_server().stop_server()
     else:
         log_error("Restart not yet implemented for your OS.")
     

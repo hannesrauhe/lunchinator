@@ -307,16 +307,16 @@ class lunch_server(object):
                             self.own_ip = determineOwnIP(self._peers.getPeerIPs())
                         if announce_name == 0:
                             # it's time to announce my name again and switch the master
-                            self.call("HELO " + get_settings().get_user_name(), peerIPs = self._peers.getPeerIPs())
+                            self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getPeerIPs())
                             self.call_request_dict()
+                    
+                            # clean up peers
+                            self._peers.removeInactive()
                     else:
                         if not is_in_broadcast_mode:
                             is_in_broadcast_mode = True
                             log_warning("seems like you are alone - broadcasting for others")
                         self._broadcast()
-                    
-                    # clean up peers
-                    self._peers.removeInactive()
         except socket.error as e:
             # socket error messages may contain special characters, which leads to crashes on old python versions
             log_error(u"stopping lunchinator because of socket error:", convert_string(str(e)))
@@ -329,6 +329,18 @@ class lunch_server(object):
             except:
                 log_warning("Wasn't able to send the leave call and close the socket...")
             self._finish()          
+            
+    def stop_server(self, stop_any=False):
+        '''this stops a running server thread
+        Usually this will not do anything if there is no running thread within the process
+        if stop_any is true it will send a stop call in case another instance has to be stopped'''
+        
+        if stop_any or self.running:
+            self.call("HELO_STOP shutdown", peerIPs=set([u"127.0.0.1"]))
+            # Just in case the call does not reach the socket:
+            self.running = False
+        else:
+            log_warning("There is no running server to stop")
 
     """ ---------------------- PRIVATE -------------------------------- """
     def _perform_call(self, msg, peerIDs, peerIPs):
@@ -346,7 +358,7 @@ class lunch_server(object):
                 if len(pIPs):
                     target += pIPs
                 else:
-                    log_warning("While calling: I do not know a peer with ID %s, ignoring "%pID)
+                    log_warning("While calling: I do not know a peer with ID %s, ignoring " % pID)
             
         if 0 == len(target):            
             log_error("Cannot send message, there is no peer given or none found")
@@ -356,7 +368,7 @@ class lunch_server(object):
            not msg.startswith(u"HELO") and \
            get_settings().get_lunch_trigger().upper() in msg.upper():
             # check if everyone is ready
-            notReadyMembers =[ip for ip in target if self._peers.isPeerReadyByIP(ip)]
+            notReadyMembers = [ip for ip in target if self._peers.isPeerReadyByIP(ip)]
             
             if notReadyMembers:
                     

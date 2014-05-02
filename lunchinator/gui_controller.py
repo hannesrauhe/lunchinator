@@ -167,8 +167,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             self.mainWindow.close()
         if self.serverThread != None and not sip.isdeleted(self.serverThread) and self.serverThread.isRunning():
             self.serverThread.finished.disconnect(self.serverFinishedUnexpectedly)
-            get_server().call("HELO_STOP shutdown", "127.0.0.1")
-            get_server().running = False
+            get_server().stop_server()
             log_info("Waiting maximal 30s for server to stop...")
             # wait maximal 30s 
             if self.serverThread.wait(30000):
@@ -207,8 +206,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def initDone(self):
         self._initDone.emit()
         
-    def call(self, msg, client, hosts):
-        self._performCall.emit(msg, client, hosts)
+    def call(self, msg, peerIDs, peerIPs):
+        self._performCall.emit(msg, peerIDs, peerIPs)
         
     def serverFinishedUnexpectedly(self):
         self.serverThread = None
@@ -395,7 +394,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def initDoneSlot(self):
         pass
     
-    @pyqtSlot(unicode, unicode, list)
+    @pyqtSlot(unicode, set, set)
     def performCallSlot(self, msg, peerIDs, peerIPs):
         get_server()._perform_call(msg, peerIDs, peerIPs)
     

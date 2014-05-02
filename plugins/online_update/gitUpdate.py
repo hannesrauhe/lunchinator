@@ -50,10 +50,9 @@ class gitUpdate(object):
             log_info("Starting Update via git")
             if getPlatform() == PLATFORM_WINDOWS:
                 subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
-                get_server().call("HELO_STOP installer_update", client="127.0.0.1")
             else:
                 subprocess.Popen(" ".join(args), shell=True, close_fds=True)
-                get_server().call("HELO_STOP installer_update", client="127.0.0.1")
+            get_server().stop_server()
         else:
             log_error("Update Script was not found at %s"%UPDATE_SCRIPT_EXEC_PATH)
         

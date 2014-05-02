@@ -9,4 +9,4 @@ if __name__ == "__main__":
     while(inp != "stop"):
         inp = raw_input("> ")
         if inp == "stop":
-            s.call("HELO_STOP test", ["127.0.0.1"])
+            s.stop_server()
