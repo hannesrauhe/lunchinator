@@ -402,10 +402,10 @@ def restartWithCommands(commands):
             args.extend(["--commands", commands.toString()])
         
         spawnProcess(args)
-        
-        get_server().get_controller().shutdown()
     except:
         log_exception("Error in stopWithCommands")
+        return
+    get_server().get_controller().shutdown()
     
 def restart():
     """Restarts the Lunchinator"""

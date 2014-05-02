@@ -45,6 +45,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         log_info("Your PyQt version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
         
+        QTimer.singleShot(0, self._eventLoopEntered);
+        self._eventLoopRunning = False
         self.resetIconTimer = None
         self.resetNextLunchTimeTimer = None
         self.isIconHighlighted = True  # set to True s.t. first dehighlight can set the default icon
@@ -93,6 +95,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
     def _initNotificationCenter(self):
         NotificationCenter.setSingletonInstance(NotificationCenterQt(self))
+        
+    def _eventLoopEntered(self):
+        self._eventLoopRunning = True
         
     def highlightIcon(self):
         if self.isIconHighlighted:
@@ -169,8 +174,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
     def _coldShutdown(self, exitCode=0):
         # before exiting, process remaining events (e.g., pending messages like HELO_LEAVE)
-        QCoreApplication.processEvents()
-        QCoreApplication.exit(exitCode)
+        if self._eventLoopRunning:
+            QCoreApplication.processEvents()
+            QCoreApplication.exit(exitCode)
+        else:
+            sys.exit(0)
         
     def quit(self, exitCode=0):
         if self.mainWindow != None:
