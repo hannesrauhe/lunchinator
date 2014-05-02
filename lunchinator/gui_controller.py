@@ -45,7 +45,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         log_info("Your PyQt version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
         
-        QTimer.singleShot(0, self._eventLoopEntered);
         self._shuttingDown = False
         self.resetIconTimer = None
         self.resetNextLunchTimeTimer = None
