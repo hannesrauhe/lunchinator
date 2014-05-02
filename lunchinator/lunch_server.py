@@ -132,7 +132,7 @@ class lunch_server(object):
         log_info("Changing Group: %s -> %s" % (get_settings().get_group(), newgroup))
         get_settings().set_group(newgroup)
         self.call("HELO_LEAVE Changing Group")
-        self._peers.removeMembers()
+        self._peers.removeMembersByIP()
         self.call_request_info()
                
     def messagesCount(self):
