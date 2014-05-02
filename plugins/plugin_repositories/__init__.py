@@ -10,6 +10,7 @@ from plugin_repositories.plugin_repositories_gui import PluginRepositoriesGUI
 class plugin_repositories(iface_general_plugin):
     def __init__(self):
         super(plugin_repositories, self).__init__()
+        self._ui = None
         self._modified = False
         self._statusHolder = None
         self._progressHolder = False
