@@ -93,10 +93,11 @@ class plugin_repositories(iface_general_plugin):
         if self._modified:
             from PyQt4.QtCore import Qt
             repos = []
-            for row in xrange(self._reposModel.rowCount()):
-                path = convert_string(self._reposModel.item(row, self.PATH_COLUMN).data(Qt.DisplayRole).toString())
-                active = self._reposModel.item(row, self.ACTIVE_COLUMN).checkState() == Qt.Checked
-                autoUpdate = self._reposModel.item(row, self.AUTO_UPDATE_COLUMN).checkState() == Qt.Checked
+            model = self._ui.getTable().model() 
+            for row in xrange(model.rowCount()):
+                path = convert_string(model.item(row, PluginRepositoriesGUI.PATH_COLUMN).data(Qt.DisplayRole).toString())
+                active = model.item(row, PluginRepositoriesGUI.ACTIVE_COLUMN).checkState() == Qt.Checked
+                autoUpdate = model.item(row, PluginRepositoriesGUI.AUTO_UPDATE_COLUMN).checkState() == Qt.Checked
                 repos.append((path, active, autoUpdate))
                 
             get_settings().get_plugin_repositories().setExternalRepositories(repos)
