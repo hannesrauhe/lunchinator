@@ -69,7 +69,6 @@ class lunch_settings(object):
         self._default_lunch_end = u"12:45"
         self._alarm_begin_time = u"11:30"
         self._alarm_end_time = u"13:00"
-        self._peer_timeout = 300  # 5 min should be enough
         self._mute_timeout = 30
         self._reset_icon_time = 5
         self._logging_level = u"ERROR"
@@ -77,9 +76,13 @@ class lunch_settings(object):
         self._default_db_connection = u"Standard"
         self._available_db_connections = u"Standard"  # list separated by ;; (like yapsy)
         self._proxy = u""
-        self._warn_if_members_not_ready = True        
-        
+        self._warn_if_members_not_ready = True
+                
+        #also in config, but hidden
         self._ID = u""
+        self._member_timeout = 300
+        self._peer_timeout = 10000
+        
         self._next_lunch_begin = None
         self._next_lunch_end = None
         
@@ -103,7 +106,6 @@ class lunch_settings(object):
         self.set_alarm_begin_time(self.read_value_from_config_file(self._alarm_begin_time, "general", "alarm_begin_time"))
         self.set_alarm_end_time(self.read_value_from_config_file(self._alarm_end_time, "general", "alarm_end_time"))
         
-        self._peer_timeout = self.read_value_from_config_file(self._peer_timeout, "general", "peer_timeout")
         self._mute_timeout = self.read_value_from_config_file(self._mute_timeout, "general", "mute_timeout")
         self._reset_icon_time = self.read_value_from_config_file(self._reset_icon_time, "general", "reset_icon_time")
         
@@ -111,11 +113,13 @@ class lunch_settings(object):
         self._group_plugins = self.read_value_from_config_file(self._group_plugins, 'general', 'group_plugins')
         self._lunch_trigger = self.read_value_from_config_file(self._lunch_trigger, 'general', 'lunch_trigger')
         
-        # not shown in settings-plugin - handled by avatar-plugin
+        # not shown in settings-plugin
         self._avatar_file = self.read_value_from_config_file(self._avatar_file, "general", "avatar_file")
         self._available_db_connections = self.read_value_from_config_file(self._available_db_connections, "general", "available_db_connections")
-        self._ID = self.read_value_from_config_file(self._ID, "general", "ID")        
-        
+        self._ID = self.read_value_from_config_file(self._ID, "general", "ID")      
+        self._member_timeout = self.read_value_from_config_file(self._member_timeout, "general", "member_timeout")   
+        self._peer_timeout = self.read_value_from_config_file(self._peer_timeout, "general", "peer_timeout")    
+
         if self._user_name == "":
             self._user_name = getpass.getuser().decode()         
         
@@ -333,8 +337,8 @@ class lunch_settings(object):
     
     def get_peer_timeout(self):
         return self._peer_timeout
-    def set_peer_timeout(self, new_value):
-        self._peer_timeout = new_value
+    def get_member_timeout(self):
+        return self._member_timeout
     
     def get_tcp_port(self):
         return self._tcp_port

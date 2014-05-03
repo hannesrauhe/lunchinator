@@ -233,14 +233,12 @@ class LunchPeers(object):
                 mIDs = deepcopy(self._memberIDs)
                 for mID in mIDs:
                     for ip in self._idToIp[mID]:       
-                        # todo: get_settings().get_member_timeout():                 
-                        if time() - self._IP_seen[ip] > 300:
+                        if time() - self._IP_seen[ip] > get_settings().get_member_timeout():
                             self._removeMember(mID)
                             break
              
                 for ip in self._IP_seen:
-                    # todo: get_settings().get_peer_timeout():
-                    if ip in self._peer_info and time() - self._IP_seen[ip] > 10000:
+                    if ip in self._peer_info and time() - self._IP_seen[ip] > get_settings().get_peer_timeout():
                         pID = self._peer_info[ip][u"ID"]
                         self._removePeerIPfromID(pID, ip)
                         del self._peer_info[ip]
