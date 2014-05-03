@@ -32,12 +32,14 @@ def checkBundleIdentifier(ident):
     return res == 1
 
 # TODO: message groups for notification center
-def displayNotification(name,msg,icon=None):
+def displayNotification(name, msg, icon=None):
     if msg == None:
         msg = u""
     myPlatform = getPlatform()
     try:
         if myPlatform == PLATFORM_LINUX:
+            if icon == None:
+                icon = ""
             subprocess.call(["notify-send","--icon="+icon, name, msg])
         elif myPlatform == PLATFORM_MAC:
             fh = open(os.path.devnull,"w")

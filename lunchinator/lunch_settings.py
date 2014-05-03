@@ -3,6 +3,7 @@ import sys, os, getpass, ConfigParser, types, logging, codecs, contextlib, uuid
 '''integrate the cli-parser into the default_config sooner or later'''
 from lunchinator import log_exception, log_error, setLoggingLevel, convert_string, MAIN_CONFIG_DIR
 from datetime import datetime
+from lunchinator.git import GitHandler
     
 class lunch_settings(object):
     LUNCH_TIME_FORMAT = "%H:%M"
@@ -200,9 +201,14 @@ class lunch_settings(object):
                     self._version = vfh.read().strip()
                 self._commit_count = self._version.split(".")[-1]
             except Exception:
-                log_error("Error reading/parsing version file")
-                self._version = u"unknown.unknown"
-                self._commit_count = "unknown"
+                gitHandler = GitHandler()
+                if gitHandler.has_git():
+                    self._commit_count = gitHandler.getCommitCount()
+                    self._version = self._commit_count
+                else:
+                    log_error("Error reading/parsing version file")
+                    self._version = u"unknown.unknown"
+                    self._commit_count = "unknown"
                 
         return self._version
     
