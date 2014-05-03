@@ -34,7 +34,8 @@ class plugin_repositories(iface_general_plugin):
         self._initRepositories()
         self._ui.resizeColumns()
         
-        self._ui.getTable().model().itemChanged.connect(self._itemChanged)
+        self._ui.getTable().model().itemChanged.connect(self._modelModified)
+        self._ui.getTable().model().rowsRemoved.connect(self._modelModified)
         self._ui.addRepository.connect(self._addRepository)
         self._ui.checkForUpdates.connect(self._checkForUpdates)
         
@@ -54,7 +55,7 @@ class plugin_repositories(iface_general_plugin):
                                    dialog.canAutoUpdate())
             self._modified = True
     
-    def _itemChanged(self, _item):
+    def _modelModified(self, _ = None, __ = None, ___ = None):
         self._modified = True
     
     def _initRepositories(self):
