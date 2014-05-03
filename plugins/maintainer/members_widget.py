@@ -240,7 +240,7 @@ class MembersWidget(QWidget):
     
     @pyqtSlot(QThread)
     def cb_log_transfer_error(self, _thread):
-        if not self.visible:
+        if not self.isVisible():
             return False
         self.log_area.setText("Error while getting log")
         self.requestFinished()
