@@ -141,9 +141,29 @@ class NotificationCenter(object):
     def disconnectPeerAppended(self, callback):
         pass
     @_emitFunc
-    def emitPeerAppended(self, ip):
+    def emitPeerAppended(self, ip, infoDict):
         pass
         
+    @_connectFunc
+    def connectPeerUpdated(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPeerUpdated(self, callback):
+        pass
+    @_emitFunc
+    def emitPeerUpdated(self, ip, infoDict):
+        pass
+    
+    @_connectFunc
+    def connectPeerRemoved(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPeerRemoved(self, callback):
+        pass
+    @_emitFunc
+    def emitPeerRemoved(self, ip):
+        pass    
+    
     @_connectFunc
     def connectMemberAppended(self, callback):
         pass

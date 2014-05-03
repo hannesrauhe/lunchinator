@@ -1,10 +1,6 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-<<<<<<< HEAD
-from lunchinator import log_exception, get_settings, get_server, get_peers
-=======
 from lunchinator import log_exception, get_settings, get_server,\
-    get_notification_center
->>>>>>> refs/heads/pluginrepos
+    get_notification_center, get_peers
 import urllib2,sys
     
 class members_table(iface_gui_plugin):
@@ -33,7 +29,7 @@ class members_table(iface_gui_plugin):
         
         self.timeoutTimer.timeout.disconnect(self.updateTimeoutsInMembersTables)
         self.timeoutTimer.stop()
-        
+
         get_notification_center().disconnectPeerAppended(self.membersModel.externalRowAppended)
         get_notification_center().disconnectPeerUpdated(self.membersModel.externalRowUpdated)
         get_notification_center().disconnectPeerRemoved(self.membersModel.externalRowRemoved)

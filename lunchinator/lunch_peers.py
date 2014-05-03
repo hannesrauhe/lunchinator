@@ -106,7 +106,7 @@ class LunchPeers(object):
     def _removeMember(self, pID):
         if pID in self._memberIDs:
             self._memberIDs.remove(pID)
-            get_notification_center().memberRemoved(pID)  
+            get_notification_center().emitMemberRemoved(pID)  
     
      
     
@@ -210,7 +210,7 @@ class LunchPeers(object):
                 self._addPeerIPtoID(newPID, ip)
             else:
                 # TODO(Hannes) this info is now the most recent for this ID
-                get_notification_center().peerUpdated(newPID, deepcopy(self._peer_info[ip]))
+                get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
                 log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
             
             own_group = get_settings().get_group()       

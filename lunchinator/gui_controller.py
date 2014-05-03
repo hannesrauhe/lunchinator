@@ -28,14 +28,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _menu = None
     # ---- SIGNALS ----------------
     _initDone = pyqtSignal()
-    peerAppendedSignal = pyqtSignal(unicode, dict)
-    peerUpdatedSignal = pyqtSignal(unicode, dict)
-    peerRemovedSignal = pyqtSignal(unicode)
-    memberAppendedSignal = pyqtSignal(unicode, dict)
-    memberUpdatedSignal = pyqtSignal(unicode, dict)
-    memberRemovedSignal = pyqtSignal(unicode)
-    messagePrependedSignal = pyqtSignal(time.struct_time, list)
-    groupAppendedSignal = pyqtSignal(unicode, set)
     _performCall = pyqtSignal(unicode, set, set)
     _sendFile = pyqtSignal(unicode, bytearray, int, bool)
     _receiveFile = pyqtSignal(unicode, int, unicode, int)
@@ -239,30 +231,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if exitCode == EXIT_CODE_UPDATE:
             self.serverThread.finished.disconnect(self.serverFinishedUnexpectedly)
             self._updateRequested.emit()    
-        
-    def peerAppended(self, peerID, infoDict):
-        self.peerAppendedSignal.emit(peerID, infoDict)
-    
-    def peerUpdated(self, peerID, infoDict):
-        self.peerUpdatedSignal.emit(peerID, infoDict)
-    
-    def peerRemoved(self, peerID):
-        self.peerRemovedSignal.emit(peerID)        
-        
-    def memberAppended(self, peerID, infoDict):
-        self.memberAppendedSignal.emit(peerID, infoDict)
-        
-    def memberUpdated(self, peerID, infoDict):
-        self.memberUpdatedSignal.emit(peerID, infoDict)
-    
-    def memberRemoved(self, peerID):
-        self.memberRemovedSignal.emit(peerID)
-    
-    def messagePrepended(self, messageTime, senderIP, messageText):
-        self.messagePrependedSignal.emit(messageTime, [senderIP, messageText])
-        
-    def groupAppended(self, group, peer_groups):
-        self.groupAppendedSignal.emit(group, peer_groups)
 
     def extendMemberInfo(self, infoDict):
         infoDict['pyqt_version'] = QtCore.PYQT_VERSION_STR

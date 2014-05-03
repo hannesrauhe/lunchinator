@@ -51,13 +51,29 @@ class NotificationCenterQt(QObject):
     def emitInstallUpdates(self):
         self._signalInstallUpdate.emit()
     
-    _signalPeerAppended = pyqtSignal(unicode)
+    _signalPeerAppended = pyqtSignal(unicode, dict)
     def connectPeerAppended(self, callback):
         self._signalPeerAppended.connect(callback)
     def disconnectPeerAppended(self, callback):
         self._signalPeerAppended.disconnect(callback)
-    def emitPeerAppended(self, ip):
-        self._signalPeerAppended.emit(ip)
+    def emitPeerAppended(self, ip, infoDict):
+        self._signalPeerAppended.emit(ip, infoDict)
+        
+    _signalPeerUpdated = pyqtSignal(unicode, dict)
+    def connectPeerUpdated(self, callback):
+        self._signalPeerUpdated.connect(callback)
+    def disconnectPeerUpdated(self, callback):
+        self._signalPeerUpdated.disconnect(callback)
+    def emitPeerUpdated(self, ip, infoDict):
+        self._signalPeerUpdated.emit(ip, infoDict)
+    
+    _signalPeerRemoved = pyqtSignal(unicode)
+    def connectPeerRemoved(self, callback):
+        self._signalPeerRemoved.connect(callback)
+    def disconnectPeerRemoved(self, callback):
+        self._signalPeerRemoved.disconnect(callback)
+    def emitPeerRemoved(self, ip):
+        self._signalPeerRemoved.emit(ip)
         
     _signalMemberAppended = pyqtSignal(unicode, dict)
     def connectMemberAppended(self, callback):

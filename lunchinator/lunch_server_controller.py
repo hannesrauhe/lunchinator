@@ -1,6 +1,6 @@
 """Base class for Lunch Server Controller classes"""
 import sys
-from lunchinator import get_server, get_settings, log_info, log_error
+from lunchinator import get_server, get_settings, log_info, log_error, get_notification_center
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall
 from lunchinator.notification_center import NotificationCenter
@@ -19,28 +19,28 @@ class LunchServerController(object):
         get_server()._perform_call(msg, peerIDs, peerIPs)
         
     def memberAppended(self, peerID, infoDict):
-        pass   
+        get_notification_center().emitMemberAppended(peerID, infoDict)
         
     def memberUpdated(self, peerID, infoDict):
-        pass   
+        get_notification_center().emitMemberUpdated(peerID, infoDict)
     
     def memberRemoved(self, peerID):
-        pass
+        get_notification_center().emitMemberRemoved(peerID)
         
     def groupAppended(self, group, peer_groups):
-        pass
+        get_notification_center().emitGroupAppended(group, peer_groups)
         
     def peerAppended(self, ip, infoDict):
-        pass
+        get_notification_center().emitPeerAppended(ip, infoDict)
     
     def peerUpdated(self, ip, infoDict):
-        pass
+        get_notification_center().emitPeerUpdated(ip, infoDict)
     
     def peerRemoved(self, ip):
-        pass    
+        get_notification_center().emitPeerRemoved(ip)
     
     def messagePrepended(self, messageTime, senderIP, messageText):
-        pass
+        get_notification_center().emitMessagePrepended(messageTime, senderIP, messageText)
 
     def shutdown(self):
         if get_server().is_running():

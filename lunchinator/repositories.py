@@ -127,12 +127,20 @@ class PluginRepositories(object):
             return set(self._upToDate)
     
     def _isOutdated(self, path):
-        """Returns True if the given repository is outdated."""
         return path in self._outdated
     
     def _isUpToDate(self, path):
-        """Returns True if the given repository is up-to-date."""
         return path in self._upToDate
+    
+    def isOutdated(self, path):
+        """Returns True if the given repository is outdated."""
+        with self._lock:
+            return self._isOutdated(path)
+    
+    def isUpToDate(self, path):
+        """Returns True if the given repository is up-to-date."""
+        with self._lock:
+            return self._isUpToDate(path)
     
     def _isAutoUpdateEnabled(self, path):
         """Returns True if auto update is enabled for the given repository."""

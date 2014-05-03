@@ -154,7 +154,6 @@ def setValidQtParent(parent):
 def getValidQtParent():
     from lunchinator import get_server
     from PyQt4.QtCore import QObject
-    from lunchinator import get_server
     if isinstance(get_server().controller, QObject):
         return get_server().controller
     elif isinstance(qtParent, QObject):

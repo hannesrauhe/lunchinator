@@ -62,9 +62,9 @@ class PluginRepositoriesGUI(QWidget):
             item.setData(QColor(0, 255, 0), Qt.DecorationRole)
         elif outdated and path in outdated:
             item.setData(QColor(255, 215, 0), Qt.DecorationRole)
-        elif get_settings().get_plugin_repositories()._isUpToDate(path):
+        elif get_settings().get_plugin_repositories().isUpToDate(path):
             item.setData(QColor(0, 255, 0), Qt.DecorationRole)
-        elif get_settings().get_plugin_repositories()._isOutdated(path):
+        elif get_settings().get_plugin_repositories().isOutdated(path):
             item.setData(QColor(255, 215, 0), Qt.DecorationRole)
         else:
             item.setData(None, Qt.DecorationRole)

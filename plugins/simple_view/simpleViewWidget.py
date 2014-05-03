@@ -4,7 +4,7 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, \
                         QLineEdit, QMenu, QInputDialog
 from PyQt4.QtCore import QTimer, Qt
-from lunchinator import get_server, get_peers, log_info
+from lunchinator import get_server, get_peers, log_info, get_notification_center
 from time import mktime,time
 from lunchinator.lunch_button import LunchButton
             
@@ -43,10 +43,19 @@ class SimpleViewWidget(QWidget):
         self.timer.timeout.connect(self.updateWidgets)
         self.timer.start(60000)
         
-        get_server().controller.memberAppendedSignal.connect(self.updateWidgets)
-        get_server().controller.memberUpdatedSignal.connect(self.updateWidgets)
-        get_server().controller.memberRemovedSignal.connect(self.updateWidgets)
+    def activate(self):
+        super(SimpleViewWidget, self).activate()
         
+        get_notification_center().connectMemberAppendedSignal(self.updateWidgets)
+        get_notification_center().connectMemberUpdatedSignal(self.updateWidgets)
+        get_notification_center().connectMemberRemovedSignal(self.updateWidgets)
+        
+    def deactivate(self):
+        get_notification_center().disconnectMemberAppendedSignal(self.updateWidgets)
+        get_notification_center().disconnectMemberUpdatedSignal(self.updateWidgets)
+        get_notification_center().disconnectMemberRemovedSignal(self.updateWidgets)
+        
+        super(SimpleViewWidget, self).deactivate()
         
     def getMemberColor(self,peerID):
         if not self.colorMap.has_key(peerID):

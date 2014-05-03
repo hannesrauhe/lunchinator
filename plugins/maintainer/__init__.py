@@ -21,6 +21,7 @@ class maintainer(iface_gui_plugin):
         from maintainer.maintainer_gui import maintainer_gui
         iface_gui_plugin.create_widget(self, parent)
         self.w = maintainer_gui(parent)
+        
         get_notification_center().connectMemberAppended(self.w.info_table_model.externalRowAppended)
         get_notification_center().connectMemberUpdated(self.w.info_table_model.externalRowUpdated)
         get_notification_center().connectMemberRemoved(self.w.info_table_model.externalRowRemoved)
@@ -34,8 +35,8 @@ class maintainer(iface_gui_plugin):
     def destroy_widget(self):
         if self.w != None:
             get_notification_center().disconnectMemberAppended(self.w.info_table_model.externalRowAppended)
-            get_notification_center().disconnectMemberRemoved(self.w.info_table_model.externalRowRemoved)
             get_notification_center().disconnectMemberUpdated(self.w.info_table_model.externalRowUpdated)
+            get_notification_center().disconnectMemberRemoved(self.w.info_table_model.externalRowRemoved)
             
             get_notification_center().disconnectMemberAppended(self.w.update_dropdown_members)
             get_notification_center().disconnectMemberUpdated(self.w.update_dropdown_members)
