@@ -1,11 +1,8 @@
-import subprocess,sys,ctypes
-from lunchinator import log_exception, log_warning, log_debug,\
-    get_settings, log_error
-import os
-import threading
-import contextlib
+import subprocess, sys, ctypes, os, threading, contextlib, json, tempfile, shutil
 from datetime import datetime
-import json
+from lunchinator import log_exception, log_warning, log_debug, \
+    get_settings, log_error
+from _imaging import path
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -396,8 +393,11 @@ def restartWithCommands(commands):
     """
     from lunchinator import get_server
     try:
+        # copy restart script to safe place
+        shutil.copy(get_settings().get_resource("bin", "restart.py"), get_settings().get_main_config_dir())
+        
         startCmd = _getStartCommand()
-        args = [_getPythonInterpreter(), get_settings().get_resource("bin", "restart.py"),
+        args = [_getPythonInterpreter(), get_settings().get_config("restart.py"),
                 "--lunchinator-path", get_settings().get_main_package_path(),
                 "--start-cmd", json.dumps(startCmd),
                 "--pid", str(os.getpid())]
