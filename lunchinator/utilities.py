@@ -2,7 +2,6 @@ import subprocess, sys, ctypes, os, threading, contextlib, json, tempfile, shuti
 from datetime import datetime
 from lunchinator import log_exception, log_warning, log_debug, \
     get_settings, log_error
-from _imaging import path
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
