@@ -3,15 +3,11 @@ from lunchinator.git import GitHandler
 from lunchinator.callables import AsyncCall
 from lunchinator.utilities import getValidQtParent
 from __builtin__ import True
-from lunchinator import get_settings, log_info, log_error
-import shutil
-import os
-import sys
+from lunchinator import get_settings
 
 class GitUpdateHandler(AppUpdateHandler):
-    UPDATE_SCRIPT = get_settings().get_resource("bin", "updateViaGit.py")
-    UPDATE_SCRIPT_EXEC_PATH = os.path.join(get_settings().get_main_config_dir(), "updateViaGit.py")
-
+    """Used if Lunchinator is run directly from git."""
+    
     @classmethod
     def appliesToConfiguration(cls):
         return GitHandler.hasGit()
@@ -51,8 +47,4 @@ class GitUpdateHandler(AppUpdateHandler):
         self._setStatus(st, True)
         
     def prepareInstallation(self, commands):
-        shutil.copy(self.UPDATE_SCRIPT, self.UPDATE_SCRIPT_EXEC_PATH)
-        if os.path.isfile(self.UPDATE_SCRIPT_EXEC_PATH):
-            commands.addGitPull(get_settings().get_main_package_path())
-        else:
-            log_error("Update Script was not found at %s" % self.UPDATE_SCRIPT_EXEC_PATH)
+        commands.addGitPull(get_settings().get_main_package_path())

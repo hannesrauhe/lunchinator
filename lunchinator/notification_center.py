@@ -20,10 +20,16 @@ def _emitFunc(func):
     return newFunc
 
 class NotificationCenter(object):
+    """Central class for notification passing within Lunchinator."""
     _instance = None
     
     @classmethod
     def getSingletonInstance(cls):
+        """Returns the singleton NotificationCenter instance.
+        
+        Don't call this method directly. Use
+        lunchinator.get_notification_center() instead.
+        """
         if cls._instance == None:
             # fallback if it was not set from outside
             cls._instance = NotificationCenter()
@@ -31,6 +37,10 @@ class NotificationCenter(object):
     
     @classmethod
     def setSingletonInstance(cls, instance):
+        """Set the singleton instance.
+        
+        This is being taken care of in the lunch server controller.
+        """
         cls._instance = instance
         
     def __init__(self):
@@ -55,7 +65,8 @@ class NotificationCenter(object):
             return
         for callback in self._callbacks[signal]:
             callback(*args, **kwargs)
-    
+
+    """Called whenever the set of outdated plugin repository changes."""    
     @_connectFunc
     def connectOutdatedRepositoriesChanged(self, callback):
         pass
@@ -66,6 +77,7 @@ class NotificationCenter(object):
     def emitOutdatedRepositoriesChanged(self):
         pass
     
+    """Called whenever the set of up-to-date plugin repositories changes."""
     @_connectFunc
     def connectUpToDateRepositoriesChanged(self, callback):
         pass
@@ -76,6 +88,7 @@ class NotificationCenter(object):
     def emitUpToDateRepositoriesChanged(self):
         pass
     
+    """Called whenever the list of plugin repositories is changed."""
     @_connectFunc
     def connectRepositoriesChanged(self, callback):
         pass
@@ -86,6 +99,7 @@ class NotificationCenter(object):
     def emitRepositoriesChanged(self):
         pass
     
+    """Called when an update for Lunchinator is detected."""
     @_connectFunc
     def connectApplicationUpdate(self, callback):
         pass
@@ -96,6 +110,7 @@ class NotificationCenter(object):
     def emitApplicationUpdate(self):
         pass
     
+    """Called when updates are disabled (online_update is deactivated)"""
     @_connectFunc
     def connectUpdatesDisabled(self, callback):
         pass
@@ -106,6 +121,9 @@ class NotificationCenter(object):
     def emitUpdatesDisabled(self):
         pass
     
+    """Notifies online_update that it should install the updates.
+    Shouldn't be connected anywhere else, since the application terminates
+    during the update."""
     @_connectFunc
     def connectInstallUpdates(self, callback):
         pass

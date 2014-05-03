@@ -1,6 +1,12 @@
 from lunchinator import log_error, log_info, get_settings
 
 class AppUpdateHandler(object):
+    """Abstract base class for Lunchinator application update handlers.
+    
+    Subclasses are used by the online_update plugin to handle the
+    application update process.
+    """
+    
     def __init__(self):
         self._ui = None
         self._statusHolder = self._getInitialStatus()        
@@ -8,15 +14,8 @@ class AppUpdateHandler(object):
         self._changelogHolder = None
         self._install_ready = False
     
-    def activate(self):
-        """Called from online_update.activate"""
-        pass
-    
-    def deactivate(self):
-        """Called from online_update.deactivate"""
-        pass
-    
     def isInstallReady(self):
+        """Returns True if there is an update available and ready to install."""
         return self._install_ready
     
     def setUI(self, ui):
@@ -35,26 +34,6 @@ class AppUpdateHandler(object):
     def getInstalledVersion(self):
         """Returns the version string to be displayed in the version label"""
         return get_settings().get_version()
-            
-    ############# To be implemented in subclass ##############
-    
-    def _getInitialStatus(self):
-        return u"Application updates are not available on your system."
-    
-    def canCheckForUpdate(self):
-        """Checks if update checks are possible"""
-        return False
-            
-    def checkForUpdate(self):
-        """Triggered from the check button"""
-        pass
-    
-    def prepareInstallation(self):
-        """
-        Prepares the installation and returns a command to execute when restarting.
-        The command is a list of arguments, as passed to subprocess.Popen.
-        """
-        raise NotImplementedError()
     
     def _setChangeLog(self, log):
         """
@@ -67,11 +46,11 @@ class AppUpdateHandler(object):
             self._changelogHolder = log
     
     def _setStatus(self, status, err=False, progress=False):
-        """
-        Caches or displays a status message.
-        status: The message to be displayed
-        err: True if it is an error
-        progress: True if the status incorporates progress information.
+        """Caches or displays a status message.
+        
+        status -- The message to be displayed
+        err -- True if the message is an error
+        progress -- True if the status incorporates progress information.
             The progress bar will be made visible based on this parameter.
         """
         if err:
@@ -91,3 +70,39 @@ class AppUpdateHandler(object):
         self._install_ready = True
         if self._ui:
             self._ui.appInstallReady()    
+            
+    ############# To be implemented in subclass ##############
+    
+    def activate(self):
+        """Called from online_update.activate"""
+        pass
+    
+    def deactivate(self):
+        """Called from online_update.deactivate"""
+        pass
+    
+    def _getInitialStatus(self):
+        """Returns the initial status message that is displayed as soon as the widget is created."""
+        return u"Application updates are not available on your system."
+    
+    def canCheckForUpdate(self):
+        """Returns True if this handler can check for updates."""
+        return False
+            
+    def checkForUpdate(self):
+        """Checks for updates.
+        
+        Called if canCheckForUpdate is True and either the user requested
+        an update check or a scheduled update checking takes place.
+        """
+        pass
+    
+    def prepareInstallation(self, commands):
+        """Prepares the installation process.
+        
+        commands -- a lunchinator.commands.Commands instance.
+                    This method adds all the necessary commands
+                    that should be executed to perform the update.
+        """
+        raise NotImplementedError()
+    

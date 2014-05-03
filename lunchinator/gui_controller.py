@@ -283,8 +283,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.notifyUpdates()
     
     def _outdatedReposChanged(self):
-        with get_settings().get_plugin_repositories():
-            self._repoUpdates = len(get_settings().get_plugin_repositories().getOutdated())
+        self._repoUpdates = get_settings().get_plugin_repositories().getNumOutdated()
         if self._repoUpdateStatusAction != None:
             self._updateRepoUpdateStatusAction()
         self.notifyUpdates()

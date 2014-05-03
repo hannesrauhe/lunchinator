@@ -92,7 +92,7 @@ class plugin_repositories(iface_general_plugin):
         for row in xrange(model.rowCount()):
             path = convert_string(model.item(row, PluginRepositoriesGUI.PATH_COLUMN).data(Qt.DisplayRole).toString())
             if GitHandler.hasGit(path):
-                if GitHandler.needsPull(path):
+                if GitHandler.needsPull(path=path):
                     outdated.add(path)
                 else:
                     upToDate.add(path)

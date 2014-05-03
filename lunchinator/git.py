@@ -5,6 +5,7 @@ from lunchinator import log_debug
 class GitHandler(object):
     @classmethod
     def runGitCommand(cls, args, path=None, quiet=True):
+        """Runs a git command and returns a triple (return code, stdout output, stderr output)"""
         if path == None:
             from lunchinator import get_settings
             path = get_settings().get_main_package_path()
@@ -23,23 +24,32 @@ class GitHandler(object):
 
     @classmethod
     def getGitCommandResult(cls, args, path=None, quiet=True):
+        """Runs a git command and returns the return code."""
         retCode, _, __ = cls.runGitCommand(args, path, quiet)
         return retCode
     
     @classmethod
     def getGitCommandOutput(cls, args, path=None):
+        """Runs a git command and returns the stdout output."""
         _retCode, pOut, _pErr = cls.runGitCommand(args, path, quiet=False)
         return pOut.strip()
     
     @classmethod
     def hasGit(cls, path=None):
+        """Checks if a path is a git repository.
+        
+        This method returns true iff git is available and the path is
+        a git repository. If git is not available, None is returned.
+        """
         try:
             return cls.getGitCommandResult(["rev-parse"], path=path) == 0
         except:
+            # seems git is not available
             return None
 
     @classmethod
     def getCommitCount(cls, path=None):
+        """Returns the number of commits in the HEAD state of a git repository."""
         try:
             return cls.getGitCommandOutput(["rev-list", "--count", "HEAD"], path=path)
         except:
@@ -47,6 +57,7 @@ class GitHandler(object):
         
     @classmethod
     def getRemoteCommitCount(cls, path=None):
+        """Returns the number of commits in the current upstream branch of a git repository."""
         try:
             return cls.getGitCommandOutput(["rev-list", "--count", "@{u}"], path=path)
         except:
@@ -54,6 +65,7 @@ class GitHandler(object):
 
     @classmethod
     def getLatestChangeLog(cls, path=None):
+        """Reads the latest tag message and returns a list of changes."""
         try:
             tags = cls.getGitCommandOutput(["tag"], path=path)
             rev = cls.getGitCommandOutput(["rev-parse", tags.split("\n")[-1]], path=path)
@@ -64,6 +76,14 @@ class GitHandler(object):
     
     @classmethod
     def canGitUpdate(cls, ensureMaster=False, path=None):
+        """Checks if a git pull is possible in a git repository.
+        
+        This method returns True iff:
+        - The directory is a git repository, and
+        - the git repository is clean and up-to-date with the upstream branch.
+        ensureMaster -- If True, this method will also ensure that the
+                        current branch is the master branch.
+        """
         if cls.getGitCommandResult(["rev-parse"], path) != 0:
             return (False, "'%s' is no git repository" % path)
          
@@ -87,7 +107,17 @@ class GitHandler(object):
         return (True, None)
 
     @classmethod
-    def needsPull(cls, path=None, returnReason=False):
+    def needsPull(cls, returnReason=False, path=None):
+        """Checks if a git repository is outdated and can be pulled.
+        
+        This method will return True iff
+        - git updates are possible (see canGitUpdate)
+        - the upstream branch contains commits that can be pulled.
+        returnReason -- If True, this method returns a tuple (needsPull, reasonString)
+                        where reasonString contains the reason why the
+                        repository does NOT need to be pulled or is None
+                        if it can be pulled.
+        """
         if path == None:
             from lunchinator import get_settings
             path = get_settings().get_main_package_path()
@@ -119,5 +149,6 @@ class GitHandler(object):
     
     @classmethod
     def pull(cls, path=None):
+        """Pulls a git repository. Does not check prerequisites!"""
         return cls.runGitCommand(["pull"], path)
     

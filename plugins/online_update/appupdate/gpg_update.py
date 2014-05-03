@@ -8,6 +8,8 @@ from lunchinator import log_error, log_debug, log_exception, get_settings,\
 import json
 
 class GPGUpdateHandler(AppUpdateHandler):
+    """Base class for updaters that download GPG signed packages and install them."""
+    
     def __init__(self, urlBase):
         AppUpdateHandler.__init__(self)
         self._urlBase = urlBase
@@ -187,13 +189,16 @@ class GPGUpdateHandler(AppUpdateHandler):
         return self._version_info and \
                self._version_info["Commit Count"] > int(get_settings().get_commit_count())
     
-    # To be implemented in subclasses
+    ########### To be implemented in subclasses ###################
     def _prepareInstallation(self, _f, _commands):
         raise NotImplementedError()
-    def _installGPG(self):
-        raise NotImplementedError()
     def _canInstallGPG(self):
+        """If GPG is not available, this method determines if it can be automatically installed."""
         return False
+    def _installGPG(self):
+        """If _canInstallGPG() is True, this method is called when a GPG installation is requested."""
+        raise NotImplementedError()
     def _getCheckURLBase(self):
+        """Returns the base URL to check for updates."""
         return None
     

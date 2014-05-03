@@ -3,6 +3,8 @@ from lunchinator import get_settings, get_notification_center
 from lunchinator.callables import AsyncCall
 
 class RepoUpdateHandler(object):
+    """Handles plugin repository updates."""
+    
     def __init__(self):
         self._ui = None
     
@@ -24,8 +26,7 @@ class RepoUpdateHandler(object):
         
     def _getRepoStatus(self, nOutdated=None):
         if nOutdated == None:
-            with get_settings().get_plugin_repositories():
-                nOutdated = len(get_settings().get_plugin_repositories().getOutdated())
+            nOutdated = get_settings().get_plugin_repositories().getNumOutdated()
         if nOutdated == 0:
             status = "There are no repositories that can be updated."
         elif nOutdated == 1:
@@ -41,8 +42,7 @@ class RepoUpdateHandler(object):
         return get_settings().get_plugin_repositories().areUpdatesAvailable()
     
     def _processOutdated(self):
-        with get_settings().get_plugin_repositories():
-            nOutdated = len(get_settings().get_plugin_repositories().getOutdated())
+        nOutdated = get_settings().get_plugin_repositories().getNumOutdated()
         
         if nOutdated > 0:
             displayNotification("Update(s) available", self._getRepoStatus())

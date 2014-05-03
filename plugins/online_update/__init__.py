@@ -80,7 +80,8 @@ class online_update(iface_general_plugin):
         return ui
         
     def checkForUpdate(self):
-        self._appUpdateHandler.checkForUpdate()
+        if self._appUpdateHandler.canCheckForUpdate():
+            self._appUpdateHandler.checkForUpdate()
         self._repoUpdateHandler.checkForUpdates()
         
     def installUpdates(self):

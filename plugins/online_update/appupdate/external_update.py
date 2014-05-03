@@ -4,6 +4,8 @@ import os
 import subprocess
 
 class ExternalUpdateHandler(AppUpdateHandler):
+    """Used when Lunchinator updates are handled by the OS package management."""
+    
     @classmethod
     def appliesToConfiguration(cls):
         if getPlatform() != PLATFORM_LINUX:
