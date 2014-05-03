@@ -41,7 +41,12 @@ class SimpleViewWidget(QWidget):
         
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.updateWidgets)
-        self.timer.start(1000)
+        self.timer.start(60000)
+        
+        get_server().controller.memberAppendedSignal.connect(self.updateWidgets)
+        get_server().controller.memberUpdatedSignal.connect(self.updateWidgets)
+        get_server().controller.memberRemovedSignal.connect(self.updateWidgets)
+        
         
     def getMemberColor(self,peerID):
         if not self.colorMap.has_key(peerID):

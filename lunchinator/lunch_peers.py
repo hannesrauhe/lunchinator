@@ -101,6 +101,8 @@ class LunchPeers(object):
             log_debug("Peer %s is a member" % pID) 
             self._memberIDs.add(pID)           
             self._controller.memberAppended(pID, deepcopy(self._getPeerInfoByID(pID)))
+        else: #something may have changed for the member data
+            self._controller.memberUpdated(pID, deepcopy(self._getPeerInfoByID(pID)))
             
     def _removeMember(self, pID):
         if pID in self._memberIDs:
