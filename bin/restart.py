@@ -27,8 +27,6 @@ def executeCommand(args):
     spawnProcess(args)
 
 def restart():
-    initialize_logger(get_settings().get_config("update.log"))
-    
     # wait for Lunchinator to exit
     try:
         pid = int(options.pid)
@@ -63,10 +61,11 @@ if __name__ == '__main__':
     if lunchinatorPath:
         sys.path.insert(0, lunchinatorPath)
     
-    from lunchinator import log_exception
+    from lunchinator import get_settings, log_exception, initialize_logger
+    initialize_logger(get_settings().get_config("update.log"))
     
     try:
-        from lunchinator import initialize_logger, get_settings, log_info, log_error
+        from lunchinator import log_info, log_error
         from lunchinator.commands import Commands
         restart()
     except:
