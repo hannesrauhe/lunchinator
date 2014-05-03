@@ -114,5 +114,5 @@ class GitHandler(object):
     
     @classmethod
     def pull(cls, path=None):
-        cls.runGitCommand(["pull"], path)
+        return cls.runGitCommand(["pull"], path)
     

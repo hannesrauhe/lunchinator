@@ -24,11 +24,14 @@ class _lunchinator_logger:
     logfileHandler = None
      
     @classmethod
-    def get_singleton_logger(cls):
+    def get_singleton_logger(cls, path=None):
         if cls.lunch_logger == None:
             if not os.path.exists(MAIN_CONFIG_DIR ):
                 os.makedirs(MAIN_CONFIG_DIR )
-            log_file = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
+            if path:
+                log_file = path
+            else:
+                log_file = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
                 
             cls.logfileHandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
             cls.logfileHandler.setFormatter(_log_formatter())
@@ -51,8 +54,8 @@ class _lunchinator_logger:
                 cls.logfileHandler.doRollover()
         return cls.lunch_logger
 
-def initialize_logger():
-    _lunchinator_logger.get_singleton_logger()
+def initialize_logger(path=None):
+    _lunchinator_logger.get_singleton_logger(path)
     #initialize settings
     get_settings().set_logging_level(get_settings().get_logging_level())
 

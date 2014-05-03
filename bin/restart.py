@@ -26,23 +26,22 @@ def executeCommand(args):
     from lunchinator.utilities import spawnProcess
     spawnProcess(args)
 
-if __name__ == '__main__':
-    (options, _args) = parse_args()
-    
-    lunchinatorPath = options.lunchinatorPath
-    if lunchinatorPath:
-        sys.path.insert(0, lunchinatorPath)
-    
-    from lunchinator.commands import Commands
+def restart():
+    initialize_logger(get_settings().get_config("update.log"))
     
     # wait for Lunchinator to exit
-    pid = int(options.pid)
-    while isRunning(pid):
-        time.sleep(1. / 5)
-        
+    try:
+        pid = int(options.pid)
+        log_info("Waiting for Lunchinator (pid %s) to terminate" % options.pid)
+        while isRunning(pid):
+            time.sleep(1. / 5)
+    except ValueError:
+        log_error("Invalid pid:", options.pid)
+    
     # execute commands while Lunchinator is not running
     cmdString = options.commands
     if cmdString:
+        log_info("Executing commands while Lunchinator is not running...")
         commands = Commands(cmdString)
         commands.executeCommands()
 
@@ -50,9 +49,26 @@ if __name__ == '__main__':
     startCmd = options.startCmd
     if startCmd:
         args = json.loads(startCmd)
+        log_info("Restarting Lunchinator:", ' '.join(args))
         
         if platform.system()=="Windows":
             subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
         else:
-            subprocess.call(args, close_fds=True)        
+            subprocess.call(args, close_fds=True)
+
+if __name__ == '__main__':
+    (options, _args) = parse_args()
+    
+    lunchinatorPath = options.lunchinatorPath
+    if lunchinatorPath:
+        sys.path.insert(0, lunchinatorPath)
+    
+    from lunchinator import log_exception
+    
+    try:
+        from lunchinator import initialize_logger, get_settings, log_info, log_error
+        from lunchinator.commands import Commands
+        restart()
+    except:
+        log_exception("Unrecoverable error during restart.")
     
