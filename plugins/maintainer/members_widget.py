@@ -261,7 +261,7 @@ class MembersWidget(QWidget):
             member = self.get_selected_log_member()
         if member != None:
             log_debug("Requesting log %d from %s" % (logNum, member))
-            get_server().call("HELO_REQUEST_LOGFILE %s %d"%(DataReceiverThread.getOpenPort(category="log%s"%member), logNum), member)
+            get_server().call("HELO_REQUEST_LOGFILE %s %d"%(DataReceiverThread.getOpenPort(category="log%s"%member), logNum), set([member]))
         else:
             self.log_area.setText("No Member selected!")
             
@@ -275,7 +275,7 @@ class MembersWidget(QWidget):
     def request_update(self):
         member = self.get_selected_log_member()
         if member != None:
-            get_server().call("HELO_UPDATE from GUI",member)
+            get_server().call("HELO_UPDATE from GUI", set([member]))
     
     def get_dropdown_member_text(self, peerID, m_name):
         if peerID == m_name:
@@ -448,7 +448,7 @@ class MembersWidget(QWidget):
     def sendMessageToMember(self, lineEdit):
         selectedMember = self.get_selected_log_member()
         if selectedMember != None:
-            get_server().call(convert_string(lineEdit.text()),client=selectedMember)
+            get_server().call(convert_string(lineEdit.text()),set([selectedMember]))
             lineEdit.clear()
         
     def updateMemberInformation(self):
@@ -459,11 +459,7 @@ class MembersWidget(QWidget):
             self.memberInformationTable.setHeaderLabel("No member selected.")
             return
 
-        with get_peers():
-            memberInformation = None
-            infoDict = get_peers().getPeerInfo(self.get_selected_log_member())
-            if infoDict != None:
-                memberInformation = copy.deepcopy(infoDict)
+        memberInformation = get_peers().getPeerInfo(self.get_selected_log_member())
             
         if memberInformation == None:
             self.memberInformationTable.setColumnCount(0)

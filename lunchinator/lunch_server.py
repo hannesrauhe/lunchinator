@@ -96,7 +96,9 @@ class lunch_server(object):
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
     def call(self, msg, peerIDs=[], peerIPs=[]):
         '''Sends a call to the given peers, specified by either there IDs or there IPs'''
-        self.initialize()        
+        self.initialize()     
+        assert(type(peerIDs) in [list,set])  
+        assert(type(peerIPs) in [list,set])   
         self.controller.call(msg, set(peerIDs), set(peerIPs))
                 
     def call_info(self, peerIPs=[]):
@@ -361,7 +363,7 @@ class lunch_server(object):
             for pID in peerIDs:
                 pIPs = self._peers.getPeerIPs(pID)
                 if len(pIPs):
-                    target += pIPs
+                    target = target.union(pIPs)
                 else:
                     log_warning("While calling: I do not know a peer with ID %s, ignoring " % pID)
             
@@ -544,7 +546,7 @@ class lunch_server(object):
             
             fileSize = fileToSend.tell()
             log_info("Sending file of size %d to %s : %d" % (fileSize, str(ip), other_tcp_port))
-            self.call("HELO_LOGFILE_TGZ %d %d" % (fileSize, other_tcp_port), ip)
+            self.call("HELO_LOGFILE_TGZ %d %d" % (fileSize, other_tcp_port), peerIPs=[ip])
             self.controller.sendFile(ip, fileToSend.getvalue(), other_tcp_port, True)      
         
         # now it's the plugins' turn:
