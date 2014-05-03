@@ -391,7 +391,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._repoUpdateStatusAction.setEnabled(False)
         self._updateRepoUpdateStatusAction()
         
-        self._installUpdatesAction = menu.addAction("Install Updates and Relaunch")
+        self._installUpdatesAction = menu.addAction("Install updates and restart")
         self._installUpdatesAction.triggered.connect(get_notification_center().emitInstallUpdates)
         self._installUpdatesAction.setVisible(self._updateAvailable)
         
