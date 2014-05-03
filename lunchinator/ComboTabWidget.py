@@ -37,14 +37,9 @@ class ComboTabWidget(QWidget):
             index = self.currentIndex()
         
         w = self.pageArea.widget(index)
-        if self.currentIndex() == index:
-            if index > 0:
-                self.setCurrentIndex(index - 1)
-            elif index + 1 < self.count():
-                self.setCurrentIndex(index + 1)
-                
-        self.switchCombo.removeItem(index)
+        
         self.pageArea.removeWidget(w)
+        self.switchCombo.removeItem(index)
         
     def updateTab(self, w, tabText, index=-1):
         if index < 0:
