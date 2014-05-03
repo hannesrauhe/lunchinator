@@ -3,8 +3,9 @@ import sys, os, getpass, ConfigParser, types, logging, codecs, contextlib, uuid
 '''integrate the cli-parser into the default_config sooner or later'''
 from lunchinator import log_exception, log_error, setLoggingLevel, convert_string, MAIN_CONFIG_DIR
 from datetime import datetime
-from lunchinator.git import GitHandler
-    
+import json
+from lunchinator.repositories import PluginRepositories
+
 class lunch_settings(object):
     LUNCH_TIME_FORMAT = "%H:%M"
     LUNCH_TIME_FORMAT_QT = "HH:mm"
@@ -52,13 +53,8 @@ class lunch_settings(object):
         self._resources_path = self._findResourcesPath(self._main_package_path)
         if self._resources_path == None:
             raise Exception("Could not determine path to the lunchinator resource files.")
-        self._internal_plugin_dir = self.get_resource("plugins")
-        self._external_plugin_dir = self.get_config("plugins")
-        self._plugin_dirs = [self._internal_plugin_dir, self._external_plugin_dir]
         
-        # insert plugin folders into path
-        for aDir in self._plugin_dirs:
-            sys.path.insert(0, aDir)
+        self._plugin_repos = None
         
         # configurable  
         self._lunch_trigger = u"lunch"
@@ -94,6 +90,11 @@ class lunch_settings(object):
             
         self._config_file = ConfigParser.SafeConfigParser()
         self.read_config_from_hd()
+        
+        # insert plugin folders into path
+        for aDir in self.get_plugin_dirs():
+            # TODO check first!
+            sys.path.insert(0, aDir)
             
     def read_config_from_hd(self): 
         self._config_file.read(self._main_config_dir + '/settings.cfg')
@@ -120,7 +121,19 @@ class lunch_settings(object):
         self._ID = self.read_value_from_config_file(self._ID, "general", "ID")      
         self._member_timeout = self.read_value_from_config_file(self._member_timeout, "general", "member_timeout")   
         self._peer_timeout = self.read_value_from_config_file(self._peer_timeout, "general", "peer_timeout")    
-
+   
+        
+        externalRepos = self.read_value_from_config_file(None, "general", "external_plugin_repos")
+        if externalRepos == None:
+            if os.path.isdir(self.get_config("plugins")):
+                externalRepos = [(self.get_config("plugins"), True, False)]  # active, but no auto update
+            else:
+                externalRepos = []
+        else:
+            externalRepos = json.loads(externalRepos)
+            
+        self._plugin_repos = PluginRepositories(self.get_resource("plugins"), externalRepos)
+        
         if self._user_name == "":
             self._user_name = getpass.getuser().decode()         
         
@@ -150,6 +163,7 @@ class lunch_settings(object):
         return value
         
     def write_config_to_hd(self):
+        self.get_config_file().set('general', 'external_plugin_repos', json.dumps(self.get_plugin_repositories().getExternalRepositories()))
         with codecs.open(self._main_config_dir + '/settings.cfg', 'w', 'utf-8') as f: 
             self._config_file.write(f)
     
@@ -172,14 +186,12 @@ class lunch_settings(object):
         return unicode(os.path.join(self.get_main_config_dir(), *args))
     
     def get_plugin_dirs(self):
-        return self._plugin_dirs
+        # getPluginDirs is thread safe
+        return self._plugin_repos.getPluginDirs()
     
-    def get_internal_plugin_dir(self):
-        return self._internal_plugin_dir
-    
-    def get_external_plugin_dir(self):
-        return self._external_plugin_dir
-    
+    def get_plugin_repositories(self):
+        return self._plugin_repos
+
     def get_config_file(self):
         return self._config_file
     
@@ -201,10 +213,12 @@ class lunch_settings(object):
                     self._version = vfh.read().strip()
                 self._commit_count = self._version.split(".")[-1]
             except Exception:
-                gitHandler = GitHandler()
-                if gitHandler.has_git():
-                    self._commit_count = gitHandler.getCommitCount()
-                    self._version = self._commit_count
+                from lunchinator.git import GitHandler
+                if GitHandler.hasGit():
+                    commit_count = GitHandler.getCommitCount()
+                    if commit_count:
+                        self._commit_count = commit_count
+                        self._version = commit_count
                 else:
                     log_error("Error reading/parsing version file")
                     self._version = u"unknown.unknown"

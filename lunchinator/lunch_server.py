@@ -2,14 +2,14 @@
 # coding=utf-8
 
 
-import socket, sys, os, json, codecs, contextlib, tarfile, platform, random
+import socket, sys, os, json, codecs, contextlib, tarfile, platform, random, errno
 from time import strftime, localtime, time, mktime, gmtime
 from threading import Lock
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
-    convert_string
-from lunchinator.utilities import determineOwnIP
+    convert_string, get_notification_center
+from lunchinator.utilities import getTimeDifference, determineOwnIP
 from lunchinator.lunch_peers import LunchPeers
 
 EXIT_CODE_ERROR = 1
@@ -57,7 +57,7 @@ class lunch_server(object):
             from lunchinator.lunch_server_controller import LunchServerController
             self.controller = LunchServerController()
             
-        self._peers = LunchPeers(self.controller)
+        self._peers = LunchPeers()
         self._read_config()
 
         if self.get_plugins_enabled():  
@@ -109,7 +109,7 @@ class lunch_server(object):
         '''Similar to a info call but also request information from the peer
         by default to every/from every peer'''
         if 0 == len(peerIPs):
-            peers = self._peers.getPeerIPs()
+            peerIPs = self._peers.getPeerIPs()
         return self.call("HELO_REQUEST_INFO " + self._build_info_string(), peerIPs=peerIPs)
     
     def call_dict(self, ip):  
@@ -319,6 +319,9 @@ class lunch_server(object):
                             is_in_broadcast_mode = True
                             log_warning("seems like you are alone - broadcasting for others")
                         self._broadcast()
+                except socket.error as e:
+                    if e.errno != errno.EINTR:
+                        raise
         except socket.error as e:
             # socket error messages may contain special characters, which leads to crashes on old python versions
             log_error(u"stopping lunchinator because of socket error:", convert_string(str(e)))
@@ -442,7 +445,6 @@ class lunch_server(object):
         
         if cmd == "HELO_INFO":
             self._peers.updatePeerInfoByIP(ip, json.loads(value))
-
         elif cmd == "HELO_REQUEST_INFO":
             self._peers.updatePeerInfoByIP(ip, json.loads(value))
             self.call_info()
@@ -566,7 +568,6 @@ class lunch_server(object):
         if not msg.startswith("ignore"):
             self.controller.processMessage(msg, ip)
             
-            from lunchinator.utilities import getTimeDifference
             diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time())
             if diff == None or get_settings().get_lunch_trigger() in msg.lower() and 0 < diff:
                 timenum = mktime(mtime)
@@ -626,7 +627,6 @@ class lunch_server(object):
         except:
             log_exception("Could not write messages to %s: %s" % (get_settings().get_messages_file(), sys.exc_info()[0])) 
             
-
     def _insertMessage(self, mtime, addr, msg):
         self.lockMessages()
         try:

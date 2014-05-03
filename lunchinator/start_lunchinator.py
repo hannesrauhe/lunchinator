@@ -173,6 +173,9 @@ def startLunchinator():
         get_server().set_plugins_enabled(usePlugins)
         app.setQuitOnLastWindowClosed(False)
         lanschi = LunchinatorGuiController()
+        if lanschi.isShuttingDown():
+            # seems lanschi would prefer to not start up
+            sys.exit(0)
         if options.showWindow:
             lanschi.openWindowClicked()
         

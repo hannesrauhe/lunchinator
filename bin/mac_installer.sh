@@ -20,6 +20,3 @@ else
 fi
 
 rm -rf "$tmpdir"
-
-echo "Launching Lunchinator"
-open "$2"

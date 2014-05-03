@@ -3,13 +3,12 @@ from copy import deepcopy
 from time import time
 from threading import Lock
 from collections import deque
-from lunchinator import get_settings, log_warning, log_exception, log_error, log_debug, log_info
+from lunchinator import get_settings, log_warning, log_exception, log_error, log_debug, log_info, get_notification_center
 from lunchinator.utilities import getTimeDifference
 
-class LunchPeers(object):
-    def __init__(self, controller):
-        self._controller = controller
         
+class LunchPeers(object):
+    def __init__(self):        
         self._memberIDs = set()  # of PeerIDs members: peers that sent their info, are active and belong to my group
         self._IP_seen = {}  # last seen timestamps by IP
         self._peer_info = {}  # information of every peer by IP
@@ -37,7 +36,7 @@ class LunchPeers(object):
         if group_name not in self._groups:
             self._groups.add(group_name)
             # TODO: what was the second parameter supposed to be?
-            self._controller.groupAppended(group_name, self._groups)
+            get_notification_center().emitGroupAppended(group_name, self._groups)
             
     
     ################ IP Timestamp Operations #####################
@@ -100,14 +99,14 @@ class LunchPeers(object):
         if pID not in self._memberIDs:
             log_debug("Peer %s is a member" % pID) 
             self._memberIDs.add(pID)           
-            self._controller.memberAppended(pID, deepcopy(self._getPeerInfoByID(pID)))
+            get_notification_center().emitMemberAppended(pID, deepcopy(self._getPeerInfoByID(pID)))
         else: #something may have changed for the member data
-            self._controller.memberUpdated(pID, deepcopy(self._getPeerInfoByID(pID)))
+            get_notification_center().emitMemberUpdated(pID, deepcopy(self._getPeerInfoByID(pID)))
             
     def _removeMember(self, pID):
         if pID in self._memberIDs:
             self._memberIDs.remove(pID)
-            self._controller.memberRemoved(pID)  
+            get_notification_center().memberRemoved(pID)  
     
      
     
@@ -211,7 +210,7 @@ class LunchPeers(object):
                 self._addPeerIPtoID(newPID, ip)
             else:
                 # TODO(Hannes) this info is now the most recent for this ID
-                self._controller.peerUpdated(newPID, deepcopy(self._peer_info[ip]))
+                get_notification_center().peerUpdated(newPID, deepcopy(self._peer_info[ip]))
                 log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
             
             own_group = get_settings().get_group()       
@@ -274,13 +273,13 @@ class LunchPeers(object):
             # no IP associated with that ID -> remove peer
             self._removeMember(pID)
             self._idToIp.pop(pID)
-            self._controller.peerRemoved(pID)  
+            get_notification_center().emitPeerRemoved(pID)  
      
     def _addPeerIPtoID(self, pID, ip):       
         if pID not in self._idToIp:
             self._idToIp[pID] = set()
             self._idToIp[pID].add(ip)   
-            self._controller.peerAppended(pID, deepcopy(self._peer_info[ip]))
+            get_notification_center().emitPeerAppended(pID, deepcopy(self._peer_info[ip]))
         else:
             self._idToIp[pID].add(ip)   
             

@@ -1,15 +1,20 @@
 """Base class for Lunch Server Controller classes"""
+import sys
 from lunchinator import get_server, get_settings, log_info, log_error
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall
+from lunchinator.notification_center import NotificationCenter
 
 class LunchServerController(object):
     def __init__(self):
         super(LunchServerController, self).__init__()
+        self._initNotificationCenter()
+        
+    def _initNotificationCenter(self):
+        NotificationCenter.setSingletonInstance(NotificationCenter())
         
     def initDone(self):
         pass
-        
     def call(self, msg, peerIDs, peerIPs):
         get_server()._perform_call(msg, peerIDs, peerIPs)
         
@@ -36,8 +41,20 @@ class LunchServerController(object):
     
     def messagePrepended(self, messageTime, senderIP, messageText):
         pass
+
+    def shutdown(self):
+        if get_server().is_running():
+            get_server().stop_server()
+        else:
+            # server is not running. HELO_STOP will not have any effect.
+            self._coldShutdown()
+            
+    def _coldShutdown(self):
+        """Shutdown when server is not yet running"""
+        sys.exit(0)
     
     def extendMemberInfo(self, _infoDict):
+        """Add some specific information to the info dictionary"""
         pass
     
     def getOpenTCPPort(self, _senderIP):
@@ -66,9 +83,6 @@ class LunchServerController(object):
     def processLunchCall(self, msg, addr):
         """ process a lunch call """
         processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
-    
-    def notifyUpdates(self):
-        pass
 
     def serverStopped(self, _exit_code):
         get_settings().write_config_to_hd()

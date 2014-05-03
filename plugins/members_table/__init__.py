@@ -1,5 +1,10 @@
 from lunchinator.iface_plugins import iface_gui_plugin
+<<<<<<< HEAD
 from lunchinator import log_exception, get_settings, get_server, get_peers
+=======
+from lunchinator import log_exception, get_settings, get_server,\
+    get_notification_center
+>>>>>>> refs/heads/pluginrepos
 import urllib2,sys
     
 class members_table(iface_gui_plugin):
@@ -28,9 +33,11 @@ class members_table(iface_gui_plugin):
         
         self.timeoutTimer.timeout.disconnect(self.updateTimeoutsInMembersTables)
         self.timeoutTimer.stop()
-        get_server().controller.peerAppendedSignal.disconnect(self.membersModel.externalRowAppended)
-        get_server().controller.peerUpdatedSignal.disconnect(self.membersModel.externalRowUpdated)
-        get_server().controller.peerRemovedSignal.disconnect(self.membersModel.externalRowRemoved)
+        
+        get_notification_center().disconnectPeerAppended(self.membersModel.externalRowAppended)
+        get_notification_center().disconnectPeerUpdated(self.membersModel.externalRowUpdated)
+        get_notification_center().disconnectPeerRemoved(self.membersModel.externalRowRemoved)
+
         self.membersTable = None
         self.membersModel = None
         self.membersProxyModel = None
@@ -58,9 +65,9 @@ class members_table(iface_gui_plugin):
         self.timeoutTimer.timeout.connect(self.updateTimeoutsInMembersTables)
         self.timeoutTimer.start(1000)  
         
-        get_server().controller.peerAppendedSignal.connect(self.membersModel.externalRowAppended)
-        get_server().controller.peerUpdatedSignal.connect(self.membersModel.externalRowUpdated)
-        get_server().controller.peerRemovedSignal.connect(self.membersModel.externalRowRemoved)
+        get_notification_center().connectPeerAppended(self.membersModel.externalRowAppended)
+        get_notification_center().connectPeerUpdated(self.membersModel.externalRowUpdated)
+        get_notification_center().connectPeerRemoved(self.membersModel.externalRowRemoved)
         
         return self.membersTable
     

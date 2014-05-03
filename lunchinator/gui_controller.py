@@ -1,9 +1,7 @@
 # coding: utf-8
-import sys, sip
+import platform, sip, socket, os, subprocess, time
 from lunchinator import get_server, log_exception, log_info, get_settings, \
-    log_error, convert_string, log_warning
-import socket, os, time, subprocess
-import platform
+    log_error, convert_string, log_warning, get_notification_center
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor,\
     QDialog
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplication, QTimer
@@ -14,8 +12,10 @@ from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
-    getValidQtParent
+    getValidQtParent, restart
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
+from lunchinator.notification_center_qt import NotificationCenterQt
+from lunchinator.notification_center import NotificationCenter
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -51,10 +51,15 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         log_info("Your PyQt version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
         
+        self._shuttingDown = False
         self.resetIconTimer = None
         self.resetNextLunchTimeTimer = None
         self.isIconHighlighted = True  # set to True s.t. first dehighlight can set the default icon
         self._updateAvailable = False
+        self._repoUpdates = 0
+        self._installUpdatesAction = None
+        self._appUpdateStatusAction = None
+        self._repoUpdateStatusAction = None
         
         self.exitCode = 0
         self.serverThread = None
@@ -84,12 +89,18 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processLunchCall.connect(self.processLunchCallSlot)
         self._updateRequested.connect(self.updateRequested)
         
-        self.messagePrependedSignal.connect(self.highlightIcon)
+        get_notification_center().connectApplicationUpdate(self._appUpdateAvailable)
+        get_notification_center().connectOutdatedRepositoriesChanged(self._outdatedReposChanged)
+        get_notification_center().connectUpdatesDisabled(self._updatesDisabled)
+        get_notification_center().connectMessagePrepended(self.highlightIcon)
         
         self.serverThread = LunchServerThread(self)
         self.serverThread.finished.connect(self.serverFinishedUnexpectedly)
         self.serverThread.finished.connect(self.serverThread.deleteLater)
         self.serverThread.start()
+        
+    def _initNotificationCenter(self):
+        NotificationCenter.setSingletonInstance(NotificationCenterQt(self))
         
     def highlightIcon(self):
         if self.isIconHighlighted:
@@ -137,8 +148,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 if result == QMessageBox.Yes:
                     if subprocess.call(['gksu', get_settings().get_resource('bin', 'install-lunch-icons.sh') + ' lunchinator']) == 0:
                         log_info("restarting after icons were installed")
-                        self.quit(EXIT_CODE_UPDATE)
-                        sys.exit(EXIT_CODE_UPDATE)
+                        restart()
                         return False
                     else:
                         QMessageBox.critical(self.mainWindow,
@@ -164,6 +174,15 @@ class LunchinatorGuiController(QObject, LunchServerController):
             return
         if reason == QSystemTrayIcon.Trigger:
             self.statusicon.contextMenu().popup(QCursor.pos())
+        
+    def _coldShutdown(self, exitCode=0):
+        # before exiting, process remaining events (e.g., pending messages like HELO_LEAVE)
+        QCoreApplication.processEvents()
+        QCoreApplication.exit(exitCode)
+        self._shuttingDown = True
+        
+    def isShuttingDown(self):
+        return self._shuttingDown
         
     def quit(self, exitCode=0):
         if self.mainWindow != None:
@@ -199,9 +218,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         get_settings().write_config_to_hd()
             
         self.exitCode = finalExitCode
-        # before exiting, process remaining events (e.g., pending messages like HELO_LEAVE)
-        QCoreApplication.processEvents()
-        QCoreApplication.exit(finalExitCode)
+        
+        self._coldShutdown(finalExitCode)
         return finalExitCode
             
     """ ---------------- CALLED FROM LUNCH SERVER -----------------"""
@@ -276,10 +294,42 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processLunchCall.emit(msg, addr)
         
     """ ----------------- CALLED ON MAIN THREAD -------------------"""
-
-    def notifyUpdates(self):
+    
+    def _updateRepoUpdateStatusAction(self):
+        status = ""
+        if self._repoUpdates == 1:
+            status = "1 plugin repository can be updated."
+        elif self._repoUpdates > 1:
+            status = "%d plugin repositories can be updated." % self._repoUpdates
+        self._repoUpdateStatusAction.setText(status)
+            
+        self._repoUpdateStatusAction.setVisible(self._repoUpdates > 0)
+    
+    def _appUpdateAvailable(self):
         self._updateAvailable = True
-        self._updateMemberStatus()
+        if self._appUpdateStatusAction != None:
+            self._appUpdateStatusAction.setVisible(True)
+        self.notifyUpdates()
+    
+    def _outdatedReposChanged(self):
+        self._repoUpdates = get_settings().get_plugin_repositories().getNumOutdated()
+        if self._repoUpdateStatusAction != None:
+            self._updateRepoUpdateStatusAction()
+        self.notifyUpdates()
+        
+    def _updatesDisabled(self):
+        if self._repoUpdateStatusAction:
+            self._repoUpdateStatusAction.setVisible(False)
+        if self._appUpdateStatusAction:
+            self._appUpdateStatusAction.setVisible(False)
+        if self._installUpdatesAction:
+            self._installUpdatesAction.setVisible(False)
+        self._updateAvailable = False
+    
+    def notifyUpdates(self):
+        hasUpdates = self._updateAvailable or self._repoUpdates > 0
+        if self._installUpdatesAction != None:
+            self._installUpdatesAction.setVisible(hasUpdates)
     
     def init_menu(self, parent):        
         # create the plugin submenu
@@ -358,6 +408,21 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         menu.addMenu(plugin_menu)
         
+        if hasattr(menu, "addSeparator"):
+            menu.addSeparator()
+        
+        self._appUpdateStatusAction = menu.addAction("Lunchinator can be updated.")
+        self._appUpdateStatusAction.setEnabled(False)
+        self._appUpdateStatusAction.setVisible(self._updateAvailable)
+        
+        self._repoUpdateStatusAction = menu.addAction("")
+        self._repoUpdateStatusAction.setEnabled(False)
+        self._updateRepoUpdateStatusAction()
+        
+        self._installUpdatesAction = menu.addAction("Install updates and restart")
+        self._installUpdatesAction.triggered.connect(get_notification_center().emitInstallUpdates)
+        self._installUpdatesAction.setVisible(self._updateAvailable)
+        
         anAction = menu.addAction('Exit')
         anAction.triggered.connect(self.quitClicked)
             
@@ -386,8 +451,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 notReady = u"%d members" % len(notReadyMembers)
             
             status = u"%s ready, %s not ready for lunch." % (ready, notReady)
-        if self._updateAvailable:
-            status = u"Update available – " + status
         self._memberStatusAction.setText(status)
     
     def check_new_msgs(self):
