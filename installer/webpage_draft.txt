@@ -34,13 +34,19 @@ If you have a firewall, make sure Ports 50000/UDP and 50001/TCP are open.
 * Windows: 
 
 * Mac:
+  Just download the latest tarball and unpack it. Place the Application Bundle in your Applications folder.
 
 * Ubuntu: Add the lunchinator ppa:
   sudo apt-add-repository ppa:lunch-team/lunchinator
-  sudo apt-add update
-  sudo apt-add install lunchinator
+  sudo apt-get update
+  sudo apt-get install lunchinator
   
-* SLES 11 SP2: Add the repository
+* SLES 11 SP2: 
+    * Install PyQT 4 from the official repositories (`sudo zypper install python-qt4`)
+    * Make sure it works (`python -c 'from PyQt4.QtCore import QThread'`)
+    * Add the following repository for python-setuptools: `sudo zypper ar http://download.opensuse.org/repositories/devel:/languages:/python/SLE_11_SP2/devel:languages:python.repo`
+    * Add the Lunchinator repository: `sudo zypper ar http://download.opensuse.org/repositories/home:/Cornelius_Ratsch/SLE_11_SP2/home:Cornelius_Ratsch.repo`
+    * Install the Lunchinator: `sudo zypper install lunchinator`
 
 * Other Systems that support python
 
