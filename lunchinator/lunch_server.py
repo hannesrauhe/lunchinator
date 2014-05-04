@@ -8,7 +8,7 @@ from threading import Lock
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
-    convert_string
+    convert_string, get_notification_center
 from lunchinator.utilities import getTimeDifference, determineOwnIP
 from lunchinator.lunch_peers import LunchPeers
 from lunchinator.logging_mutex import loggingMutex
@@ -561,12 +561,12 @@ class lunch_server(object):
         mtime = localtime()
         
         t = strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8")
-        m = self._peers.getPeerName(ip)
+        m = self._peers.getPeerInfoByIP(ip)
             
-        log_info("%s: [%s] %s" % (t, m, msg))
+        log_info("%s: [%s] %s" % (t, m[u"ID"], msg))
         
-        self._insertMessage(mtime, ip, msg)
-        self.controller.messagePrepended(mtime, ip, msg)
+        self._insertMessage(mtime, m[u"ID"], msg)
+        get_notification_center().emitMessagePrepended(mtime, m[u"ID"], msg)
         
         # TODO: Signal at this point, if this is necessary?
         self.new_msg = True

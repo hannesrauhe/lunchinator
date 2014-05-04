@@ -15,32 +15,9 @@ class LunchServerController(object):
         
     def initDone(self):
         pass
+    
     def call(self, msg, peerIDs, peerIPs):
         get_server()._perform_call(msg, peerIDs, peerIPs)
-        
-    def memberAppended(self, peerID, infoDict):
-        get_notification_center().emitMemberAppended(peerID, infoDict)
-        
-    def memberUpdated(self, peerID, infoDict):
-        get_notification_center().emitMemberUpdated(peerID, infoDict)
-    
-    def memberRemoved(self, peerID):
-        get_notification_center().emitMemberRemoved(peerID)
-        
-    def groupAppended(self, group, peer_groups):
-        get_notification_center().emitGroupAppended(group, peer_groups)
-        
-    def peerAppended(self, ip, infoDict):
-        get_notification_center().emitPeerAppended(ip, infoDict)
-    
-    def peerUpdated(self, ip, infoDict):
-        get_notification_center().emitPeerUpdated(ip, infoDict)
-    
-    def peerRemoved(self, ip):
-        get_notification_center().emitPeerRemoved(ip)
-    
-    def messagePrepended(self, messageTime, senderIP, messageText):
-        get_notification_center().emitMessagePrepended(messageTime, senderIP, messageText)
 
     def shutdown(self):
         if get_server().is_running():

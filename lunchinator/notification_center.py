@@ -211,7 +211,7 @@ class NotificationCenter(object):
     def disconnectMessagePrepended(self, callback):
         pass
     @_emitFunc
-    def emitMessagePrepended(self, messageTime, senderIP, messageText):
+    def emitMessagePrepended(self, messageTime, senderID, messageText):
         pass
     
 if __name__ == '__main__':
