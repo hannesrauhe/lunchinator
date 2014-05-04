@@ -292,11 +292,15 @@ class lunch_server(object):
                     
                     # if this packet has info about the peer, we record it and
                     # are done
-                    if self._handle_structure_event(ip, cmd, value):
+                    if self._handle_structure_event(ip, cmd, value):            
+                        # now it's the plugins' turn:
+                        self.controller.processEvent(cmd, value, ip)
                         continue
                                         
                     try:        
-                        self._handle_incoming_event(ip, cmd, value)                         
+                        self._handle_incoming_event(ip, cmd, value)
+                        # now it's the plugins' turn:
+                        self.controller.processEvent(cmd, value, ip)                     
                     except:
                         log_exception("Unexpected error while handling event from group member %s call: %s" % (ip, str(sys.exc_info())))
                         log_critical("The data received was: %s" % data)
@@ -475,9 +479,6 @@ class lunch_server(object):
         else:
             r_value = False 
             
-        # now it's the plugins' turn:
-        self.controller.processEvent(cmd, value, ip)
-            
         return r_value
 
     def requets_avatar(self, ip): 
@@ -550,9 +551,6 @@ class lunch_server(object):
             log_info("Sending file of size %d to %s : %d" % (fileSize, str(ip), other_tcp_port))
             self.call("HELO_LOGFILE_TGZ %d %d" % (fileSize, other_tcp_port), peerIPs=[ip])
             self.controller.sendFile(ip, fileToSend.getvalue(), other_tcp_port, True)      
-        
-        # now it's the plugins' turn:
-        self.controller.processEvent(cmd, value, ip)
             
     def _handle_incoming_message(self, ip, msg):
         mtime = localtime()
