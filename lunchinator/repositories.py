@@ -1,7 +1,7 @@
-from threading import Lock
 from copy import deepcopy
 from git import GitHandler
 from lunchinator import get_notification_center
+from lunchinator.logging_mutex import loggingMutex
 
 class PluginRepositories(object):
     """Manages external plugin repositories."""
@@ -10,12 +10,12 @@ class PluginRepositories(object):
     ACTIVE_INDEX = 1
     AUTO_UPDATE_INDEX = 2
     
-    def __init__(self, internalDir, externalRepos):
+    def __init__(self, internalDir, externalRepos, logging=False):
         self._internalDir = internalDir
         self._externalRepos = externalRepos
         self._outdated = set()
         self._upToDate = set()
-        self._lock = Lock()
+        self._lock = loggingMutex("repositories", logging=logging)
         
     def getPluginDirs(self):
         """Returns a list of directories in which to search for plugins.

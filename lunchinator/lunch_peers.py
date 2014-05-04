@@ -1,10 +1,10 @@
 import os, codecs, socket
 from copy import deepcopy
 from time import time
-from threading import Lock
-from collections import deque
-from lunchinator import get_settings, log_warning, log_exception, log_error, log_debug, log_info, get_notification_center
+from lunchinator import get_settings, log_warning, log_exception, log_debug, log_info, get_notification_center
 from lunchinator.utilities import getTimeDifference
+from lunchinator.logging_mutex import loggingMutex
+import logging
 
         
 class LunchPeers(object):
@@ -19,7 +19,7 @@ class LunchPeers(object):
         self.dontSendTo = set()  
         self._new_peerIPs = set()  # peers I have to ask for info 
         
-        self._lock = Lock()
+        self._lock = loggingMutex("peers", logging=get_settings().get_logging_level() == logging.DEBUG)
         
         self._initPeersFromFile()  
         
@@ -153,6 +153,12 @@ class LunchPeers(object):
                 return i[u'name']
         return None 
     
+    def getPeerNameNoLock(self, pID):
+        i = self._getPeerInfoByID(pID)
+        if i:
+            return i[u'name']
+        return None
+    
     def getPeerNameByIP(self, ip):
         """Returns the name of the peer or None if not a peer"""
         with self._lock:
@@ -165,7 +171,12 @@ class LunchPeers(object):
         with self._lock:
             if ip in self._peer_info:
                 return self._peer_info[ip][u'ID']
-        return None 
+        return None
+    
+    def getPeerIDNoLock(self, ip):
+        if ip in self._peer_info:
+            return self._peer_info[ip][u'ID']
+        return None
     
     def getPeerIPs(self, pID=None):
         """Returns the name of the peer or None if not a peer"""

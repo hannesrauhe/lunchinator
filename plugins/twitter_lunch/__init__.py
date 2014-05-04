@@ -1,10 +1,11 @@
 from lunchinator.iface_plugins import iface_called_plugin
-import subprocess, sys, ctypes
+import subprocess, sys, ctypes, logging
 from lunchinator import get_server, log_exception, log_warning, get_settings, convert_string, log_error, log_info, log_debug
 import urllib2, tempfile, json, time, twitter, contextlib, csv
 from cStringIO import StringIO
 
 from threading import Thread,Event,Lock
+from lunchinator.logging_mutex import loggingMutex
 
 class TwitterDownloadThread(Thread):    
     def __init__(self, event):
@@ -15,7 +16,7 @@ class TwitterDownloadThread(Thread):
         self._old_pic_urls = {}
         self._since_ids = {}
         self._stop_event = event
-        self._lock = Lock()
+        self._lock = loggingMutex("twitter download thread", logging=get_settings().get_logging_level() == logging.DEBUG)
         self._polling_time = 60
         self._mentions_since_id = 0
         self._remote_callers = []

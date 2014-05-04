@@ -8,9 +8,11 @@ from threading import Lock
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
-    convert_string, get_notification_center
+    convert_string
 from lunchinator.utilities import getTimeDifference, determineOwnIP
 from lunchinator.lunch_peers import LunchPeers
+from lunchinator.logging_mutex import loggingMutex
+import logging
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -39,7 +41,7 @@ class lunch_server(object):
         self.last_messages = []
         self.plugin_manager = None
         self.own_ip = None
-        self.messagesLock = Lock()
+        self.messagesLock = loggingMutex("messages", logging=get_settings().get_logging_level() == logging.DEBUG)
         
         self.exitCode = 0  
         

@@ -132,7 +132,7 @@ class lunch_settings(object):
         else:
             externalRepos = json.loads(externalRepos)
             
-        self._plugin_repos = PluginRepositories(self.get_resource("plugins"), externalRepos)
+        self._plugin_repos = PluginRepositories(self.get_resource("plugins"), externalRepos, logging=self.get_logging_level() == logging.DEBUG)
         
         if self._user_name == "":
             self._user_name = getpass.getuser().decode()         

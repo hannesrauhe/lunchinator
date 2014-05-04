@@ -318,7 +318,7 @@ class MessagesTableModel(TableModelBase):
     
     def _updateSenderItem(self, _, m, item):
         ip = convert_string(m[0])
-        data = QVariant(get_peers().getPeerName(get_peers().getPeerID(ip)))
+        data = QVariant(get_peers().getPeerNameNoLock(get_peers().getPeerIDNoLock(ip)))
         item.setData(data, Qt.DisplayRole)
     
     def _updateMessageItem(self, _, m, item):
