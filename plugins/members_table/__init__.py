@@ -7,18 +7,12 @@ class members_table(iface_gui_plugin):
     def __init__(self):
         super(members_table, self).__init__()
         self.membersTable = None
-        self.timeoutTimer = None
     
     def activate(self):
         iface_gui_plugin.activate(self)
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
-        
-    def updateTimeoutsInMembersTables(self):
-        self.membersProxyModel.setDynamicSortFilter(False)
-        self.membersModel.updateTimeouts()
-        self.membersProxyModel.setDynamicSortFilter(True)    
         
     def addHostClicked(self, text):
         if get_server().controller != None:
@@ -27,9 +21,6 @@ class members_table(iface_gui_plugin):
     def destroy_widget(self):
         iface_gui_plugin.destroy_widget(self)
         
-        self.timeoutTimer.timeout.disconnect(self.updateTimeoutsInMembersTables)
-        self.timeoutTimer.stop()
-
         get_notification_center().disconnectPeerAppended(self.membersModel.externalRowAppended)
         get_notification_center().disconnectPeerUpdated(self.membersModel.externalRowUpdated)
         get_notification_center().disconnectPeerRemoved(self.membersModel.externalRowRemoved)
@@ -37,7 +28,6 @@ class members_table(iface_gui_plugin):
         self.membersTable = None
         self.membersModel = None
         self.membersProxyModel = None
-        self.timeoutTimer = None
     
     def create_widget(self, parent):
         from PyQt4.QtGui import QSortFilterProxyModel
@@ -56,10 +46,8 @@ class members_table(iface_gui_plugin):
         self.membersProxyModel.setSourceModel(self.membersModel)
         self.membersTable.setModel(self.membersProxyModel)
         
-        self.timeoutTimer = QTimer(self.membersModel)
-        self.timeoutTimer.setInterval(1000)
-        self.timeoutTimer.timeout.connect(self.updateTimeoutsInMembersTables)
-        self.timeoutTimer.start(1000)  
+        self.membersTable.setColumnWidth(MembersTableModel.NAME_COL_INDEX, 150)
+        self.membersTable.setColumnWidth(MembersTableModel.GROUP_COL_INDEX, 150)
         
         get_notification_center().connectPeerAppended(self.membersModel.externalRowAppended)
         get_notification_center().connectPeerUpdated(self.membersModel.externalRowUpdated)
