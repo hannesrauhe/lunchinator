@@ -270,9 +270,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def _updateRepoUpdateStatusAction(self):
         status = ""
         if self._repoUpdates == 1:
-            status = "1 plugin repository can be updated."
+            status = "1 plugin repository can be updated"
         elif self._repoUpdates > 1:
-            status = "%d plugin repositories can be updated." % self._repoUpdates
+            status = "%d plugin repositories can be updated" % self._repoUpdates
         self._repoUpdateStatusAction.setText(status)
             
         self._repoUpdateStatusAction.setVisible(self._repoUpdates > 0)
@@ -411,7 +411,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             self._restartStatusAction.setVisible(False)
             self._restartAction.setVisible(False)
         
-        self._appUpdateStatusAction = menu.addAction("Lunchinator can be updated.")
+        self._appUpdateStatusAction = menu.addAction("Lunchinator can be updated")
         self._appUpdateStatusAction.setEnabled(False)
         self._appUpdateStatusAction.setVisible(self._updateAvailable)
         
