@@ -303,6 +303,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
     def _restartRequired(self, reason):
         reason = convert_string(reason)
+        if self._restartReason == reason:
+            # same reason again, do not notify
+            return
+        
         displayNotification(u"Restart required", reason)
         
         if self._restartReason:

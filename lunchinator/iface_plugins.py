@@ -1,6 +1,7 @@
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginManager import PluginManagerSingleton
-from lunchinator import log_error, log_exception, convert_string
+from lunchinator import log_error, log_exception, convert_string,\
+    get_notification_center
 import types, sys, logging
 from copy import deepcopy
 
@@ -214,6 +215,9 @@ class iface_plugin(IPlugin):
             targetDict[o]=new_v
             new_v = self.set_option_value(o, new_v)
         self._displayOptionValue(o, new_v)
+    
+    def _requires_restart_callback(self, _o, _new_v):
+        get_notification_center().emitRestartRequired("Some changed settings require a restart")
             
     def register_option_callback(self, o, callback):
         if o in self.option_callbacks:

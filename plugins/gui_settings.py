@@ -16,7 +16,7 @@ class gui_settings(iface_general_plugin):
                         (u"reset_icon_time", u"Reset Lunchinator Icon after x min"),
                         (u"tcp_port", u"TCP Port"),
                         (u"logging_level", u"Logging Level", (u"CRITICAL", u"ERROR", u"WARNING", u"INFO", u"DEBUG")),
-                        (u"group_plugins", u"Group Plugins by category"),
+                        (u"group_plugins", u"Group Plugins by category", self._requires_restart_callback),
                         (u"proxy", u"Proxy Server (usually detected automatically)")]
         self.options = []
         self.force_activation = True
