@@ -87,6 +87,9 @@ class GitHandler(object):
         if cls.getGitCommandResult(["rev-parse"], path) != 0:
             return (False, "'%s' is no git repository" % path)
          
+        if cls.getGitCommandOutput(["rev-parse", "--abbrev-ref", "HEAD"], path) == "HEAD":
+            return (False, "The repository is in a detached state")
+         
         if cls.getGitCommandResult(["diff", "--name-only", "--exit-code", "--quiet"], path) != 0:
             return (False, "There are unstaged changes")
          
@@ -151,4 +154,3 @@ class GitHandler(object):
     def pull(cls, path=None):
         """Pulls a git repository. Does not check prerequisites!"""
         return cls.runGitCommand(["pull"], path)
-    
