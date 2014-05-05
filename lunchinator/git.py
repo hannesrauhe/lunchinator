@@ -3,6 +3,8 @@ import os
 from lunchinator import log_debug
 
 class GitHandler(object):
+    UP_TO_DATE_REASON = "Repository is up-to-date"
+    
     @classmethod
     def runGitCommand(cls, args, path=None, quiet=True):
         """Runs a git command and returns a triple (return code, stdout output, stderr output)"""
@@ -88,7 +90,7 @@ class GitHandler(object):
             return (False, "'%s' is no git repository" % path)
          
         if cls.getGitCommandOutput(["rev-parse", "--abbrev-ref", "HEAD"], path) == "HEAD":
-            return (False, "The repository is in a detached state")
+            return (False, "Repository is in a detached state")
          
         if cls.getGitCommandResult(["diff", "--name-only", "--exit-code", "--quiet"], path) != 0:
             return (False, "There are unstaged changes")
@@ -132,7 +134,7 @@ class GitHandler(object):
         
         # update remotes
         if cls.getGitCommandResult(["remote", "update"], path) != 0:
-            return False if not returnReason else (False, "Error updating repository.")
+            return False if not returnReason else (False, "Error updating repository")
         
         local = cls.getGitCommandOutput(["rev-parse", "HEAD"], path)
         remote = cls.getGitCommandOutput(["rev-parse", "@{u}"], path)
@@ -141,14 +143,14 @@ class GitHandler(object):
         if local == remote:
             # up-to-date
             log_debug("Repository", path, "up-to-date")
-            return False if not returnReason else (False, "Repository is up-to-date.")
+            return False if not returnReason else (False, cls.UP_TO_DATE_REASON)
         if local == base:
             # can fast-forward
             return True if not returnReason else (True, None)
         
         # need to push or diverged
         log_debug("Repository", path, "needs to be pushed or is diverged")
-        return False if not returnReason else (False, "Repository contains unpushed commits or is diverged.")
+        return False if not returnReason else (False, "Repository contains unpushed commits or is diverged")
     
     @classmethod
     def pull(cls, path=None):

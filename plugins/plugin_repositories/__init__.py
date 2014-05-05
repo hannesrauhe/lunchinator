@@ -98,14 +98,15 @@ class plugin_repositories(iface_general_plugin):
         from PyQt4.QtCore import Qt
         model = self._ui.getTable().model()
         outdated = set()
-        upToDate = set()
+        upToDate = {}
         for row in xrange(model.rowCount()):
             path = convert_string(model.item(row, PluginRepositoriesGUI.PATH_COLUMN).data(Qt.DisplayRole).toString())
             if GitHandler.hasGit(path):
-                if GitHandler.needsPull(path=path):
+                needsPull, reason = GitHandler.needsPull(True, path)
+                if needsPull:
                     outdated.add(path)
                 else:
-                    upToDate.add(path)
+                    upToDate[path] = reason
         return outdated, upToDate
 
     def _checkingError(self, msg):

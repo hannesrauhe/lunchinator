@@ -59,12 +59,19 @@ class PluginRepositoriesGUI(QWidget):
     def _updateStatusItem(self, item, path, outdated=None, upToDate=None):
         # first check fresh results, then the ones from repositories
         if upToDate and path in upToDate:
-            item.setData(QColor(0, 255, 0), Qt.DecorationRole)
+            item.setText(upToDate[path])
+            if upToDate[path] == GitHandler.UP_TO_DATE_REASON:
+                item.setData(QColor(0, 255, 0), Qt.DecorationRole)
+            else:
+                item.setData(QColor(255, 0, 0), Qt.DecorationRole)
         elif outdated and path in outdated:
+            item.setText("Repository can be updated")
             item.setData(QColor(255, 215, 0), Qt.DecorationRole)
         elif get_settings().get_plugin_repositories().isUpToDate(path):
+            item.setText("No updates (for details, check status)")
             item.setData(QColor(0, 255, 0), Qt.DecorationRole)
         elif get_settings().get_plugin_repositories().isOutdated(path):
+            item.setText("Repository can be updated")
             item.setData(QColor(255, 215, 0), Qt.DecorationRole)
         else:
             item.setData(None, Qt.DecorationRole)
