@@ -304,14 +304,18 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def _restartRequired(self, reason):
         reason = convert_string(reason)
         displayNotification(u"Restart required", reason)
+        
+        if self._restartReason:
+            # now there are multiple reasons to restart
+            self._restartReason = "Some changes need a restart"
+        else:
+            self._restartReason = reason
         if self._restartStatusAction != None:
-            self._restartStatusAction.setText(reason)
+            self._restartStatusAction.setText(self._restartReason)
             self._restartStatusAction.setVisible(True)
             # don't need both actions
             if not self._hasUpdates():
                 self._restartAction.setVisible(True)
-        else:
-            self._restartReason = reason
     
     def notifyUpdates(self):
         hasUpdates = self._hasUpdates()
