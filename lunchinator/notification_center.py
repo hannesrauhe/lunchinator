@@ -134,6 +134,19 @@ class NotificationCenter(object):
     def emitInstallUpdates(self):
         pass
     
+    """Emitted when an action was performed that requires a restart,
+    e.g., the plugin repositories were changed. GUI controller will
+    display a restart action in the Lunchinator menu."""
+    @_connectFunc
+    def connectRestartRequired(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectRestartRequired(self, callback):
+        pass
+    @_emitFunc
+    def emitRestartRequired(self, reason):
+        pass
+    
     @_connectFunc
     def connectPeerAppended(self, callback):
         pass

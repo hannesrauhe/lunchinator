@@ -51,6 +51,14 @@ class NotificationCenterQt(QObject):
     def emitInstallUpdates(self):
         self._signalInstallUpdate.emit()
     
+    _signalRestartRequired = pyqtSignal(unicode)
+    def connectRestartRequired(self, callback):
+        self._signalRestartRequired.connect(callback)
+    def disconnectRestartRequired(self, callback):
+        self._signalRestartRequired.disconnect(callback)
+    def emitRestartRequired(self, reason):
+        self._signalRestartRequired.emit(reason)
+    
     _signalPeerAppended = pyqtSignal(unicode, dict)
     def connectPeerAppended(self, callback):
         self._signalPeerAppended.connect(callback)

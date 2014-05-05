@@ -15,6 +15,7 @@ class plugin_repositories(iface_general_plugin):
         self._statusHolder = None
         self._progressHolder = False
         self.force_activation = True
+        self._restartRequired = False
         self._outdated = set()
         self._upToDate = set()
         
@@ -34,8 +35,8 @@ class plugin_repositories(iface_general_plugin):
         self._initRepositories()
         self._ui.resizeColumns()
         
-        self._ui.getTable().model().itemChanged.connect(self._modelModified)
-        self._ui.getTable().model().rowsRemoved.connect(self._modelModified)
+        self._ui.getTable().model().itemChanged.connect(self._itemChanged)
+        self._ui.getTable().model().rowsRemoved.connect(self._rowsRemoved)
         self._ui.addRepository.connect(self._addRepository)
         self._ui.checkForUpdates.connect(self._checkForUpdates)
         
@@ -43,6 +44,9 @@ class plugin_repositories(iface_general_plugin):
             self._setStatus(self._statusHolder, self._progressHolder)
         
         return self._ui  
+    
+    def _needsRestart(self):
+        self._restartRequired = True
     
     def _addRepository(self):
         from plugin_repositories.add_repo_dialog import AddRepoDialog
@@ -53,10 +57,15 @@ class plugin_repositories(iface_general_plugin):
                                    dialog.isRepositoryActive(),
                                    dialog.isAutoUpdateEnabled(),
                                    dialog.canAutoUpdate())
+            self._needsRestart()
             self._modified = True
     
-    def _modelModified(self, _ = None, __ = None, ___ = None):
+    def _itemChanged(self, _item):
         self._modified = True
+        
+    def _rowsRemoved(self, _parent, _start, _end):
+        self._modified = True
+        self._needsRestart()
     
     def _initRepositories(self):
         self._modified = False
@@ -125,6 +134,9 @@ class plugin_repositories(iface_general_plugin):
                 
             get_settings().get_plugin_repositories().setExternalRepositories(repos)
             self._modified = False
+            if self._restartRequired:
+                self._restartRequired = False
+                get_notification_center().emitRestartRequired(u"Plugin Repositories have been modified.")
     
 if __name__ == '__main__':
     from lunchinator.iface_plugins import iface_gui_plugin

@@ -190,6 +190,9 @@ class lunch_server(object):
     def set_plugins_enabled(self, enable):
         self._load_plugins = enable
         
+    def is_running(self):
+        return self.running
+        
     def has_gui(self):
         return self._has_gui
     

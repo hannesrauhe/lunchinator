@@ -434,7 +434,7 @@ def restartWithCommands(commands):
     except:
         log_exception("Error in stopWithCommands")
         return
-    get_server().get_controller().shutdown()
+    get_server().getController().shutdown()
     
 def restart():
     """Restarts the Lunchinator"""
