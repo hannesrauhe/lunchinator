@@ -7,7 +7,18 @@ from lunchinator.logging_mutex import loggingMutex
 import logging
 
         
-class LunchPeers(object):
+class LunchPeers(object):    
+    """This class holds information about all peers known to the lunchinator,
+    Terminology:
+    * a peer is anyone who sent a UDP packet to the lunchinator port
+    a peer can either be identified by its IP and additionally by any ID it told us
+    (usually an UUID). This way a peer that changed its IP (e.g. because of switching 
+    between LAN and WLAN, or because of DHCP) can be recognised later. If no ID was 
+    sent, the ID is the IP
+    
+    """
+
+ 
     def __init__(self):        
         self._memberIDs = set()  # of PeerIDs members: peers that sent their info, are active and belong to my group
         self._IP_seen = {}  # last seen timestamps by IP
@@ -16,7 +27,6 @@ class LunchPeers(object):
         
         self._groups = set()  # seen group names
         
-        self.dontSendTo = set()  
         self._new_peerIPs = set()  # peers I have to ask for info 
         
         self._lock = loggingMutex("peers", logging=get_settings().get_logging_level() == logging.DEBUG)
@@ -29,10 +39,12 @@ class LunchPeers(object):
     ################ Group Operations #####################
     # no lock -> groups are not removed  
     def getGroups(self):  
-        """Collection of all lunch groups"""
+        """returns a collection of all lunch groups"""
         return self._groups
     
     def addGroup(self, group_name):
+        """adds a new group 
+        (done by the lunch server thread)"""
         if group_name not in self._groups:
             self._groups.add(group_name)
             # TODO: what was the second parameter supposed to be?
@@ -42,15 +54,20 @@ class LunchPeers(object):
     ################ IP Timestamp Operations #####################
     # no locks needed: timeouts are not removed
     def seenIP(self, ip):
+        """record that there was contact with the given IP just now
+        needed for cleanup of peer data
+        (done by the lunch server thread)"""
         self._IP_seen[ip] = time() 
         
     def getIPLastSeen(self, ip):
+        """returns a timestamp of the last contact with that IP"""
         if ip in self._IP_seen:
             return self._IP_seen[ip]
         return None  
     
     # here we need a lock
     def getIDLastSeen(self, pID):
+        """returns a timestamp of the last contact with the peer given by its ID"""
         with self._lock:
             if pID in self._idToIp:
                 return max([self.getIPLastSeen(ip) for ip in self._idToIp[pID]])
