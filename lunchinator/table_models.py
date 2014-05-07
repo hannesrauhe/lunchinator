@@ -176,16 +176,12 @@ class MembersTableModel(TableModelBase):
         columns = [(u"Name", self._updateNameItem),
                    (u"Group", self._updateGroupItem),
                    (u"LunchTime", self._updateLunchTimeItem)]
-        if get_settings().get_advanced_gui_enabled():
-            columns.append(("SendTo", self._updateSendToItem))
         super(MembersTableModel, self).__init__(dataSource, columns)
         
         # Called before server is running, no need to lock here
         for peerID in self.dataSource:
             infoDict = dataSource.getPeerInfo(peerID)
             self.appendContentRow(peerID, infoDict)
-            
-        self.itemChanged.connect(self.itemChangedSlot)
             
     def _getRowToolTip(self, peerID, _infoDict):
         return u"ID: %s\nIPs: %s" % (peerID, ', '.join(get_peers().getPeerIPs(peerID)))
@@ -249,24 +245,6 @@ class MembersTableModel(TableModelBase):
             intValue = int(time.time() - timeout)
         item.setData(QVariant(intValue), Qt.DisplayRole)
     
-    def _updateSendToItem(self, ip, _, item):
-        checkstate = Qt.Unchecked if ip in self.dataSource.dontSendTo else Qt.Checked
-        item.setCheckState(checkstate)
-        item.setCheckable(True)
-        
-    """ --------------------- SLOTS ---------------------- """
-    
-    def itemChangedSlot(self, item):
-        row = item.index().row()
-        column = item.index().column()
-        if column == self.SEND_TO_COL_INDEX:
-            ip = self.keys[row]
-            sendTo = item.checkState() == Qt.Checked
-            if sendTo and ip in self.dataSource.dontSendTo:
-                self.dataSource.dontSendTo.remove(ip)
-            elif not sendTo and ip not in self.dataSource.dontSendTo:
-                self.dataSource.dontSendTo.add(ip)
-
 class ExtendedMembersModel(TableModelBase):
     def __init__(self, dataSource):
         super(ExtendedMembersModel, self).__init__(dataSource, None)
