@@ -39,25 +39,14 @@ class SimpleViewWidget(QWidget):
         layout.addLayout(sendLayout)
         layout.addWidget(self.msgview)
         
+        
+        get_notification_center().connectMemberAppended(self.updateWidgets)
+        get_notification_center().connectMemberUpdated(self.updateWidgets)
+        get_notification_center().connectMemberRemoved(self.updateWidgets)
+        get_notification_center().connectMessagePrepended(self.updateWidgets)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.updateWidgets)
         self.timer.start(60000)
-        
-    def activate(self):
-        super(SimpleViewWidget, self).activate()
-        
-        get_notification_center().connectMemberAppendedSignal(self.updateWidgets)
-        get_notification_center().connectMemberUpdatedSignal(self.updateWidgets)
-        get_notification_center().connectMemberRemovedSignal(self.updateWidgets)
-        get_notification_center().connectMessagePrepended(self.updateWidgets)
-        
-    def deactivate(self):
-        get_notification_center().disconnectMemberAppendedSignal(self.updateWidgets)
-        get_notification_center().disconnectMemberUpdatedSignal(self.updateWidgets)
-        get_notification_center().disconnectMemberRemovedSignal(self.updateWidgets)
-        get_notification_center().disconnectMessagePrepended(self.updateWidgets)
-        
-        super(SimpleViewWidget, self).deactivate()
         
     def showEvent(self, showEvent):
         self.updateWidgets()
@@ -89,8 +78,8 @@ class SimpleViewWidget(QWidget):
         self.memberView.setToolTip(memToolTip)
         
         msgTexts = ""
-        for timest, addr, msg in get_server().getMessages(time() - (180 * 60)):
-            peerID = get_peers().getPeerID(addr)
+        for timest, peerID, msg in get_server().getMessages(time() - (180 * 60)):
+            #peerID = get_peers().getPeerID(addr)
             member = get_peers().getPeerName(peerID)
             color = self.getMemberColor(peerID)
             msgTexts += "<span style='color:#%s'><b>%s</b> \
@@ -113,6 +102,10 @@ class SimpleViewWidget(QWidget):
     def finish(self):
         try:
             self.timer.timeout.disconnect()
+            get_notification_center().disconnectMemberAppended(self.updateWidgets)
+            get_notification_center().disconnectMemberUpdated(self.updateWidgets)
+            get_notification_center().disconnectMemberRemoved(self.updateWidgets)
+            get_notification_center().disconnectMessagePrepended(self.updateWidgets) 
         except:
             log_info("Simple View: was not able to disconnect timer")
         
