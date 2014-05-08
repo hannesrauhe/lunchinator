@@ -492,7 +492,7 @@ class lunch_server(object):
     def requets_avatar(self, ip): 
         info = self._peers.getPeerInfoByIP(ip)
         if info and u"avatar" in info and not os.path.exists(os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])):
-            self.call("HELO_REQUEST_AVATAR " + str(self.controller.getOpenTCPPort(ip)), client=ip)  
+            self.call("HELO_REQUEST_AVATAR " + str(self.controller.getOpenTCPPort(ip)), peerIPs=[ip])  
             return True
         return False   
       
@@ -530,7 +530,7 @@ class lunch_server(object):
             if os.path.exists(fileToSend):
                 fileSize = os.path.getsize(fileToSend)
                 log_info("Sending file of size %d to %s : %d" % (fileSize, str(ip), other_tcp_port))
-                self.call("HELO_AVATAR %s" % fileSize, ip)
+                self.call("HELO_AVATAR %s" % fileSize, pererIPs = [ip])
                 # TODO in a future release, send TCP port
                 # self.call("HELO_AVATAR %s %s" % (fileSize, other_tcp_port), ip)
                 self.controller.sendFile(ip, fileToSend, other_tcp_port)
