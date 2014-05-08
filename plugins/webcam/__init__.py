@@ -28,7 +28,8 @@ class webcam(iface_gui_plugin):
                                             pic_url=self.options["pic_url"],
                                             timeout=self.options["timeout"],
                                             no_proxy=self.options["no_proxy"],
-                                            smooth_scaling=self.options["smooth_scaling"])
+                                            smooth_scaling=self.options["smooth_scaling"],
+                                            update=True)
         return self.webcam
     
     def add_menu(self,menu):
