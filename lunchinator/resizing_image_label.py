@@ -37,6 +37,16 @@ class ResizingImageLabel(QLabel):
         self.setRawPixmap(QPixmap.fromImage(QImage(path)))
 
 class ResizingWebImageLabel(ResizingImageLabel):
+    """Constructor
+    
+    parent -- parent QObject
+    pic_url -- URL to download and display
+    fallback_pic -- Picture to display if pic_url is not yet downloaded or is not available
+    smooth_scaling -- Use a smooth image resizing algorithm (slower)
+    update -- automatically update periodically
+    timeout -- number of seconds between updates
+    no_proxy -- True to disable proxy for pic_url
+    """
     def __init__(self, parent, pic_url = None, fallback_pic = None, smooth_scaling = False, update = False, timeout = 0, no_proxy = False):
         super(ResizingWebImageLabel, self).__init__(parent, smooth_scaling, QSize(640, 480))
         
@@ -76,8 +86,16 @@ class ResizingWebImageLabel(ResizingImageLabel):
     @pyqtSlot(QThread, unicode)
     def errorDownloading(self, _thread, url):
         log_error("Error downloading webcam image from %s" % url)
+        
+    def showEvent(self, event):
+        self.update()
+        return super(ResizingWebImageLabel, self).showEvent(event)
             
-    def update(self): 
+    def update(self):
+        if not self.isVisible():
+            return
+         
+        print "update"
         if self.pic_url != None:
             thread = DownloadThread(self, self.pic_url, no_proxy = self.no_proxy)
             thread.finished.connect(thread.deleteLater)
