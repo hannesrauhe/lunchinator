@@ -14,12 +14,25 @@ class LunchPeers(object):
     a peer can either be identified by its IP and additionally by any ID it told us
     (usually an UUID). This way a peer that changed its IP (e.g. because of switching 
     between LAN and WLAN, or because of DHCP) can be recognised later. If no ID was 
-    sent, the ID is the IP
+    sent, the ID is the IP. Peers are removed after a defined timeout (default: 10000 sec 
+    after the last contact or within approx. a minute if they are not reacting to our 
+    requests
+    * a member is a peer that sent at least one info call and sent anything within a 
+    defined timespan (default: 300 sec). If this lunchinator belongs to a group, i.e. the 
+    group-setting is not empty, a peer must also belong to our group to be a member.
+    
+    With a few exception most calls to exchange information about the network or the instance
+    are sent to all known peers (structural events). 
+    Natural language messages are usually sent to members only. Peers that are in another 
+    group drop messages by default. 
+    
+    All public functions (not starting with _) are thread safe unless the documentation 
+    says something else ^^.
     
     """
 
- 
-    def __init__(self):        
+    def __init__(self):
+        """after initializing all variables, the peer information form the lust run is read from a file"""
         self._memberIDs = set()  # of PeerIDs members: peers that sent their info, are active and belong to my group
         self._IP_seen = {}  # last seen timestamps by IP
         self._peer_info = {}  # information of every peer by IP
@@ -34,6 +47,7 @@ class LunchPeers(object):
         self._initPeersFromFile()  
         
     def finish(self):
+        """should be called for a clean shutdown of the program, the peer information will be stored in a file"""
         self._writePeersToFile()
     
     ################ Group Operations #####################
@@ -76,11 +90,15 @@ class LunchPeers(object):
     
     ################ Member Operations #####################
     def addMemberByIP(self, ip):
+        """promote a peer to member - the peer must be known"""
         with self._lock:
             if ip in self._peer_info:
                 self._addMember(self._peer_info[ip][u"ID"])
+            else:
+                log_warning("Tried to promote peer with IP %s to member, but I do not know that peer")
     
     def isMemberByIP(self, ip):
+        """check if the given IP belongs to a member"""
         with self._lock:
             if ip in self._peer_info:
                 return self._peer_info[ip][u"ID"] in self._memberIDs
@@ -88,6 +106,7 @@ class LunchPeers(object):
                 return False
             
     def removeMembersByIP(self, toRemove=None):
+        """remove members identified by their IPs, if toRemove is None, all members are removed"""
         with self._lock:
             if toRemove == None:
                 self._memberIDs.clear()
@@ -101,17 +120,19 @@ class LunchPeers(object):
                     self._removeMember(self._peer_info[ip][u"ID"])
     
     def getMemberIPs(self):
+        """returns the IPs of all members"""
         with self._lock:
             return [ self._idToIp[ID] for ID in self._memberIDs ]            
         
     def getMembers(self):
-        """Members are peers, that send their INFO, are in my group, and were active recently"""
+        """returns the IDs of all members"""
         return deepcopy(self._memberIDs)    
     
     def getReadyMembers(self):
+        """returns a list of IDs of all members that are ready for lunch"""
         with self._lock:
             return set([x for x in self._memberIDs if self._checkInfoForReady(self._getPeerInfoByID(x)) ])
-    
+
     def _addMember(self, pID):
         if pID not in self._memberIDs:
             log_debug("Peer %s is a member" % pID) 
@@ -130,6 +151,9 @@ class LunchPeers(object):
     
     ################ Peer Operations #####################            
     def removePeerIPs(self, toRemove):
+        """removes the given IPs and drops information collected about these peers.
+        If a peer is registered under multiple IPs and not all are removed its data 
+        is not dropped."""
         if type(toRemove) != set:
             toRemove = set(toRemove)
         
@@ -141,7 +165,8 @@ class LunchPeers(object):
                      
                         
     def getPeerInfoByIP(self, ip):
-        """Returns the info dictionary for a peer or None if the ID is unknown"""
+        """Returns the info dictionary for a peer identified by its IP 
+        or None if the ID is unknown"""
         with self._lock:
             if ip in self._peer_info:
                 return deepcopy(self._peer_info[ip])
@@ -156,7 +181,7 @@ class LunchPeers(object):
         return None
         
     def getPeerGroupByIP(self, ip):
-        """Returns the name of the peer or None if not a peer"""
+        """Returns the group of a peer identified by its IP"""
         with self._lock:
             if ip in self._peer_info:
                 return self._peer_info[ip][u'group']
@@ -171,32 +196,34 @@ class LunchPeers(object):
         return None 
     
     def getPeerNameNoLock(self, pID):
+        """unlocked version, DO NOT use unless you know what you are doing"""
         i = self._getPeerInfoByID(pID)
         if i:
             return i[u'name']
         return None
     
     def getPeerNameByIP(self, ip):
-        """Returns the name of the peer or None if not a peer"""
+        """Returns the name of the peer identified by its IP or None if not a peer"""
         with self._lock:
             if ip in self._peer_info:
                 return self._peer_info[ip][u'name']
         return None 
     
     def getPeerID(self, ip):
-        """Returns the name of the peer or None if not a peer"""
+        """Returns the ID of a peer that was sent from the given IP"""
         with self._lock:
             if ip in self._peer_info:
                 return self._peer_info[ip][u'ID']
         return None
     
     def getPeerIDNoLock(self, ip):
+        """unlocked version, DO NOT use unless you know what you are doing"""
         if ip in self._peer_info:
             return self._peer_info[ip][u'ID']
         return None
     
     def getPeerIPs(self, pID=None):
-        """Returns the name of the peer or None if not a peer"""
+        """returns the IPs of a peer or of all peers if pID==None"""
         if pID == None:
             return self._peer_info.keys()
         with self._lock:
@@ -205,12 +232,18 @@ class LunchPeers(object):
         return [] 
     
     def isPeerReadyByIP(self, ip):
+        """returns true if the peer identified by the given IP is ready for lunch"""
         with self._lock:
             if ip in self._peer_info:
                 return self._checkInfoForReady(self._peer_info[ip])
         return False
     
     def createPeerByIP(self, ip, info={}):  
+        """adds a peer for that IP and creates a valid info object for this peer.
+        If the info dictionary does not contain ID, name and group, ID and name 
+        are defaulted to the IP and the group is left empty.
+        Within the next seconds a request for info will be sent to this IP."""
+        
         with self._lock:      
             if ip not in self._peer_info:
                 log_info("new peer: %s" % ip)
@@ -225,7 +258,13 @@ class LunchPeers(object):
                     self._IP_seen[ip] = -1
                 self._new_peerIPs.add(ip)
             
-    def updatePeerInfoByIP(self, ip, newInfo):    
+    def updatePeerInfoByIP(self, ip, newInfo):  
+        """The info for the peer that contacted this lunchinator from the given IP 
+        will be updated with the data given by newInfo - afterwards a signal is emitted 
+        and the group membership is checked in case this lunchinator is in a group.
+        If the peer is in the same group it will be promoted to member, otherwise it 
+        will be removed from the list of members. Further signals are emitted if the peer
+        is in a group we do not know yet and for member append/remove/update"""
         with self._lock:    
             if ip in self._new_peerIPs:
                 self._new_peerIPs.remove(ip)
@@ -277,10 +316,11 @@ class LunchPeers(object):
             log_exception("Something went wrong while trying to clean up the list of peers and members")
     
     def getPeerInfoDict(self):
-        """Returns all data stored in the peerInfo dict"""
+        """Returns all data stored in the peerInfo dict -> all data on all peers"""
         return deepcopy(self._peer_info)
             
     def getNewPeerIPs(self):
+        """Returns the list of peers this lunchinator instance has not had contact with"""
         return deepcopy(self._new_peerIPs)
     
     # unlocked private operation:        
@@ -323,7 +363,7 @@ class LunchPeers(object):
         if os.path.exists(p_file):
             with codecs.open(p_file, 'r', 'utf-8') as f:    
                 for line in f.readlines():
-                    line = line.split("\t",1)
+                    line = line.split("\t", 1)
                     hostn = line[0].strip()
                     peerId = unicode(hostn)
                     pInfo = None
@@ -333,7 +373,7 @@ class LunchPeers(object):
                             if type(pInfo) != dict:
                                 raise
                         except Exception, e:
-                            log_debug("Was not able to extract peerInfo from peersFile -> maybe old format: "+str(e))
+                            log_debug("Was not able to extract peerInfo from peersFile -> maybe old format: " + str(e))
                             peerId = unicode(line[1].strip())
                         
                     if not hostn:
