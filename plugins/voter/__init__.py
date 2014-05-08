@@ -1,5 +1,6 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import get_server, get_settings, log_exception, log_error
+from lunchinator.utilities import displayNotification
 from PyQt4.QtGui import QTreeView, QWidget, QSortFilterProxyModel, QSizePolicy, QTableWidgetItem, QPushButton, QPalette, QColor
 from PyQt4.QtCore import Qt, QTime
 from ui_voter import Ui_Voter
@@ -24,10 +25,12 @@ class voter(iface_gui_plugin):
                 return
             vote = json.loads(value)
             if vote.has_key("time") and vote.has_key("place"):
-                self.add_vote(ip, vote["place"], vote["time"])
+                self.add_vote(member_info[u"ID"], vote["place"], vote["time"])
+                displayNotification("New Vote", "%s voted"%member_info[u"name"])
             else:
                 log_error("Voter: Vote does not look valid: " + value)
         
+    # todo: rename ip=>id
     def add_vote(self, ip, vote_place, vote_time):
         if self.ip2vote.has_key(ip):
             # member has already voted, revoke old vote
@@ -55,11 +58,11 @@ class voter(iface_gui_plugin):
             
     
     def send_vote(self, place, stime):
-        vote_call = "HELO_VOTE "+json.dumps({"place": unicode(place), "time": unicode(stime.toString("hh:mm"))})
+        vote_call = "HELO_VOTE " + json.dumps({"place": unicode(place), "time": unicode(stime.toString("hh:mm"))})
         get_server().call(vote_call)
         
-        etime = stime.addSecs(60*30)
-        get_server().get_controller().changeNextLunchTime(stime.toString("hh:mm"), etime.toString("hh:mm"))
+        etime = stime.addSecs(60 * 30)
+        get_server().getController().changeNextLunchTime(stime.toString("hh:mm"), etime.toString("hh:mm"))
 
 class voterWidget(QWidget):
     def __init__(self, parent, vote_clicked_callable):
@@ -86,7 +89,7 @@ class voterWidget(QWidget):
         
     def add_table_row(self, vote_place, vote_time, vote_count=1):
         insertIndex = self.ui.tableWidget.rowCount()
-        #for rowIndex in range(0, self.ui.tableWidget.rowCount()):
+        # for rowIndex in range(0, self.ui.tableWidget.rowCount()):
             
                     
         self.ui.tableWidget.insertRow(insertIndex)
@@ -119,8 +122,8 @@ class voterWidget(QWidget):
         
 
 if __name__ == "__main__":
-    def call_dummy(place,time):
+    def call_dummy(place, time):
         pass
     
     from lunchinator.iface_plugins import iface_gui_plugin
-    iface_gui_plugin.run_standalone(lambda window : voterWidget(window,call_dummy))
+    iface_gui_plugin.run_standalone(lambda window : voterWidget(window, call_dummy))
