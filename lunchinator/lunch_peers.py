@@ -1,4 +1,4 @@
-import os, codecs, socket
+import os, codecs, socket, json
 from copy import deepcopy
 from time import time
 from lunchinator import get_settings, log_warning, log_exception, log_debug, log_info, get_notification_center
@@ -117,7 +117,7 @@ class LunchPeers(object):
             log_debug("Peer %s is a member" % pID) 
             self._memberIDs.add(pID)           
             get_notification_center().emitMemberAppended(pID, deepcopy(self._getPeerInfoByID(pID)))
-        else: #something may have changed for the member data
+        else:  # something may have changed for the member data
             get_notification_center().emitMemberUpdated(pID, deepcopy(self._getPeerInfoByID(pID)))
             
     def _removeMember(self, pID):
@@ -258,7 +258,7 @@ class LunchPeers(object):
         log_debug("Removing inactive members and peers")      
         try:            
             with self._lock:
-                #copy before changing members-list, cannot change while iterating
+                # copy before changing members-list, cannot change while iterating
                 mIDs = deepcopy(self._memberIDs)
                 for mID in mIDs:
                     for ip in self._idToIp[mID]:       
@@ -323,17 +323,27 @@ class LunchPeers(object):
         if os.path.exists(p_file):
             with codecs.open(p_file, 'r', 'utf-8') as f:    
                 for line in f.readlines():
-                    line = line.split()
+                    line = line.split("\t",1)
                     hostn = line[0].strip()
                     peerId = unicode(hostn)
+                    pInfo = None
                     if len(line) > 1:
-                        peerId = unicode(line[1].strip())
+                        try:
+                            pInfo = json.loads(line[1])
+                            if type(pInfo) != dict:
+                                raise
+                        except Exception, e:
+                            log_debug("Was not able to extract peerInfo from peersFile -> maybe old format: "+str(e))
+                            peerId = unicode(line[1].strip())
                         
                     if not hostn:
                         continue
                     try:
                         ip = unicode(socket.gethostbyname(hostn))
-                        self.createPeerByIP(ip, {u"name":unicode(hostn), u"ID":peerId})
+                        if pInfo:
+                            self.createPeerByIP(ip, pInfo)
+                        else:
+                            self.createPeerByIP(ip, {u"name":unicode(hostn), u"ID":peerId})
                     except socket.error, e:
                         log_warning("cannot find host specified in members_file by %s with name %s" % (p_file, hostn))
     
@@ -343,8 +353,8 @@ class LunchPeers(object):
                 with codecs.open(get_settings().get_peers_file(), 'w', 'utf-8') as f:
                     f.truncate()
                     with self._lock:
-                        for ip in self._peer_info.keys():
-                            f.write(u"%s\t%s\n" % (ip, self._peer_info[ip][u"ID"]))
+                        for ip, info in self._peer_info.iteritems():
+                            f.write(u"%s\t%s\n" % (ip, json.dumps(info)))
         except:
             log_exception("Could not write peers to %s" % (get_settings().get_peers_file()))    
         
