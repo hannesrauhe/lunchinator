@@ -63,15 +63,17 @@ class SimpleViewWidget(QWidget):
             return True        
         
         members = get_peers().getMembers()
-        memText = "%d people online<br />" % len(members)
+        memText = "%d group members online<br />" % len(members)
         memToolTip = ""
 
         peers = get_server().getLunchPeers()
         readyMembers = peers.getReadyMembers()
         notReadyMembers = peers.getMembers() - readyMembers
-                
-        memToolTip += "<span style='color:green'>%s</span><br />" % ", ".join(readyMembers) if len(readyMembers) else ""
-        memToolTip += "<span style='color:red'>%s</span>" % ", ".join(notReadyMembers) if len(notReadyMembers) else ""
+        
+        readyText = ", ".join([peers.getPeerName(x) for x in readyMembers])
+        notReadyText = ", ".join([peers.getPeerName(x) for x in notReadyMembers])
+        memToolTip += "<span style='color:green'>%s</span><br />" % readyText if len(readyMembers) else ""
+        memToolTip += "<span style='color:red'>%s</span>" % notReadyText if len(notReadyMembers) else ""
         
         memText += "<span style='color:green'>%d ready for lunch</span>" % len(readyMembers) if len(readyMembers) else "no one ready for lunch"
         self.memberView.setText(memText)
