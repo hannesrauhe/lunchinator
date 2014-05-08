@@ -95,7 +95,6 @@ class ResizingWebImageLabel(ResizingImageLabel):
         if not self.isVisible():
             return
          
-        print "update"
         if self.pic_url != None:
             thread = DownloadThread(self, self.pic_url, no_proxy = self.no_proxy)
             thread.finished.connect(thread.deleteLater)
