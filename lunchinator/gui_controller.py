@@ -16,7 +16,6 @@ from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 from lunchinator.notification_center_qt import NotificationCenterQt
 from lunchinator.notification_center import NotificationCenter
-from distutils.log import info
 
 class LunchServerThread(QThread):
     def __init__(self, parent):

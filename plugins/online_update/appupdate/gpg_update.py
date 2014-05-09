@@ -1,10 +1,9 @@
 from online_update.appupdate.app_update_handler import AppUpdateHandler
-from lunchinator.utilities import getGPG, getValidQtParent, displayNotification
+from lunchinator.utilities import getGPG, getValidQtParent
 from lunchinator.download_thread import DownloadThread
 import os
 import contextlib
-from lunchinator import log_error, log_debug, log_exception, get_settings,\
-    get_notification_center
+from lunchinator import log_error, log_debug, log_exception, get_settings
 import json
 
 class GPGUpdateHandler(AppUpdateHandler):
@@ -102,7 +101,6 @@ class GPGUpdateHandler(AppUpdateHandler):
             
         self._setStatus("New version %s downloaded, ready to install" % self._getDownloadedVersion())
         self._installReady()
-        displayNotification("New Version Available", "Install via Update Plugin")
             
         return True
     
@@ -158,8 +156,6 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._setChangeLog(json.loads(self._version_info[u"Change Log"]))
         
         if self._hasNewVersion():
-            get_notification_center().emitApplicationUpdate()
-            
             # check if we already downloaded this version before
             if not self._checkHash():
                 self._setStatus("New Version %s available, Downloading ..." % (self._getDownloadedVersion()), progress=True)

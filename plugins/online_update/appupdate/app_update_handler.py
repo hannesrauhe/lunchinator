@@ -1,4 +1,6 @@
-from lunchinator import log_error, log_info, get_settings
+from lunchinator import log_error, log_info, get_settings,\
+    get_notification_center
+from lunchinator.utilities import displayNotification
 
 class AppUpdateHandler(object):
     """Abstract base class for Lunchinator application update handlers.
@@ -68,6 +70,8 @@ class AppUpdateHandler(object):
     def _installReady(self):
         """Makes the install button enabled/disabled"""
         self._install_ready = True
+        get_notification_center().emitApplicationUpdate()
+        displayNotification("New Version Available", "Install via Update Plugin")
         if self._ui:
             self._ui.appInstallReady()    
             
