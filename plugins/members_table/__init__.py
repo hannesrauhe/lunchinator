@@ -14,6 +14,9 @@ class members_table(iface_gui_plugin):
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
         
+    def get_displayed_name(self):
+        return "Peers"
+        
     def addHostClicked(self, text):
         if get_server().controller != None:
             get_server().controller.addHostClicked(text)        

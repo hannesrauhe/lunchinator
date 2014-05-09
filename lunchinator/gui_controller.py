@@ -16,6 +16,7 @@ from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 from lunchinator.notification_center_qt import NotificationCenterQt
 from lunchinator.notification_center import NotificationCenter
+from distutils.log import info
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -328,6 +329,21 @@ class LunchinatorGuiController(QObject, LunchServerController):
             # don't need both
             self._restartAction.setVisible(False)
     
+    _PLUGIN_NAME_PROPERTY = "plugin_name"
+    
+    def _getDisplayedName(self, pluginInfo):
+        return pluginInfo.plugin_object.get_displayed_name() if pluginInfo.plugin_object.get_displayed_name() else pluginInfo.name
+    
+    def _create_plugin_action(self, pluginInfo, parentMenu, aCat):
+        displayedName = self._getDisplayedName(pluginInfo) 
+        anAction = parentMenu.addAction(displayedName)
+        anAction.setProperty(self._PLUGIN_NAME_PROPERTY, pluginInfo.name)
+        anAction.setCheckable(True)
+        anAction.setChecked(pluginInfo.plugin_object.is_activated)
+        anAction.toggled.connect(partial(self.toggle_plugin, anAction, aCat))
+        self.pluginNameToMenuAction[pluginInfo.name] = anAction
+        return anAction
+        
     def init_menu(self, parent):        
         # create the plugin submenu
         menu = QMenu(parent)
@@ -342,7 +358,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 self.pluginActions = {}
                 catMenus = {}
                 
-                for pluginInfo in sorted(allPlugins, key=lambda info : info.name):                
+                for pluginInfo in sorted(allPlugins, key=lambda info : self._getDisplayedName(info)):                
                     categoryMenu = None
                     anAction = None
                     for aCat in pluginInfo.categories:
@@ -353,11 +369,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                             catMenus[aCat] = categoryMenu
                     
                         if anAction == None:
-                            anAction = categoryMenu.addAction(pluginInfo.name)
-                            anAction.setCheckable(True)
-                            anAction.setChecked(pluginInfo.plugin_object.is_activated)
-                            anAction.toggled.connect(partial(self.toggle_plugin, anAction, aCat))
-                            self.pluginNameToMenuAction[pluginInfo.name] = anAction
+                            anAction = self._create_plugin_action(pluginInfo, categoryMenu, aCat)
                         else:
                             categoryMenu.addAction(anAction)
                         
@@ -369,12 +381,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
                     plugin_menu.addMenu(aMenu)
             else:
                 self.pluginActions = []
-                for pluginInfo in sorted(allPlugins, key=lambda info : info.name):
-                    anAction = plugin_menu.addAction(pluginInfo.name)
-                    anAction.setCheckable(True)
-                    anAction.setChecked(pluginInfo.plugin_object.is_activated)
-                    anAction.toggled.connect(partial(self.toggle_plugin, anAction, pluginInfo.categories[0]))
-                    self.pluginNameToMenuAction[pluginInfo.name] = anAction
+                for pluginInfo in sorted(allPlugins, key=lambda info : self._getDisplayedName(info)):
+                    anAction = self._create_plugin_action(pluginInfo, plugin_menu, pluginInfo.categories[0])
                     self.pluginActions.append(anAction)
         
         # main _menu
@@ -494,7 +502,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     @pyqtSlot(QAction, unicode, bool)
     def toggle_plugin(self, w, p_cat, new_state):
         p_cat = convert_string(p_cat)
-        p_name = convert_string(w.text())
+        p_name = convert_string(w.property(self._PLUGIN_NAME_PROPERTY).toString())
         if new_state:
             log_info("Activating plugin '%s' of type '%s'" % (p_name, p_cat))
             po = get_server().plugin_manager.activatePluginByName(p_name, p_cat)

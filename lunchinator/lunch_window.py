@@ -129,7 +129,8 @@ class LunchinatorWindow(QMainWindow):
             # widget already visible
             return
         
-        dockWidget = PluginDockWidget(name, self, self.closePlugin)
+        displayedName = po.get_displayed_name() if po.get_displayed_name() else name
+        dockWidget = PluginDockWidget(displayedName, self, self.closePlugin)
         dockWidget.setObjectName(u"plugin.%s" % name)
         newWidget = self.window_msgCheckCreatePluginWidget(dockWidget, po, name)
         dockWidget.setWidget(newWidget)

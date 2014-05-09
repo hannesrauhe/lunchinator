@@ -63,6 +63,13 @@ class iface_plugin(IPlugin):
         IPlugin.deactivate(self)
         self.option_widgets = {}
     
+    def get_displayed_name(self):
+        """Returns the displayed name of this plugin.
+        
+        Return None if pluginInfo.name is good enough.
+        """
+        return None
+    
     def get_option_names(self):
         if self.option_names == None:
             return [(aKey, aKey) for aKey in self.options.keys()]
