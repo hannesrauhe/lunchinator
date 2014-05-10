@@ -132,7 +132,7 @@ class lunch_settings(object):
         else:
             externalRepos = json.loads(externalRepos)
             
-        self._plugin_repos = PluginRepositories(self.get_resource("plugins"), externalRepos, logging=self.get_logging_level() == logging.DEBUG)
+        self._plugin_repos = PluginRepositories(self.get_resource("plugins"), externalRepos, logging=self.get_verbose())
         
         if self._user_name == "":
             self._user_name = getpass.getuser().decode()         
@@ -384,6 +384,9 @@ class lunch_settings(object):
             setLoggingLevel(logging.INFO)
         elif self._logging_level == u"DEBUG":
             setLoggingLevel(logging.DEBUG)
+        
+    def get_verbose(self):
+        return self._logging_level == u"DEBUG"
         
     def get_group_plugins(self):
         return self._group_plugins

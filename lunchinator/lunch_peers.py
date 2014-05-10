@@ -42,7 +42,7 @@ class LunchPeers(object):
         
         self._new_peerIPs = set()  # peers I have to ask for info 
         
-        self._lock = loggingMutex("peers", logging=get_settings().get_logging_level() == logging.DEBUG)
+        self._lock = loggingMutex("peers", logging=get_settings().get_verbose())
         
         self._initPeersFromFile()  
         

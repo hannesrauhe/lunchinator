@@ -80,7 +80,9 @@ class SimpleViewWidget(QWidget):
         self.memberView.setToolTip(memToolTip)
         
         msgTexts = ""
-        for timest, peerID, msg in get_server().getMessages(time() - (180 * 60)):
+        with get_server().get_messages():
+            messages = get_server().get_messages().getAll(time() - (180 * 60))
+        for timest, peerID, msg in messages:
             #peerID = get_peers().getPeerID(addr)
             member = get_peers().getPeerName(peerID)
             color = self.getMemberColor(peerID)

@@ -16,7 +16,7 @@ class TwitterDownloadThread(Thread):
         self._old_pic_urls = {}
         self._since_ids = {}
         self._stop_event = event
-        self._lock = loggingMutex("twitter download thread", logging=get_settings().get_logging_level() == logging.DEBUG)
+        self._lock = loggingMutex("twitter download thread", logging=get_settings().get_verbose())
         self._polling_time = 60
         self._mentions_since_id = 0
         self._remote_callers = []

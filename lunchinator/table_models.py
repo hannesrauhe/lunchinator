@@ -311,7 +311,7 @@ class MessagesTableModel(TableModelBase):
         
         self.setSortRole(self.SORT_ROLE)
         # called before server is running, no need to lock here
-        for aMsg in self.dataSource.getMessages():
+        for aMsg in self.dataSource.getAll():
             self.appendContentRow(aMsg[0], [aMsg[1], aMsg[2]])
             
     def _updateTimeItem(self, mTime, _, item):
@@ -319,8 +319,14 @@ class MessagesTableModel(TableModelBase):
         item.setData(QVariant(time.mktime(mTime)), self.SORT_ROLE)
     
     def _updateSenderItem(self, _, m, item):
-        ip = convert_string(m[0])
-        data = QVariant(get_peers().getPeerNameNoLock(get_peers().getPeerIDNoLock(ip)))
+        peerID = convert_string(m[0])
+        name = get_peers().getPeerNameNoLock(peerID)
+        if not name:
+            # check if peerID is IP (from old version)
+            peerID = get_peers().getPeerIDNoLock(peerID)
+            if peerID:
+                name = get_peers().getPeerNameNoLock(peerID)
+        data = QVariant(get_peers().getPeerNameNoLock(peerID))
         item.setData(data, Qt.DisplayRole)
     
     def _updateMessageItem(self, _, m, item):
@@ -332,5 +338,5 @@ class MessagesTableModel(TableModelBase):
     @pyqtSlot()
     def updateSenders(self):
         with get_peers():
-            for row, aMsg in enumerate(self.dataSource.getMessages()):
+            for row, aMsg in enumerate(self.dataSource.getAll()):
                 self.updateItem(aMsg[0], [aMsg[1], aMsg[2]], row, 1)

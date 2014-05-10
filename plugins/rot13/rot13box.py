@@ -37,15 +37,14 @@ class rot13box(QWidget):
         
     def updateMsgMenu(self):
         self.msgMenu.clear()
-        get_server().lockMessages()
-        try:
-            for i in range(min(10, len(get_server().getMessages()))):
-                self.msgMenu.addAction(get_server().getMessages()[i][2], partial(self.encodeText, get_server().getMessages()[i][2]))
-        finally:
-            get_server().releaseMessages()
+        messages = get_server().get_messages()
+        with messages:
+            for i in xrange(min(10, len(messages))):
+                message = messages[i]
+                self.msgMenu.addAction(message[2], partial(self.encodeText, message[2]))
         
     def grabMessage(self):
-        self.encodeText(get_server().getMessage(0)[2])
+        self.encodeText(get_server().get_messages().getLatest()[2])
         
     def encodeText(self,text):
         if self.entry is not None:

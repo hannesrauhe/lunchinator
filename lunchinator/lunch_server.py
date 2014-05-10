@@ -13,6 +13,7 @@ from lunchinator.utilities import getTimeDifference, determineOwnIP
 from lunchinator.lunch_peers import LunchPeers
 from lunchinator.logging_mutex import loggingMutex
 import logging
+from lunchinator.messages import Messages
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -38,10 +39,8 @@ class lunch_server(object):
         self.new_msg = False
         self._peer_nr = 0
         self.last_lunch_call = 0
-        self.last_messages = []
         self.plugin_manager = None
         self.own_ip = None
-        self.messagesLock = loggingMutex("messages", logging=get_settings().get_logging_level() == logging.DEBUG)
         
         self.exitCode = 0  
         
@@ -60,6 +59,7 @@ class lunch_server(object):
             self.controller = LunchServerController()
             
         self._peers = LunchPeers()
+        self._messages = Messages(logging=get_settings().get_verbose())
         self._read_config()
 
         if self.get_plugins_enabled():  
@@ -144,45 +144,8 @@ class lunch_server(object):
         self._peers.removeMembersByIP()
         self.call_request_info()
                
-    def messagesCount(self):
-        length = 0
-        self.lockMessages()
-        try:
-            length = len(self.last_messages)
-        finally:
-            self.releaseMessages()
-        return length
-    
-    def getMessage(self, index):
-        message = None
-        self.lockMessages()
-        try:
-            message = self.last_messages[index]
-        finally:
-            self.releaseMessages()
-        return message
-    
-    def lockMessages(self):
-        self.messagesLock.acquire()
-        
-    def releaseMessages(self):
-        self.messagesLock.release()
-        
-    def getMessages(self, begin=None):
-        self.lockMessages()
-        messages = []
-        try:
-            if not begin:  
-                messages = self.last_messages[:]
-            else:
-                for mtime, addr, msg in self.last_messages:                    
-                    if mtime >= gmtime(begin):
-                        messages.append([mtime, addr, msg])
-                    else:
-                        break
-        finally:
-            self.releaseMessages()
-        return messages
+    def get_messages(self):
+        return self._messages
     
     def get_plugins_enabled(self):
         return self._load_plugins
@@ -254,7 +217,7 @@ class lunch_server(object):
             self.controller.initDone()
             while self.running:
                 # TODO we can replace this with a signal when a message arrives, can't we?
-                if self.new_msg and (time() - mktime(self.getMessage(0)[0])) > (get_settings().get_reset_icon_time() * 60):
+                if self.new_msg and (time() - mktime(self.get_messages().get(0)[0])) > (get_settings().get_reset_icon_time() * 60):
                     self.new_msg = False
                 try:
                     data, addr = s.recvfrom(1024)
@@ -568,12 +531,12 @@ class lunch_server(object):
             
         log_info("%s: [%s] %s" % (t, m[u"ID"], msg))
         
-        self._insertMessage(mtime, m[u"ID"], msg)
+        self._messages.insert(mtime, m[u"ID"], msg)
         get_notification_center().emitMessagePrepended(mtime, m[u"ID"], msg)
         
         # TODO: Signal at this point, if this is necessary?
         self.new_msg = True
-        self._write_messages_to_file()
+        self._messages.writeToFile(get_settings().get_messages_file())
         
         if not msg.startswith("ignore"):
             self.controller.processMessage(msg, ip)
@@ -591,7 +554,7 @@ class lunch_server(object):
     def _finish(self):
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"), "Stopping the lunch notifier service")
         self._peers.finish()
-        self._write_messages_to_file()
+        self._messages.writeToFile(get_settings().get_messages_file())
         self.controller.serverStopped(self.exitCode)
     
     def _broadcast(self):
@@ -606,41 +569,6 @@ class lunch_server(object):
                         
     ''' ===== natural language messages writing and loading to/from file===== '''           
     def _read_config(self):              
-        if len(self.last_messages) == 0:
-            self.last_messages = self._init_messages_from_file()
+        if len(self._messages) == 0:
+            self._messages.initFromFile(get_settings().get_messages_file())
         
-    def _init_messages_from_file(self):
-        messages = []
-        if os.path.exists(get_settings().get_messages_file()):
-            try:
-                with codecs.open(get_settings().get_messages_file(), 'r', 'utf-8') as f:    
-                    tmp_msg = json.load(f)
-                    for m in tmp_msg:
-                        messages.append([localtime(m[0]), m[1], m[2]])
-            except:
-                log_exception("Could not read messages file %s,but it seems to exist" % (get_settings().get_messages_file()))
-        return messages
-    
-    def _write_messages_to_file(self):
-        try:
-            if self.messagesCount() > 0:
-                with codecs.open(get_settings().get_messages_file(), 'w', 'utf-8') as f:
-                    f.truncate()
-                    msg = []
-                    self.lockMessages()
-                    try:
-                        for m in self.last_messages:
-                            msg.append([mktime(m[0]), m[1], m[2]])
-                    finally:
-                        self.releaseMessages()
-                    json.dump(msg, f)
-        except:
-            log_exception("Could not write messages to %s: %s" % (get_settings().get_messages_file(), sys.exc_info()[0])) 
-            
-    def _insertMessage(self, mtime, addr, msg):
-        self.lockMessages()
-        try:
-            self.last_messages.insert(0, [mtime, addr, msg])
-        finally:
-            self.releaseMessages()
-    

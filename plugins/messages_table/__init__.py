@@ -44,7 +44,7 @@ class messages_table(iface_gui_plugin):
         self.messagesTable = TableWidget(parent, "Send Message", self.sendMessageClicked, placeholderText="Enter a message")
         
         # initialize messages table
-        self.messagesModel = MessagesTableModel(get_server())
+        self.messagesModel = MessagesTableModel(get_server().get_messages())
         self.messagesProxyModel = QSortFilterProxyModel(self.messagesTable)
         self.messagesProxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
         self.messagesProxyModel.setSortRole(MessagesTableModel.SORT_ROLE)

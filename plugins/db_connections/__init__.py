@@ -10,7 +10,7 @@ class db_connections(iface_general_plugin):
         super(db_connections, self).__init__()
         self.plugin_manager = get_server().plugin_manager
         
-        self.conn_properties_lock = loggingMutex("db_conn_properties", logging=get_settings().get_logging_level() == logging.DEBUG)
+        self.conn_properties_lock = loggingMutex("db_conn_properties", logging=get_settings().get_verbose())
         self.open_connections = {}
         self.conn_properties = {}
         self.conn_plugins = {} #will be filled later (init plugin obejcts)        
