@@ -41,7 +41,8 @@ class lunch_settings(object):
         self._main_config_dir = MAIN_CONFIG_DIR
         self._members_file = self.get_config("lunch_members.cfg") # DEPRECATED, use peers_file
         self._peers_file = self.get_config("lunch_peers.cfg")
-        self._messages_file = self.get_config("messages")
+        self._legacy_messages_file = self.get_config("messages")
+        self._messages_file = self.get_config("messages.sqlite")
         self._log_file = self.get_config("lunchinator.log")
         self._avatar_dir = self.get_config("avatars")
         self._version = None
@@ -204,6 +205,9 @@ class lunch_settings(object):
     
     def get_messages_file(self):
         return self._messages_file
+
+    def get_legacy_messages_file(self):
+        return self._legacy_messages_file
     
     def get_version(self):
         if not self._version:

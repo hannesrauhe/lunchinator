@@ -1,18 +1,14 @@
 #!/usr/bin/python
 # coding=utf-8
 
-
-import socket, sys, os, json, codecs, contextlib, tarfile, platform, random, errno
-from time import strftime, localtime, time, mktime, gmtime
-from threading import Lock
+import socket, sys, os, json, contextlib, tarfile, platform, random, errno
+from time import strftime, localtime, time, mktime
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string, get_notification_center
 from lunchinator.utilities import getTimeDifference, determineOwnIP
 from lunchinator.lunch_peers import LunchPeers
-from lunchinator.logging_mutex import loggingMutex
-import logging
 from lunchinator.messages import Messages
 
 EXIT_CODE_ERROR = 1
@@ -59,8 +55,7 @@ class lunch_server(object):
             self.controller = LunchServerController()
             
         self._peers = LunchPeers()
-        self._messages = Messages(logging=get_settings().get_verbose())
-        self._read_config()
+        self._init_messages()
 
         if self.get_plugins_enabled():  
             from iface_plugins import iface_called_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
@@ -94,6 +89,12 @@ class lunch_server(object):
         else:
             log_info("lunchinator initialised without plugins")
        
+    def _init_messages(self):
+        importFromOld = not os.path.exists(get_settings().get_messages_file()) and \
+                        os.path.exists(get_settings().get_legacy_messages_file())
+        self._messages = Messages(get_settings().get_messages_file(), logging=get_settings().get_verbose())
+        if importFromOld:        
+            self._messages.importOld(get_settings().get_legacy_messages_file())
             
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
     def call(self, msg, peerIDs=[], peerIPs=[]):
@@ -567,8 +568,3 @@ class lunch_server(object):
         except:
             log_exception("Problem while broadcasting")
                         
-    ''' ===== natural language messages writing and loading to/from file===== '''           
-    def _read_config(self):              
-        if len(self._messages) == 0:
-            self._messages.initFromFile(get_settings().get_messages_file())
-        
