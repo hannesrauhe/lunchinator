@@ -124,8 +124,13 @@ class my_install(install.install):
         outputs.extend(sorted(dirs))
         return outputs
 
+name = "Lunchinator"
+branch = os.getenv("__lunchinator_branch")
+if branch and branch!="master":
+    name +="-"+branch
+
 setup(
-    name =          'Lunchinator',
+    name =          name,
     version =       version,
     url =           'http://www.lunchinator.de',
     #download_url =  'http://path/tp/Lunchinator-%s.tar.gz' % version,
