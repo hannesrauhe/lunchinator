@@ -3,11 +3,12 @@ from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex, QSt
 from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
 import time
 from functools import partial
-from datetime import datetime
-from lunchinator import convert_string, get_settings, get_peers, log_debug,\
+from datetime import datetime, timedelta
+from lunchinator import convert_string, get_peers, log_debug,\
     get_server
 from lunch_settings import lunch_settings
 from lunchinator.utilities import getTimeDifference
+from time import mktime
 
 class TableModelBase(QStandardItemModel):
     KEY_ROLE = Qt.UserRole + 1
@@ -367,13 +368,23 @@ class MessagesTableModel(QAbstractItemModel):
     def _getMessage(self, row):
         return self._messages[len(self._messages) - 1 - row]
     
+    def _formatTime(self, mTime):
+        dt = datetime.fromtimestamp(mktime(mTime))
+        if dt.date() == datetime.today().date():
+            return time.strftime("Today %H:%M", mTime)
+        elif dt.date() == (datetime.today() - timedelta(days=1)).date():
+            return time.strftime("Yesterday %H:%M", mTime)
+        elif dt.date().year == datetime.today().date().year:
+            return time.strftime("%b %d, %H:%M", mTime)
+        return time.strftime("%b %d %Y, %H:%M", mTime)
+    
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             message = self._getMessage(index.row())
             if index.column() == 0:
                 # time
                 mTime = message[0]
-                return QVariant(time.strftime("%d.%m.%Y %H:%M:%S", mTime))
+                return QVariant(self._formatTime(mTime))
             elif index.column() == 1:
                 # sender
                 peerID = message[1]
@@ -386,6 +397,8 @@ class MessagesTableModel(QAbstractItemModel):
                 return QVariant(get_peers().getPeerNameNoLock(peerID))
             else:
                 return QVariant(message[2])
+        elif role == Qt.SizeHintRole:
+            return QSize(0, 20)
         elif role == self.SORT_ROLE:
             mTime = self._getMessage(index.row())[0]
             if index.column() == 0:

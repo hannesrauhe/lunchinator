@@ -43,6 +43,8 @@ class messages_table(iface_gui_plugin):
         # initialize messages table
         self.messagesModel = MessagesTableModel(parent)
         self.messagesTable.setModel(self.messagesModel)
+        self.messagesTable.setColumnWidth(0, 120)
+        self.messagesTable.setColumnWidth(1, 90)
         
         get_notification_center().connectMessagePrepended(self.messagesModel.messagePrepended)
         get_notification_center().connectPeerAppended(self.updateSendersInMessagesTable)
