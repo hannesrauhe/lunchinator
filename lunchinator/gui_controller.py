@@ -33,7 +33,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _receiveFile = pyqtSignal(unicode, int, unicode, int)
     _processEvent = pyqtSignal(unicode, unicode, unicode)
     _processMessage = pyqtSignal(unicode, unicode)
-    _processLunchCall = pyqtSignal(unicode, unicode)
     _updateRequested = pyqtSignal()
     # -----------------------------
     
@@ -81,7 +80,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         self._processEvent.connect(self.processEventSlot)
         self._processMessage.connect(self.processMessageSlot)
-        self._processLunchCall.connect(self.processLunchCallSlot)
         self._updateRequested.connect(self.updateRequested)
         
         get_notification_center().connectApplicationUpdate(self._appUpdateAvailable)
@@ -261,10 +259,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def processMessage(self, msg, addr):
         self._processMessage.emit(msg, addr)
                     
-    """ process a lunch call """
-    def processLunchCall(self, msg, addr):
-        self._processLunchCall.emit(msg, addr)
-        
     """ ----------------- CALLED ON MAIN THREAD -------------------"""
     
     def _updateRepoUpdateStatusAction(self):
@@ -477,6 +471,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def disable_auto_update(self):
         get_settings().set_auto_update_enabled(False)
                   
+    def _insertMessage(self, mtime, addr, msg):
+        QCoreApplication.processEvents()
+        LunchServerController._insertMessage(self, mtime, addr, msg)
+                  
                   
     """---------------------- SLOTS ------------------------------"""
     
@@ -657,11 +655,4 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def processMessageSlot(self, msg, addr):
         msg = convert_string(msg)
         addr = convert_string(addr)
-        processPluginCall(addr, lambda p, ip, member_info: p.process_message(msg, ip, member_info))
-                    
-    @pyqtSlot(unicode, unicode)
-    def processLunchCallSlot(self, msg, addr):
-        msg = convert_string(msg)
-        addr = convert_string(addr)
-        processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
-
+        super(LunchinatorGuiController, self).processMessage(msg, addr)

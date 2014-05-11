@@ -1,13 +1,16 @@
 """Base class for Lunch Server Controller classes"""
 import sys
-from lunchinator import get_server, get_settings, log_info, log_error, get_notification_center
+from lunchinator import get_server, get_settings, log_info, get_notification_center,\
+    log_debug, get_peers
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
-from lunchinator.utilities import processPluginCall
+from lunchinator.utilities import processPluginCall, getTimeDifference
 from lunchinator.notification_center import NotificationCenter
+from time import localtime, strftime, mktime
 
 class LunchServerController(object):
     def __init__(self):
         super(LunchServerController, self).__init__()
+        self.last_lunch_call = 0
         self._initNotificationCenter()
         
     def _initNotificationCenter(self):
@@ -53,14 +56,34 @@ class LunchServerController(object):
         """ process any non-message event """
         processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info))
     
+    def _insertMessage(self,mtime, addr, msg):
+        get_server().get_messages().insert(mtime, addr, msg)
+        
     def processMessage(self, msg, addr):
         """ process any message event, including lunch calls """
-        processPluginCall(addr, lambda p, ip, member_info: p.process_message(msg, ip, member_info))
-                    
-    def processLunchCall(self, msg, addr):
-        """ process a lunch call """
-        processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
-
+        
+        mtime = localtime()
+        
+        t = strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8")
+        m = get_peers().getPeerInfoByIP(addr)
+            
+        log_info("%s: [%s] %s" % (t, m[u"ID"], msg))
+        
+        self._insertMessage(mtime, m[u"ID"], msg)
+        get_notification_center().emitMessagePrepended(mtime, m[u"ID"], msg)
+        
+        if not msg.startswith("ignore"):
+            processPluginCall(addr, lambda p, ip, member_info: p.process_message(msg, ip, member_info))
+            
+            diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time())
+            if diff == None or get_settings().get_lunch_trigger() in msg.lower() and 0 < diff:
+                timenum = mktime(mtime)
+                if timenum - self.last_lunch_call > get_settings().get_mute_timeout():
+                    self.last_lunch_call = timenum
+                    processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info))
+                else:
+                    log_debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)" % (t, m, msg, strftime("%H:%M:%S", localtime(timenum + get_settings().get_mute_timeout()))))
+        
     def serverStopped(self, _exit_code):
         get_settings().write_config_to_hd()
         if get_server().get_plugins_enabled():

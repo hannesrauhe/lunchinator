@@ -6,8 +6,8 @@ from time import strftime, localtime, time, mktime
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
-    convert_string, get_notification_center
-from lunchinator.utilities import getTimeDifference, determineOwnIP
+    convert_string
+from lunchinator.utilities import determineOwnIP
 from lunchinator.lunch_peers import LunchPeers
 from lunchinator.messages import Messages
 
@@ -34,7 +34,6 @@ class lunch_server(object):
         self.running = False
         self.new_msg = False
         self._peer_nr = 0
-        self.last_lunch_call = 0
         self.plugin_manager = None
         self.own_ip = None
         
@@ -249,7 +248,9 @@ class lunch_server(object):
                     if not data.startswith("HELO"):
                         if self._peers.isMemberByIP(ip):
                             try:
-                                self._handle_incoming_message(ip, data)
+                                # TODO: Signal at this point, if this is necessary?
+                                self.new_msg = True
+                                self.getController().processMessage(data, ip)
                             except:
                                 log_exception("Error while handling incoming message from %s: %s" % (ip, data))
                         else:
@@ -524,33 +525,6 @@ class lunch_server(object):
             self.call("HELO_LOGFILE_TGZ %d %d" % (fileSize, other_tcp_port), peerIPs=[ip])
             self.controller.sendFile(ip, fileToSend.getvalue(), other_tcp_port, True)      
             
-    def _handle_incoming_message(self, ip, msg):
-        mtime = localtime()
-        
-        t = strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8")
-        m = self._peers.getPeerInfoByIP(ip)
-            
-        log_info("%s: [%s] %s" % (t, m[u"ID"], msg))
-        
-        self._messages.insert(mtime, m[u"ID"], msg)
-        get_notification_center().emitMessagePrepended(mtime, m[u"ID"], msg)
-        
-        # TODO: Signal at this point, if this is necessary?
-        self.new_msg = True
-        
-        if not msg.startswith("ignore"):
-            self.controller.processMessage(msg, ip)
-            
-            diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time())
-            if diff == None or get_settings().get_lunch_trigger() in msg.lower() and 0 < diff:
-                timenum = mktime(mtime)
-                if timenum - self.last_lunch_call > get_settings().get_mute_timeout():
-                    self.last_lunch_call = timenum
-                    self.controller.processLunchCall(msg, ip)
-                else:
-                    log_debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)" % (t, m, msg, strftime("%H:%M:%S", localtime(timenum + get_settings().get_mute_timeout()))))
-    
-    
     def _finish(self):
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"), "Stopping the lunch notifier service")
         self._peers.finish()
