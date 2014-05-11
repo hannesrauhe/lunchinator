@@ -269,6 +269,9 @@ class LunchPeers(object):
             if ip in self._new_peerIPs:
                 self._new_peerIPs.remove(ip)
             oldPID = self._peer_info[ip][u"ID"]
+            if newInfo == self._peer_info[ip]:
+                log_debug("%s sent his info but nothing new"%ip)
+                return
             self._peer_info[ip].update(newInfo)
             newPID = self._peer_info[ip][u"ID"]
             
