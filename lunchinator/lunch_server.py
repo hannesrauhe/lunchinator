@@ -200,7 +200,7 @@ class lunch_server(object):
     def start_server(self):
         self.initialize()
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"), "Starting the lunch notifier service")
-        self.running = True
+        
         self.my_master = -1  # the peer i use as master
         announce_name = -1  # how often did I announce my name
         cmd = ""
@@ -214,6 +214,7 @@ class lunch_server(object):
         try: 
             s.bind(("", 50000)) 
             s.settimeout(5.0)
+            self.running = True
             self.controller.initDone()
             while self.running:
                 # TODO we can replace this with a signal when a message arrives, can't we?
