@@ -1,9 +1,11 @@
-from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex, QString, QTimer, QModelIndex
+from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex, QString, QTimer, QModelIndex,\
+    QAbstractItemModel
 from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
 import time
 from functools import partial
 from datetime import datetime
-from lunchinator import convert_string, get_settings, get_peers, log_debug
+from lunchinator import convert_string, get_settings, get_peers, log_debug,\
+    get_server
 from lunch_settings import lunch_settings
 from lunchinator.utilities import getTimeDifference
 
@@ -302,12 +304,12 @@ class ExtendedMembersModel(TableModelBase):
         data = self._checkDict(data)
         self.updateModel({key: data}, update=True)
 
-class MessagesTableModel(TableModelBase):
+class MessagesTableModelOld(TableModelBase):
     def __init__(self, dataSource):
         columns = [("Time", self._updateTimeItem),
                    ("Sender", self._updateSenderItem),
                    ("Message", self._updateMessageItem)]
-        super(MessagesTableModel, self).__init__(dataSource, columns)
+        super(MessagesTableModelOld, self).__init__(dataSource, columns)
         
         self.setSortRole(self.SORT_ROLE)
         # called before server is running, no need to lock here
@@ -340,3 +342,68 @@ class MessagesTableModel(TableModelBase):
         with get_peers():
             for row, aMsg in enumerate(self.dataSource.getAll()):
                 self.updateItem(aMsg[0], [aMsg[1], aMsg[2]], row, 1)
+
+class MessagesTableModel(QAbstractItemModel):
+    SORT_ROLE = Qt.UserRole + 1
+    
+    def __init__(self, parent):
+        super(MessagesTableModel, self).__init__(parent)
+        self._messages = get_server().get_messages().getSlidingWindowCache(100)
+        
+    def index(self, row, column, _parent=QModelIndex()):
+        if row < len(self._messages) and row >= 0 and column < 3 and column >= 0:
+            return super(MessagesTableModel, self).createIndex(row, column)
+        return QModelIndex()
+    
+    def parent(self, _child):
+        return QModelIndex()
+    
+    def rowCount(self, parent=QModelIndex()):
+        return 0 if parent.isValid() and parent.column() != 0 else len(self._messages)
+    
+    def columnCount(self, parent=None):
+        return 0 if parent.isValid() else 3
+    
+    def _getMessage(self, row):
+        return self._messages[len(self._messages) - 1 - row]
+    
+    def data(self, index, role=Qt.DisplayRole):
+        if role == Qt.DisplayRole:
+            message = self._getMessage(index.row())
+            if index.column() == 0:
+                # time
+                mTime = message[0]
+                return QVariant(time.strftime("%d.%m.%Y %H:%M:%S", mTime))
+            elif index.column() == 1:
+                # sender
+                peerID = message[1]
+                name = get_peers().getPeerNameNoLock(peerID)
+                if not name:
+                    # check if peerID is IP (from old version)
+                    peerID = get_peers().getPeerIDNoLock(peerID)
+                    if peerID:
+                        name = get_peers().getPeerNameNoLock(peerID)
+                return QVariant(get_peers().getPeerNameNoLock(peerID))
+            else:
+                return QVariant(message[2])
+        elif role == self.SORT_ROLE:
+            mTime = self._getMessage(index.row())[0]
+            if index.column() == 0:
+                return QVariant(time.mktime(mTime))
+        return QVariant()
+            
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role == Qt.DisplayRole:
+            if section == 0:
+                return QVariant("Time")
+            elif section == 1:
+                return QVariant("Sender")
+            elif section == 2:
+                return QVariant("Message")
+        return super(MessagesTableModel, self).headerData(section, orientation, role)
+            
+    def messagePrepended(self, _time, _sender, _message):
+        self.rowsInserted.emit(QModelIndex(), 0, 0)
+
+    def updateSenders(self):
+        self.dataChanged.emit(self.createIndex(0, 1), self.createIndex(len(self._messages), 1))

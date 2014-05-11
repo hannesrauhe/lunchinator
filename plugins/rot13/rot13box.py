@@ -39,7 +39,7 @@ class rot13box(QWidget):
         self.msgMenu.clear()
         messages = get_server().get_messages()
         with messages:
-            for i in xrange(min(10, len(messages))):
+            for i in xrange(len(messages) - 1, len(messages) - 1 - min(10, len(messages))):
                 message = messages[i]
                 self.msgMenu.addAction(message[2], partial(self.encodeText, message[2]))
         

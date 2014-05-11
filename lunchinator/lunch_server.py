@@ -218,7 +218,7 @@ class lunch_server(object):
             self.controller.initDone()
             while self.running:
                 # TODO we can replace this with a signal when a message arrives, can't we?
-                if self.new_msg and (time() - mktime(self.get_messages().get(0)[0])) > (get_settings().get_reset_icon_time() * 60):
+                if self.new_msg and (time() - mktime(self.get_messages().getLatest()[0])) > (get_settings().get_reset_icon_time() * 60):
                     self.new_msg = False
                 try:
                     data, addr = s.recvfrom(1024)
@@ -537,7 +537,6 @@ class lunch_server(object):
         
         # TODO: Signal at this point, if this is necessary?
         self.new_msg = True
-        self._messages.writeToFile(get_settings().get_messages_file())
         
         if not msg.startswith("ignore"):
             self.controller.processMessage(msg, ip)

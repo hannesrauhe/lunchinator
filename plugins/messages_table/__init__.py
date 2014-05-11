@@ -15,9 +15,7 @@ class messages_table(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def updateSendersInMessagesTable(self):
-        self.messagesProxyModel.setDynamicSortFilter(False)
         self.messagesModel.updateSenders()
-        self.messagesProxyModel.setDynamicSortFilter(True)
         
     def sendMessageClicked(self, text):
         if get_server().controller != None:
@@ -32,7 +30,6 @@ class messages_table(iface_gui_plugin):
         get_notification_center().disconnectPeerRemoved(self.updateSendersInMessagesTable)
         
         self.messagesModel = None
-        self.messagesProxyModel = None
         self.messagesTable = None
         
     def create_widget(self, parent):
@@ -41,18 +38,13 @@ class messages_table(iface_gui_plugin):
         from lunchinator.table_widget import TableWidget
         from lunchinator.table_models import MessagesTableModel
         
-        self.messagesTable = TableWidget(parent, "Send Message", self.sendMessageClicked, placeholderText="Enter a message")
+        self.messagesTable = TableWidget(parent, "Send Message", self.sendMessageClicked, placeholderText="Enter a message", sortingEnabled=False)
         
         # initialize messages table
-        self.messagesModel = MessagesTableModel(get_server().get_messages())
-        self.messagesProxyModel = QSortFilterProxyModel(self.messagesTable)
-        self.messagesProxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
-        self.messagesProxyModel.setSortRole(MessagesTableModel.SORT_ROLE)
-        self.messagesProxyModel.setDynamicSortFilter(True)
-        self.messagesProxyModel.setSourceModel(self.messagesModel)
-        self.messagesTable.setModel(self.messagesProxyModel)
+        self.messagesModel = MessagesTableModel(parent)
+        self.messagesTable.setModel(self.messagesModel)
         
-        get_notification_center().connectMessagePrepended(self.messagesModel.externalRowPrepended)
+        get_notification_center().connectMessagePrepended(self.messagesModel.messagePrepended)
         get_notification_center().connectPeerAppended(self.updateSendersInMessagesTable)
         get_notification_center().connectPeerUpdated(self.updateSendersInMessagesTable)
         get_notification_center().connectPeerRemoved(self.updateSendersInMessagesTable)
@@ -61,4 +53,3 @@ class messages_table(iface_gui_plugin):
     
     def add_menu(self,menu):
         pass
-
