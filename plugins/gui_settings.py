@@ -1,54 +1,61 @@
 from lunchinator.iface_plugins import iface_general_plugin
-from lunchinator import get_server, get_settings, log_warning
+from lunchinator import get_settings, get_notification_center, convert_string
+from lunchinator.lunch_settings import lunch_settings
     
 class gui_settings(iface_general_plugin):
     def __init__(self):
         super(gui_settings, self).__init__()
-        option_names = [(u'user_name', u'User Name'),
-                        (u'lunch_trigger', u'Word that triggers alarm'),
-                        (u'group', u'Group Name', self.change_group),
-                        (u"default_lunch_begin", u'Free for Lunch from'),
-                        (u"default_lunch_end", u'Free for Lunch until'),
-                        (u"warn_if_members_not_ready", u"Warn if members are not ready for lunch"),
-                        (u"alarm_begin_time", u"No Alarm before"),
-                        (u"alarm_end_time", u"No Alarm after"),
-                        (u"mute_timeout", u"Mute for x sec after Alarm"),
-                        (u"reset_icon_time", u"Reset Lunchinator Icon after x min"),
-                        (u"tcp_port", u"TCP Port"),
-                        (u"logging_level", u"Logging Level", (u"CRITICAL", u"ERROR", u"WARNING", u"INFO", u"DEBUG")),
-                        (u"group_plugins", u"Group Plugins by category", self._requires_restart_callback),
-                        (u"proxy", u"Proxy Server (usually detected automatically)")]
-        self.options = []
+        self.options = lunch_settings.get_general_settings()
         self.force_activation = True
-        for o in option_names:
-            val = self._get_option_value(o[0])
-            if val != None:
-                self.options.append((o, val))
                 
-    def save_options_widget_data(self):
-        self.save_data()
+    def activate(self):
+        iface_general_plugin.activate(self)
+        get_notification_center().connectGeneralSettingChanged(self._settingChanged)
         
-    def _get_option_value(self, oname):
-        methodname = "get_"+oname
-        if hasattr(get_settings(), methodname): 
-            _member = getattr(get_settings(), methodname)
-            return _member()
-        else:
-            log_warning("settings has no attribute called '%s'" % oname)
+    def deactivate(self):
+        get_notification_center().disconnectGeneralSettingChanged(self._settingChanged)
+        iface_general_plugin.deactivate(self)
+
+    def save_options_widget_data(self):
+        get_notification_center().disconnectGeneralSettingChanged(self._settingChanged)
+        super(gui_settings, self).save_options_widget_data()
+        get_notification_center().connectGeneralSettingChanged(self._settingChanged)
+    
+    """ Overrides to change options data source """
+    
+    def _getOptionValue(self, o, _hidden=False):
+        return get_settings().get_option(o)
+    
+    def _callOptionCallback(self, o, new_v):
+        return get_settings().set_option(o, new_v)
+    
+    def _initOptionValue(self, o, v, _hidden=False):
+        # initializing done in lunch_settings
+        pass
+    
+    def _setOptionValue(self, o, v, _hidden=False):
+        # nothing to do here, already set in option callback (setter).
+        pass
+    
+    def _iterOptions(self, _hidden=False):
+        """Iterates over (option key, option value)"""
+        for option in self.options:
+            yield (option, get_settings().get_option(option))
+    
+    def _hasConfigOption(self, _o):
+        # config options managed in lunch_settings
+        return False
+    
+    def _getConfigOption(self, _o):
+        # config options managed in lunch_settings
         return None
         
-    def set_option_value(self, o, new_v):
-        # override category as "general"
-        get_settings().get_config_file().set('general', o, unicode(new_v))
-        
-        methodname = "set_"+o
-        if hasattr(get_settings(), methodname): 
-            _member = getattr(get_settings(), methodname)
-            _member(self.options[o])
-        else:
-            log_warning("settings has no setter for '%s'" % o)
-        
-        return self._get_option_value(o)
-            
-    def change_group(self, _key, value):
-        get_server().changeGroup(unicode(value))
+    def _setConfigOption(self, _o, _v):
+        # config options managed in lunch_settings
+        pass
+    
+    """ End overrides """
+    
+    def _settingChanged(self, settingName):
+        settingName = convert_string(settingName)
+        self._displayOptionValue(settingName)

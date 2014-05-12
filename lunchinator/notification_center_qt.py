@@ -124,3 +124,11 @@ class NotificationCenterQt(QObject):
     def emitMessagePrepended(self, messageTime, senderID, messageText):
         self._signalMessagePrepended.emit(messageTime, senderID, messageText)
     
+    _signalGeneralSettingChanged = pyqtSignal(unicode)
+    def connectGeneralSettingChanged(self, callback):
+        self._signalGeneralSettingChanged.connect(callback)
+    def disconnectGeneralSettingChanged(self, callback):
+        self._signalGeneralSettingChanged.disconnect(callback)
+    def emitGeneralSettingChanged(self, settingName):
+        self._signalGeneralSettingChanged.emit(settingName)
+        
