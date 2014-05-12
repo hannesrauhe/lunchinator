@@ -310,6 +310,7 @@ class lunch_server(object):
         except:
             log_exception("stopping - Critical error: %s" % str(sys.exc_info())) 
         finally: 
+            self.running = False
             try:
                 self.call("HELO_LEAVE bye")
                 s.close()  
