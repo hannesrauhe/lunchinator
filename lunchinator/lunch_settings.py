@@ -535,11 +535,11 @@ class lunch_settings(object):
     def get_proxy(self):
         return self._proxy
     @gui_setting(u"Proxy server (usually detected automatically)", restart=True)
-    def set_proxy(self, newValue):
+    def set_proxy(self, newValue, init=False):
         if newValue:
             os.environ["http_proxy"] = newValue
             os.environ["https_proxy"] = newValue
-        else:
+        elif not init:
             if "http_proxy" in os.environ:
                 del os.environ["http_proxy"]
             if "https_proxy" in os.environ:
