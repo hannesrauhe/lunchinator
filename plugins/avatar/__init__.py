@@ -72,7 +72,7 @@ class avatar(iface_general_plugin):
             log_debug("Avatar: no file selected")
     
     def _display_avatar(self):
-        img_path = get_settings().get_avatar_dir()+get_settings().get_avatar_file()
+        img_path = os.path.join(get_settings().get_avatar_dir(), get_settings().get_avatar_file())
         self._setImage(img_path, self.label)
         
     def create_options_widget(self, parent):
@@ -93,6 +93,8 @@ class avatar(iface_general_plugin):
         hlayout.addWidget(b,0, Qt.AlignCenter)
         layout.addLayout(hlayout)
         layout.addWidget(QWidget(widget), 1)
+        
+        self._display_avatar()
         return widget
 
     def save_options_widget_data(self, **_kwargs):

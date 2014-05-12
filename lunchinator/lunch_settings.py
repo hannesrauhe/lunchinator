@@ -9,16 +9,20 @@ from lunchinator.repositories import PluginRepositories
 import inspect
 
 _GENERAL_SETTINGS = []
-    
-def gui_setting(desc, sendInfoDict=False, restart=False, choice=None):
-    def gui_setting_wrap(func):
+_HIDDEN_SETTINGS = set()
+
+def setting(gui=False, desc=None, sendInfoDict=False, restart=False, choice=None):
+    def setting_wrap(func):
         prefix = func.__name__[:3]
         option = func.__name__[4:]
         
-        if type(choice) not in (tuple, list):
-            _GENERAL_SETTINGS.append(((option, desc), None))
+        if gui:
+            if type(choice) not in (tuple, list):
+                _GENERAL_SETTINGS.append(((option, desc), None))
+            else:
+                _GENERAL_SETTINGS.append(((option, desc, choice), None))
         else:
-            _GENERAL_SETTINGS.append(((option, desc, choice), None))
+            _HIDDEN_SETTINGS.add(option)
         
         if prefix == "set":
             def newFunc(self, *args, **kwargs):
@@ -49,7 +53,7 @@ def gui_setting(desc, sendInfoDict=False, restart=False, choice=None):
                 else:
                     log_warning("settings has attribute '%s'" % attrname)
                     
-                if not isInit:
+                if gui and not isInit:
                     get_notification_center().emitGeneralSettingChanged(option)
                 
                 if sendInfo:
@@ -59,7 +63,13 @@ def gui_setting(desc, sendInfoDict=False, restart=False, choice=None):
                     get_notification_center().emitRestartRequired("Some changed settings require a restart")
             return newFunc
         return func
-    return gui_setting_wrap
+    return setting_wrap
+
+def hidden_setting(sendInfoDict=False):
+    return setting(gui=False, sendInfoDict=sendInfoDict)
+
+def gui_setting(desc, sendInfoDict=False, restart=False, choice=None):
+    return setting(gui=True, desc=desc, sendInfoDict=sendInfoDict, restart=restart, choice=choice)
 
 class lunch_settings(object):
     LUNCH_TIME_FORMAT = "%H:%M"
@@ -73,8 +83,12 @@ class lunch_settings(object):
         return cls._instance
         
     @classmethod
-    def get_general_settings(cls):
+    def get_gui_settings(cls):
         return _GENERAL_SETTINGS
+    
+    @classmethod
+    def get_hidden_settings(cls):
+        return _HIDDEN_SETTINGS
     
     def __init__(self):
         '''unchangeable for now'''
@@ -185,19 +199,20 @@ class lunch_settings(object):
     def read_config_from_hd(self): 
         self._config_file.read(self._main_config_dir + '/settings.cfg')
         
-        for tup, _val in self.get_general_settings():
+        # load gui settings
+        for tup, _val in self.get_gui_settings():
             option = tup[0]
             value = self.read_value_from_config_file(self.get_option(option), "general", option)
             self.set_option(option, value, init=True)
+            
+        # load hidden settings
+        for option in self.get_hidden_settings():
+            value = self.read_value_from_config_file(self.get_option(option), "general", option)
+            self.set_option(option, value, init=True)
         
-        # not shown in settings-plugin
-        self._avatar_file = self.read_value_from_config_file(self._avatar_file, "general", "avatar_file")
-        self._available_db_connections = self.read_value_from_config_file(self._available_db_connections, "general", "available_db_connections")
+        # load settings that don't fit the default schema        
         self._ID = self.read_value_from_config_file(self._ID, "general", "ID")      
-        self._member_timeout = self.read_value_from_config_file(self._member_timeout, "general", "member_timeout")   
-        self._peer_timeout = self.read_value_from_config_file(self._peer_timeout, "general", "peer_timeout")    
-   
-        
+        self._available_db_connections = self.read_value_from_config_file(self._available_db_connections, "general", "available_db_connections")
         externalRepos = self.read_value_from_config_file(None, "general", "external_plugin_repos")
         if externalRepos == None:
             if os.path.isdir(self.get_config("plugins")):
@@ -338,12 +353,12 @@ class lunch_settings(object):
                  
     def get_avatar_file(self):
         return self.get_avatar()
-    def set_avatar_file(self, file_name, _something):  
-        if not os.path.exists(self._avatar_dir + "/" + file_name):
+    @hidden_setting()
+    def set_avatar_file(self, file_name):  
+        if file_name and not os.path.exists(os.path.join(self._avatar_dir, file_name)):
             log_error("avatar does not exist: %s", file_name)
             return
         self._avatar_file = convert_string(file_name)
-        self._config_file.set('general', 'avatar_file', str(file_name))
         
     def get_avatar(self):
         return self._avatar_file
@@ -439,8 +454,15 @@ class lunch_settings(object):
     
     def get_peer_timeout(self):
         return self._peer_timeout
+    @hidden_setting()
+    def set_peer_timeout(self, v):
+        self._peer_timeout = v
+        
     def get_member_timeout(self):
         return self._member_timeout
+    @hidden_setting()
+    def set_member_timeout(self, v):
+        self._member_timeout = v
     
     def get_reset_icon_time(self):
         return self._reset_icon_time

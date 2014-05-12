@@ -5,7 +5,7 @@ from lunchinator.lunch_settings import lunch_settings
 class gui_settings(iface_general_plugin):
     def __init__(self):
         super(gui_settings, self).__init__()
-        self.options = lunch_settings.get_general_settings()
+        self.options = lunch_settings.get_gui_settings()
         self.force_activation = True
                 
     def activate(self):
