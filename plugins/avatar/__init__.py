@@ -95,7 +95,7 @@ class avatar(iface_general_plugin):
         layout.addWidget(QWidget(widget), 1)
         return widget
 
-    def save_options_widget_data(self):
+    def save_options_widget_data(self, **_kwargs):
         if self.selectedFile != None:
             l = l_avatar()
             l.use_as_avatar(self.selectedFile)

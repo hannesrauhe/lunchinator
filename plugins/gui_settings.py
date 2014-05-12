@@ -16,9 +16,9 @@ class gui_settings(iface_general_plugin):
         get_notification_center().disconnectGeneralSettingChanged(self._settingChanged)
         iface_general_plugin.deactivate(self)
 
-    def save_options_widget_data(self):
+    def save_options_widget_data(self, **kwargs):
         get_notification_center().disconnectGeneralSettingChanged(self._settingChanged)
-        super(gui_settings, self).save_options_widget_data()
+        super(gui_settings, self).save_options_widget_data(**kwargs)
         get_notification_center().connectGeneralSettingChanged(self._settingChanged)
     
     """ Overrides to change options data source """
@@ -26,14 +26,14 @@ class gui_settings(iface_general_plugin):
     def _getOptionValue(self, o, _hidden=False):
         return get_settings().get_option(o)
     
-    def _callOptionCallback(self, o, new_v):
-        return get_settings().set_option(o, new_v)
+    def _callOptionCallback(self, o, new_v, **kwargs):
+        return get_settings().set_option(o, new_v, **kwargs)
     
     def _initOptionValue(self, o, v, _hidden=False):
         # initializing done in lunch_settings
         pass
     
-    def _setOptionValue(self, o, v, _hidden=False):
+    def _setOptionValue(self, _o, _v, _hidden=False, **_kwargs):
         # nothing to do here, already set in option callback (setter).
         pass
     

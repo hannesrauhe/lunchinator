@@ -25,8 +25,8 @@ class bug_report(iface_gui_plugin):
     def add_menu(self,menu):
         pass
 
-    def save_options_widget_data(self):
-        iface_gui_plugin.save_options_widget_data(self)
+    def save_options_widget_data(self, **kwargs):
+        iface_gui_plugin.save_options_widget_data(self, **kwargs)
         if self.repoUpdated:
             self.repoUpdated = False
             if self.gui != None:

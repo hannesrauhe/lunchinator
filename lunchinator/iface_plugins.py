@@ -106,7 +106,7 @@ class iface_plugin(IPlugin):
         """Initially sets the option value, read from the settings file."""
         self._setOptionValue(o, v, hidden)
             
-    def _setOptionValue(self, o, v, hidden=False):
+    def _setOptionValue(self, o, v, hidden=False, **_kwargs):
         """Stores the value of the option in memory."""
         if hidden:
             self.hidden_options[o] = v
@@ -120,7 +120,7 @@ class iface_plugin(IPlugin):
         else:
             return self.options.iteritems()
     
-    def _callOptionCallback(self, o, new_v):
+    def _callOptionCallback(self, o, new_v, **_kwargs):
         """Calls a callback method and returns the (possibly) modified value."""
         if o in self.option_callbacks:
             mod_v = self.option_callbacks[o](o, new_v)
@@ -204,16 +204,16 @@ class iface_plugin(IPlugin):
         grid.addWidget(e, i, 1, Qt.AlignLeft if fillHorizontal is False else Qt.Alignment(0))
         self.option_widgets[o[0]] = e
             
-    def _set_option(self, o, new_v, convert, hidden):
+    def _set_option(self, o, new_v, convert, hidden, **kwargs):
         if not self.has_option(o, hidden):
             return
         v = self._getOptionValue(o, hidden)
         if convert:
             new_v = self._convertOption(o, v, new_v)
         if new_v != v:
-            new_v = self._callOptionCallback(o, new_v)
+            new_v = self._callOptionCallback(o, new_v, **kwargs)
             new_v = self._storeOptionValue(o, new_v)
-            self._setOptionValue(o, new_v, hidden)
+            self._setOptionValue(o, new_v, hidden, **kwargs)
         self._displayOptionValue(o, new_v)
         
     """ Protected members """
@@ -351,19 +351,19 @@ class iface_plugin(IPlugin):
         if self._hasOption(o):
             return self._getOptionValue(o)
         
-    def set_option(self, o, new_v, convert=True):
+    def set_option(self, o, new_v, convert=True, **kwargs):
         """
         Set option o to the new value new_v.
         If you are sure that new_v has the correct type, you can set convert = False.
         """
-        self._set_option(o, new_v, convert, hidden=False)
+        self._set_option(o, new_v, convert, hidden=False, **kwargs)
         
-    def set_hidden_option(self, o, new_v, convert=True):
+    def set_hidden_option(self, o, new_v, convert=True, **kwargs):
         """
         Set hidden option o to the new value new_v.
         If you are sure that new_v has the correct type, you can set convert = False.
         """
-        self._set_option(o, new_v, convert, hidden=True)
+        self._set_option(o, new_v, convert, hidden=True, **kwargs)
                 
     def reset_option(self, o):
         """
@@ -380,7 +380,7 @@ class iface_plugin(IPlugin):
             return self.option_defaults[o]
         return None
             
-    def save_options_widget_data(self):
+    def save_options_widget_data(self, **kwargs):
         """
         Called from GUI controller when the user presses "Save" in
         the settings dialog.
@@ -389,7 +389,7 @@ class iface_plugin(IPlugin):
             return
         for o, e in self.option_widgets.iteritems():
             new_v = self._readDataFromWidget(o, e)
-            self.set_option(o, new_v, False)
+            self.set_option(o, new_v, False, **kwargs)
     
     def discard_changes(self):
         """

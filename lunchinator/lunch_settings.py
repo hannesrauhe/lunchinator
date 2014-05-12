@@ -29,8 +29,6 @@ def gui_setting(desc, sendInfoDict=False, restart=False, choice=None):
                     if not "init" in argspec:
                         del kwargs["init"]
                     
-                func(self, *args, **kwargs)
-                
                 if isInit:
                     sendInfo = False
                 else:
@@ -38,6 +36,8 @@ def gui_setting(desc, sendInfoDict=False, restart=False, choice=None):
                     if "sendInfoDict" in kwargs:
                         sendInfo = kwargs["sendInfoDict"]
                         del kwargs["sendInfoDict"]
+
+                func(self, *args, **kwargs)
     
                 attrname = "_" + option
                 if hasattr(self, attrname): 
@@ -156,7 +156,7 @@ class lunch_settings(object):
                 return poss
         return None
             
-    def set_option(self, o, v, init=False):
+    def set_option(self, o, v, **kwargs):
         """Set an option by its name.
         
         o -- option name
@@ -166,7 +166,7 @@ class lunch_settings(object):
         methodname = "set_" + o
         if hasattr(self, methodname): 
             _member = getattr(self, methodname)
-            _member(v, init=init)
+            _member(v, **kwargs)
         else:
             log_warning("settings has no setter for '%s'" % o)
         

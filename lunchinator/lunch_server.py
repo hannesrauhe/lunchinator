@@ -138,6 +138,7 @@ class lunch_server(object):
             self._peer_nr = (self._peer_nr + 1) % len(peers)            
     
     def changeGroup(self, newgroup):
+        """Call get_setting().set_group(...) to change the group programatically."""
         log_info("Changing Group: %s -> %s" % (get_settings().get_group(), newgroup))
         self.call("HELO_LEAVE Changing Group")
         self._peers.removeMembersByIP()

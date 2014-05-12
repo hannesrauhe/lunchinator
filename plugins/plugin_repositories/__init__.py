@@ -122,7 +122,7 @@ class plugin_repositories(iface_general_plugin):
     def discard_changes(self):
         self._initRepositories()
         
-    def save_options_widget_data(self):
+    def save_options_widget_data(self, **kwargs):
         if self._modified:
             from PyQt4.QtCore import Qt
             repos = []

@@ -37,7 +37,7 @@ class iface_db_plugin(iface_plugin):
     def create_options_widget(self, parent):
         return None  
       
-    def save_options_widget_data(self):
+    def save_options_widget_data(self, **_kwargs):
         pass
     
     def create_db_options_widget(self, parent):
