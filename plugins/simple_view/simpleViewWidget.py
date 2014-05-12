@@ -5,7 +5,7 @@ from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, \
                         QLineEdit, QMenu, QInputDialog
 from PyQt4.QtCore import QTimer, Qt
 from lunchinator import get_server, get_peers, log_info, get_notification_center
-from time import mktime, time
+from time import localtime, time, strftime, mktime
 from lunchinator.lunch_button import LunchButton
             
 class SimpleViewWidget(QWidget):   
@@ -87,7 +87,7 @@ class SimpleViewWidget(QWidget):
             member = get_peers().getPeerName(peerID)
             color = self.getMemberColor(peerID)
             msgTexts += "<span style='color:#%s'><b>%s</b> \
-                        <i>[%d sec]</i>: %s</span><br />\n" % (color, member, time() - mktime(timest), msg)
+                        <i>[%s]</i>: %s</span><br />\n" % (color, member,strftime("%H:%M",timest), msg)
                         
         self.msgview.setHtml(msgTexts)
         
