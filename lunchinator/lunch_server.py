@@ -99,8 +99,7 @@ class lunch_server(object):
     def call(self, msg, peerIDs=[], peerIPs=[]):
         '''Sends a call to the given peers, specified by either there IDs or there IPs'''
         self.initialize()     
-        assert(type(peerIDs) in [list,set])  
-        assert(type(peerIPs) in [list,set])   
+        assert(type(peerIPs) in [list,set])
         self.controller.call(msg, set(peerIDs), set(peerIPs))
         
     def call_all_members(self, msg):
@@ -330,10 +329,11 @@ class lunch_server(object):
         else:
             log_warning("There is no running server to stop")
 
-    """ ---------------------- PRIVATE -------------------------------- """
-    def _perform_call(self, msg, peerIDs, peerIPs):
+    def perform_call(self, msg, peerIDs, peerIPs):
         """Only the controller should invoke this method -> Called from main thread
-        both peerIDs and peerIPs should be sets"""     
+        both peerIDs and peerIPs should be sets
+        Used also by start_lunchinator to send messages without initializing
+        the whole lunch server."""     
         msg = convert_string(msg)
         target = []
         
@@ -347,7 +347,7 @@ class lunch_server(object):
                     target = target.union(pIPs)
                 else:
                     log_warning("While calling: I do not know a peer with ID %s, ignoring " % pID)
-            
+    
         if 0 == len(target):            
             log_error("Cannot send message, there is no peer given or none found")
             
@@ -395,6 +395,8 @@ class lunch_server(object):
         finally:
             s.close() 
         return i
+            
+    """ ---------------------- PRIVATE -------------------------------- """
     
     def _build_info_string(self):
         from lunchinator.utilities import getPlatform, PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS

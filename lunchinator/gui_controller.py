@@ -484,7 +484,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     
     @pyqtSlot(unicode, set, set)
     def performCallSlot(self, msg, peerIDs, peerIPs):
-        get_server()._perform_call(msg, peerIDs, peerIPs)
+        get_server().perform_call(msg, peerIDs, peerIPs)
     
     @pyqtSlot()
     def updateRequested(self):

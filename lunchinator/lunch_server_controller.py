@@ -20,7 +20,7 @@ class LunchServerController(object):
         pass
     
     def call(self, msg, peerIDs, peerIPs):
-        get_server()._perform_call(msg, peerIDs, peerIPs)
+        get_server().perform_call(msg, peerIDs, peerIPs)
 
     def shutdown(self):
         if get_server().is_running():
