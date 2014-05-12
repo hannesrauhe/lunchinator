@@ -356,7 +356,7 @@ class lunch_server(object):
            not msg.startswith(u"HELO") and \
            get_settings().get_lunch_trigger().upper() in msg.upper():
             # check if everyone is ready
-            notReadyMembers = [ip for ip in target if self._peers.isPeerReadyByIP(ip)]
+            notReadyMembers = [self._peers.getPeerNameByIP(ip) for ip in target if not self._peers.isPeerReadyByIP(ip)]
             
             if notReadyMembers:
                     
