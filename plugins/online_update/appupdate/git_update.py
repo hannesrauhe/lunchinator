@@ -3,7 +3,7 @@ from lunchinator.git import GitHandler
 from lunchinator.callables import AsyncCall
 from lunchinator.utilities import getValidQtParent
 from __builtin__ import True
-from lunchinator import get_settings
+from lunchinator import get_settings, get_server
 
 class GitUpdateHandler(AppUpdateHandler):
     """Used if Lunchinator is run directly from git."""
@@ -14,7 +14,8 @@ class GitUpdateHandler(AppUpdateHandler):
     
     def activate(self):
         AppUpdateHandler.activate(self)
-        self.checkForUpdate()
+        if self.canCheckForUpdate():
+            self.checkForUpdate()
         
     def _getInitialStatus(self):
         return "Not checked."
@@ -23,7 +24,7 @@ class GitUpdateHandler(AppUpdateHandler):
         return get_settings().get_commit_count()
         
     def canCheckForUpdate(self):
-        return True
+        return get_server().has_gui()
         
     def checkForUpdate(self):
         self._setStatus("Checking for update...")

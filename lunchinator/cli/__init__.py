@@ -115,7 +115,6 @@ class LunchCLIModule(object):
             print "Unknown command: %s" % cmd
             
     def getHostList(self, args):
-        # TODO use peer IDs
         hosts = []
         for member in args:
             if len(member) == 0:
