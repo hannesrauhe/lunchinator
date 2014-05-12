@@ -32,7 +32,6 @@ class lunch_server(object):
         self._load_plugins = True
         self._has_gui = True
         self.running = False
-        self.new_msg = False
         self._peer_nr = 0
         self.plugin_manager = None
         self.own_ip = None
@@ -216,9 +215,6 @@ class lunch_server(object):
             self.running = True
             self.controller.initDone()
             while self.running:
-                # TODO we can replace this with a signal when a message arrives, can't we?
-                if self.new_msg and (time() - mktime(self.get_messages().getLatest()[0])) > (get_settings().get_reset_icon_time() * 60):
-                    self.new_msg = False
                 try:
                     data, addr = s.recvfrom(1024)
                     ip = unicode(addr[0])
@@ -248,8 +244,6 @@ class lunch_server(object):
                     if not data.startswith("HELO"):
                         if self._peers.isMemberByIP(ip):
                             try:
-                                # TODO: Signal at this point, if this is necessary?
-                                self.new_msg = True
                                 self.getController().processMessage(data, ip)
                             except:
                                 log_exception("Error while handling incoming message from %s: %s" % (ip, data))

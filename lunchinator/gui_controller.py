@@ -115,8 +115,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
             self.resetIconTimer.setSingleShot(True)
             self.resetIconTimer.timeout.connect(self.dehighlightIcon)
         
-        self.resetIconTimer.start(get_settings().get_reset_icon_time() * 60000)
-        
     def dehighlightIcon(self):
         if not self.isIconHighlighted:
             return
@@ -462,19 +460,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
             status = u"%s ready, %s not ready for lunch." % (ready, notReady)
         self._memberStatusAction.setText(status)
     
-    def check_new_msgs(self):
-        return get_server().new_msg
-    
-    def reset_new_msgs(self):
-        get_server().new_msg = False
-        
     def disable_auto_update(self):
         get_settings().set_auto_update_enabled(False)
                   
     def _insertMessage(self, mtime, addr, msg):
         QCoreApplication.processEvents()
         LunchServerController._insertMessage(self, mtime, addr, msg)
-                  
                   
     """---------------------- SLOTS ------------------------------"""
     
@@ -540,8 +531,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
     @pyqtSlot(bool)
     @pyqtSlot()
     def openWindowClicked(self, _=None):    
-        self.reset_new_msgs() 
-        
         if self.mainWindow == None:
             log_error("mainWindow is not initialized")
             return
@@ -588,8 +577,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if self.mainWindow == None:
             log_error("mainWindow not specified")
             return
-        
-        self.reset_new_msgs()
         
         if self.settingsWindow == None:
             self.settingsWindow = LunchinatorSettingsDialog(self.mainWindow)

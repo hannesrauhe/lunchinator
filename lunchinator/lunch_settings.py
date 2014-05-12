@@ -132,7 +132,6 @@ class lunch_settings(object):
         self._alarm_begin_time = u"11:30"
         self._alarm_end_time = u"13:00"
         self._mute_timeout = 30
-        self._reset_icon_time = 5
         self._logging_level = u"ERROR"
         self._group_plugins = False
         self._default_db_connection = u"Standard"
@@ -473,12 +472,6 @@ class lunch_settings(object):
     @hidden_setting()
     def set_member_timeout(self, v):
         self._member_timeout = v
-    
-    def get_reset_icon_time(self):
-        return self._reset_icon_time
-    @gui_setting(u"Reset Lunchinator icon after x min")
-    def set_reset_icon_time(self, new_value):
-        self._reset_icon_time = new_value
     
     def get_tcp_port(self):
         return self._tcp_port
