@@ -65,11 +65,21 @@ def setting(gui=False, desc=None, sendInfoDict=False, restart=False, choice=None
         return func
     return setting_wrap
 
-def hidden_setting(sendInfoDict=False):
-    return setting(gui=False, sendInfoDict=sendInfoDict)
-
 def gui_setting(desc, sendInfoDict=False, restart=False, choice=None):
+    """Decorator for GUI settings
+    
+    sendInfoDict -- True to send info dictionary on changes
+    restart -- True to send restart notification on changes
+    choice -- List or tuple of strings as a choice of options
+    """
     return setting(gui=True, desc=desc, sendInfoDict=sendInfoDict, restart=restart, choice=choice)
+
+def hidden_setting(sendInfoDict=False):
+    """Decorator for hidden settings
+    
+    sendInfoDict -- True to send info dictionary on changes
+    """
+    return setting(gui=False, sendInfoDict=sendInfoDict)
 
 class lunch_settings(object):
     LUNCH_TIME_FORMAT = "%H:%M"
