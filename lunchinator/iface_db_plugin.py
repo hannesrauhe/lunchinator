@@ -37,7 +37,7 @@ class iface_db_plugin(iface_plugin):
     def create_options_widget(self, parent):
         return None  
       
-    def save_options_widget_data(self):
+    def save_options_widget_data(self, **_kwargs):
         pass
     
     def create_db_options_widget(self, parent):
@@ -68,7 +68,7 @@ class iface_db_plugin(iface_plugin):
         if not self.option_widgets:
             return
         for o,e in self.option_widgets.iteritems():
-            self.conn_options[o] = self.read_data_from_widget(o, e)
+            self.conn_options[o] = self._readDataFromWidget(o, e)
         return self.conn_options
     
     '''should return an object of Type lunch_db which is already open'''

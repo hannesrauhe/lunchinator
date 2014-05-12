@@ -56,8 +56,6 @@ class _lunchinator_logger:
 
 def initialize_logger(path=None):
     _lunchinator_logger.get_singleton_logger(path)
-    #initialize settings
-    get_settings().set_logging_level(get_settings().get_logging_level())
 
 def convert_string(string):
     import traceback

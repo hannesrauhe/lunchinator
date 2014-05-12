@@ -227,6 +227,16 @@ class NotificationCenter(object):
     def emitMessagePrepended(self, messageTime, senderID, messageText):
         pass
     
+    @_connectFunc
+    def connectGeneralSettingChanged(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectGeneralSettingChanged(self, callback):
+        pass
+    @_emitFunc
+    def emitGeneralSettingChanged(self, settingName):
+        pass
+    
 if __name__ == '__main__':
     def _testCallback(a, b, c):
         print a, b, c

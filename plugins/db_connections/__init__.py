@@ -98,7 +98,7 @@ class db_connections(iface_general_plugin):
 
         return self.conn_options_widget
     
-    def save_options_widget_data(self):
+    def save_options_widget_data(self, **kwargs):
         new_props = self.conn_options_widget.get_connection_properties()
         self.config_file = get_settings().get_config_file()
         '''@todo Delete connections here'''

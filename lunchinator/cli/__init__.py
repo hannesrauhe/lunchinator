@@ -115,14 +115,13 @@ class LunchCLIModule(object):
             print "Unknown command: %s" % cmd
             
     def getHostList(self, args):
-        # TODO use peer IDs
         hosts = []
         for member in args:
             if len(member) == 0:
                 continue
-            ip = get_peers().getIPForPeerName(member)
-            if ip != None:
-                hosts.append(ip)
+            ids = get_peers().getPeerIDsByName(member)
+            if ids:
+                hosts.extend(ids)
             else:
                 # assume IP or host name
                 hosts.append(member)
@@ -130,10 +129,12 @@ class LunchCLIModule(object):
     
     def _getHostnames(self, _args, _argNum, prefix):
         with get_peers():
-            lunchmemberNames = set((get_peers().getPeerName(peerID).replace(u" ", u"\\ ")\
-                                    for peerID in get_peers().getMembers()\
-                                    if get_peers().getPeerName(peerID).replace(u" ", u"\\ ").startswith(prefix)))
-            lunchmembers = list(lunchmemberNames.union((ip for ip in get_peers().getMembers() if ip.startswith(prefix))))
+            lunchmemberNames = set((get_peers().getPeerNameNoLock(peerID).replace(u" ", u"\\ ")\
+                                    for peerID in get_peers()\
+                                    if get_peers().getPeerNameNoLock(peerID).replace(u" ", u"\\ ").startswith(prefix)))
+            for peerID in get_peers():
+                lunchmemberNames.union((ip for ip in get_peers().getPeerIPsNoLock(peerID) if ip.startswith(prefix)))
+            lunchmembers = list(lunchmemberNames.union((peerID for peerID in get_peers() if peerID.startswith(prefix))))
         return lunchmembers if lunchmembers != None else []
     
     def completeHostnames(self, text, line, begidx, endidx):

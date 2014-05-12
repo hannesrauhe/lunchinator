@@ -14,7 +14,10 @@ class CLIMessageHandling(LunchCLIModule):
         
         args = self.getArguments(args)
         message = args.pop(0)
-        get_server().call(message, peerIPs=self.getHostList(args))
+        try:
+            get_server().call(message, peerIPs=self.getHostList(args))
+        except:
+            log_exception("Error sending")
         
     def complete_send(self, text, line, begidx, endidx):
         if self.getArgNum(text, line, begidx, endidx)[0] > 1:
@@ -29,7 +32,10 @@ class CLIMessageHandling(LunchCLIModule):
         """
         args = args.decode('utf-8')
         args = self.getArguments(args)
-        get_server().call("lunch", peerIPs=self.getHostList(args))
+        try:
+            get_server().call("lunch", peerIPs=self.getHostList(args))
+        except:
+            log_exception("Error calling")
         
     def complete_call(self, text, line, begidx, endidx):
         return self.completeHostnames(text, line, begidx, endidx)

@@ -38,5 +38,5 @@ class l_avatar(object):
         shutil.copy(os.path.join(get_settings().get_avatar_dir(), "tmp.jpg"),
                     os.path.join(get_settings().get_avatar_dir(), avatar_name))
         
-        get_settings().set_avatar_file(avatar_name, True)
+        get_settings().set_avatar_file(avatar_name)
         return os.path.join(get_settings().get_avatar_dir(), avatar_name)

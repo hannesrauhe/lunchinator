@@ -52,9 +52,10 @@ class online_update(iface_general_plugin):
         get_notification_center().connectInstallUpdates(self.installUpdates)
         get_notification_center().connectRepositoriesChanged(self._repoUpdateHandler.checkForUpdates)
             
-        self._scheduleTimer = QTimer(getValidQtParent())
-        self._scheduleTimer.timeout.connect(self.checkForUpdate)
-        self._scheduleTimer.start(online_update.CHECK_INTERVAL)
+        if get_server().has_gui():
+            self._scheduleTimer = QTimer(getValidQtParent())
+            self._scheduleTimer.timeout.connect(self.checkForUpdate)
+            self._scheduleTimer.start(online_update.CHECK_INTERVAL)
         
     def deactivate(self):
         if self._scheduleTimer != None:

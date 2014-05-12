@@ -222,6 +222,15 @@ class LunchPeers(object):
             return self._peer_info[ip][u'ID']
         return None
     
+    def getPeerIDsByName(self, peerName):
+        """Returns a list of peer IDs of peers with the given name."""
+        names = []
+        with self._lock:
+            for anID, aDict in self._peer_info.iteritems():
+                if u"name" in aDict and aDict[u"name"] == peerName:
+                    names.append(anID)
+        return names
+    
     def getPeerIPs(self, pID=None):
         """returns the IPs of a peer or of all peers if pID==None"""
         if pID == None:
@@ -229,6 +238,14 @@ class LunchPeers(object):
         with self._lock:
             if pID in self._idToIp:
                 return set(self._idToIp[pID])
+        return []
+    
+    def getPeerIPsNoLock(self, pID=None):
+        """unlocked version, DO NOT use unless you know what you are doing"""
+        if pID == None:
+            return self._peer_info.keys()
+        if pID in self._idToIp:
+            return set(self._idToIp[pID])
         return [] 
     
     def isPeerReadyByIP(self, ip):
@@ -269,6 +286,9 @@ class LunchPeers(object):
             if ip in self._new_peerIPs:
                 self._new_peerIPs.remove(ip)
             oldPID = self._peer_info[ip][u"ID"]
+            if newInfo == self._peer_info[ip]:
+                log_debug("%s sent his info but nothing new"%ip)
+                return
             self._peer_info[ip].update(newInfo)
             newPID = self._peer_info[ip][u"ID"]
             

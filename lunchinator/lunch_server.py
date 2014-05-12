@@ -32,7 +32,6 @@ class lunch_server(object):
         self._load_plugins = True
         self._has_gui = True
         self.running = False
-        self.new_msg = False
         self._peer_nr = 0
         self.plugin_manager = None
         self.own_ip = None
@@ -99,8 +98,7 @@ class lunch_server(object):
     def call(self, msg, peerIDs=[], peerIPs=[]):
         '''Sends a call to the given peers, specified by either there IDs or there IPs'''
         self.initialize()     
-        assert(type(peerIDs) in [list,set])  
-        assert(type(peerIPs) in [list,set])   
+        assert(type(peerIPs) in [list,set])
         self.controller.call(msg, set(peerIDs), set(peerIPs))
         
     def call_all_members(self, msg):
@@ -138,8 +136,8 @@ class lunch_server(object):
             self._peer_nr = (self._peer_nr + 1) % len(peers)            
     
     def changeGroup(self, newgroup):
+        """Call get_setting().set_group(...) to change the group programatically."""
         log_info("Changing Group: %s -> %s" % (get_settings().get_group(), newgroup))
-        get_settings().set_group(newgroup)
         self.call("HELO_LEAVE Changing Group")
         self._peers.removeMembersByIP()
         self.call_request_info()
@@ -200,7 +198,7 @@ class lunch_server(object):
     def start_server(self):
         self.initialize()
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"), "Starting the lunch notifier service")
-        self.running = True
+        
         self.my_master = -1  # the peer i use as master
         announce_name = -1  # how often did I announce my name
         cmd = ""
@@ -214,11 +212,9 @@ class lunch_server(object):
         try: 
             s.bind(("", 50000)) 
             s.settimeout(5.0)
+            self.running = True
             self.controller.initDone()
             while self.running:
-                # TODO we can replace this with a signal when a message arrives, can't we?
-                if self.new_msg and (time() - mktime(self.get_messages().getLatest()[0])) > (get_settings().get_reset_icon_time() * 60):
-                    self.new_msg = False
                 try:
                     data, addr = s.recvfrom(1024)
                     ip = unicode(addr[0])
@@ -248,8 +244,6 @@ class lunch_server(object):
                     if not data.startswith("HELO"):
                         if self._peers.isMemberByIP(ip):
                             try:
-                                # TODO: Signal at this point, if this is necessary?
-                                self.new_msg = True
                                 self.getController().processMessage(data, ip)
                             except:
                                 log_exception("Error while handling incoming message from %s: %s" % (ip, data))
@@ -309,6 +303,7 @@ class lunch_server(object):
         except:
             log_exception("stopping - Critical error: %s" % str(sys.exc_info())) 
         finally: 
+            self.running = False
             try:
                 self.call("HELO_LEAVE bye")
                 s.close()  
@@ -328,10 +323,11 @@ class lunch_server(object):
         else:
             log_warning("There is no running server to stop")
 
-    """ ---------------------- PRIVATE -------------------------------- """
-    def _perform_call(self, msg, peerIDs, peerIPs):
+    def perform_call(self, msg, peerIDs, peerIPs):
         """Only the controller should invoke this method -> Called from main thread
-        both peerIDs and peerIPs should be sets"""     
+        both peerIDs and peerIPs should be sets
+        Used also by start_lunchinator to send messages without initializing
+        the whole lunch server."""     
         msg = convert_string(msg)
         target = []
         
@@ -345,7 +341,7 @@ class lunch_server(object):
                     target = target.union(pIPs)
                 else:
                     log_warning("While calling: I do not know a peer with ID %s, ignoring " % pID)
-            
+    
         if 0 == len(target):            
             log_error("Cannot send message, there is no peer given or none found")
             
@@ -354,7 +350,7 @@ class lunch_server(object):
            not msg.startswith(u"HELO") and \
            get_settings().get_lunch_trigger().upper() in msg.upper():
             # check if everyone is ready
-            notReadyMembers = [ip for ip in target if self._peers.isPeerReadyByIP(ip)]
+            notReadyMembers = [self._peers.getPeerNameByIP(ip) for ip in target if not self._peers.isPeerReadyByIP(ip)]
             
             if notReadyMembers:
                     
@@ -393,6 +389,8 @@ class lunch_server(object):
         finally:
             s.close() 
         return i
+            
+    """ ---------------------- PRIVATE -------------------------------- """
     
     def _build_info_string(self):
         from lunchinator.utilities import getPlatform, PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS
