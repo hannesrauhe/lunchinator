@@ -40,11 +40,12 @@ class members_table(iface_gui_plugin):
         
         class NameSortProxyModel(QSortFilterProxyModel):
             def lessThan(self, left, right):
-                ldata = self.sourceModel().data(left)
-                rdata = self.sourceModel().data(right)
+                ldata = self.sourceModel().data(left, MembersTableModel.SORT_ROLE)
+                rdata = self.sourceModel().data(right, MembersTableModel.SORT_ROLE)
                 if ldata == rdata:
-                    lindex = self.sourceModel().createIndex(left.row(), 0)
-                    rindex = self.sourceModel().createIndex(right.row(), 0)
+                    lindex = self.sourceModel().index(left.row(), 0)
+                    rindex = self.sourceModel().index(right.row(), 0)
+                    
                     return super(NameSortProxyModel, self).lessThan(lindex, rindex)
                 
                 return super(NameSortProxyModel, self).lessThan(left, right)

@@ -400,9 +400,12 @@ class MessagesTableModel(QAbstractItemModel):
         elif role == Qt.SizeHintRole:
             return QSize(0, 20)
         elif role == self.SORT_ROLE:
-            mTime = self._getMessage(index.row())[0]
             if index.column() == 0:
+                mTime = self._getMessage(index.row())[0]
                 return QVariant(time.mktime(mTime))
+            else:
+                # return display role as fallback
+                return self.data(index)
         return QVariant()
             
     def headerData(self, section, orientation, role=Qt.DisplayRole):
