@@ -231,6 +231,10 @@ class LunchPeers(object):
                     names.append(anID)
         return names
     
+    def getPeers(self):
+        """returns the IDs of all peers"""
+        return self._idToIp.keys()
+    
     def getPeerIPs(self, pID=None):
         """returns the IPs of a peer or of all peers if pID==None"""
         if pID == None:

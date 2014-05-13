@@ -1,5 +1,5 @@
 from lunchinator.iface_plugins import iface_general_plugin
-from lunchinator import get_server, get_settings, log_error, log_debug, log_warning
+from lunchinator import get_plugin_manager, get_settings, log_error, log_debug, log_warning
 from lunchinator.logging_mutex import loggingMutex
 import logging
 
@@ -8,7 +8,7 @@ class db_connections(iface_general_plugin):
     
     def __init__(self):
         super(db_connections, self).__init__()
-        self.plugin_manager = get_server().plugin_manager
+        self.plugin_manager = get_plugin_manager()
         
         self.conn_properties_lock = loggingMutex("db_conn_properties", logging=get_settings().get_verbose())
         self.open_connections = {}

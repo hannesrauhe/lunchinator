@@ -29,7 +29,6 @@ class lunch_server(object):
         super(lunch_server, self).__init__()
         self.controller = None
         self.initialized = False
-        self._load_plugins = True
         self._has_gui = True
         self.running = False
         self._peer_nr = 0
@@ -54,38 +53,10 @@ class lunch_server(object):
             
         self._peers = LunchPeers()
         self._init_messages()
-
-        if self.get_plugins_enabled():  
-            from iface_plugins import iface_called_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
-            from iface_db_plugin import iface_db_plugin
-            from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
-            
-            PluginManagerSingleton.setBehaviour([
-                ConfigurablePluginManager,
-            ])
-            self.plugin_manager = PluginManagerSingleton.get()
-            self.plugin_manager.app = self
-            self.plugin_manager.setConfigParser(get_settings().get_config_file(), get_settings().write_config_to_hd)
-            self.plugin_manager.setPluginPlaces(get_settings().get_plugin_dirs())
-            categoriesFilter = {
-               "general" : iface_general_plugin,
-               "called" : iface_called_plugin,
-               "gui" : iface_gui_plugin,
-               "db" : iface_db_plugin
-               }
-            self.plugin_manager.setCategoriesFilter(categoriesFilter) 
-
-            try:
-                self.plugin_manager.collectPlugins()
-            except:
-                log_exception("problem when loading plugins")
-            
-            for p in self.plugin_manager.getAllPlugins():
-                if p.plugin_object.is_activation_forced() and not p.plugin_object.is_activated:
-                    self.plugin_manager.activatePluginByName(p.name, p.category)
-                    
-        else:
-            log_info("lunchinator initialised without plugins")
+        
+        #TODO: Plugin init cannot be done in controller constructor because the GUI has to be ready
+        #separation of gui Plugins necessary - but how *sigh*? 
+        self.controller.initPlugins()
        
     def _init_messages(self):
         importFromOld = not os.path.exists(get_settings().get_messages_file()) and \
@@ -144,12 +115,6 @@ class lunch_server(object):
                
     def get_messages(self):
         return self._messages
-    
-    def get_plugins_enabled(self):
-        return self._load_plugins
-    
-    def set_plugins_enabled(self, enable):
-        self._load_plugins = enable
         
     def is_running(self):
         return self.running
@@ -177,7 +142,7 @@ class lunch_server(object):
         return None        
         
     def getDBConnection(self, name=""):
-        if not self.get_plugins_enabled():
+        if not get_settings().get_plugins_enabled():
             log_error("Plugins are disabled, cannot get DB connections.")
             return None
         

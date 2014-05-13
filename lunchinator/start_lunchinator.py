@@ -46,7 +46,7 @@ def sendMessage(msg, cli):
     if msg == None:
         msg = "lunch"
     
-    get_server().set_plugins_enabled(False)
+    get_settings().set_plugins_enabled(False)
     recv_nr=get_server().perform_call(msg,peerIDs=[],peerIPs=[cli])
     print "sent to",recv_nr,"clients"
     
@@ -131,7 +131,7 @@ def startLunchinator():
         sendMessage(options.message, options.client)
     elif options.stop:
         msg = "local"
-        get_server().set_plugins_enabled(False)
+        get_settings().set_plugins_enabled(False)
         get_server().stop_server(stop_any=True)
         print "Sent stop command to local lunchinator"
     elif options.cli:
@@ -140,7 +140,7 @@ def startLunchinator():
         retCode = 1
         try:
             from lunchinator import lunch_cli
-            get_server().set_plugins_enabled(usePlugins)
+            get_settings().set_plugins_enabled(usePlugins)
             get_server().set_has_gui(False)
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
@@ -152,7 +152,7 @@ def startLunchinator():
         usePlugins = checkDependencies(usePlugins)
         
     #    sys.settrace(trace)
-        get_server().set_plugins_enabled(usePlugins)
+        get_settings().set_plugins_enabled(usePlugins)
         get_server().set_has_gui(False)
         get_server().start_server()
         sys.exit(get_server().exitCode)
@@ -170,7 +170,7 @@ def startLunchinator():
         app = QApplication(sys.argv)
         usePlugins = checkDependencies(usePlugins, gui=True)
 
-        get_server().set_plugins_enabled(usePlugins)
+        get_settings().set_plugins_enabled(usePlugins)
         app.setQuitOnLastWindowClosed(False)
         lanschi = LunchinatorGuiController()
         if lanschi.isShuttingDown():

@@ -1,7 +1,7 @@
 import cmd, threading, time, inspect
 from functools import partial
 from lunchinator import get_server, log_error, utilities, log_exception,\
-    get_notification_center
+    get_notification_center, get_settings
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.cli.cli_message import CLIMessageHandling
 from lunchinator.cli.cli_option import CLIOptionHandling
@@ -42,8 +42,8 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
         
         get_server().initialize(self)
         
-        if get_server().get_plugins_enabled():
-            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+        if get_settings().get_plugins_enabled():
+            for pluginInfo in get_plugin_manager().getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:
                     self.addModule(pluginInfo.plugin_object)
                 

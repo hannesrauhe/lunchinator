@@ -1,6 +1,6 @@
 from PyQt4.QtGui import QTabWidget, QDialog, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton
 from PyQt4.QtCore import Qt, pyqtSignal
-from lunchinator import get_server, log_exception
+from lunchinator import get_settings, get_plugin_manager, log_exception
 from lunchinator.ComboTabWidget import ComboTabWidget
 from bisect import bisect_left
 
@@ -22,8 +22,8 @@ class LunchinatorSettingsDialog(QDialog):
         self.plugin_widgets = {}
         self.widget_names = []
         try:
-            if get_server().get_plugins_enabled():
-                for pluginInfo in get_server().plugin_manager.getAllPlugins():
+            if get_settings().get_plugins_enabled():
+                for pluginInfo in get_plugin_manager().getAllPlugins():
                     if pluginInfo.plugin_object.is_activated:
                         self.addPlugin(pluginInfo.plugin_object, pluginInfo.name)
         except:

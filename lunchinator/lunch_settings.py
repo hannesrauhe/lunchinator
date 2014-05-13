@@ -101,7 +101,6 @@ class lunch_settings(object):
         return _HIDDEN_SETTINGS
     
     def __init__(self):
-        '''unchangeable for now'''
         self._main_config_dir = MAIN_CONFIG_DIR
         self._members_file = self.get_config("lunch_members.cfg") # DEPRECATED, use peers_file
         self._peers_file = self.get_config("lunch_peers.cfg")
@@ -118,7 +117,7 @@ class lunch_settings(object):
         self._resources_path = self._findResourcesPath(self._main_package_path)
         if self._resources_path == None:
             raise Exception("Could not determine path to the lunchinator resource files.")
-        
+        self._load_plugins = True
         self._plugin_repos = None
         
         # configurable  
@@ -177,7 +176,13 @@ class lunch_settings(object):
         for poss in possibilities:
             if os.path.exists(os.path.join(poss, "images", "lunchinator.png")):
                 return poss
-        return None
+        return None    
+    
+    def get_plugins_enabled(self):
+        return self._load_plugins
+    
+    def set_plugins_enabled(self, enable):
+        self._load_plugins = enable
             
     def set_option(self, o, v, **kwargs):
         """Set an option by its name.

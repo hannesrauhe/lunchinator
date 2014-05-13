@@ -134,3 +134,10 @@ def get_server():
 
 def get_peers():
     return get_server().getLunchPeers()
+
+def get_plugin_manager():
+    if get_settings().get_plugins_enabled():
+        from yapsy.PluginManager import PluginManagerSingleton
+        return PluginManagerSingleton.get()
+    else:
+        log_exception("Cannnot load plugin manager: plugins are disabled")
