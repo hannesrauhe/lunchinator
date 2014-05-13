@@ -19,7 +19,7 @@ class db_SQLite(iface_db_plugin):
       
     def __init__(self):
         super(db_SQLite, self).__init__()
-        self.options=[("sqlite_file", os.path.join(get_settings().get_main_config_dir(),"statistics.sq3"))]
+        self.options=[("sqlite_file", os.path.join(get_settings().get_main_config_dir(),"lunchinator.sq3"))]
         self.members={}
         
     def create_connection(self, options):
