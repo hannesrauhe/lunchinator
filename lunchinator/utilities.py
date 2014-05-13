@@ -1,4 +1,4 @@
-import subprocess, sys, ctypes, os, threading, contextlib, json, tempfile, shutil, socket
+import subprocess, sys, os, contextlib, json, shutil, socket
 from datetime import datetime
 from lunchinator import log_exception, log_warning, log_debug, \
     get_settings, log_error
@@ -42,7 +42,7 @@ def displayNotification(name, msg, icon=None):
                 return
             
             call = [exe, "-title", "Lunchinator: %s" % name, "-message", msg]
-            if False and AttentionGetter.getInstance().existsBundle: # no sender until code signing is fixed (probably never)
+            if False and checkBundleIdentifier(_LUNCHINATOR_BUNDLE_IDENTIFIER): # no sender until code signing is fixed (probably never)
                 call.extend(["-sender", _LUNCHINATOR_BUNDLE_IDENTIFIER])
                 
             log_debug(call)
@@ -54,97 +54,6 @@ def displayNotification(name, msg, icon=None):
     except:
         log_exception("error displaying notification")
         
-class AttentionGetter(object):
-    _instance = None
-    
-    class AttentionThread(threading.Thread):
-        def __init__(self, audioFile):
-            super(AttentionGetter.AttentionThread, self).__init__()
-            self._audioFile = audioFile
-        
-        def run(self):        
-            myPlatform = getPlatform()
-            if myPlatform == PLATFORM_LINUX:
-                _drawAttentionLinux(self._audioFile)
-            elif myPlatform == PLATFORM_MAC:
-                _drawAttentionMac(self._audioFile)
-            elif myPlatform == PLATFORM_WINDOWS:
-                _drawAttentionWindows(self._audioFile)
-    
-    def __init__(self):
-        super(AttentionGetter, self).__init__()
-        self.attentionThread = None
-        if getPlatform() == PLATFORM_MAC:
-            self.existsBundle = checkBundleIdentifier(_LUNCHINATOR_BUNDLE_IDENTIFIER)
-        
-    @classmethod
-    def getInstance(cls):
-        if cls._instance == None:
-            cls._instance = cls()
-        return cls._instance
-    
-    def drawAttention(self, audioFile):
-        if self.attentionThread != None and self.attentionThread.isAlive():
-            # someone is already drawing attention at the moment
-            log_debug("Drawing attention is already in progress.")
-            return
-        else:
-            log_debug("Starting new attention thread.")
-            self.attentionThread = self.AttentionThread(audioFile)
-            self.attentionThread.start()
-        
-def drawAttention(audioFile):
-    AttentionGetter.getInstance().drawAttention(audioFile)
-        
-def _drawAttentionLinux(audioFile):       
-    try:
-        subprocess.call(["eject", "-T", "/dev/cdrom"])
-    except:
-        log_exception("notify error: eject error (open)")
-    
-    try:
-        subprocess.call(["play", "-q", audioFile])    
-    except:
-        log_exception("notify error: sound error")
-
-    try:
-        subprocess.call(["eject", "-T", "/dev/cdrom"])
-    except:
-        log_exception("notify error: eject error (close)")
-        
-def _drawAttentionMac(audioFile):      
-    try:
-        subprocess.call(["drutil", "tray", "eject"])
-    except:
-        log_exception("notify error: eject error (open)")
-         
-    try:
-        subprocess.call(["afplay", audioFile])    
-    except:
-        log_exception("notify error: sound error")
-         
-    try:
-        subprocess.call(["drutil", "tray", "close"])
-    except:
-        log_exception("notify error: eject error (close)")
-
-def _drawAttentionWindows(audioFile):    
-    try:
-        ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
-    except:
-        log_exception("notify error: eject error (open)")
-    try:
-        from PyQt4.QtGui import QSound
-        q = QSound(audioFile)
-        q.play()
-    except:        
-        log_exception("notify error: sound")
-        
-    try:
-        ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
-    except:
-        log_exception("notify error: eject error (close)")
-
 qtParent = None 
 
 def setValidQtParent(parent):
@@ -161,7 +70,7 @@ def getValidQtParent():
     raise Exception("Could not find a valid QObject instance")
     
 def processPluginCall(ip, call):
-    from lunchinator import get_settings, get_peers, get_plugin_manager
+    from lunchinator import get_peers, get_plugin_manager
     if not get_settings().get_plugins_enabled():
         return
     from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
