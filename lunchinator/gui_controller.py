@@ -1,7 +1,8 @@
 # coding: utf-8
 import platform, sip, socket, os, subprocess
 from lunchinator import get_server, log_exception, log_info, get_settings, \
-    log_error, convert_string, log_warning, get_notification_center
+    log_error, convert_string, log_warning, get_notification_center, \
+    get_plugin_manager
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor,\
     QDialog
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplication, QTimer
@@ -192,8 +193,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
             log_info("server not running")
              
         if self.running:
-            if get_server().get_plugins_enabled():
-                for pluginInfo in get_server().plugin_manager.getAllPlugins():
+            if get_settings().get_plugins_enabled():
+                for pluginInfo in get_plugin_manager().getAllPlugins():
                     if pluginInfo.plugin_object.is_activated:
                         pluginInfo.plugin_object.deactivate()
                 log_info("plug-ins deactivated, exiting")
@@ -341,7 +342,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         plugin_menu = QMenu("PlugIns", menu)
         
         self.pluginActions = None
-        if get_server().get_plugins_enabled():
+        if get_settings().get_plugins_enabled():
             from yapsy.PluginManager import PluginManagerSingleton
             allPlugins = [x for x in PluginManagerSingleton.get().getAllPlugins() if not x.plugin_object.is_activation_forced()]
             
@@ -493,14 +494,14 @@ class LunchinatorGuiController(QObject, LunchServerController):
         p_name = convert_string(w.property(self._PLUGIN_NAME_PROPERTY).toString())
         if new_state:
             log_info("Activating plugin '%s' of type '%s'" % (p_name, p_cat))
-            po = get_server().plugin_manager.activatePluginByName(p_name, p_cat)
+            po = get_plugin_manager().activatePluginByName(p_name, p_cat)
             if p_cat == "gui" and self.mainWindow != None:
                 self.mainWindow.addPluginWidget(po, p_name, makeVisible=True)
             if self.settingsWindow != None:
                 self.settingsWindow.addPlugin(po, p_name)
         else:
             log_info("Deactivating plugin '%s' of type '%s'" % (p_name, p_cat))
-            po = get_server().plugin_manager.deactivatePluginByName(p_name, p_cat)  
+            po = get_plugin_manager().deactivatePluginByName(p_name, p_cat)  
             if p_cat == "gui" and self.mainWindow != None:
                 po.destroy_widget()
                 self.mainWindow.removePluginWidget(p_name)
@@ -588,10 +589,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
 
     @pyqtSlot()        
     def settingsDialogClosed(self):
-        if not get_server().get_plugins_enabled():
+        if not get_settings().get_plugins_enabled():
             return
         resp = self.settingsWindow.result()
-        for pluginInfo in get_server().plugin_manager.getAllPlugins():
+        for pluginInfo in get_plugin_manager().getAllPlugins():
             if pluginInfo.plugin_object.is_activated:
                 if resp == LunchinatorSettingsDialog.Accepted:
                     try:

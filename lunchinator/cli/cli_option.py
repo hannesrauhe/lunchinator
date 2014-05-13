@@ -1,12 +1,12 @@
 import sys
 from lunchinator.cli import LunchCLIModule
-from lunchinator import get_server, convert_string, log_exception
+from lunchinator import get_settings, get_plugin_manager, convert_string, log_exception
 
 class CLIOptionHandling(LunchCLIModule):
     def getOptionCategories(self):
         try:
-            if get_server().get_plugins_enabled():
-                for pluginInfo in get_server().plugin_manager.getAllPlugins():
+            if get_settings().get_plugins_enabled():
+                for pluginInfo in get_plugin_manager().getAllPlugins():
                     if pluginInfo.plugin_object.is_activated:
                         if pluginInfo.plugin_object.has_options():
                             yield (pluginInfo.name, pluginInfo.description)
@@ -15,8 +15,8 @@ class CLIOptionHandling(LunchCLIModule):
             
     def getPluginObject(self, cat):
         cat = cat.upper()
-        if get_server().get_plugins_enabled():
-            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+        if get_settings().get_plugins_enabled():
+            for pluginInfo in get_plugin_manager().getAllPlugins():
                 if pluginInfo.plugin_object.is_activated and pluginInfo.name.upper() == cat:
                     return pluginInfo.plugin_object
         return None

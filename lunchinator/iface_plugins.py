@@ -15,8 +15,7 @@ class iface_plugin(IPlugin):
         self.option_choice = {}
         self.hidden_options = None
         self.force_activation = False
-        # TODO is this necessary?
-        _manager = PluginManagerSingleton.get()
+
         super(iface_plugin, self).__init__()
     
     """ Overrides from IPlugin """

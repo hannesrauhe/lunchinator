@@ -61,22 +61,22 @@ class lunch_http(iface_called_plugin):
                 
     def write_info_html(self):
         try:
-            # TODO write information about inactive peers?
-            if len(get_peers().getActivePeers())==0:
+            if len(get_peers())==0:
                 with codecs.open(self.options["html_dir"]+"/index.html","w",'utf-8') as indexhtml:
                     indexhtml.write("<title>Lunchinator</title><meta http-equiv='refresh' content='5' >no peers\n")
                     return
             
-            table_data = {"id":[""]*len(get_peers().getActivePeers())}
+            table_data = {"id":[""]*len(get_peers())}
             index = 0
-            for peerID in get_peers().getActivePeers():
+            peerIDs = get_peers().getPeers()
+            for peerID in peerIDs:
                 infodict = get_peers().getPeerInfo(peerID)
                 if infodict == None:
                     infodict = {}
                 table_data["id"][index] = peerID
                 for k,v in infodict.iteritems():
                     if not table_data.has_key(k):
-                        table_data[k]=[""]*len(get_peers().getActivePeers())
+                        table_data[k]=[""]*len(get_peers())
                     if k=="avatar" and os.path.isfile(get_settings().get_avatar_dir()+"/"+v):
                         table_data[k][index]="<img width='200' src=\"avatars/%s\" />"%v
                     else:
@@ -89,7 +89,7 @@ class lunch_http(iface_called_plugin):
                 for th in table_data.iterkeys():
                     indexhtml.write("<th>%s</th>"%th) 
                 indexhtml.write("</tr>") 
-                for i in range(0,len(get_peers().getActivePeers())):
+                for i in range(0,len(get_peers())):
                     indexhtml.write("<tr>") 
                     for k in table_data.iterkeys():
                         indexhtml.write("<td>%s</td>"%table_data[k][i]) 

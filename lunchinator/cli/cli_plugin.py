@@ -1,6 +1,6 @@
 from functools import partial
 from lunchinator.cli import LunchCLIModule
-from lunchinator import get_server, log_exception
+from lunchinator import get_settings, get_plugin_manager, log_exception
 
 class CLIPluginHandling(LunchCLIModule):
     def __init__(self, parent):
@@ -10,11 +10,11 @@ class CLIPluginHandling(LunchCLIModule):
     def getPluginNames(self, listActivated, listDeactivated, category = None):
         try:
             plugins = None
-            if get_server().get_plugins_enabled():
+            if get_settings().get_plugins_enabled():
                 if category == None:
-                    plugins = get_server().plugin_manager.getAllPlugins()
+                    plugins = get_plugin_manager().getAllPlugins()
                 else:
-                    plugins = get_server().plugin_manager.getPluginsOfCategory(category)
+                    plugins = get_plugin_manager().getPluginsOfCategory(category)
                 
                 for pluginInfo in plugins:
                     if pluginInfo.plugin_object.is_activated and listActivated or\
@@ -43,7 +43,7 @@ class CLIPluginHandling(LunchCLIModule):
             pluginName = args.pop(0).upper()
             try:
                 pInfo = None
-                for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                for pluginInfo in get_plugin_manager().getAllPlugins():
                     if pluginInfo.name.upper() == pluginName:
                         pInfo = pluginInfo
                 if pInfo == None:
@@ -52,7 +52,7 @@ class CLIPluginHandling(LunchCLIModule):
                 elif pInfo.plugin_object.is_activated:
                     print "Plugin already loaded."
                 else:
-                    po = get_server().plugin_manager.activatePluginByName(pInfo.name,pInfo.categories[0])
+                    po = get_plugin_manager().activatePluginByName(pInfo.name,pInfo.categories[0])
                     self.parent.addModule(po)
             except:
                 log_exception("while loading plugin")
@@ -62,7 +62,7 @@ class CLIPluginHandling(LunchCLIModule):
             pluginName = args.pop(0).upper()
             try:
                 pInfo = None
-                for pluginInfo in get_server().plugin_manager.getAllPlugins():
+                for pluginInfo in get_plugin_manager().getAllPlugins():
                     if pluginInfo.name.upper() == pluginName:
                         pInfo = pluginInfo
                 if pInfo == None:
@@ -71,7 +71,7 @@ class CLIPluginHandling(LunchCLIModule):
                 elif not pInfo.plugin_object.is_activated:
                     print "Plugin is not loaded."
                 else:
-                    get_server().plugin_manager.deactivatePluginByName(pInfo.name,pInfo.categories[0])
+                    get_plugin_manager().deactivatePluginByName(pInfo.name,pInfo.categories[0])
                     self.parent.removeModule(pInfo.plugin_object)
             except:
                 log_exception("while unloading plugin")
@@ -98,7 +98,7 @@ class CLIPluginHandling(LunchCLIModule):
         pass
     
     def completeList(self, _args, _argNum, _text):
-        return (aCat for aCat in get_server().plugin_manager.getCategories() if aCat.startswith(_text))
+        return (aCat for aCat in get_plugin_manager().getCategories() if aCat.startswith(_text))
     
     def completePluginNames(self, _args, _argNum, text, listActivated, listDeactivated):
         text = text.lower()
