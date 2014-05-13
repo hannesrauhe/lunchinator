@@ -52,11 +52,11 @@ class lunch_server(object):
             self.controller = LunchServerController()
             
         self._peers = LunchPeers()
-        self._init_messages()
         
         #TODO: Plugin init cannot be done in controller constructor because the GUI has to be ready
         #separation of gui Plugins necessary - but how *sigh*? 
         self.controller.initPlugins()
+        self._init_messages()
        
     def _init_messages(self):
         importFromOld = not os.path.exists(get_settings().get_messages_file()) and \
@@ -127,31 +127,8 @@ class lunch_server(object):
         
     def getOwnIP(self):
         # TODO replace by getOwnID if possible
-        return self.own_ip
-    
-    def getAvailableDBConnections(self):
-        if not self.get_plugins_enabled():
-            log_error("Plugins are disabled, cannot get DB connections.")
-            return None
-        
-        from iface_plugins import PluginManagerSingleton
-        pluginInfo = PluginManagerSingleton.get().getPluginByName("Database Settings", "general")
-        if pluginInfo and pluginInfo.plugin_object.is_activated:
-            return pluginInfo.plugin_object.getAvailableDBConnections()
-        log_exception("getAvailableDBConnections: DB Connections plugin not yet loaded")
-        return None        
-        
-    def getDBConnection(self, name=""):
-        if not get_settings().get_plugins_enabled():
-            log_error("Plugins are disabled, cannot get DB connections.")
-            return None
-        
-        from iface_plugins import PluginManagerSingleton
-        pluginInfo = PluginManagerSingleton.get().getPluginByName("Database Settings", "general")
-        if pluginInfo and pluginInfo.plugin_object.is_activated:
-            return pluginInfo.plugin_object.getDBConnection(name)
-        log_exception("getDBConnection: DB Connections plugin not yet loaded")
-        return None      
+        # answer Hannes: call getID on settings
+        return self.own_ip   
         
     def getLunchPeers(self):
         return self._peers 

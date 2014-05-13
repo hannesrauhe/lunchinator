@@ -140,4 +140,15 @@ def get_plugin_manager():
         from yapsy.PluginManager import PluginManagerSingleton
         return PluginManagerSingleton.get()
     else:
-        log_exception("Cannnot load plugin manager: plugins are disabled")
+        log_exception("Cannnot load plugin manager: plugins are disabled")   
+    
+def get_db_connection(self, name=""):
+    if not get_settings().get_plugins_enabled():
+        log_error("Plugins are disabled, cannot get DB connections.")
+        return None
+    
+    pluginInfo = get_plugin_manager().getPluginByName("Database Settings", "general")
+    if pluginInfo and pluginInfo.plugin_object.is_activated:
+        return pluginInfo.plugin_object.getDBConnection(name)
+    log_exception("getDBConnection: DB Connections plugin not yet loaded")
+    return None   

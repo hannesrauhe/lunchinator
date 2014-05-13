@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import *
 from lunchinator import get_server, log_debug,\
-    get_settings
+    get_settings, get_db_connection
 
 class statistics(iface_called_plugin):
     def __init__(self):
@@ -17,7 +17,7 @@ class statistics(iface_called_plugin):
         iface_called_plugin.deactivate(self)
         
     def connect_to_db(self,_=None,__=None):
-        self.connectionPlugin = get_server().getDBConnection(self.options["db_connection"])
+        self.connectionPlugin = get_db_connection(self.options["db_connection"])
             
         if None==self.connectionPlugin:
             log_error("Statistics: DB %s of type %s connection not available - will deactivate statistics now"
