@@ -535,7 +535,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
             log_error("mainWindow is not initialized")
             return
         self.mainWindow.show()
-        self.mainWindow.activateWindow()
+        if getPlatform() == PLATFORM_MAC:
+            self.mainWindow.activateWindow()
         self.mainWindow.raise_()
             
     @pyqtSlot()
@@ -583,7 +584,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
             self.settingsWindow.closed.connect(self.settingsDialogClosed)
 
         self.settingsWindow.setVisible(True)
-        self.settingsWindow.activateWindow()
+        if getPlatform() == PLATFORM_MAC:
+            self.settingsWindow.activateWindow()
         self.settingsWindow.raise_()
 
     @pyqtSlot()        
