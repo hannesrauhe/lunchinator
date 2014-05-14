@@ -17,11 +17,11 @@ class statistics(iface_called_plugin):
         iface_called_plugin.deactivate(self)
         
     def connect_to_db(self,_=None,__=None):
-        self.connectionPlugin = get_db_connection(self.options["db_connection"])
+        self.connectionPlugin, plugin_type = get_db_connection(self.options["db_connection"])
             
         if None==self.connectionPlugin:
-            log_error("Statistics: DB %s of type %s connection not available - will deactivate statistics now"
-                      %(self.options["db_connection"],str(type(self.connectionPlugin))))
+            log_error("Statistics: DB  connection %s not available - will deactivate statistics now"
+                      %(self.options["db_connection"]))
             log_error("Statistics: Activate a DB Connection plugin and check settings")
             return False
         

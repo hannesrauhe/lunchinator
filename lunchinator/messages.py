@@ -1,8 +1,8 @@
 from lunchinator.logging_mutex import loggingMutex
-from lunchinator import log_exception
+from lunchinator import log_exception, log_warning, log_debug, get_settings
+import lunchinator
 from time import localtime, mktime
 import codecs, json, os, sys
-from lunchinator.multithreaded_sqlite import MultiThreadSQLite
 from collections import deque
         
 class Messages(object):
@@ -11,18 +11,24 @@ class Messages(object):
     
     def __init__(self, path, logging):
         self._lock = loggingMutex("messages", logging=logging)
-        self._db = MultiThreadSQLite(path)
-        self._db.open()
+        self._db, plugin_type = lunchinator.get_db_connection()
         
+        if plugin_type != "SQLite Connection":
+            log_warning("Your standard connection is not of type SQLite." + \
+                "Loading messages from another type is experimental.")
+            
         if not self._db.existsTable("VERSION"):
             self._db.execute("CREATE TABLE VERSION(VERSION INTEGER)")
             self._db.execute("INSERT INTO VERSION(VERSION) VALUES(?)", self._DB_VERSION_INITIAL)
             
-        if not self._db.existsTable("MESSAGES"):
-            self._db.execute("CREATE TABLE MESSAGES(SENDER TEXT, TIME REAL, MESSAGE TEXT)")
-            
-        self._latest = self._getLatest()
-        self._length = self._getNumMessages()
+        if not self._db.existsTable("CORE_MESSAGES"):
+            self._db.execute("CREATE TABLE CORE_MESSAGES(SENDER TEXT, TIME REAL, MESSAGE TEXT)")
+            self._length = 0
+            self._latest = None
+            self.importOld(get_settings().get_legacy_messages_file())
+        else:
+            self._latest = self._getLatest()
+            self._length = self._getNumMessages()
 
     def _getDBVersion(self):
         return self._db.query("SELECT VERSION FROM VERSION")[0][0]
@@ -37,10 +43,10 @@ class Messages(object):
         return self._convertMessage(result[0])
     
     def _getLatest(self):
-        return self._getFirstResult(self._db.query("SELECT * FROM MESSAGES WHERE ROWID = (SELECT MAX(ROWID) FROM MESSAGES)"))
+        return self._getFirstResult(self._db.query("SELECT * FROM CORE_MESSAGES WHERE ROWID = (SELECT MAX(ROWID) FROM CORE_MESSAGES)"))
     
     def _getNumMessages(self):
-        return self._db.query("SELECT COUNT(*) FROM MESSAGES")[0][0]
+        return self._db.query("SELECT COUNT(*) FROM CORE_MESSAGES")[0][0]
                       
     def importOld(self, path):
         if os.path.exists(path):
@@ -59,10 +65,12 @@ class Messages(object):
     
     
     def writeToFile(self, path):
-        try:
-            self._db.close()
-        except:
-            log_exception("Could not write messages to %s: %s" % (path, sys.exc_info()[0])) 
+        # TODO: writeToFile just closes DB connection? - remove this function or rename it
+        log_debug("write to file called in messages - not necessary")
+#        try:
+#            self._db.close()
+#        except:
+#            log_exception("Could not write messages to %s: %s" % (path, sys.exc_info()[0])) 
     
     def insert(self, mtime, addr, msg):
         """Insert a new message
@@ -73,12 +81,12 @@ class Messages(object):
         
         seconds = mktime(mtime)
         with self._lock:
-            self._db.execute("INSERT INTO MESSAGES VALUES(?, ?, ?)", addr, seconds, msg)
+            self._db.execute("INSERT INTO CORE_MESSAGES VALUES(?, ?, ?)", addr, seconds, msg)
             self._latest = (mtime, addr, msg)
             self._length += 1
 
     def getBulk(self, start, length, reverse=False):
-        result = self._db.query("SELECT * FROM MESSAGES LIMIT ? OFFSET ?", length, start)
+        result = self._db.query("SELECT * FROM CORE_MESSAGES LIMIT ? OFFSET ?", length, start)
         if reverse:
             return (self._convertMessage(row) for row in reversed(result))
         else:
@@ -112,7 +120,7 @@ class Messages(object):
         if index == len(self) - 1:
             # fast access to latest message
             return self.getLatest()
-        return self._getFirstResult(self._db.query("SELECT * FROM MESSAGES LIMIT 1 OFFSET ?", index))
+        return self._getFirstResult(self._db.query("SELECT * FROM CORE_MESSAGES LIMIT 1 OFFSET ?", index))
     
     def getAll(self, begin=None):
         """Get all messages.
@@ -121,9 +129,9 @@ class Messages(object):
         """
         result = []
         if begin:
-            messages = self._db.query("SELECT * FROM MESSAGES WHERE TIME > ?", begin)
+            messages = self._db.query("SELECT * FROM CORE_MESSAGES WHERE TIME > ?", begin)
         else:
-            messages = self._db.query("SELECT * FROM MESSAGES")
+            messages = self._db.query("SELECT * FROM CORE_MESSAGES")
 
         if messages:
             for msgObj in reversed(messages):

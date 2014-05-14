@@ -1,5 +1,5 @@
 from lunchinator.iface_plugins import iface_general_plugin
-from lunchinator import get_plugin_manager, get_settings, log_error, log_debug, log_warning
+from lunchinator import get_plugin_manager, get_settings, log_error, log_debug, log_warning, log_exception
 from lunchinator.logging_mutex import loggingMutex
 import logging
 
@@ -69,23 +69,27 @@ class db_connections(iface_general_plugin):
         return ob,prop
     
     def deactivate(self):
-        for conn in self.open_connections.values():
-            conn.close()   
+        for name,conn in self.open_connections.iteritems():
+            try:
+                conn.close()
+            except:
+                log_exception("While deactivating: Could not close connection %s", name)   
         iface_general_plugin.deactivate(self)
     
-    def getDBConnection(self,name=""):
+    def getDBConnection(self,name=""):        
+        """returns tuple (connection_handle, connection_type) of the given connection"""
         if len(name)==0:
             name = get_settings().get_default_db_connection()
         
         if name not in get_settings().get_available_db_connections():
-            return None
+            return None, None
         
+        ob, props = self.getProperties(name)
         if name not in self.open_connections:
-            ob, props = self.getProperties(name)
             log_debug("DB Connections: opening connection %s of type %s"%(name,props["plugin_type"]))
             self.open_connections[name] = ob.create_connection(props)
         
-        return self.open_connections[name]
+        return self.open_connections[name], props["plugin_type"]
     
     def create_options_widget(self, parent):
         from db_connections.DbConnOptions import DbConnOptions

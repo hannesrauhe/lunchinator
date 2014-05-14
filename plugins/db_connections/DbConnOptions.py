@@ -30,6 +30,10 @@ class DbConnOptions(QWidget):
         lay.addWidget(self.conn_details, 2, 0, 1, 2)        
         newConnButton = QPushButton("New Connection", parent)
         lay.addWidget(newConnButton, 3, 1)
+        warningLbl = QLabel("The standard connection is used by the lunchinator internally to store messages etc." + \
+                             " DO NOT change this connection unless you know what you are doing.")
+        warningLbl.setWordWrap(True)
+        lay.addWidget(warningLbl, 4, 0, 4, 2)
         
         for p in self.available_types.values():
             w = p.create_db_options_widget(parent)

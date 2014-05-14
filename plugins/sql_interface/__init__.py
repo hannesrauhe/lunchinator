@@ -40,7 +40,7 @@ class sql_interface(iface_gui_plugin):
         from lunchinator.table_models import TableModelBase
         
         if None==self.db_connection:        
-            self.db_connection = get_db_connection(self.options["db_connection"])
+            self.db_connection, _ = get_db_connection(self.options["db_connection"])
                     
         try:
             header, res = self.db_connection.queryWithHeader(sql_stat)

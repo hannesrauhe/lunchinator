@@ -144,13 +144,15 @@ def get_plugin_manager():
     else:
         log_exception("Cannnot load plugin manager: plugins are disabled")   
     
-def get_db_connection(self, name=""):
+def get_db_connection(name=""):
+    """returns tuple (connection_handle, connection_type) of the given connection"""
+    
     if not get_settings().get_plugins_enabled():
         log_error("Plugins are disabled, cannot get DB connections.")
-        return None
+        return None, None
     
     pluginInfo = get_plugin_manager().getPluginByName("Database Settings", "general")
     if pluginInfo and pluginInfo.plugin_object.is_activated:
         return pluginInfo.plugin_object.getDBConnection(name)
     log_exception("getDBConnection: DB Connections plugin not yet loaded")
-    return None   
+    return None, None

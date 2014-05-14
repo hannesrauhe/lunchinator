@@ -56,14 +56,7 @@ class lunch_server(object):
         #TODO: Plugin init cannot be done in controller constructor because the GUI has to be ready
         #separation of gui Plugins necessary - but how *sigh*? 
         self.controller.initPlugins()
-        self._init_messages()
-       
-    def _init_messages(self):
-        importFromOld = not os.path.exists(get_settings().get_messages_file()) and \
-                        os.path.exists(get_settings().get_legacy_messages_file())
-        self._messages = Messages(get_settings().get_messages_file(), logging=get_settings().get_verbose())
-        if importFromOld:        
-            self._messages.importOld(get_settings().get_legacy_messages_file())
+        self._messages = Messages(get_settings().get_messages_file(), logging=get_settings().get_verbose())            
             
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
     def call(self, msg, peerIDs=[], peerIPs=[]):
