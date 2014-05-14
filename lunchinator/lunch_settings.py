@@ -40,18 +40,25 @@ def setting(gui=False, desc=None, sendInfoDict=False, restart=False, choice=None
                     if "sendInfoDict" in kwargs:
                         sendInfo = kwargs["sendInfoDict"]
                         del kwargs["sendInfoDict"]
+                
+                attrname = "_" + option
+                if hasattr(self, attrname): 
+                    old_v = getattr(self, attrname)
+                    new_v = args[0]
+                    if type(old_v) != type(new_v):
+                        log_error("Value of setting", option, "has wrong type.")
+                        return
+                else:
+                    log_warning("settings has attribute '%s'" % attrname)
 
                 func(self, *args, **kwargs)
     
-                attrname = "_" + option
                 if hasattr(self, attrname): 
                     new_v = getattr(self, attrname)
                     
                     if not isInit:
                         # override category as "general"
                         self.get_config_file().set('general', option, unicode(new_v))
-                else:
-                    log_warning("settings has attribute '%s'" % attrname)
                     
                 if gui and not isInit:
                     get_notification_center().emitGeneralSettingChanged(option)
@@ -255,6 +262,8 @@ class lunch_settings(object):
             self._config_file.add_section(section)
         except ConfigParser.NoOptionError:
             pass
+        except ValueError:
+            log_error("Value of setting", name, "has wrong type.")
         except:
             log_exception("error while reading %s from config file", name)
         return value
