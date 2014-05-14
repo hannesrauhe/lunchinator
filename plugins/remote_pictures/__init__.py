@@ -108,20 +108,20 @@ class remote_pictures(iface_gui_plugin):
         for aPeer in listStr.split(";;"):
             aPeer = aPeer.strip()
             
-            peerID = None
-            if get_peers().knowsID(aPeer):
+            peerIDs = []
+            if get_peers().getPeerIPs(aPeer):
                 # is a peer ID
-                peerID = aPeer
+                peerIDs = [aPeer]
             else:
                 # check if it is a peer name
-                peerID = get_server().getIDForPeerName(aPeer)
-                if peerID == None:
+                peerIDs = get_peers().getPeerIDsByName(aPeer)
+                if not peerIDs:
                     # might be hostname or IP
                     ip = socket.gethostbyname(aPeer)
                     if ip:
                         yield ip
                     
-            if peerID != None:
+            for peerID in peerIDs:
                 # yield each IP for this peer ID 
                 for ip in get_peers().getAllIPsOfPeer(peerID):
                     yield ip

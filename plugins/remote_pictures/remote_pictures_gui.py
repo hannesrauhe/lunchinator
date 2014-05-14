@@ -5,8 +5,8 @@ from PyQt4.QtCore import QTimer, QSize, Qt, QVariant, QSettings, pyqtSlot, pyqtS
 from lunchinator.resizing_image_label import ResizingWebImageLabel
 import tempfile
 import os
-import urlparse
 from functools import partial
+from lunchinator.callables import AsyncCall
 
 class RemotePicturesGui(QStackedWidget):
     MIN_THUMBNAIL_SIZE = 16
@@ -223,18 +223,26 @@ class RemotePicturesGui(QStackedWidget):
         return self.rp.options['thumbnail_size']
     
     def _createThumbnail(self, inFile, category):
+        """Called asynchronously"""
         outFile = self._fileForThumbnail(category)
         fileName = outFile.name
         
         imageData = inFile.read()
-        oldPixmap = QPixmap.fromImage(QImage.fromData(imageData))
-        if oldPixmap.width() > self.MAX_THUMBNAIL_SIZE or oldPixmap.height() > self.MAX_THUMBNAIL_SIZE:
-            newPixmap = oldPixmap.scaled(self.MAX_THUMBNAIL_SIZE,self.MAX_THUMBNAIL_SIZE,Qt.KeepAspectRatio,Qt.SmoothTransformation)
+        oldImage = QImage.fromData(imageData)
+        if oldImage.width() > self.MAX_THUMBNAIL_SIZE or oldImage.height() > self.MAX_THUMBNAIL_SIZE:
+            newImage = oldImage.scaled(self.MAX_THUMBNAIL_SIZE,
+                                       self.MAX_THUMBNAIL_SIZE,
+                                       Qt.KeepAspectRatio,
+                                       Qt.SmoothTransformation)
         else:
             # no up-scaling here
-            newPixmap = oldPixmap
-        newPixmap.save(fileName, format='jpeg')
+            newImage = oldImage
+        newImage.save(fileName, format='jpeg')
         return fileName
+            
+    def _addCategoryAndCloseFile(self, category, imageFile, thumbnailPath):
+        self.categoryModel.addCategory(category, thumbnailPath, self._getThumbnailSize())
+        imageFile.close()
             
     def _addCategory(self, category, thumbnailPath = None, imageFile = None):
         # cache category image
@@ -243,8 +251,11 @@ class RemotePicturesGui(QStackedWidget):
             if thumbnailPath != None:
                 self.categoryModel.addCategory(category, thumbnailPath, self._getThumbnailSize())
             elif imageFile != None:
-                # TODO create thumbnail asynchronously, then close imageFile
-                self.categoryModel.addCategory(category, self._createThumbnail(imageFile, category), self._getThumbnailSize())
+                # create thumbnail asynchronously, then close imageFile
+                AsyncCall(self,
+                          self._createThumbnail,
+                          partial(self._addCategoryAndCloseFile, category, imageFile))(imageFile, category)
+                closeImmediately = False
             else:
                 raise Exception("No image path specified.")
             self.categoryPictures[category] = []
@@ -404,9 +415,16 @@ class CategoriesModel(QStandardItemModel):
         super(CategoriesModel, self).__init__()
         self.setColumnCount(1)
         
+    def _createThumbnail(self, imagePath, thumbnailSize):
+        """Called asynchronously, hence, no QPixmaps here."""
+        image = QImage(imagePath)
+        return image.scaled(QSize(thumbnailSize, thumbnailSize), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        
+    def _setThumbnail(self, item, image):
+        item.setData(QVariant(QIcon(QPixmap.fromImage(image))), Qt.DecorationRole)
+        
     def _initializeItem(self, item, imagePath, thumbnailSize):
-        iconData = QPixmap.fromImage(QImage(imagePath))
-        item.setData(QVariant(QIcon(iconData.scaled(QSize(thumbnailSize, thumbnailSize), Qt.KeepAspectRatio, Qt.SmoothTransformation))), Qt.DecorationRole)
+        AsyncCall(self, self._createThumbnail, partial(self._setThumbnail, item))(imagePath, thumbnailSize)
         
     def addCategory(self, cat, firstImage, thumbnailSize):
         item = QStandardItem()
