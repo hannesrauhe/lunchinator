@@ -104,6 +104,10 @@ class RemotePicturesGui(QStackedWidget):
         self.minOpacityChanged.emit(float(self.rp.options['min_opacity']) / 100.)
         self.maxOpacityChanged.emit(float(self.rp.options['max_opacity']) / 100.)
                 
+        self._createThumbnailAndAddCategory = AsyncCall(self,
+                                                        self._createThumbnail,
+                                                        self._addCategoryAndCloseFile)
+                
         # load categories index
         self._loadIndex()
         
@@ -238,9 +242,11 @@ class RemotePicturesGui(QStackedWidget):
             # no up-scaling here
             newImage = oldImage
         newImage.save(fileName, format='jpeg')
-        return fileName
+        return fileName, inFile, category
             
-    def _addCategoryAndCloseFile(self, category, imageFile, thumbnailPath):
+    def _addCategoryAndCloseFile(self, aTuple):
+        """Called synchronously, with result of _createThumbnail"""
+        thumbnailPath, imageFile, category = aTuple
         self.categoryModel.addCategory(category, thumbnailPath, self._getThumbnailSize())
         imageFile.close()
             
@@ -252,9 +258,7 @@ class RemotePicturesGui(QStackedWidget):
                 self.categoryModel.addCategory(category, thumbnailPath, self._getThumbnailSize())
             elif imageFile != None:
                 # create thumbnail asynchronously, then close imageFile
-                AsyncCall(self,
-                          self._createThumbnail,
-                          partial(self._addCategoryAndCloseFile, category, imageFile))(imageFile, category)
+                self._createThumbnailAndAddCategory(imageFile, category)
                 closeImmediately = False
             else:
                 raise Exception("No image path specified.")
