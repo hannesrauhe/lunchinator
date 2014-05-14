@@ -7,6 +7,10 @@ from datetime import datetime, timedelta
 class MessagesTableModel(QAbstractItemModel):
     SORT_ROLE = Qt.UserRole + 1
     
+    TIME_COL = 0
+    SENDER_COL = 1
+    MESSAGE_COL = 2
+    
     def __init__(self, parent):
         super(MessagesTableModel, self).__init__(parent)
         self._messages = get_server().get_messages().getSlidingWindowCache(100)
@@ -41,11 +45,11 @@ class MessagesTableModel(QAbstractItemModel):
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             message = self._getMessage(index.row())
-            if index.column() == 0:
+            if index.column() == self.TIME_COL:
                 # time
                 mTime = message[0]
                 return QVariant(self._formatTime(mTime))
-            elif index.column() == 1:
+            elif index.column() == self.SENDER_COL:
                 # sender
                 peerID = message[1]
                 name = get_peers().getPeerNameNoLock(peerID)
@@ -60,7 +64,7 @@ class MessagesTableModel(QAbstractItemModel):
         elif role == Qt.SizeHintRole:
             return QSize(0, 20)
         elif role == self.SORT_ROLE:
-            if index.column() == 0:
+            if index.column() == self.TIME_COL:
                 mTime = self._getMessage(index.row())[0]
                 return QVariant(time.mktime(mTime))
             else:
@@ -70,11 +74,11 @@ class MessagesTableModel(QAbstractItemModel):
             
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
-            if section == 0:
+            if section == self.TIME_COL:
                 return QVariant("Time")
-            elif section == 1:
+            elif section == self.SENDER_COL:
                 return QVariant("Sender")
-            elif section == 2:
+            elif section == self.MESSAGE_COL:
                 return QVariant("Message")
         return super(MessagesTableModel, self).headerData(section, orientation, role)
             
@@ -82,4 +86,9 @@ class MessagesTableModel(QAbstractItemModel):
         self.rowsInserted.emit(QModelIndex(), 0, 0)
 
     def updateSenders(self):
-        self.dataChanged.emit(self.createIndex(0, 1), self.createIndex(len(self._messages), 1))
+        self.dataChanged.emit(self.createIndex(0, self.SENDER_COL),
+                              self.createIndex(len(self._messages), self.SENDER_COL))
+        
+    def updateTimes(self):
+        self.dataChanged.emit(self.createIndex(0, self.TIME_COL),
+                              self.createIndex(len(self._messages), self.TIME_COL))
