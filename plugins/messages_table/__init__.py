@@ -36,7 +36,7 @@ class messages_table(iface_gui_plugin):
         from PyQt4.QtGui import QSortFilterProxyModel
         from PyQt4.QtCore import Qt
         from lunchinator.table_widget import TableWidget
-        from lunchinator.table_models import MessagesTableModel
+        from messages_table.messages_table_model import MessagesTableModel
         
         self.messagesTable = TableWidget(parent, "Send Message", self.sendMessageClicked, placeholderText="Enter a message", sortingEnabled=False)
         

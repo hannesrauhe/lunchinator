@@ -35,7 +35,7 @@ class members_table(iface_gui_plugin):
     def create_widget(self, parent):
         from PyQt4.QtGui import QSortFilterProxyModel
         from PyQt4.QtCore import QTimer, Qt
-        from lunchinator.table_models import MembersTableModel
+        from members_table.members_table_model import MembersTableModel
         from lunchinator.table_widget import TableWidget
         
         class NameSortProxyModel(QSortFilterProxyModel):
