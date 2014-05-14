@@ -3,10 +3,35 @@ from PyQt4.QtCore import Qt, QVariant, pyqtSlot, QTimer, QStringList, QThread
 from lunchinator.history_line_edit import HistoryLineEdit
 from functools import partial
 from lunchinator import get_server, get_settings, convert_string, log_warning,\
-    log_exception, log_debug, getLogLineTime, get_peers
+    log_exception, log_debug, getLogLineTime, get_peers, get_notification_center
 import os, sip, codecs, copy, shutil, contextlib, tarfile
 from datetime import datetime
 from lunchinator.lunch_datathread_qt import DataReceiverThread
+from lunchinator.table_models import TableModelBase
+
+class DropdownModel(TableModelBase):
+    _NAME_KEY = u'name'
+    _ID_KEY = u'ID'
+    
+    def __init__(self, dataSource):
+        columns = [(u"Name", self._updateNameItem)]
+        super(DropdownModel, self).__init__(dataSource, columns)
+        
+        # Called before server is running, no need to lock here
+        for peerID in self.dataSource:
+            infoDict = dataSource.getPeerInfo(peerID)
+            self.appendContentRow(peerID, infoDict)
+            
+    def _updateNameItem(self, _ip, infoDict, item):
+        peerID = infoDict[self._ID_KEY] if self._ID_KEY in infoDict else u""
+        m_name = infoDict[self._NAME_KEY] if self._NAME_KEY in infoDict else u""
+        
+        if peerID == m_name:
+            name = peerID
+        else:
+            name = "%s (%s)" % (m_name.strip(), peerID.strip())
+        
+        item.setText(name)
 
 class MembersWidget(QWidget):
     def __init__(self, parent):
@@ -16,8 +41,7 @@ class MembersWidget(QWidget):
         layout.setSpacing(0)
         
         self.dropdown_members_dict = {}
-        self.dropdown_members_model = QStandardItemModel()
-        self.dropdown_members_model.appendRow(QStandardItem(""))
+        self.dropdown_members_model = DropdownModel(get_peers())
         self.dropdown_members = QComboBox(self)
         self.dropdown_members.setModel(self.dropdown_members_model)
         
@@ -87,7 +111,6 @@ class MembersWidget(QWidget):
         
         layout.addWidget(logSplitter, 1)
         
-        self.update_dropdown_members()
         self.memberSelectionChanged()
         self.log_tree_view.selectionModel().selectionChanged.connect(self.displaySelectedLogfile)
         self.dropdown_members.currentIndexChanged.connect(self.memberSelectionChanged)
@@ -95,6 +118,15 @@ class MembersWidget(QWidget):
         self.requestLogsButton.clicked.connect(self.requestLogClicked)
         self.sendMessageButton.clicked.connect(partial(self.sendMessageToMember, messageInput))
         messageInput.returnPressed.connect(partial(self.sendMessageToMember, messageInput))
+        
+        get_notification_center().connectPeerAppended(self.dropdown_members_model.externalRowAppended)
+        get_notification_center().connectPeerUpdated(self.dropdown_members_model.externalRowUpdated)
+        get_notification_center().connectPeerRemoved(self.dropdown_members_model.externalRowRemoved)
+        
+    def destroy_widget(self):
+        get_notification_center().disconnectPeerAppended(self.dropdown_members_model.externalRowAppended)
+        get_notification_center().disconnectPeerUpdated(self.dropdown_members_model.externalRowUpdated)
+        get_notification_center().disconnectPeerRemoved(self.dropdown_members_model.externalRowRemoved)
         
     def listLogfiles(self, basePath, sort = None):
         if sort is None:
@@ -277,39 +309,6 @@ class MembersWidget(QWidget):
         if member != None:
             get_server().call("HELO_UPDATE from GUI", set([member]))
     
-    def get_dropdown_member_text(self, peerID, m_name):
-        if peerID == m_name:
-            return peerID
-        else:
-            return "%s (%s)" % (m_name.strip(), peerID.strip())
-    
-    def update_dropdown_members(self):
-        self.updateMemberInformation()
-        if self.dropdown_members_model == None:
-            return
-        
-        peers = set(get_peers())
-        for peerID in peers:
-            m_name = get_peers().getPeerName(peerID)
-            if not peerID in self.dropdown_members_dict:
-                # is new ip, append to the end
-                self.dropdown_members_dict[peerID] = (self.dropdown_members_model.rowCount(), m_name)
-                self.dropdown_members_model.appendRow(QStandardItem(self.get_dropdown_member_text(peerID, m_name)))
-            else:
-                #is already present, check if new information is available
-                info = self.dropdown_members_dict[peerID]
-                if m_name != info[1]:
-                    #name has changed
-                    anItem = self.dropdown_members_model.item(info[0], column=0)
-                    anItem.setText(self.get_dropdown_member_text(peerID, m_name))
-                    self.dropdown_members_dict[peerID] = (info[0], m_name)
-                    
-        removedPeers = set(self.dropdown_members_dict.keys()) - peers
-        for peerID in removedPeers:
-            info = self.dropdown_members_dict[peerID]
-            self.dropdown_members_model.removeRow(info[0])
-            del self.dropdown_members_dict[peerID]
-                
     def listLogFilesForMember(self, member):
         logDir = "%s/logs/%s" % (get_settings().get_main_config_dir(), member)
         if not os.path.exists(logDir):
