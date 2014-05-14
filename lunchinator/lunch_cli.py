@@ -1,7 +1,7 @@
 import cmd, threading, time, inspect
 from functools import partial
 from lunchinator import get_server, log_error, utilities, log_exception,\
-    get_notification_center, get_settings
+    get_notification_center, get_settings, get_plugin_manager
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.cli.cli_message import CLIMessageHandling
 from lunchinator.cli.cli_option import CLIOptionHandling

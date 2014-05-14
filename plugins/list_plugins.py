@@ -1,4 +1,5 @@
-from lunchinator.iface_plugins import iface_gui_plugin, PluginManagerSingleton
+from lunchinator.iface_plugins import iface_gui_plugin
+from yapsy.PluginManager import PluginManagerSingleton
     
 class list_plugins(iface_gui_plugin):
     def __init__(self):

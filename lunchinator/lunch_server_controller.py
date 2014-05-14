@@ -21,7 +21,8 @@ class LunchServerController(object):
     
     def initPlugins(self):
         if get_settings().get_plugins_enabled():  
-            from iface_plugins import iface_called_plugin, iface_general_plugin, iface_gui_plugin, PluginManagerSingleton
+            from yapsy.PluginManager import PluginManagerSingleton
+            from iface_plugins import iface_called_plugin, iface_general_plugin, iface_gui_plugin
             from iface_db_plugin import iface_db_plugin
             from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
             

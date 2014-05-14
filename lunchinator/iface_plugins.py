@@ -1,5 +1,4 @@
 from yapsy.IPlugin import IPlugin
-from yapsy.PluginManager import PluginManagerSingleton
 from lunchinator import log_error, log_exception, convert_string, \
     get_notification_center
 import types, sys, logging
