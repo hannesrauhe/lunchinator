@@ -1,7 +1,7 @@
 from lunchinator import log_exception, log_warning
 import sys
 from functools import partial
-from PyQt4.QtCore import QThread, pyqtSignal
+from PyQt4.QtCore import QThread, pyqtSignal, QObject
 
 class _CallBase(object):
     def __init__(self, call, successCall, errorCall, mutex):
@@ -72,9 +72,17 @@ class SyncCall(_CallBase):
     def __call__(self, *args, **kwargs):
         self._processCall(args, kwargs)
         
-class AsyncCall(QThread, _CallBase):
+class AsyncCall(QObject, _CallBase):
     _successSig = pyqtSignal(object)
     _errorSig = pyqtSignal(unicode)
+    
+    class CallThread(QThread):
+        def __init__(self, parent, call):
+            QThread.__init__(self, parent)
+            self._call = call
+    
+        def run(self):
+            self._call()
     
     def __init__(self, parent, call, successCall = None, errorCall = None, mutex = None):
         """Creates an asynchronous call object
@@ -86,10 +94,9 @@ class AsyncCall(QThread, _CallBase):
         errorCall -- If call() raises an exception, errorCall is called with an error message as the only argument.
         mutex -- A QMutex object that will be locked during call().
         """
-        QThread.__init__(self, parent)
+        QObject.__init__(self, parent)
         _CallBase.__init__(self, call, successCall, errorCall, mutex)
-        self._args = None
-        self._kwargs = None
+        self._parent = parent
 
     def _setErrorCall(self, errorCall):
         self._errorSig.connect(errorCall)
@@ -104,9 +111,6 @@ class AsyncCall(QThread, _CallBase):
         self._errorSig.emit(errorMessage)
 
     def __call__(self, *args, **kwargs):
-        self._args = args
-        self._kwargs = kwargs
-        self.start()
-
-    def run(self):
-        self._processCall(self._args, self._kwargs)
+        thread = self.CallThread(self._parent, partial(self._processCall, args, kwargs))
+        thread.finished.connect(thread.deleteLater)
+        thread.start()
