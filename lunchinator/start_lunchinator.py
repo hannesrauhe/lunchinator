@@ -154,6 +154,7 @@ def startLunchinator():
     #    sys.settrace(trace)
         get_settings().set_plugins_enabled(usePlugins)
         get_server().set_has_gui(False)
+        get_server().initialize()
         get_server().start_server()
         sys.exit(get_server().exitCode)
     else:    

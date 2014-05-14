@@ -2,7 +2,7 @@
 # coding=utf-8
 
 import socket, sys, os, json, contextlib, tarfile, platform, random, errno
-from time import strftime, localtime, time, mktime
+from time import strftime, localtime
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
@@ -39,8 +39,8 @@ class lunch_server(object):
         
     """ -------------------------- CALLED FROM MAIN THREAD -------------------------------- """
         
-    """Initialize Lunch Server with a specific controller"""
     def initialize(self, controller=None):
+        """Initialize Lunch Server with a specific controller"""
         if self.initialized:
             return
         self.initialized = True
@@ -61,13 +61,11 @@ class lunch_server(object):
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
     def call(self, msg, peerIDs=[], peerIPs=[]):
         '''Sends a call to the given peers, specified by either there IDs or there IPs'''
-        self.initialize()     
         assert(type(peerIPs) in [list,set])
         self.controller.call(msg, set(peerIDs), set(peerIPs))
         
     def call_all_members(self, msg):
         '''Sends a call to all members'''
-        self.initialize()      
         self.controller.call(msg, self._peers.getMembers(), set())
                 
     def call_info(self, peerIPs=[]):
@@ -131,7 +129,6 @@ class lunch_server(object):
 
     '''listening method - should be started in its own thread'''    
     def start_server(self):
-        self.initialize()
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"), "Starting the lunch notifier service")
         
         self.my_master = -1  # the peer i use as master
@@ -235,6 +232,8 @@ class lunch_server(object):
         except socket.error as e:
             # socket error messages may contain special characters, which leads to crashes on old python versions
             log_error(u"stopping lunchinator because of socket error:", convert_string(str(e)))
+        except KeyboardInterrupt:
+            log_info("Received keyboard interrupt, stopping.")
         except:
             log_exception("stopping - Critical error: %s" % str(sys.exc_info())) 
         finally: 
