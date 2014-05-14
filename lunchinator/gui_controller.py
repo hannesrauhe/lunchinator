@@ -44,9 +44,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         log_info("Your PyQt version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
         
         self._shuttingDown = False
-        self.resetIconTimer = None
         self.resetNextLunchTimeTimer = None
-        self.isIconHighlighted = True  # set to True s.t. first dehighlight can set the default icon
         self._updateAvailable = False
         self._repoUpdates = 0
         self._installUpdatesAction = None
@@ -55,6 +53,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._restartAction = None
         self._restartStatusAction = None
         self._restartReason = u""
+        self._highlightNewMessage = False
+        self._highlightPeersReady = False
         
         self.exitCode = 0
         self.serverThread = None
@@ -86,7 +86,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         get_notification_center().connectApplicationUpdate(self._appUpdateAvailable)
         get_notification_center().connectOutdatedRepositoriesChanged(self._outdatedReposChanged)
         get_notification_center().connectUpdatesDisabled(self._updatesDisabled)
-        get_notification_center().connectMessagePrepended(self.highlightIcon)
+        get_notification_center().connectMessagePrepended(self._newMessage)
         get_notification_center().connectRestartRequired(self._restartRequired)
         
         self.serverThread = LunchServerThread(self)
@@ -97,36 +97,35 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def _initNotificationCenter(self):
         NotificationCenter.setSingletonInstance(NotificationCenterQt(self))
         
-    def highlightIcon(self):
-        if self.isIconHighlighted:
-            return
+    def _newMessage(self):
         if self.mainWindow.isActiveWindow():
             # dont set highlighted if window is in foreground
             return
-        self.isIconHighlighted = True
-        icon_file = get_settings().get_resource("images", "lunchinatorred.png")
-        if hasattr(QIcon, "fromTheme"):
-            icon = QIcon.fromTheme("lunchinatorred", QIcon(icon_file))
-        else:
-            icon = QIcon(icon_file)
-        self.statusicon.setIcon(icon)
+        self._highlightNewMessage = True
+        self._highlightIcon()
         
-        if self.resetIconTimer == None:
-            self.resetIconTimer = QTimer(self)
-            self.resetIconTimer.setSingleShot(True)
-            self.resetIconTimer.timeout.connect(self.dehighlightIcon)
+    def windowActivated(self):
+        """Called from Lunchinator window"""
+        if self._highlightNewMessage:
+            self._highlightNewMessage = False
+            self._highlightIcon()
         
-    def dehighlightIcon(self):
-        if not self.isIconHighlighted:
-            return
-        self.isIconHighlighted = False
-        if self.resetIconTimer != None and self.resetIconTimer.isActive():
-            self.resetIconTimer.stop()
-        icon_file = get_settings().get_resource("images", "lunchinator.png")
-        if hasattr(QIcon, "fromTheme"):
-            icon = QIcon.fromTheme("lunchinator", QIcon(icon_file))
+    def _highlightIcon(self):
+        if self._highlightNewMessage:
+            name = "lunchinatorred"
+        elif self._highlightPeersReady:
+            name = "lunchinatorgreen"
         else:
+            name = "lunchinator"
+        
+        icon_file = get_settings().get_resource("images", name + ".png")
+        
+        icon = None
+        if hasattr(QIcon, "fromTheme"):
+            icon = QIcon.fromTheme(name, QIcon(icon_file))
+        if not icon:
             icon = QIcon(icon_file)
+        
         self.statusicon.setIcon(icon)
         
     def createTrayIcon(self):
@@ -153,8 +152,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         # initialize tray icon
         self.statusicon = QSystemTrayIcon(self.mainWindow)
-        # dehighlightIcon sets the default icon
-        self.dehighlightIcon()
+        # _highlightIcon sets the default icon
+        self._highlightIcon()
         contextMenu = self.init_menu(self.mainWindow)
         self.statusicon.activated.connect(self.trayActivated)
         self.statusicon.setContextMenu(contextMenu)
@@ -441,11 +440,13 @@ class LunchinatorGuiController(QObject, LunchServerController):
         readyMembers = peers.getReadyMembers()
         notReadyMembers = peers.getMembers() - readyMembers
         
+        everybodyReady = False
         if not readyMembers and not notReadyMembers:
             status = u"No members."
         elif not readyMembers:
             status = u"Nobody is ready for lunch."
         elif not notReadyMembers:
+            everybodyReady = True
             status = u"Everybody is ready for lunch."
         else:
             if len(readyMembers) == 1:
@@ -459,6 +460,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 notReady = u"%d members" % len(notReadyMembers)
             
             status = u"%s ready, %s not ready for lunch." % (ready, notReady)
+        if everybodyReady and not self._highlightPeersReady:
+            self._highlightPeersReady = True
+            self._highlightIcon()
         self._memberStatusAction.setText(status)
     
     def disable_auto_update(self):

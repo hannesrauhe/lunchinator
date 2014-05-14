@@ -190,7 +190,7 @@ class LunchinatorWindow(QMainWindow):
 
     def event(self, event):
         if event.type() == QEvent.WindowActivate:
-            self.guiHandler.dehighlightIcon()
+            self.guiHandler.windowActivated()
         return QMainWindow.event(self, event)
          
     def closeEvent(self, closeEvent):
