@@ -56,7 +56,7 @@ class lunch_server(object):
         #TODO: Plugin init cannot be done in controller constructor because the GUI has to be ready
         #separation of gui Plugins necessary - but how *sigh*? 
         self.controller.initPlugins()
-        self._messages = Messages(get_settings().get_messages_file(), logging=get_settings().get_verbose())            
+        self._messages = Messages(get_settings().get_messages_file(), logging=get_settings().get_verbose())      
             
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
     def call(self, msg, peerIDs=[], peerIPs=[]):
@@ -120,6 +120,7 @@ class lunch_server(object):
         # TODO replace by getOwnID if possible
         # answer Hannes: call getID on settings
         return self.own_ip   
+
         
     def getLunchPeers(self):
         return self._peers 
