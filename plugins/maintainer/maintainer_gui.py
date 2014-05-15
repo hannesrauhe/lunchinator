@@ -1,9 +1,9 @@
 from lunchinator import get_peers, get_notification_center, convert_string
+from lunchinator.table_models import TableModelBase
 from PyQt4.QtGui import QTreeView, QTabWidget, QSortFilterProxyModel, QSizePolicy,\
     QStandardItem
 from PyQt4.QtCore import Qt, pyqtSlot, QVariant
 from maintainer.members_widget import MembersWidget
-from table_models import TableModelBase
 
 class ExtendedMembersModel(TableModelBase):
     def __init__(self, dataSource):
