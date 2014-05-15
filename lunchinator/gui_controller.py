@@ -463,6 +463,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if everybodyReady and not self._highlightPeersReady:
             self._highlightPeersReady = True
             self._highlightIcon()
+        elif not everybodyReady and self._highlightPeersReady:
+            self._highlightPeersReady = False
+            self._highlightIcon()
         self._memberStatusAction.setText(status)
     
     def disable_auto_update(self):
