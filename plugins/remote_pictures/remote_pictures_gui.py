@@ -262,7 +262,8 @@ class RemotePicturesGui(QStackedWidget):
                 closeImmediately = False
             else:
                 raise Exception("No image path specified.")
-            self.categoryPictures[category] = []
+            if category not in self.categoryPictures:
+                self.categoryPictures[category] = []
         finally:
             if closeImmediately and imageFile != None:
                 imageFile.close()
