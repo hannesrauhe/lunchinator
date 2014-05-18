@@ -127,8 +127,16 @@ class OnlineUpdateGUI(QWidget):
     
         listFormat = QTextListFormat()
         listFormat.setStyle(QTextListFormat.ListDisc)
-        cursor.insertList(listFormat)
-    
-        cursor.insertText("\n".join(log))
+        listFormat2 = QTextListFormat()
+        listFormat2.setStyle(QTextListFormat.ListDisc)
+        listFormat2.setIndent(2)
+        
+        for line in log:
+            if line.startswith('*'):
+                cursor.insertList(listFormat2)
+                line = line[1:]
+            else:
+                cursor.insertList(listFormat)
+            cursor.insertText(line)
+        
         self.setChangelogVisible(True)
-    
