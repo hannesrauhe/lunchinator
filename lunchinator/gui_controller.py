@@ -383,9 +383,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if hasattr(menu, "addSeparator"):
             menu.addSeparator()
             
+        get_notification_center().connectMemberAppended(self._updateMemberStatus)
+        get_notification_center().connectMemberUpdated(self._updateMemberStatus)
+        get_notification_center().connectMemberRemoved(self._updateMemberStatus)
         self.memberStatusUpdateTimer = QTimer(self)
         self.memberStatusUpdateTimer.timeout.connect(self._updateMemberStatus)
-        self.memberStatusUpdateTimer.start(5000)
+        self.memberStatusUpdateTimer.start(60000)
         
         anAction = menu.addAction('Call for lunch')
         anAction.triggered.connect(partial(self.sendMessageClicked, u'lunch', None))
