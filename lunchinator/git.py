@@ -1,6 +1,6 @@
 import subprocess
 import os
-from lunchinator import log_debug
+from lunchinator import log_debug, log_warning, log_exception
 
 class GitHandler(object):
     UP_TO_DATE_REASON = "Repository is up-to-date"
@@ -62,17 +62,6 @@ class GitHandler(object):
         """Returns the number of commits in the current upstream branch of a git repository."""
         try:
             return cls.getGitCommandOutput(["rev-list", "--count", "@{u}"], path=path)
-        except:
-            return None
-
-    @classmethod
-    def getLatestChangeLog(cls, path=None):
-        """Reads the latest tag message and returns a list of changes."""
-        try:
-            tags = cls.getGitCommandOutput(["tag"], path=path)
-            rev = cls.getGitCommandOutput(["rev-parse", tags.split("\n")[-1]], path=path)
-            out = cls.getGitCommandOutput(["cat-file", "-p", rev], path=path)
-            return out.split("\n")[5:]
         except:
             return None
     
