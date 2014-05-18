@@ -106,7 +106,15 @@ class CLIPluginHandling(LunchCLIModule):
         return (aValue for aValue in candidates if aValue.startswith(text))
     
     def complete_plugin(self, text, line, begidx, endidx):
-        return self.completeSubcommands(text, line, begidx, endidx, {"list": self.completeList,
-                                                                 "load": partial(self.completePluginNames, listActivated=False, listDeactivated=True),
-                                                                 "unload": partial(self.completePluginNames, listActivated=True, listDeactivated=False)})
+        return self.completeSubcommands(text,
+                                        line,
+                                        begidx,
+                                        endidx,
+                                        {"list": self.completeList,
+                                         "load": partial(self.completePluginNames,
+                                                         listActivated=False,
+                                                         listDeactivated=True),
+                                         "unload": partial(self.completePluginNames,
+                                                           listActivated=True,
+                                                           listDeactivated=False)})
     
