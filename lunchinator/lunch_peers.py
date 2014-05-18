@@ -293,7 +293,12 @@ class LunchPeers(object):
             if newInfo == self._peer_info[ip]:
                 log_debug("%s sent his info but nothing new"%ip)
                 return
+            old_info = deepcopy(self._peer_info[ip])
             self._peer_info[ip].update(newInfo)
+            if old_info == self._peer_info[ip]:
+                log_debug("%s sent info - without new info"%ip)
+                return
+                
             newPID = self._peer_info[ip][u"ID"]
             
             if newPID != oldPID:

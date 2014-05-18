@@ -82,10 +82,10 @@ class lunch_server(object):
         return self.call("HELO_REQUEST_INFO " + self._build_info_string(), peerIPs=peerIPs)
     
     def call_dict(self, ip):  
-        '''Sends the information about my peers to one peer at a time'''      
+        '''Sends the information about my peers to one peer identified by its IP at a time'''      
         peers_dict = {}
         for ip in self._peers.getPeerIPs():
-            peers_dict[ip] = self._peers.getPeerName(ip)
+            peers_dict[ip] = self._peers.getPeerNameByIP(ip)
         self.call("HELO_DICT " + json.dumps(peers_dict), peerIPs=[ip]) 
         
     def call_request_dict(self):

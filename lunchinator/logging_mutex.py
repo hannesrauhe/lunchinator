@@ -33,8 +33,9 @@ class _LoggingMutex(object):
     def __enter__(self):
         if self.currentThreadID() == self.currentThread:
             import traceback
-            log_error("Requesting lock from the same thread")
-            traceback.print_stack()
+#             log_error("Requesting lock from the same thread")
+#             traceback.print_stack()
+            raise Exception("Requesting lock from the same thread")
         
         log_debug("Requesting mutex", self.name)
         self.enterMutex()
