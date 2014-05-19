@@ -1,5 +1,5 @@
 from PyQt4.QtGui import QDialog, QLabel, QVBoxLayout, QHBoxLayout,\
-    QWidget, QPushButton, QStyle, QCommonStyle, QLineEdit, QCheckBox,\
+    QWidget, QPushButton, QStyle, QLineEdit, QCheckBox,\
     QFileDialog
 from PyQt4.Qt import Qt
 from lunchinator import convert_string
@@ -17,7 +17,12 @@ class AddRepoDialog(QDialog):
         
         layout = QVBoxLayout(self)
         
-        style = QCommonStyle()
+        style = None
+        try:
+            from PyQt4.QtGui import QCommonStyle
+            style = QCommonStyle()
+        except:
+            pass
         
         self.setWindowTitle(u"Add Plugin Repository")
 
@@ -32,7 +37,11 @@ class AddRepoDialog(QDialog):
         
         browseButton = QPushButton(self)
         browseButton.setAutoDefault(False)
-        browseIcon = style.standardIcon(QStyle.SP_DirOpenIcon)
+        if style:
+            browseIcon = style.standardIcon(QStyle.SP_DirOpenIcon)
+        else:
+            browseIcon = None
+        
         if browseIcon:
             browseButton.setIcon(browseIcon)
         else:
@@ -59,11 +68,12 @@ class AddRepoDialog(QDialog):
                 
         errorLayout = QHBoxLayout()
         errorLayout.setContentsMargins(0, 0, 0, 0)
-        self._errorIcon = QLabel(self)
-        self._errorIcon.setPixmap(style.standardIcon(QStyle.SP_MessageBoxWarning).pixmap(12,12))
-        self._errorIcon.setAlignment(Qt.AlignTop)
-        self._errorIcon.setVisible(False)
-        errorLayout.addWidget(self._errorIcon, 0, Qt.AlignLeft)
+        if style:
+            self._errorIcon = QLabel(self)
+            self._errorIcon.setPixmap(style.standardIcon(QStyle.SP_MessageBoxWarning).pixmap(12,12))
+            self._errorIcon.setAlignment(Qt.AlignTop)
+            self._errorIcon.setVisible(False)
+            errorLayout.addWidget(self._errorIcon, 0, Qt.AlignLeft)
         
         self._errorLabel = QLabel(self)
         self._errorLabel.setVisible(False)
