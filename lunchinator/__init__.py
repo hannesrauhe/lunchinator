@@ -93,7 +93,8 @@ def setLoggingLevel(newLevel):
     # ensure logger is initialized
     _get_logger()
     _lunchinator_logger.streamHandler.setLevel(newLevel)
-    _lunchinator_logger.logfileHandler.setLevel(newLevel)
+    if _lunchinator_logger.logfileHandler:
+        _lunchinator_logger.logfileHandler.setLevel(newLevel)
     
 def _generate_string(*s):
     return u" ".join(x if type(x) in (str, unicode) else str(x) for x in s)
