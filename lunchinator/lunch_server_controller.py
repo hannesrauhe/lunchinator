@@ -91,7 +91,8 @@ class LunchServerController(object):
         processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info))
     
     def _insertMessage(self,mtime, addr, msg):
-        get_server().get_messages().insert(mtime, addr, msg)
+        if get_server().get_messages():
+            get_server().get_messages().insert(mtime, addr, msg)
         
     def processMessage(self, msg, addr):
         """ process any message event, including lunch calls """

@@ -55,8 +55,11 @@ class lunch_server(object):
         
         #TODO: Plugin init cannot be done in controller constructor because the GUI has to be ready
         #separation of gui Plugins necessary - but how *sigh*? 
-        self.controller.initPlugins()
-        self._messages = Messages(get_settings().get_messages_file(), logging=get_settings().get_verbose())      
+        if get_settings().get_plugins_enabled():
+            self.controller.initPlugins()
+            self._messages = Messages(get_settings().get_messages_file(), logging=get_settings().get_verbose())
+        else:
+            self._messages = None            
             
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
     def call(self, msg, peerIDs=[], peerIPs=[]):
@@ -462,7 +465,8 @@ class lunch_server(object):
     def _finish(self):
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"), "Stopping the lunch notifier service")
         self._peers.finish()
-        self._messages.writeToFile(get_settings().get_messages_file())
+        if self._messages:
+            self._messages.writeToFile(get_settings().get_messages_file())
         self.controller.serverStopped(self.exitCode)
     
     def _broadcast(self):
