@@ -26,32 +26,34 @@ class _lunchinator_logger:
     @classmethod
     def get_singleton_logger(cls, path=None):
         if cls.lunch_logger == None:
-            if not os.path.exists(MAIN_CONFIG_DIR ):
-                os.makedirs(MAIN_CONFIG_DIR )
-            if path:
-                log_file = path
-            else:
-                log_file = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
-                
-            cls.logfileHandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
-            cls.logfileHandler.setFormatter(_log_formatter())
-            cls.logfileHandler.setLevel(logging.DEBUG)
-            
-            cls.streamHandler = logging.StreamHandler()
-            cls.streamHandler.setFormatter(logging.Formatter("[%(levelname)7s] %(message)s"))
+            if not os.path.exists(MAIN_CONFIG_DIR):
+                os.makedirs(MAIN_CONFIG_DIR)
             
             cls.lunch_logger = logging.getLogger("LunchinatorLogger")
             cls.lunch_logger.setLevel(logging.DEBUG)
-            cls.lunch_logger.addHandler(cls.logfileHandler)
+            
+            cls.streamHandler = logging.StreamHandler()
+            cls.streamHandler.setFormatter(logging.Formatter("[%(levelname)7s] %(message)s"))
             cls.lunch_logger.addHandler(cls.streamHandler)
+            
+            if path:
+                try:
+                    cls.logfileHandler = logging.handlers.RotatingFileHandler(path, 'a', 0, 9)
+                    cls.logfileHandler.setFormatter(_log_formatter())
+                    cls.logfileHandler.setLevel(logging.DEBUG)
+                    
+                    cls.lunch_logger.addHandler(cls.logfileHandler)
+                    
+                    if os.path.getsize(path) > 0:
+                        cls.logfileHandler.doRollover()
+                except IOError:
+                    cls.lunch_logger.error("Could not initialize log file.")
             
             yapsi_logger = logging.getLogger('yapsy')
             yapsi_logger.setLevel(logging.WARNING)
             yapsi_logger.addHandler(cls.logfileHandler)
             yapsi_logger.addHandler(cls.streamHandler)
             
-            if os.path.getsize(log_file) > 0:
-                cls.logfileHandler.doRollover()
         return cls.lunch_logger
 
 def initialize_logger(path=None):

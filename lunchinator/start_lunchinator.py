@@ -7,9 +7,10 @@ import signal
 from functools import partial
 from optparse import OptionParser
 from lunchinator import log_info, log_error, get_settings,\
-    get_server, log_exception, initialize_logger
+    get_server, log_exception, initialize_logger, MAIN_CONFIG_DIR
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
 from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS, restart
+import os
     
 def parse_args():
     usage = "usage: %prog [options]"
@@ -121,20 +122,20 @@ def checkDependencies(noPlugins, gui = False):
             return False
 
 def startLunchinator():
-    initialize_logger()
-    
     (options, _args) = parse_args()
     usePlugins = options.noPlugins
     if options.exitWithStopCode:
         sys.exit(EXIT_CODE_STOP)
     elif options.lunchCall or options.message != None:
+        initialize_logger()
         sendMessage(options.message, options.client)
     elif options.stop:
-        msg = "local"
+        initialize_logger()
         get_settings().set_plugins_enabled(False)
         get_server().stop_server(stop_any=True)
         print "Sent stop command to local lunchinator"
     elif options.cli:
+        initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))
         usePlugins = checkDependencies(usePlugins)
             
         retCode = 1
@@ -149,6 +150,7 @@ def startLunchinator():
         finally:
             sys.exit(retCode)
     elif options.noGui:
+        initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))
         usePlugins = checkDependencies(usePlugins)
         
     #    sys.settrace(trace)
@@ -157,7 +159,8 @@ def startLunchinator():
         get_server().initialize()
         get_server().start_server()
         sys.exit(get_server().exitCode)
-    else:    
+    else:
+        initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))    
         log_info("We are on",platform.system(),platform.release(),platform.version())
         try:
             from PyQt4.QtCore import QThread
