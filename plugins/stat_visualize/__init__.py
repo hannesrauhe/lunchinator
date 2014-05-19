@@ -6,7 +6,7 @@ class stat_visualize(iface_gui_plugin):
     def __init__(self):
         super(stat_visualize, self).__init__()
 
-        self.options = [((u"db_connection", u"DB Connection", 
+        self.options = [((u"db_connection", u"DB Connection",
                           get_settings().get_available_db_connections()),
                          get_settings().get_default_db_connection())]
     
@@ -17,23 +17,17 @@ class stat_visualize(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)        
         
     def create_widget(self, parent):
-        from stat_visualize.diagram import statTimelineWidget
-        from PyQt4.QtGui import QGridLayout, QLabel, QPushButton, QWidget, QSpinBox
+        from stat_visualize.diagram import statTimelineTab, statSwarmTab
+        from PyQt4.QtGui import QTabWidget,QLabel
         from PyQt4.QtCore import Qt
         
         connPlugin, plugin_type = get_db_connection(self.options["db_connection"])
         
-        w = QWidget(parent)
-        lay = QGridLayout(w)
-        vw = statTimelineWidget(connPlugin)
-        lay.addWidget(vw,0,0,1,2)
-        lay.addWidget(QLabel("Scale:"),1,0, Qt.AlignRight)
-        spinbox = QSpinBox(parent)
-        spinbox.setValue(vw.getScale())
-        spinbox.valueChanged.connect(vw.setScale)
-        lay.addWidget(spinbox,1,1)
+        w = QTabWidget(parent)
+        w.addTab(statTimelineTab(parent, connPlugin), "Timeline")
+        w.addTab(statSwarmTab(parent, connPlugin), "Swarm")
         return w
     
-    def add_menu(self,menu):
+    def add_menu(self, menu):
         pass
 
