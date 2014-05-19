@@ -44,8 +44,13 @@ class statTimelineWidget(QtGui.QWidget):
             yAreaPos[i] = int((i * size.height() / numYAreas) + (size.height() / numYAreas / 2))
             qp.drawText(10, yAreaPos[i], "%s (%d)" % (t[0], t[1]))
         
-        for pos, val in zip(range(size.width(), 100, -100), range(0, size.width(), 100)):
-            qp.drawText(pos, 10, "%d" % int(self.scale * val))
+        for pos, val in zip(range(size.width(), 60, -60), range(0, size.width(), 60)):
+            h_val = 0
+            min_val = self.scale * val / 60
+            if min_val >= 60:
+                h_val = min_val // 60
+                min_val = min_val % 60
+            qp.drawText(pos, 10, "%d:%02d" % (h_val, min_val))
             
         
         qp.setPen(QtCore.Qt.red)
@@ -53,8 +58,12 @@ class statTimelineWidget(QtGui.QWidget):
                                             "FROM messages " + \
                                             "WHERE rtime between %d and %d" % (minTime, maxTime))
         zeroPoint = maxTime - size.width()
+        lastx = -1
+        xcounter = 0
         for mtype, sender, rtime in timelineData:
             x = int((rtime - minTime) / self.scale)
-            y = yAreaPos[mtypes[mtype]]
+            xcounter = xcounter + 1 if lastx == x else 0
+            lastx = x
+            y = yAreaPos[mtypes[mtype]] + xcounter
             qp.drawPoint(x, y)   
 #             print x,y,mtype
