@@ -216,7 +216,8 @@ class lunch_server(object):
                             self.own_ip = determineOwnIP(self._peers.getPeerIPs())
                         if announce_name == 0:
                             unknownPeers = self._peers.getNewPeerIPs()
-                            self.call_request_info(unknownPeers)
+                            if len(unknownPeers):
+                                self.call_request_info(unknownPeers)
                             # it's time to announce my name again and switch the master
                             self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getPeerIPs())
                             self.call_request_dict()
