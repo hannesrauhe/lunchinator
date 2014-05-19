@@ -62,11 +62,12 @@ class lunch_server(object):
     def call(self, msg, peerIDs=[], peerIPs=[]):
         '''Sends a call to the given peers, specified by either there IDs or there IPs'''
         assert(type(peerIPs) in [list,set])
+        self.initialize()
         self.controller.call(msg, set(peerIDs), set(peerIPs))
         
     def call_all_members(self, msg):
         '''Sends a call to all members'''
-        self.controller.call(msg, self._peers.getMembers(), set())
+        self.call(msg, self._peers.getMembers(), set())
                 
     def call_info(self, peerIPs=[]):
         '''An info call informs a peer about my name etc...    by default to every peer'''
