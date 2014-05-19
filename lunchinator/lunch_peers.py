@@ -290,10 +290,9 @@ class LunchPeers(object):
             if ip in self._new_peerIPs:
                 self._new_peerIPs.remove(ip)
             oldPID = self._peer_info[ip][u"ID"]
-            if newInfo == self._peer_info[ip]:
-                log_debug("%s sent his info but nothing new"%ip)
-                return
+            old_info = deepcopy(self._peer_info[ip])
             self._peer_info[ip].update(newInfo)
+                
             newPID = self._peer_info[ip][u"ID"]
             
             if newPID != oldPID:
@@ -301,8 +300,11 @@ class LunchPeers(object):
                 self._addPeerIPtoID(newPID, ip)
             else:
                 # TODO(Hannes) this info is now the most recent for this ID
-                get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
-                log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
+                if old_info != self._peer_info[ip]:
+                    get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
+                    log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
+                else:
+                    log_debug("%s sent info - without new info"%ip)
             
             own_group = get_settings().get_group()       
             

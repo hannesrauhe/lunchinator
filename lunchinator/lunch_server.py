@@ -62,11 +62,12 @@ class lunch_server(object):
     def call(self, msg, peerIDs=[], peerIPs=[]):
         '''Sends a call to the given peers, specified by either there IDs or there IPs'''
         assert(type(peerIPs) in [list,set])
+        self.initialize()
         self.controller.call(msg, set(peerIDs), set(peerIPs))
         
     def call_all_members(self, msg):
         '''Sends a call to all members'''
-        self.controller.call(msg, self._peers.getMembers(), set())
+        self.call(msg, self._peers.getMembers(), set())
                 
     def call_info(self, peerIPs=[]):
         '''An info call informs a peer about my name etc...    by default to every peer'''
@@ -82,10 +83,10 @@ class lunch_server(object):
         return self.call("HELO_REQUEST_INFO " + self._build_info_string(), peerIPs=peerIPs)
     
     def call_dict(self, ip):  
-        '''Sends the information about my peers to one peer at a time'''      
+        '''Sends the information about my peers to one peer identified by its IP at a time'''      
         peers_dict = {}
         for ip in self._peers.getPeerIPs():
-            peers_dict[ip] = self._peers.getPeerName(ip)
+            peers_dict[ip] = self._peers.getPeerNameByIP(ip)
         self.call("HELO_DICT " + json.dumps(peers_dict), peerIPs=[ip]) 
         
     def call_request_dict(self):
@@ -215,7 +216,8 @@ class lunch_server(object):
                             self.own_ip = determineOwnIP(self._peers.getPeerIPs())
                         if announce_name == 0:
                             unknownPeers = self._peers.getNewPeerIPs()
-                            self.call_request_info(unknownPeers)
+                            if len(unknownPeers):
+                                self.call_request_info(unknownPeers)
                             # it's time to announce my name again and switch the master
                             self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getPeerIPs())
                             self.call_request_dict()

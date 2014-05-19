@@ -2,7 +2,7 @@
 import platform, sip, socket, os, subprocess
 from lunchinator import get_server, log_exception, log_info, get_settings, \
     log_error, convert_string, log_warning, get_notification_center, \
-    get_plugin_manager
+    get_plugin_manager, get_peers
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor,\
     QDialog
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplication, QTimer
@@ -383,9 +383,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if hasattr(menu, "addSeparator"):
             menu.addSeparator()
             
+        get_notification_center().connectMemberAppended(self._updateMemberStatus)
+        get_notification_center().connectMemberUpdated(self._updateMemberStatus)
+        get_notification_center().connectMemberRemoved(self._updateMemberStatus)
         self.memberStatusUpdateTimer = QTimer(self)
         self.memberStatusUpdateTimer.timeout.connect(self._updateMemberStatus)
-        self.memberStatusUpdateTimer.start(5000)
+        self.memberStatusUpdateTimer.start(60000)
         
         anAction = menu.addAction('Call for lunch')
         anAction.triggered.connect(partial(self.sendMessageClicked, u'lunch', None))
@@ -526,7 +529,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def addHostClicked(self, hostn):
         try:
             ip = socket.gethostbyname(hostn.strip())
-            get_server()._append_member(ip, hostn)
+            get_peers().createPeerByIP(ip, {u"name": unicode(hostn.strip())})
         except:
             d = QMessageBox(QMessageBox.Critical, "Error adding host", "Cannot add host: Hostname unknown: %s" % hostn, QMessageBox.Ok, self.mainWindow)
             d.exec_()
