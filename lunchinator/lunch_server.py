@@ -344,12 +344,15 @@ class lunch_server(object):
                    u"version_commit_count_plugins":get_settings().get_commit_count_plugins(),
                    u"platform": sys.platform}
         
-        if getPlatform() == PLATFORM_LINUX:
-            info_d[u"os"] = u" ".join(aString if type(aString) in (str, unicode) else "[%s]" % " ".join(aString) for aString in platform.mac_ver())
-        elif getPlatform() == PLATFORM_WINDOWS:
-            info_d[u"os"] = u" ".join(aString if type(aString) in (str, unicode) else "[%s]" % " ".join(aString) for aString in platform.mac_ver())
-        elif getPlatform() == PLATFORM_MAC:
-            info_d[u"os"] = u" ".join(aString if type(aString) in (str, unicode) else "[%s]" % " ".join(aString) for aString in platform.mac_ver())
+        try:
+            if getPlatform() == PLATFORM_LINUX:
+                info_d[u"os"] = u" ".join(aString if type(aString) in (str, unicode) else "[%s]" % " ".join(aString) for aString in platform.linux_distribution())
+            elif getPlatform() == PLATFORM_WINDOWS:
+                info_d[u"os"] = u" ".join(aString if type(aString) in (str, unicode) else "[%s]" % " ".join(aString) for aString in platform.win32_ver())
+            elif getPlatform() == PLATFORM_MAC:
+                info_d[u"os"] = u" ".join(aString if type(aString) in (str, unicode) else "[%s]" % " ".join(aString) for aString in platform.mac_ver())
+        except:
+            log_exception("Error generating OS version string")
             
         if get_settings().get_next_lunch_begin():
             info_d[u"next_lunch_begin"] = get_settings().get_next_lunch_begin()
