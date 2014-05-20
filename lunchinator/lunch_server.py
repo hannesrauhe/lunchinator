@@ -87,8 +87,8 @@ class lunch_server(object):
     def call_dict(self, ip):  
         '''Sends the information about my peers to one peer identified by its IP at a time'''      
         peers_dict = {}
-        for ip in self._peers.getPeerIPs():
-            peers_dict[ip] = self._peers.getPeerNameByIP(ip)
+        for pIP in self._peers.getPeerIPs():
+            peers_dict[pIP] = self._peers.getPeerNameByIP(pIP)
         self.call("HELO_DICT " + json.dumps(peers_dict), peerIPs=[ip]) 
         
     def call_request_dict(self):
