@@ -11,19 +11,27 @@ class ExternalUpdateHandler(AppUpdateHandler):
         if getPlatform() != PLATFORM_LINUX:
             return False
          
-        call = ["dpkg", "-s", "lunchinator"]         
-        fh = open(os.path.devnull,"w")
-        p = subprocess.Popen(call,stdout=fh, stderr=fh)
-        retCode = p.returncode
-        if retCode == 0:
-            return True
+        try:
+            call = ["dpkg", "-s", "lunchinator"]         
+            fh = open(os.path.devnull,"w")
+            p = subprocess.Popen(call,stdout=fh, stderr=fh)
+            retCode = p.returncode
+            if retCode == 0:
+                return True
+        except OSError:
+            # dpkg probably does not exists
+            pass
                 
-        call = "rpm -qa | grep lunchinator"         
-        fh = open(os.path.devnull,"w")
-        p = subprocess.Popen(call,stdout=fh, stderr=fh, shell=True)
-        retCode = p.returncode
-        if retCode == 0:
-            return True
+        try:
+            call = "rpm -qa | grep lunchinator"         
+            fh = open(os.path.devnull,"w")
+            p = subprocess.Popen(call,stdout=fh, stderr=fh, shell=True)
+            retCode = p.returncode
+            if retCode == 0:
+                return True
+        except OSError:
+            # dpkg probably does not exists
+            pass
         
         return False  
     
