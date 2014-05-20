@@ -150,6 +150,11 @@ class lunch_server(object):
             s.settimeout(5.0)
             self.running = True
             self.controller.initDone()
+            
+            #first thing to do: ask stored peers for their info:
+            if self._peers:
+                self.call_request_info()
+            
             while self.running:
                 try:
                     data, addr = s.recvfrom(1024)
@@ -216,10 +221,12 @@ class lunch_server(object):
                             log_warning("ending braodcast")                            
                         if not self.own_ip:
                             self.own_ip = determineOwnIP(self._peers.getPeerIPs())
+                        
+                        unknownPeers = self._peers.getNewPeerIPs()
+                        if len(unknownPeers):
+                            self.call_request_info(unknownPeers)
+                            
                         if announce_name == 0:
-                            unknownPeers = self._peers.getNewPeerIPs()
-                            if len(unknownPeers):
-                                self.call_request_info(unknownPeers)
                             # it's time to announce my name again and switch the master
                             self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getPeerIPs())
                             self.call_request_dict()
