@@ -37,14 +37,14 @@ class _LoggingMutex(object):
 #             traceback.print_stack()
             raise Exception("Requesting lock from the same thread")
         
-        log_debug("Requesting mutex", self.name)
+        #log_debug("Requesting mutex", self.name)
         self.enterMutex()
         self.currentThread = self.currentThreadID()
-        log_debug("Entering mutex", self.name)
+        #log_debug("Entering mutex", self.name)
         return self
     
     def __exit__(self, *args, **kwargs):
-        log_debug("Leaving mutex", self.name)
+        #log_debug("Leaving mutex", self.name)
         self.currentThread = None
         self.exitMutex(*args, **kwargs)
         
