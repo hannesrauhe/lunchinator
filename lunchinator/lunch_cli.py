@@ -33,6 +33,7 @@ class ServerThread(threading.Thread):
 class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
     def __init__(self):
         cmd.Cmd.__init__(self)
+        LunchServerController.__init__(self)
 
         self.prompt = "> "
         self.commands = set(["exit"])
