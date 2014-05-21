@@ -1,7 +1,7 @@
 from lunchinator.iface_db_plugin import iface_db_plugin, lunch_db
 import sys, sqlite3, threading, Queue, datetime, os
 from lunchinator import get_server, get_settings, log_debug, log_exception, log_error
-from lunchinator.multithreaded_sqlite import MultiThreadSQLite
+from db_SQLite.multithreaded_sqlite import MultiThreadSQLite
  
 class db_SQLite(iface_db_plugin):  
     VERSION_TABLE = "DB_VERSION"
