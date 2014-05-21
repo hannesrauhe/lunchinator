@@ -1,7 +1,7 @@
 import threading
 import Queue
 import sqlite3
-from iface_db_plugin import lunch_db
+from lunchinator.iface_db_plugin import lunch_db
 from lunchinator import log_debug
 import datetime
 

@@ -15,6 +15,10 @@ OutputBaseFilename=setup_lunchinator
 AllowNoIcons=yes
 DefaultGroupName=Lunchinator
 
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\plugins"
+Type: filesandordirs; Name: "{app}\lunchinator"
+
 [Files]
 Source: "dist\lunchinator.exe"; DestDir: "{app}"
 Source: "..\*"; DestDir: "{app}\"; Flags: recursesubdirs; Excludes: "*.pyc,installer"
