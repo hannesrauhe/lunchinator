@@ -357,7 +357,9 @@ class LunchPeers(object):
                 # illegal format, just assume ready
                 return True
             return diff > 0
-        return False
+        else:
+            #no lunch time information (only happening with very old lunchinators), assume ready
+            return True
              
     def _removePeerIPfromID(self, pID, ip):   
         log_debug("Removing %s from ID: %s" % (ip, pID))
