@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import iface_called_plugin
 import subprocess, sys, ctypes
-from lunchinator import get_server, log_exception, log_warning, get_settings, convert_string, log_error
+from lunchinator import get_server, log_exception, log_warning, get_settings, convert_string, log_error, log_debug
 from lunchinator.download_thread import DownloadThread
 from lunchinator.utilities import displayNotification, getValidQtParent
 from cStringIO import StringIO
@@ -42,13 +42,15 @@ class tdtnotify(iface_called_plugin):
             if not cmd=="HELO_TDTNOTIFY_NEW_PIC":
                 get_server().call("HELO_TDTNOTIFY_POLL "+str(self.options["polling_time"]))
                 
-            self.forceDownload = value=="force"      
+            self.forceDownload = value=="force" 
+            
+            parent = None     
             try:
-                getValidQtParent()
+                parent = getValidQtParent()
             except:
-                log_warning("TDT Notify does not work without QT")
-                return
-            downloadThread = DownloadThread(getValidQtParent(), "http://api.tumblr.com/v2/blog/"+self.options['blog_name']+".tumblr.com/posts/photo?api_key=SyMOX3RGVS4OnK2bGWBcXNUfX34lnzQJY5FRB6uxpFqjEHz2SY")
+                log_debug("Trying to use TDT without QT parent")
+                
+            downloadThread = DownloadThread(parent, "http://api.tumblr.com/v2/blog/"+self.options['blog_name']+".tumblr.com/posts/photo?api_key=SyMOX3RGVS4OnK2bGWBcXNUfX34lnzQJY5FRB6uxpFqjEHz2SY")
             downloadThread.success.connect(self.downloadedJSON)
             downloadThread.error.connect(self.errorDownloadingJSON)
             downloadThread.finished.connect(downloadThread.deleteLater)
