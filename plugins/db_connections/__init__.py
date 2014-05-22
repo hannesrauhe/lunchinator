@@ -1,5 +1,6 @@
 from lunchinator.iface_plugins import iface_general_plugin
-from lunchinator import get_plugin_manager, get_settings, log_error, log_debug, log_warning, log_exception
+from lunchinator import get_plugin_manager, get_settings, log_error, log_debug, \
+    log_warning, log_exception, get_notification_center
 from lunchinator.logging_mutex import loggingMutex
 import logging
 
@@ -135,6 +136,7 @@ class db_connections(iface_general_plugin):
                     necessary, will be re-opened automatically)'''
                     conn = self.open_connections.pop(conn_name)
                     conn.close()
+                    get_notification_center().emitRestartRequired("DB Settings were changed - you should restart")
                 
         get_settings().set_available_db_connections(self.conn_properties.keys())
         self.conn_properties_lock.release()
