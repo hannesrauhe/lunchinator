@@ -23,7 +23,7 @@ class Messages(object):
             
         if not self._db.existsTable("CORE_MESSAGES"):
             self._db.execute("CREATE TABLE CORE_MESSAGES(SENDER TEXT, TIME REAL, MESSAGE TEXT)")
-            self._db.execute("CREATE INDEX CORE_MESSAGE_TIME_INDEX on CORE_MESSAGES(TIME REAL ASC)")
+            self._db.execute("CREATE INDEX CORE_MESSAGE_TIME_INDEX on CORE_MESSAGES(TIME ASC)")
             self._length = 0
             self._latest = None
             self.importOld(get_settings().get_legacy_messages_file())
