@@ -4,8 +4,6 @@ from time import time
 from lunchinator import get_settings, log_warning, log_exception, log_debug, log_info, get_notification_center
 from lunchinator.utilities import getTimeDifference
 from lunchinator.logging_mutex import loggingMutex
-import logging
-
         
 class LunchPeers(object):    
     """This class holds information about all peers known to the lunchinator,
@@ -278,6 +276,8 @@ class LunchPeers(object):
                 if not self._IP_seen.has_key(ip):
                     self._IP_seen[ip] = -1
                 self._new_peerIPs.add(ip)
+                return True
+            return False
             
     def updatePeerInfoByIP(self, ip, newInfo):  
         """The info for the peer that contacted this lunchinator from the given IP 
@@ -287,7 +287,8 @@ class LunchPeers(object):
         will be removed from the list of members. Further signals are emitted if the peer
         is in a group we do not know yet and for member append/remove/update"""
         with self._lock:    
-            if ip in self._new_peerIPs:
+            if ip in self._new_peerIPs and len(newInfo) > 1:
+                '''only remove from new peers if this is more than a HELO'''
                 self._new_peerIPs.remove(ip)
             oldPID = self._peer_info[ip][u"ID"]
             old_info = deepcopy(self._peer_info[ip])
@@ -304,7 +305,7 @@ class LunchPeers(object):
                     get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
                     log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
                 else:
-                    log_debug("%s sent info - without new info"%ip)
+                    log_debug("%s sent info - without new info" % ip)
             
             own_group = get_settings().get_group()       
             
@@ -358,7 +359,7 @@ class LunchPeers(object):
                 return True
             return diff > 0
         else:
-            #no lunch time information (only happening with very old lunchinators), assume ready
+            # no lunch time information (only happening with very old lunchinators), assume ready
             return True
              
     def _removePeerIPfromID(self, pID, ip):   

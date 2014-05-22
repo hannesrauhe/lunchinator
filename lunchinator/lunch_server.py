@@ -178,7 +178,9 @@ class lunch_server(object):
                     
                     # we also make sure, that there is a valid record for this ip,
                     # so we do not have to check this every time
-                    self._peers.createPeerByIP(ip)
+                    if self._peers.createPeerByIP(ip):
+                        #this is a new member - we ask for info right away
+                        self.call_request_info([ip])
                     
                     # if there is no HELO in the beginning, it's just a message and 
                     # we handle it, if the peer is in our group
@@ -384,10 +386,11 @@ class lunch_server(object):
         elif cmd == "HELO_DICT":
             # the master send me the list of _members - yeah
             ext_members = json.loads(value)
-            # i add every entry and assume, the member is in my group
-            # i will still ask the member itself 
+            # add every entry and assume, the member is in my group
             for m_ip, m_name in ext_members.iteritems():
-                self._peers.createPeerByIP(m_ip, {u"name":m_name, u"group":get_settings().get_group()})
+                if self._peers.createPeerByIP(m_ip, {u"name":m_name, u"group":get_settings().get_group()}):
+                    #this is a new member - ask for info right away
+                    self.call_request_info([m_ip])
 
         elif cmd == "HELO_LEAVE":
             self._peers.removeMembersByIP(ip)
