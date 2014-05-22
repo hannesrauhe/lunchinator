@@ -66,7 +66,7 @@ class statTimelineWidget(QtGui.QWidget):
         timelineData = self.connPlugin.query("SELECT mtype, sender, rtime " + \
                                             "FROM messages " + \
                                             "WHERE rtime between %d and %d" % (minTime, maxTime))
-        zeroPoint = maxTime - size.width()
+
         lastx = -1
         xcounter = 0
         for mtype, sender, rtime in timelineData:
@@ -102,6 +102,12 @@ class statSwarmWidget(QtGui.QWidget):
         self.period = 1
         self.mtype = "HELO%"
         
+        #const:
+        self.maxCircleSize = 50
+        self.myCircleSize = 20        
+        self.query_unbuffer = time.time()
+        
+        
     def setPeriod(self, i):
         self.period = i
         self.update()
@@ -115,6 +121,31 @@ class statSwarmWidget(QtGui.QWidget):
         
     def getmType(self):
         return self.mtype
+    
+    def retrieveDataFromDatabase(self):
+        if time.time()<self.query_unbuffer:
+            return
+                
+        self.scale = 1
+        self.numPeers = 0
+        self.peerNodes = {}
+        
+        maxTime = time.time()
+        minTime = maxTime - self.period*60*60
+        
+        tmp = self.connPlugin.query("SELECT sender, count(*) FROM messages " + \
+                                    "WHERE rtime between ? and ? "+ \
+                                    "AND mType LIKE ?"
+                                    "GROUP BY sender", minTime, maxTime, str(self.mtype))
+        self.query_unbuffer = time.time()+5
+        self.numPeers = len(tmp)
+        if 0 == self.numPeers :
+            return
+        
+        for sender, count in tmp:
+            while count/self.scale > self.maxCircleSize:
+                self.scale += 1
+            self.peerNodes[sender] = count
 
     def paintEvent(self, e):
         qp = QtGui.QPainter()
@@ -126,38 +157,22 @@ class statSwarmWidget(QtGui.QWidget):
         qp.setPen(QtCore.Qt.black)
         
         size = self.size()
-        maxCircleSize = 50
-        myCircleSize = 20
         
         centerX = size.width() / 2
         centerY = size.height() / 2
-        qp.drawEllipse(centerX - myCircleSize/2, centerY - myCircleSize/2, myCircleSize, myCircleSize)
-        
-        maxTime = time.time()
-        minTime = maxTime - self.period*60*60
-        
-        tmp = self.connPlugin.query("SELECT sender, count(*) FROM messages " + \
-                                    "WHERE rtime between ? and ? "+ \
-                                    "AND mType LIKE ?"
-                                    "GROUP BY sender", minTime, maxTime, str(self.mtype))
-        numPeers = len(tmp)
-        if 0 == numPeers :
+        qp.drawEllipse(centerX - self.myCircleSize/2, centerY - self.myCircleSize/2, self.myCircleSize, self.myCircleSize)
+                    
+        self.retrieveDataFromDatabase()
+        if 0 == self.numPeers :
             return
         
-        scale = 1
-        peerNodes = {}
-        for sender, count in tmp:
-            while count/scale > maxCircleSize:
-                scale += 1
-            peerNodes[sender] = count
-            
-        qp.drawText(10,10,"%d"%scale)
+        qp.drawText(10,10,"%d"%self.scale)
         i = 0
-        for sender, count in peerNodes.iteritems():
+        for sender, count in self.peerNodes.iteritems():
             distanceX = size.width() / 4
             distanceY = size.height() / 4
-            circleSize = count/scale
-            t = i * (2 * math.pi / numPeers)
+            circleSize = count/self.scale
+            t = i * (2 * math.pi / self.numPeers)
             x = distanceX * math.cos(t) + centerX - circleSize/2;
             y = distanceY * math.sin(t) + centerY - circleSize/2;
             qp.drawEllipse(x, y, circleSize, circleSize)
