@@ -17,12 +17,13 @@ class Messages(object):
             log_warning("Your standard connection is not of type SQLite." + \
                 "Loading messages from another type is experimental.")
             
-        if not self._db.existsTable("VERSION"):
-            self._db.execute("CREATE TABLE VERSION(VERSION INTEGER)")
-            self._db.execute("INSERT INTO VERSION(VERSION) VALUES(?)", self._DB_VERSION_INITIAL)
+        if not self._db.existsTable("CORE_MESSAGE_VERSION"):
+            self._db.execute("CREATE TABLE CORE_MESSAGE_VERSION(VERSION INTEGER)")
+            self._db.execute("INSERT INTO CORE_MESSAGE_VERSION(VERSION) VALUES(?)", self._DB_VERSION_INITIAL)
             
         if not self._db.existsTable("CORE_MESSAGES"):
             self._db.execute("CREATE TABLE CORE_MESSAGES(SENDER TEXT, TIME REAL, MESSAGE TEXT)")
+            self._db.execute("CREATE INDEX CORE_MESSAGE_TIME_INDEX on CORE_MESSAGES(TIME REAL ASC)")
             self._length = 0
             self._latest = None
             self.importOld(get_settings().get_legacy_messages_file())
@@ -31,7 +32,7 @@ class Messages(object):
             self._length = self._getNumMessages()
 
     def _getDBVersion(self):
-        return self._db.query("SELECT VERSION FROM VERSION")[0][0]
+        return self._db.query("SELECT VERSION FROM CORE_MESSAGE_VERSION")[0][0]
     
     def _convertMessage(self, output):
         """Returns (Time, Sender, Message)"""
