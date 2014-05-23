@@ -38,11 +38,7 @@ class LunchPeers(object):
         
         self._groups = set()  # seen group names
         
-        self._new_peerIPs = set()  # peers I have to ask for info 
-        
         self._lock = loggingMutex("peers", logging=get_settings().get_verbose())
-        
-        self._initPeersFromFile()  
         
     def finish(self):
         """should be called for a clean shutdown of the program, the peer information will be stored in a file"""
@@ -61,7 +57,6 @@ class LunchPeers(object):
             self._groups.add(group_name)
             # TODO: what was the second parameter supposed to be?
             get_notification_center().emitGroupAppended(group_name, self._groups)
-            
     
     ################ IP Timestamp Operations #####################
     # no locks needed: timeouts are not removed
@@ -257,39 +252,36 @@ class LunchPeers(object):
                 return self._checkInfoForReady(self._peer_info[ip])
         return False
     
-    def createPeerByIP(self, ip, info={}):  
-        """adds a peer for that IP and creates a valid info object for this peer.
-        If the info dictionary does not contain ID, name and group, ID and name 
-        are defaulted to the IP and the group is left empty.
-        Within the next seconds a request for info will be sent to this IP."""
-        
-        with self._lock:      
-            if ip not in self._peer_info:
-                log_info("new peer: %s" % ip)
-                # I add a new peer -> if I do not have an ID yet, the ID is the ip
-                self._peer_info[ip] = dict({u"name":ip,
-                                            u"group":u"",
-                                            u"ID":ip}.items() + info.items())
-                pID = self._peer_info[ip][u"ID"]
-                self._addPeerIPtoID(pID, ip)
-                    
-                if not self._IP_seen.has_key(ip):
-                    self._IP_seen[ip] = -1
-                self._new_peerIPs.add(ip)
-                return True
-            return False
+    def _createPeerByIP(self, ip, info):  
+        """adds a peer for that IP"""
+        log_info("new peer: %s" % ip)
+        # I add a new peer -> if I do not have an ID yet, the ID is the ip
+        self._peer_info[ip] = dict({u"name":ip,
+                                    u"group":u"",
+                                    u"ID":ip}.items() + info.items())
+        pID = self._peer_info[ip][u"ID"]
+        self._addPeerIPtoID(pID, ip)
+            
+        if not self._IP_seen.has_key(ip):
+            self._IP_seen[ip] = -1
             
     def updatePeerInfoByIP(self, ip, newInfo):  
-        """The info for the peer that contacted this lunchinator from the given IP 
-        will be updated with the data given by newInfo - afterwards a signal is emitted 
+        """Adds a peer info dict to an IP
+        
+        The info for the peer that contacted this lunchinator from the given IP 
+        will be updated with the data given by newInfo. If the IP is unknown, the
+        IP will be added as a new peer. Otherwise, a signal is emitted 
         and the group membership is checked in case this lunchinator is in a group.
         If the peer is in the same group it will be promoted to member, otherwise it 
         will be removed from the list of members. Further signals are emitted if the peer
-        is in a group we do not know yet and for member append/remove/update"""
-        with self._lock:    
-            if ip in self._new_peerIPs and len(newInfo) > 1:
-                '''only remove from new peers if this is more than a HELO'''
-                self._new_peerIPs.remove(ip)
+        is in a group we do not know yet and for member append/remove/update
+        """
+        with self._lock:
+            if ip not in self._peer_info:
+                # this is a new peer
+                self._createPeerByIP(ip, newInfo)
+                return
+             
             oldPID = self._peer_info[ip][u"ID"]
             old_info = deepcopy(self._peer_info[ip])
             self._peer_info[ip].update(newInfo)
@@ -337,8 +329,6 @@ class LunchPeers(object):
                         pID = self._peer_info[ip][u"ID"]
                         self._removePeerIPfromID(pID, ip)
                         del self._peer_info[ip]
-                        
-                self._new_peerIPs.clear()
         except:
             log_exception("Something went wrong while trying to clean up the list of peers and members")
     
@@ -346,10 +336,6 @@ class LunchPeers(object):
         """Returns all data stored in the peerInfo dict -> all data on all peers"""
         return deepcopy(self._peer_info)
             
-    def getNewPeerIPs(self):
-        """Returns the list of peers this lunchinator instance has not had contact with"""
-        return deepcopy(self._new_peerIPs)
-    
     # unlocked private operation:        
     def _checkInfoForReady(self, p_info):        
         if p_info and p_info.has_key(u"next_lunch_begin") and p_info.has_key(u"next_lunch_end"):
@@ -386,35 +372,25 @@ class LunchPeers(object):
         recentIP = list(self._idToIp[pID])[0]
         return self._peer_info[recentIP]     
     
-    def _initPeersFromFile(self):
+    def initPeersFromFile(self):
+        """Initializes peer IPs from file and returns a list of IPs
+        to request info from."""
         p_file = get_settings().get_peers_file() if os.path.exists(get_settings().get_peers_file()) else get_settings().get_members_file()
         
+        peerIPs = []
         if os.path.exists(p_file):
             with codecs.open(p_file, 'r', 'utf-8') as f:    
                 for line in f.readlines():
                     line = line.split("\t", 1)
                     hostn = line[0].strip()
-                    peerId = unicode(hostn)
-                    pInfo = None
-                    if len(line) > 1:
-                        try:
-                            pInfo = json.loads(line[1])
-                            if type(pInfo) != dict:
-                                raise
-                        except Exception, e:
-                            log_debug("Was not able to extract peerInfo from peersFile -> maybe old format: " + str(e))
-                            peerId = unicode(line[1].strip())
-                        
                     if not hostn:
                         continue
                     try:
                         ip = unicode(socket.gethostbyname(hostn))
-                        if pInfo:
-                            self.createPeerByIP(ip, pInfo)
-                        else:
-                            self.createPeerByIP(ip, {u"name":unicode(hostn), u"ID":peerId})
-                    except socket.error, e:
+                        peerIPs.append(ip)
+                    except socket.error:
                         log_warning("cannot find host specified in members_file by %s with name %s" % (p_file, hostn))
+        return peerIPs
     
     def _writePeersToFile(self):
         try:
@@ -422,8 +398,8 @@ class LunchPeers(object):
                 with codecs.open(get_settings().get_peers_file(), 'w', 'utf-8') as f:
                     f.truncate()
                     with self._lock:
-                        for ip, info in self._peer_info.iteritems():
-                            f.write(u"%s\t%s\n" % (ip, json.dumps(info)))
+                        for ip in self._peer_info:
+                            f.write(u"%s\n" % ip)
         except:
             log_exception("Could not write peers to %s" % (get_settings().get_peers_file()))    
         

@@ -152,8 +152,9 @@ class lunch_server(object):
             self.controller.initDone()
             
             #first thing to do: ask stored peers for their info:
-            if self._peers:
-                self.call_request_info()
+            if self._peers != None:
+                requests = self._peers.initPeersFromFile()
+                self.call_request_info(requests)
             
             while self.running:
                 try:
@@ -178,7 +179,7 @@ class lunch_server(object):
                     
                     # we also make sure, that there is a valid record for this ip,
                     # so we do not have to check this every time
-                    if self._peers.createPeerByIP(ip):
+                    if not self._peers.getPeerInfoByIP(ip):
                         #this is a new member - we ask for info right away
                         self.call_request_info([ip])
                     
@@ -202,7 +203,7 @@ class lunch_server(object):
                     
                     # if this packet has info about the peer, we record it and
                     # are done
-                    if self._handle_structure_event(ip, cmd, value):            
+                    if self._handle_structure_event(ip, cmd, value):
                         # now it's the plugins' turn:
                         self.controller.processEvent(cmd, value, ip)
                         continue
@@ -214,20 +215,16 @@ class lunch_server(object):
                     except:
                         log_exception("Unexpected error while handling event from group member %s call: %s" % (ip, str(sys.exc_info())))
                         log_critical("The data received was: %s" % data)
-                except socket.timeout:    
+                except socket.timeout:
                     announce_name = (announce_name + 1) % 10
                         
                     if len(self._peers) > 1:                     
                         if is_in_broadcast_mode:
                             is_in_broadcast_mode = False
-                            log_warning("ending braodcast")                            
+                            log_warning("ending broadcast")                            
                         if not self.own_ip:
                             self.own_ip = determineOwnIP(self._peers.getPeerIPs())
                         
-                        unknownPeers = self._peers.getNewPeerIPs()
-                        if len(unknownPeers):
-                            self.call_request_info(unknownPeers)
-                            
                         if announce_name == 0:
                             # it's time to announce my name again and switch the master
                             self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getPeerIPs())
@@ -387,7 +384,7 @@ class lunch_server(object):
             # the master send me the list of _members - yeah
             ext_members = json.loads(value)
             # add every entry and assume, the member is in my group
-            for m_ip, m_name in ext_members.iteritems():
+            for m_ip, _m_name in ext_members.iteritems():
                 if not self._peers.getPeerInfoByIP(m_ip):
                     #this is a new peer - ask for info right away
                     self.call_request_info([m_ip])
@@ -397,7 +394,9 @@ class lunch_server(object):
             
         elif cmd == "HELO":
             # this is just a ping with the members name
-            self._peers.updatePeerInfoByIP(ip, {u"name":value})     
+            if not self._peers.getPeerInfoByIP(ip):
+                #this is a new peer - ask for info right away
+                self.call_request_info([ip])
             
         else:
             r_value = False 
