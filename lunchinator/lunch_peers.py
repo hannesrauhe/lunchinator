@@ -312,10 +312,11 @@ class LunchPeers(object):
                 self._removeMember(newPID)
                 
     def removeInactive(self):
-        """1. members that haven't been seen for <memberTimeout> seconds are removed, 
+        """
+        1. members that haven't been seen for <memberTimeout> seconds are removed, 
         2. peers that haven't been seen for <peerTimeout> seconds or have never been seen 
-        are removed
-        3. the new peers list is cleaned, you should try to call them before invoking this"""
+           are removed
+        """
         
         log_debug("Removing inactive members and peers")      
         try:            
