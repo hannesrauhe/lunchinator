@@ -176,9 +176,8 @@ class lunch_server(object):
                     
                     # first we save the timestamp of this contact, no matter what
                     self._peers.seenIP(ip)
-                    
-                    # we also make sure, that there is a valid record for this ip,
-                    # so we do not have to check this every time
+
+                    # check if we know this peer                    
                     if not self._peers.getPeerInfoByIP(ip):
                         #this is a new member - we ask for info right away
                         self.call_request_info([ip])
