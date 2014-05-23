@@ -256,9 +256,13 @@ class LunchPeers(object):
         """adds a peer for that IP"""
         log_info("new peer: %s" % ip)
         # I add a new peer -> if I do not have an ID yet, the ID is the ip
-        self._peer_info[ip] = dict({u"name":ip,
-                                    u"group":u"",
-                                    u"ID":ip}.items() + info.items())
+        if u'group' not in info:
+            info[u'group'] = u""
+        if u'name' not in info:
+            info[u"name"] = ip
+        if u"ID" not in info:
+            info[u"ID"] = ip
+        self._peer_info[ip] = info
         pID = self._peer_info[ip][u"ID"]
         self._addPeerIPtoID(pID, ip)
             
