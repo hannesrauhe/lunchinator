@@ -529,7 +529,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def addHostClicked(self, hostn):
         try:
             ip = socket.gethostbyname(hostn.strip())
-            get_peers().createPeerByIP(ip, {u"name": unicode(hostn.strip())})
+            get_server().call_request_info([ip])
         except:
             d = QMessageBox(QMessageBox.Critical, "Error adding host", "Cannot add host: Hostname unknown: %s" % hostn, QMessageBox.Ok, self.mainWindow)
             d.exec_()

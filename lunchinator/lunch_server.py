@@ -388,8 +388,8 @@ class lunch_server(object):
             ext_members = json.loads(value)
             # add every entry and assume, the member is in my group
             for m_ip, m_name in ext_members.iteritems():
-                if self._peers.createPeerByIP(m_ip, {u"name":m_name, u"group":get_settings().get_group()}):
-                    #this is a new member - ask for info right away
+                if not self._peers.getPeerInfoByIP(m_ip):
+                    #this is a new peer - ask for info right away
                     self.call_request_info([m_ip])
 
         elif cmd == "HELO_LEAVE":
