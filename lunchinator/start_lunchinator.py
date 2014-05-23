@@ -35,6 +35,8 @@ def parse_args():
                       help="Send call to this specific member.")
     optionParser.add_option("--stop", default=False, dest="stop", action="store_true",
                       help="Stop local Lunch server.")
+    optionParser.add_option("--no-broadcast", default=False, dest="noBroadcast", action="store_true",
+                      help="Disable broadcasting if you are alone.")
     optionParser.add_option("--stopCode", default=False, dest="exitWithStopCode", action="store_true",
                       help="Exits immediately with the stop exit code.")
     return optionParser.parse_args()
@@ -144,6 +146,7 @@ def startLunchinator():
             from lunchinator import lunch_cli
             get_settings().set_plugins_enabled(usePlugins)
             get_server().set_has_gui(False)
+            get_server().set_disable_broadcast(options.noBroadcast)
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
         except:
@@ -157,6 +160,7 @@ def startLunchinator():
     #    sys.settrace(trace)
         get_settings().set_plugins_enabled(usePlugins)
         get_server().set_has_gui(False)
+        get_server().set_disable_broadcast(options.noBroadcast)
         get_server().initialize()
         get_server().start_server()
         sys.exit(get_server().exitCode)
@@ -176,6 +180,7 @@ def startLunchinator():
         usePlugins = checkDependencies(usePlugins, gui=True)
 
         get_settings().set_plugins_enabled(usePlugins)
+        get_server().set_disable_broadcast(options.noBroadcast)
         app.setQuitOnLastWindowClosed(False)
         lanschi = LunchinatorGuiController()
         if lanschi.isShuttingDown():

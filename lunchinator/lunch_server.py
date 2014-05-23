@@ -30,6 +30,7 @@ class lunch_server(object):
         self.controller = None
         self.initialized = False
         self._has_gui = True
+        self._disable_broadcast = False
         self.running = False
         self._peer_nr = 0
         self.plugin_manager = None
@@ -117,7 +118,13 @@ class lunch_server(object):
         return self._has_gui
     
     def set_has_gui(self, enable):
-        self._has_gui = enable 
+        self._has_gui = enable
+        
+    def set_disable_broadcast(self, disable):
+        self._disable_broadcast = disable
+        
+    def get_disable_broadcast(self):
+        return self._disable_broadcast
         
     def getOwnIP(self):
         # TODO replace by getOwnID if possible
@@ -232,10 +239,11 @@ class lunch_server(object):
                             # clean up peers
                             self._peers.removeInactive()
                     else:
-                        if not is_in_broadcast_mode:
-                            is_in_broadcast_mode = True
-                            log_warning("seems like you are alone - broadcasting for others")
-                        self._broadcast()
+                        if not self._disable_broadcast:
+                            if not is_in_broadcast_mode:
+                                is_in_broadcast_mode = True
+                                log_warning("seems like you are alone - broadcasting for others")
+                            self._broadcast()
                 except socket.error as e:
                     if e.errno != errno.EINTR:
                         raise
