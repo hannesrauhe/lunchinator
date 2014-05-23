@@ -152,7 +152,7 @@ class lunch_server(object):
             self.controller.initDone()
             
             #first thing to do: ask stored peers for their info:
-            if self._peers:
+            if len(self._peers):
                 self.call_request_info()
             
             while self.running:
