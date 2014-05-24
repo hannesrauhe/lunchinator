@@ -438,7 +438,16 @@ class iface_plugin(IPlugin):
 class iface_general_plugin(iface_plugin): 
     pass
 
-class iface_called_plugin(iface_plugin): 
+class iface_called_plugin(iface_plugin):
+    def processes_events_immediately(self):
+        """Override if the plugin can process events without peer information.
+        
+        If this method returns True, process_message, process_lunch_call
+        and process_event may be called even though the sending peer is
+        not known yet. 
+        """ 
+        return False
+        
     def process_message(self, msg, ip, member_info):
         pass
         
@@ -476,6 +485,15 @@ class iface_gui_plugin(iface_plugin):
         self.activate()
         sys.exit(app.exec_())
         
+    def processes_events_immediately(self):
+        """Override if the plugin can process events without peer information.
+        
+        If this method returns True, process_message, process_lunch_call
+        and process_event may be called even though the sending peer is
+        not known yet. 
+        """ 
+        return False
+    
     def process_message(self, msg, ip, member_info):
         pass
         

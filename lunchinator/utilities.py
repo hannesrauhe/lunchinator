@@ -69,7 +69,7 @@ def getValidQtParent():
         return qtParent
     raise Exception("Could not find a valid QObject instance")
     
-def processPluginCall(ip, call):
+def processPluginCall(ip, call, newPeer, fromQueue):
     from lunchinator import get_peers, get_plugin_manager
     if not get_settings().get_plugins_enabled():
         return
@@ -83,12 +83,15 @@ def processPluginCall(ip, call):
     
     # called also contains gui plugins
     for pluginInfo in get_plugin_manager().getPluginsOfCategory("called")+get_plugin_manager().getPluginsOfCategory("gui"):
-        if not (isinstance(pluginInfo.plugin_object, iface_called_plugin) or  isinstance(pluginInfo.plugin_object, iface_gui_plugin)):
+        if not (isinstance(pluginInfo.plugin_object, iface_called_plugin) or \
+                isinstance(pluginInfo.plugin_object, iface_gui_plugin)):
             log_warning("Plugin '%s' is not a called/gui plugin" % pluginInfo.name)
             continue
         if pluginInfo.plugin_object.is_activated:
             try:
-                call(pluginInfo.plugin_object, ip, member_info)
+                if (pluginInfo.plugin_object.processes_events_immediately() and not fromQueue) or \
+                   (not pluginInfo.plugin_object.processes_events_immediately() and not newPeer):
+                    call(pluginInfo.plugin_object, ip, member_info)
             except:
                 log_exception(u"plugin error in %s while processing event" % pluginInfo.name)
                 

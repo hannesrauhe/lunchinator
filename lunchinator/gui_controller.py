@@ -2,7 +2,7 @@
 import platform, sip, socket, os, subprocess
 from lunchinator import get_server, log_exception, log_info, get_settings, \
     log_error, convert_string, log_warning, get_notification_center, \
-    get_plugin_manager, get_peers
+    get_plugin_manager
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QAction, QSystemTrayIcon, QIcon, QCursor,\
     QDialog
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplication, QTimer
@@ -12,7 +12,7 @@ from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
-from lunchinator.utilities import processPluginCall, getPlatform, PLATFORM_MAC,\
+from lunchinator.utilities import getPlatform, PLATFORM_MAC,\
     getValidQtParent, restart, displayNotification
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 from lunchinator.notification_center_qt import NotificationCenterQt
@@ -32,8 +32,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _performCall = pyqtSignal(unicode, set, set)
     _sendFile = pyqtSignal(unicode, bytearray, int, bool)
     _receiveFile = pyqtSignal(unicode, int, unicode, int)
-    _processEvent = pyqtSignal(unicode, unicode, unicode)
-    _processMessage = pyqtSignal(unicode, unicode)
+    _processEvent = pyqtSignal(unicode, unicode, unicode, float, bool, bool)
+    _processMessage = pyqtSignal(unicode, unicode, float, bool, bool)
     _updateRequested = pyqtSignal()
     # -----------------------------
     
@@ -250,12 +250,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._sendFile.emit(ip, bytearray(fileOrData), otherTCPPort, isData)
 
     """ process any non-message event """    
-    def processEvent(self, cmd, hostName, senderIP):
-        self._processEvent.emit(cmd, hostName, senderIP)
+    def processEvent(self, cmd, hostName, senderIP, eventTime, newPeer, fromQueue):
+        self._processEvent.emit(cmd, hostName, senderIP, eventTime, newPeer, fromQueue)
     
     """ process any message event, including lunch calls """
-    def processMessage(self, msg, addr):
-        self._processMessage.emit(msg, addr)
+    def processMessage(self, msg, addr, eventTime, newPeer, fromQueue):
+        self._processMessage.emit(msg, addr, eventTime, newPeer, fromQueue)
                     
     """ ----------------- CALLED ON MAIN THREAD -------------------"""
     
@@ -644,15 +644,15 @@ class LunchinatorGuiController(QObject, LunchServerController):
         dr.finished.connect(dr.deleteLater)
         dr.start()
         
-    @pyqtSlot(unicode, unicode, unicode)
-    def processEventSlot(self, cmd, value, addr):
+    @pyqtSlot(unicode, unicode, unicode, float, bool, bool)
+    def processEventSlot(self, cmd, value, addr, eventTime, newPeer, fromQueue):
         cmd = convert_string(cmd)
         value = convert_string(value)
         addr = convert_string(addr)
-        processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info))
+        super(LunchinatorGuiController, self).processEvent(cmd, value, addr, eventTime, newPeer, fromQueue)
      
-    @pyqtSlot(unicode, unicode)
-    def processMessageSlot(self, msg, addr):
+    @pyqtSlot(unicode, unicode, float, bool, bool)
+    def processMessageSlot(self, msg, addr, eventTime, newPeer, fromQueue):
         msg = convert_string(msg)
         addr = convert_string(addr)
-        super(LunchinatorGuiController, self).processMessage(msg, addr)
+        super(LunchinatorGuiController, self).processMessage(msg, addr, eventTime, newPeer, fromQueue)

@@ -191,7 +191,7 @@ class lunch_server(object):
                         #this is a new member - we ask for info right away
                         self.call_request_info([ip])
                     
-                    self._handle_event(data, ip, isNewPeer)
+                    self._handle_event(data, ip, time(), isNewPeer, False)
                 except socket.timeout:
                     announce_name = (announce_name + 1) % 10
                     
@@ -346,21 +346,21 @@ class lunch_server(object):
         self.controller.extendMemberInfo(info_d)
         return json.dumps(info_d)      
     
-    def _enqueue_message(self, data, ip):
+    def _enqueue_event(self, data, ip, eventTime):
         log_debug("Peer of IP %s is unknown, enqueuing message" % ip)
         if ip in self._message_queues:
             queue = self._message_queues[ip]
         else:
             queue = (time(), [])
         
-        queue[1].append(data)
+        queue[1].append((eventTime, data))
         self._message_queues[ip] = queue
     
     def _process_queued_messages(self, ip):
         log_debug("Processing enqueued messages of IP", ip)
         if ip in self._message_queues:
-            for data in self._message_queues[ip][1]:
-                self._handle_event(data, ip, newPeer=False)
+            for eventTime, data in self._message_queues[ip][1]:
+                self._handle_event(data, ip, eventTime, newPeer=False, fromQueue=True)
             del self._message_queues[ip]
     
     def _remove_timed_out_queues(self):
@@ -373,22 +373,21 @@ class lunch_server(object):
                not data.startswith("HELO_INFO") and \
                not data.startswith("HELO_REQUEST_DICT")
     
-    def _handle_event(self, data, ip, newPeer):
+    def _handle_event(self, data, ip, eventTime, newPeer, fromQueue):
         # if there is no HELO in the beginning, it's just a message and 
         # we handle it, if the peer is in our group
         if not data.startswith("HELO"):
             # only process message if we know the peer
             if newPeer:
-                self._enqueue_message(data, ip)
+                self._enqueue_event(data, ip, eventTime)
+            if self._peers.isMemberByIP(ip):
+                try:
+                    self.getController().processMessage(data, ip, eventTime, newPeer, fromQueue)
+                except:
+                    log_exception("Error while handling incoming message from %s: %s" % (ip, data))
             else:
-                if self._peers.isMemberByIP(ip):
-                    try:
-                        self.getController().processMessage(data, ip)
-                    except:
-                        log_exception("Error while handling incoming message from %s: %s" % (ip, data))
-                else:
-                    log_debug("Dropped a message from %s: %s" % (ip, data))
-                return
+                log_debug("Dropped a message from %s: %s" % (ip, data))
+            return
         
         cmd = u""
         value = u""
@@ -399,20 +398,20 @@ class lunch_server(object):
             log_error("Command of %s has no payload: %s" % (ip, data))
         
         # if this packet has info about the peer, we record it and
-        # are done. These events are always processed, regardless
-        # of whether we know the peer or not.
+        # are done. These events are always processed immediately and
+        # not enqueued.
         if self._handle_structure_event(ip, cmd, value, newPeer):
             # now it's the plugins' turn:
-            self.controller.processEvent(cmd, value, ip)
+            self.controller.processEvent(cmd, value, ip, eventTime, False, False)
             return
                             
         try:
             if newPeer:
-                self._enqueue_message(data, ip)
-            else:
-                self._handle_incoming_event(ip, cmd, value)
-                # now it's the plugins' turn:
-                self.controller.processEvent(cmd, value, ip)                     
+                self._enqueue_event(data, ip, eventTime)
+                
+            self._handle_incoming_event(ip, cmd, value, newPeer, fromQueue)
+            # now it's the plugins' turn:
+            self.controller.processEvent(cmd, value, ip, eventTime, newPeer, fromQueue)
         except:
             log_exception("Unexpected error while handling event from group member %s call: %s" % (ip, str(sys.exc_info())))
             log_critical("The data received was: %s" % data)
@@ -468,8 +467,12 @@ class lunch_server(object):
         return False   
       
             
-    def _handle_incoming_event(self, ip, cmd, value): 
+    def _handle_incoming_event(self, ip, cmd, value, newPeer, _fromQueue):
         # todo: maybe from here on this should be in plugins?
+        
+        # I don't see any reason to process these events for unknown peers.
+        if newPeer:
+            return
         
         if cmd == "HELO_AVATAR":
             # someone wants to send me his pic via TCP
