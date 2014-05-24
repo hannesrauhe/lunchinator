@@ -123,7 +123,7 @@ class remote_pictures(iface_gui_plugin):
                     
             for peerID in peerIDs:
                 # yield each IP for this peer ID 
-                for ip in get_peers().getAllIPsOfPeer(peerID):
+                for ip in get_peers().getPeerIPs(peerID):
                     yield ip
             
     def generateTrustedIPs(self):
