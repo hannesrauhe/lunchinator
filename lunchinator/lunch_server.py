@@ -366,6 +366,7 @@ class lunch_server(object):
     def _remove_timed_out_queues(self):
         for ip in set(self._message_queues.keys()):
             if time() - self._message_queues[ip][0] > get_settings().get_member_timeout():
+                log_debug("Removing queued messages from IP", ip)
                 del self._message_queues[ip]
     
     def _should_call_info_on_event(self, data):
