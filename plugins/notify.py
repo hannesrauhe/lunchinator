@@ -129,7 +129,10 @@ class Notify(iface_called_plugin):
                 log_error("configured audio file %s does not exist in sounds folder, using old one"%new_value)
             # don't set the new value, keep old value
         return audio_file
-            
+    
+    def processes_events_immediately(self):
+        return True    
+    
     def process_message(self,msg,addr,member_info):
         name = " ["+addr+"]"
         icon = self.options[u"icon_file"]

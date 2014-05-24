@@ -28,6 +28,9 @@ class statistics(iface_called_plugin):
         log_debug("Statistics: Using DB Connection ",type(self.connectionPlugin))
         return True
             
+    def processes_events_immediately(self):
+        return True
+            
     def process_message(self,msg,addr,member_info):
         if self.connectionPlugin or self.connect_to_db():
             self.connectionPlugin.insert_call("msg", msg, addr)
