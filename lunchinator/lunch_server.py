@@ -2,7 +2,7 @@
 # coding=utf-8
 
 import socket, sys, os, json, contextlib, tarfile, platform, random, errno
-from time import strftime, localtime
+from time import strftime, localtime, time
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
@@ -35,6 +35,7 @@ class lunch_server(object):
         self._peer_nr = 0
         self.plugin_manager = None
         self.own_ip = None
+        self._message_queues = {} # queues for messages from new peers
         
         self.exitCode = 0  
         
@@ -144,8 +145,6 @@ class lunch_server(object):
         
         self.my_master = -1  # the peer i use as master
         announce_name = -1  # how often did I announce my name
-        cmd = ""
-        value = ""
         
         self.own_ip = determineOwnIP(self._peers.getPeerIPs())
         
@@ -159,7 +158,7 @@ class lunch_server(object):
             self.controller.initDone()
             
             #first thing to do: ask stored peers for their info:
-            if self._peers != None:
+            if len(self._peers) == 0:
                 requests = self._peers.initPeersFromFile()
                 self.call_request_info(requests)
             
@@ -167,6 +166,8 @@ class lunch_server(object):
                 try:
                     data, addr = s.recvfrom(1024)
                     ip = unicode(addr[0])
+                    
+                    log_debug("Incoming event from %s: %s" % (ip, data))
                     try:
                         data = data.decode('utf-8')
                     except:
@@ -184,46 +185,16 @@ class lunch_server(object):
                     # first we save the timestamp of this contact, no matter what
                     self._peers.seenIP(ip)
 
-                    # check if we know this peer                    
-                    if not self._peers.getPeerInfoByIP(ip):
+                    # check if we know this peer          
+                    isNewPeer = self._peers.getPeerInfoByIP(ip) == None          
+                    if isNewPeer and self._should_call_info_on_event(data):
                         #this is a new member - we ask for info right away
                         self.call_request_info([ip])
                     
-                    # if there is no HELO in the beginning, it's just a message and 
-                    # we handle it, if the peer is in our group
-                    if not data.startswith("HELO"):
-                        if self._peers.isMemberByIP(ip):
-                            try:
-                                self.getController().processMessage(data, ip)
-                            except:
-                                log_exception("Error while handling incoming message from %s: %s" % (ip, data))
-                        else:
-                            log_debug("Dropped a message from %s: %s" % (ip, data))
-                        continue
-                    
-                    try:
-                        # commands must always have additional info:
-                        (cmd, value) = data.split(" ", 1)
-                    except:
-                        log_error("Command of %s has no payload: %s" % (ip, data))
-                    
-                    # if this packet has info about the peer, we record it and
-                    # are done
-                    if self._handle_structure_event(ip, cmd, value):
-                        # now it's the plugins' turn:
-                        self.controller.processEvent(cmd, value, ip)
-                        continue
-                                        
-                    try:        
-                        self._handle_incoming_event(ip, cmd, value)
-                        # now it's the plugins' turn:
-                        self.controller.processEvent(cmd, value, ip)                     
-                    except:
-                        log_exception("Unexpected error while handling event from group member %s call: %s" % (ip, str(sys.exc_info())))
-                        log_critical("The data received was: %s" % data)
+                    self._handle_event(data, ip, isNewPeer)
                 except socket.timeout:
                     announce_name = (announce_name + 1) % 10
-                        
+                    
                     if len(self._peers) > 1:                     
                         if is_in_broadcast_mode:
                             is_in_broadcast_mode = False
@@ -238,6 +209,7 @@ class lunch_server(object):
                     
                             # clean up peers
                             self._peers.removeInactive()
+                            self._remove_timed_out_queues()
                     else:
                         if not self._disable_broadcast:
                             if not is_in_broadcast_mode:
@@ -374,18 +346,96 @@ class lunch_server(object):
         self.controller.extendMemberInfo(info_d)
         return json.dumps(info_d)      
     
-    def _handle_structure_event(self, ip, cmd, value):
+    def _enqueue_message(self, data, ip):
+        log_debug("Peer of IP %s is unknown, enqueuing message" % ip)
+        if ip in self._message_queues:
+            queue = self._message_queues[ip]
+        else:
+            queue = (time(), [])
+        
+        queue[1].append(data)
+        self._message_queues[ip] = queue
+    
+    def _process_queued_messages(self, ip):
+        log_debug("Processing enqueued messages of IP", ip)
+        if ip in self._message_queues:
+            for data in self._message_queues[ip][1]:
+                self._handle_event(data, ip, newPeer=False)
+            del self._message_queues[ip]
+    
+    def _remove_timed_out_queues(self):
+        for ip in set(self._message_queues.keys()):
+            if time() - self._message_queues[ip][0] > get_settings().get_member_timeout():
+                del self._message_queues[ip]
+    
+    def _should_call_info_on_event(self, data):
+        return not data.startswith("HELO_REQUEST_INFO") and \
+               not data.startswith("HELO_INFO") and \
+               not data.startswith("HELO_REQUEST_DICT")
+    
+    def _handle_event(self, data, ip, newPeer):
+        # if there is no HELO in the beginning, it's just a message and 
+        # we handle it, if the peer is in our group
+        if not data.startswith("HELO"):
+            # only process message if we know the peer
+            if newPeer:
+                self._enqueue_message(data, ip)
+            else:
+                if self._peers.isMemberByIP(ip):
+                    try:
+                        self.getController().processMessage(data, ip)
+                    except:
+                        log_exception("Error while handling incoming message from %s: %s" % (ip, data))
+                else:
+                    log_debug("Dropped a message from %s: %s" % (ip, data))
+                return
+        
+        cmd = u""
+        value = u""
+        try:
+            # commands must always have additional info:
+            (cmd, value) = data.split(" ", 1)
+        except:
+            log_error("Command of %s has no payload: %s" % (ip, data))
+        
+        # if this packet has info about the peer, we record it and
+        # are done. These events are always processed, regardless
+        # of whether we know the peer or not.
+        if self._handle_structure_event(ip, cmd, value, newPeer):
+            # now it's the plugins' turn:
+            self.controller.processEvent(cmd, value, ip)
+            return
+                            
+        try:
+            if newPeer:
+                self._enqueue_message(data, ip)
+            else:
+                self._handle_incoming_event(ip, cmd, value)
+                # now it's the plugins' turn:
+                self.controller.processEvent(cmd, value, ip)                     
+        except:
+            log_exception("Unexpected error while handling event from group member %s call: %s" % (ip, str(sys.exc_info())))
+            log_critical("The data received was: %s" % data)
+    
+    def _handle_structure_event(self, ip, cmd, value, newPeer):
         r_value = True
         
         if cmd == "HELO_INFO":
             self._peers.updatePeerInfoByIP(ip, json.loads(value))
+            if newPeer:
+                self._process_queued_messages(ip)
+            
         elif cmd == "HELO_REQUEST_INFO":
             self._peers.updatePeerInfoByIP(ip, json.loads(value))
             self.call_info()
-                
+            if newPeer:
+                self._process_queued_messages(ip)
+        
         elif cmd == "HELO_REQUEST_DICT":
             self._peers.updatePeerInfoByIP(ip, json.loads(value))   
             self.call_dict(ip)           
+            if newPeer:
+                self._process_queued_messages(ip)
 
         elif cmd == "HELO_DICT":
             # the master send me the list of _members - yeah
