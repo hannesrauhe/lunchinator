@@ -284,24 +284,24 @@ class LunchPeers(object):
             if ip not in self._peer_info:
                 # this is a new peer
                 self._createPeerByIP(ip, newInfo)
-                return
-             
-            oldPID = self._peer_info[ip][u"ID"]
-            old_info = deepcopy(self._peer_info[ip])
-            self._peer_info[ip].update(newInfo)
-                
-            newPID = self._peer_info[ip][u"ID"]
-            
-            if newPID != oldPID:
-                self._removePeerIPfromID(oldPID, ip)
-                self._addPeerIPtoID(newPID, ip)
+                newPID = self._peer_info[ip][u"ID"]
             else:
-                # TODO(Hannes) this info is now the most recent for this ID
-                if old_info != self._peer_info[ip]:
-                    get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
-                    log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
+                oldPID = self._peer_info[ip][u"ID"]
+                old_info = deepcopy(self._peer_info[ip])
+                self._peer_info[ip].update(newInfo)
+                    
+                newPID = self._peer_info[ip][u"ID"]
+                
+                if newPID != oldPID:
+                    self._removePeerIPfromID(oldPID, ip)
+                    self._addPeerIPtoID(newPID, ip)
                 else:
-                    log_debug("%s sent info - without new info" % ip)
+                    # TODO(Hannes) this info is now the most recent for this ID
+                    if old_info != self._peer_info[ip]:
+                        get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
+                        log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
+                    else:
+                        log_debug("%s sent info - without new info" % ip)
             
             own_group = get_settings().get_group()       
             
