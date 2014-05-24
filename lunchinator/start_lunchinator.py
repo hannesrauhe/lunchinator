@@ -11,6 +11,8 @@ from lunchinator import log_info, log_error, get_settings,\
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
 from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS, restart
 import os
+from lunchinator import setLoggingLevel
+import logging
     
 def parse_args():
     usage = "usage: %prog [options]"
@@ -39,6 +41,8 @@ def parse_args():
                       help="Disable broadcasting if you are alone.")
     optionParser.add_option("--stopCode", default=False, dest="exitWithStopCode", action="store_true",
                       help="Exits immediately with the stop exit code.")
+    optionParser.add_option("-v", "--verbose", default=False, dest="verbose", action="store_true",
+                      help="Enable DEBUG output (override setting).")
     return optionParser.parse_args()
 
 def trace(frame, event, _):
@@ -125,6 +129,10 @@ def checkDependencies(noPlugins, gui = False):
 
 def startLunchinator():
     (options, _args) = parse_args()
+    
+    if options.verbose:
+        get_settings()
+        setLoggingLevel(logging.DEBUG)
     usePlugins = options.noPlugins
     if options.exitWithStopCode:
         sys.exit(EXIT_CODE_STOP)
