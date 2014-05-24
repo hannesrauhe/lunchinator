@@ -1,4 +1,4 @@
-import os, codecs, socket, json
+import os, codecs, socket
 from copy import deepcopy
 from time import time
 from lunchinator import get_settings, log_warning, log_exception, log_debug, log_info, get_notification_center
@@ -31,6 +31,7 @@ class LunchPeers(object):
 
     def __init__(self):
         """after initializing all variables, the peer information form the lust run is read from a file"""
+        self._potentialPeers = set() # set containing data from lunch_peers.cfg 
         self._memberIDs = set()  # of PeerIDs members: peers that sent their info, are active and belong to my group
         self._IP_seen = {}  # last seen timestamps by IP
         self._peer_info = {}  # information of every peer by IP
@@ -391,6 +392,7 @@ class LunchPeers(object):
                     if not hostn:
                         continue
                     try:
+                        self._potentialPeers.add(hostn)
                         ip = unicode(socket.gethostbyname(hostn))
                         peerIPs.append(ip)
                     except socket.error:
@@ -399,12 +401,13 @@ class LunchPeers(object):
     
     def _writePeersToFile(self):
         try:
-            if len(self._peer_info) > 1:
+            with self._lock:
+                for ip in self._peer_info:
+                    hostname = socket.gethostbyaddr(ip)[0]
+                    self._potentialPeers.add(hostname)
                 with codecs.open(get_settings().get_peers_file(), 'w', 'utf-8') as f:
                     f.truncate()
-                    with self._lock:
-                        for ip in self._peer_info:
-                            f.write(u"%s\n" % ip)
+                    f.write(u"\n".join(sorted(self._potentialPeers)))
         except:
             log_exception("Could not write peers to %s" % (get_settings().get_peers_file()))    
         
