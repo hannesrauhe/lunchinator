@@ -1,7 +1,8 @@
 import os, codecs, socket
 from copy import deepcopy
 from time import time
-from lunchinator import get_settings, log_warning, log_exception, log_debug, log_info, get_notification_center
+from lunchinator import get_settings, log_warning, log_exception, log_debug, log_info, get_notification_center,\
+    log_error
 from lunchinator.utilities import getTimeDifference
 from lunchinator.logging_mutex import loggingMutex
         
@@ -26,7 +27,7 @@ def peerGetter(needsID=False):
                 try:
                     if not pIP and pID:
                         if pID in self._idToIp:
-                            pIP = iter(self._idToIp[pID]).next()
+                            pIP = self._idToIp[pID][-1]
                         else:
                             pIP = None
                     return func(self, pIP)
@@ -99,7 +100,20 @@ class LunchPeers(object):
         """record that there was contact with the given IP just now
         needed for cleanup of peer data
         (done by the lunch server thread)"""
-        self._IP_seen[ip] = time() 
+        self._IP_seen[ip] = time()
+        
+        # check if ip is the last one in the ip list of the corresponding peer
+        with self._lock:
+            pID = self.getPeerID(pIP=ip, lock=False)
+            if pID in self._idToIp:
+                ips = self._idToIp[pID]
+                if ips[-1] != ip:
+                    # move last seen to the end of the list
+                    try:
+                        idx = ips.index(ip)
+                        ips[idx], ips[-1] = ips[-1], ips[idx]
+                    except ValueError:
+                        log_error("IP", ip, "of peer", pID, "not in _idToIP")
         
     def getIPLastSeen(self, ip):
         """returns a timestamp of the last contact with that IP"""
@@ -112,7 +126,7 @@ class LunchPeers(object):
         """returns a timestamp of the last contact with the peer given by its ID"""
         with self._lock:
             if pID in self._idToIp:
-                return max([self.getIPLastSeen(ip) for ip in self._idToIp[pID]])
+                return self._idToIp[pID][-1]
             else:
                 return -1
     
@@ -376,11 +390,11 @@ class LunchPeers(object):
      
     def _addPeerIPtoID(self, pID, ip):       
         if pID not in self._idToIp:
-            self._idToIp[pID] = set()
-            self._idToIp[pID].add(ip)   
+            self._idToIp[pID] = [ip]
             get_notification_center().emitPeerAppended(pID, deepcopy(self._peer_info[ip]))
         else:
-            self._idToIp[pID].add(ip)   
+            # last one is last seen one
+            self._idToIp[pID].append(ip)   
             
     def initPeersFromFile(self):
         """Initializes peer IPs from file and returns a list of IPs
