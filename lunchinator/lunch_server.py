@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # coding=utf-8
 
-import socket, sys, os, json, contextlib, tarfile, platform, random, errno
-from time import strftime, localtime, time
+import socket, sys, os, json, contextlib, tarfile, platform, random, errno, threading
+from time import strftime, localtime, time, sleep
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
@@ -138,7 +138,6 @@ class lunch_server(object):
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"), "Starting the lunch notifier service")
         
         self.my_master = -1  # the peer i use as master
-        announce_name = -1  # how often did I announce my name
         
         is_in_broadcast_mode = False
         
@@ -147,6 +146,8 @@ class lunch_server(object):
             s.bind(("", 50000)) 
             s.settimeout(5.0)
             self.running = True
+            cThread = lunch_interval_thread(self)
+            cThread.start()
             self.controller.initDone()
             
             #first thing to do: ask stored peers for their info:
@@ -185,28 +186,17 @@ class lunch_server(object):
                     
                     self._handle_event(data, ip, time(), isNewPeer, False)
                 except socket.timeout:
-                    announce_name = (announce_name + 1) % 10
                     
                     if len(self._peers) > 1:                     
                         if is_in_broadcast_mode:
                             is_in_broadcast_mode = False
-                            log_warning("ending broadcast")                            
-                        
-                        if announce_name == 0:
-                            # it's time to announce my name again and switch the master
-                            self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getPeerIPs())
-                            self.call_request_dict()
-                    
-                            # clean up peers
-                            self._peers.removeInactive()
+                            log_warning("ending broadcast")       
                     else:
                         if not self._disable_broadcast:
                             if not is_in_broadcast_mode:
                                 is_in_broadcast_mode = True
                                 log_warning("seems like you are alone - broadcasting for others")
                             self._broadcast()
-                    self._remove_timed_out_queues()
-                    self._cleanup_cached_messages()
                 except socket.error as e:
                     if e.errno != errno.EINTR:
                         raise
@@ -220,11 +210,14 @@ class lunch_server(object):
         finally: 
             self.running = False
             try:
+                #make sure to close the cleanup thread first
+                cThread.join()
+                
                 self.call("HELO_LEAVE bye")
                 s.close()  
             except:
                 log_warning("Wasn't able to send the leave call and close the socket...")
-            self._finish()          
+            self._finish()
             
     def stop_server(self, stop_any=False):
         '''this stops a running server thread
@@ -574,4 +567,32 @@ class lunch_server(object):
             s_broad.close()
         except:
             log_exception("Problem while broadcasting")
+            
+class lunch_interval_thread(threading.Thread):
+    '''this thread does everything that's necessary on a regular basis'''
+    
+    def __init__(self, server_obj):
+        super(lunch_interval_thread, self).__init__()
+        self.server_obj = server_obj
+            
+    def run(self):    
+        #running through the loop every 3 seconds, but only do something every 30 seconds
+        #->thread can end faster   
+        announce_name = 1  #nothing happens the first 30 seconds
+        while self.server_obj.running:                          
+            announce_name = (announce_name + 1) % 10
+            if announce_name == 0:
+                log_debug("clean up thread runs")
+                try:
+                    # it's time to announce my name again and switch the master
+                    self.server_obj.call("HELO " + get_settings().get_user_name(), peerIPs=self.server_obj._peers.getPeerIPs())
+                    self.server_obj.call_request_dict()
+            
+                    # clean up peers
+                    self.server_obj._peers.removeInactive()            
+                    self.server_obj._remove_timed_out_queues()
+                    self.server_obj._cleanup_cached_messages()
+                except:
+                    log_exception("Something went wrong in the lunch interval thread")
+            sleep(3)
                         
