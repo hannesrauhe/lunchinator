@@ -147,8 +147,7 @@ class lunch_settings(object):
                 
         #also in config, but hidden
         self._ID = u""
-        self._member_timeout = 300
-        self._peer_timeout = 10000
+        self._peer_timeout = 300
         
         self._next_lunch_begin = None
         self._next_lunch_end = None
@@ -481,12 +480,6 @@ class lunch_settings(object):
     def set_peer_timeout(self, v):
         self._peer_timeout = v
         
-    def get_member_timeout(self):
-        return self._member_timeout
-    @hidden_setting()
-    def set_member_timeout(self, v):
-        self._member_timeout = v
-    
     def get_tcp_port(self):
         return self._tcp_port
     @gui_setting(u"TCP port", restart=True)

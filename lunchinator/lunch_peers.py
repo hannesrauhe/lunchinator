@@ -314,29 +314,21 @@ class LunchPeers(object):
                 
     def removeInactive(self):
         """
-        1. members that haven't been seen for <memberTimeout> seconds are removed, 
-        2. peers that haven't been seen for <peerTimeout> seconds or have never been seen 
-           are removed
+        peers that haven't been seen for <peerTimeout> seconds are removed
+        and a PeerRemoved notification is sent. If a removed peer was a
+        member, a MemberRemoved notification is sent, too.
         """
         
-        log_debug("Removing inactive members and peers")      
+        log_debug("Removing inactive peers")      
         try:            
             with self._lock:
-                # copy before changing members-list, cannot change while iterating
-                mIDs = deepcopy(self._memberIDs)
-                for mID in mIDs:
-                    for ip in self._idToIp[mID]:       
-                        if time() - self._IP_seen[ip] > get_settings().get_member_timeout():
-                            self._removeMember(mID)
-                            break
-             
                 for ip in self._IP_seen:
                     if ip in self._peer_info and time() - self._IP_seen[ip] > get_settings().get_peer_timeout():
                         pID = self._peer_info[ip][u"ID"]
                         self._removePeerIPfromID(pID, ip)
                         del self._peer_info[ip]
         except:
-            log_exception("Something went wrong while trying to clean up the list of peers and members")
+            log_exception("Something went wrong while trying to clean up the list of peers")
     
     def getPeerInfoDict(self):
         """Returns all data stored in the peerInfo dict -> all data on all peers"""
@@ -362,7 +354,10 @@ class LunchPeers(object):
             # no IP associated with that ID -> remove peer
             self._removeMember(pID)
             self._idToIp.pop(pID)
-            get_notification_center().emitPeerRemoved(pID)  
+            get_notification_center().emitPeerRemoved(pID)
+            
+            # if this peer is a member, remove it, too
+            self._removeMember(pID)
      
     def _addPeerIPtoID(self, pID, ip):       
         if pID not in self._idToIp:

@@ -357,15 +357,16 @@ class lunch_server(object):
         self._message_queues[ip] = queue
     
     def _process_queued_messages(self, ip):
-        log_debug("Processing enqueued messages of IP", ip)
         if ip in self._message_queues:
+            if len(self._message_queues[ip][1]) > 0:
+                log_debug("Processing enqueued messages of IP", ip)
             for eventTime, data in self._message_queues[ip][1]:
                 self._handle_event(data, ip, eventTime, newPeer=False, fromQueue=True)
             del self._message_queues[ip]
     
     def _remove_timed_out_queues(self):
         for ip in set(self._message_queues.keys()):
-            if time() - self._message_queues[ip][0] > get_settings().get_member_timeout():
+            if time() - self._message_queues[ip][0] > get_settings().get_peer_timeout():
                 log_debug("Removing queued messages from IP", ip)
                 del self._message_queues[ip]
     
