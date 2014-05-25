@@ -3,10 +3,9 @@ from lunchinator import get_peers, log_debug
 from lunchinator.utilities import getTimeDifference
 from lunchinator.lunch_settings import lunch_settings
 import time
-from functools import partial
 from datetime import datetime
 from PyQt4.QtCore import Qt, QVariant, QModelIndex
-from PyQt4.QtGui import QColor
+from PyQt4.QtGui import QColor, QBrush
 
 class MembersTableModel(TableModelBase):
     LUNCH_TIME_TIMER_ROLE = TableModelBase.SORT_ROLE + 1
@@ -26,6 +25,13 @@ class MembersTableModel(TableModelBase):
                    (u"LunchTime", self._updateLunchTimeItem)]
         super(MembersTableModel, self).__init__(dataSource, columns)
         
+        self._grayBrush = QBrush(QColor(150,150,150))
+        self._green = QColor(0, 255, 0)
+        self._grayGreen = QColor(150,220,150)
+        
+        self._red = QColor(255, 0, 0)
+        self._grayRed = QColor(200,150,150)
+        
         # Called before server is running, no need to lock here
         for peerID in self.dataSource:
             infoDict = dataSource.getPeerInfo(peerID)
@@ -34,14 +40,16 @@ class MembersTableModel(TableModelBase):
     def _getRowToolTip(self, peerID, _infoDict):
         return u"ID: %s\nIPs: %s" % (peerID, ', '.join(get_peers().getPeerIPs(pID=peerID)))
 
-    def _updateIpItem(self, ip, _, item):
-        item.setData(QVariant(ip), Qt.DisplayRole)
+    def _grayOutItem(self, item):
+        item.setData(self._grayBrush, Qt.ForegroundRole)
 
-    def _updateNameItem(self, ip, infoDict, item):
+    def _updateNameItem(self, peerID, infoDict, item):
         if self._NAME_KEY in infoDict:
             item.setText(infoDict[self._NAME_KEY])
         else:
-            item.setText(ip)
+            item.setText(peerID)
+        if not self.dataSource.isMember(pID=peerID):
+            self._grayOutItem(item)
         
     def removeRow(self, row, parent=QModelIndex()):
         # ensure no timer is active after a row has been removed
@@ -52,11 +60,13 @@ class MembersTableModel(TableModelBase):
             timer.deleteLater()
         return TableModelBase.removeRow(self, row, parent)
         
-    def _updateLunchTimeItem(self, _ip, infoDict, item):
+    def _updateLunchTimeItem(self, peerID, infoDict, item):
         oldTimer = item.data(self.LUNCH_TIME_TIMER_ROLE)
         if oldTimer != None:
             oldTimer.stop()
             oldTimer.deleteLater()
+            
+        isMember = self.dataSource.isMember(pID=peerID)
         if self._LUNCH_BEGIN_KEY in infoDict and self._LUNCH_END_KEY in infoDict:
             item.setText(infoDict[self._LUNCH_BEGIN_KEY]+"-"+infoDict[self._LUNCH_END_KEY])
             try:
@@ -66,19 +76,24 @@ class MembersTableModel(TableModelBase):
                 timeDifference = getTimeDifference(infoDict[self._LUNCH_BEGIN_KEY],infoDict[self._LUNCH_END_KEY])
                 if timeDifference != None:
                     if timeDifference > 0:
-                        item.setData(QColor(0, 255, 0), Qt.DecorationRole)
+                        item.setData(self._green if isMember else self._grayGreen, Qt.DecorationRole)
                     else:
-                        item.setData(QColor(255, 0, 0), Qt.DecorationRole)
+                        item.setData(self._red if isMember else self._grayRed, Qt.DecorationRole)
             except ValueError:
                 log_debug("Ignoring illegal lunch time:", infoDict[self._LUNCH_BEGIN_KEY])
         else:
             item.setData(QVariant(-1), self.SORT_ROLE)
             
-    def _updateGroupItem(self, _peerID, infoDict, item):
+        if not isMember:
+            self._grayOutItem(item)
+            
+    def _updateGroupItem(self, peerID, infoDict, item):
         if self._GROUP_KEY in infoDict:
             item.setText(infoDict[self._GROUP_KEY])
         else:
             item.setText(u"")
+        if not self.dataSource.isMember(pID=peerID):
+            self._grayOutItem(item)
         
     def _dataForKey(self, key):
         return self.dataSource.getPeerInfo(pID=key)
