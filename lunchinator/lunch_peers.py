@@ -345,9 +345,9 @@ class LunchPeers(object):
                     existing_info = self._peer_info[ip]
                 elif ip not in self._peer_info and newPID in self._idToIp:
                     # this is a new IP for an existing peer
-                    self._addPeerIPtoID(newPID, ip)
-                    existing_info = self.getPeerInfo(pID=newPID, lock=False)
+                    existing_info = self._peer_info[self._idToIp[newPID][-1]]
                     self._peer_info[ip] = existing_info
+                    self._addPeerIPtoID(newPID, ip)
                 elif ip in self._peer_info and newPID not in self._idToIp:
                     # we already know this IP but it is not this peer - should not happen
                     log_error("Something went wrong - ID", newPID, "is missing in _idToIp")
