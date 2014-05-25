@@ -1,5 +1,3 @@
-from lunchinator import log_error, log_debug
-
 def loggingMutex(name, qMutex=False, logging=False):
     if logging:
         return _LoggingMutexQt(name) if qMutex else _LoggingMutexThreading(name)
@@ -25,26 +23,31 @@ class _LoggingMutex(object):
         raise NotImplementedError
 
     def acquire(self):
+        if self.currentThreadID() == self.currentThread:
+            raise Exception("Requesting lock from the same thread")
+        
+        self._acquire()
+        self.currentThread = self.currentThreadID()
+    
+    def _acquire(self):
         raise NotImplementedError
     
     def release(self):
+        self.currentThread = None
+        self._release()
+    
+    def _release(self):
         raise NotImplementedError
 
     def __enter__(self):
         if self.currentThreadID() == self.currentThread:
-            import traceback
-#             log_error("Requesting lock from the same thread")
-#             traceback.print_stack()
             raise Exception("Requesting lock from the same thread")
         
-        #log_debug("Requesting mutex", self.name)
         self.enterMutex()
         self.currentThread = self.currentThreadID()
-        #log_debug("Entering mutex", self.name)
         return self
     
     def __exit__(self, *args, **kwargs):
-        #log_debug("Leaving mutex", self.name)
         self.currentThread = None
         self.exitMutex(*args, **kwargs)
         
@@ -58,10 +61,10 @@ class _LoggingMutexThreading(_LoggingMutex):
         from threading import currentThread
         return currentThread().ident
 
-    def acquire(self):
+    def _acquire(self):
         self.mutex.acquire()
         
-    def release(self):
+    def _release(self):
         self.mutex.release()
 
     def enterMutex(self):
@@ -80,10 +83,10 @@ class _LoggingMutexQt(_LoggingMutex):
         from PyQt4.QtCore import QThread
         return QThread.currentThreadId()
     
-    def acquire(self):
+    def _acquire(self):
         self.mutex.lock()
         
-    def release(self):
+    def _release(self):
         self.mutex.unlock()
     
     def enterMutex(self):
