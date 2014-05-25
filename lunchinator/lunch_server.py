@@ -9,6 +9,7 @@ from lunchinator import log_debug, log_info, log_critical, get_settings, log_exc
     convert_string
 from lunchinator.lunch_peers import LunchPeers
 from lunchinator.messages import Messages
+from lunchinator.logging_mutex import loggingMutex
 from collections import deque
 
 EXIT_CODE_ERROR = 1
@@ -36,6 +37,9 @@ class lunch_server(object):
         self.plugin_manager = None
         self._message_queues = {} # queues for messages from new peers
         self._last_messages = {} # last messages by peer ID, to avoid duplicates
+        
+        self.message_queues_lock = loggingMutex("message_queues", logging=get_settings().get_verbose())
+        self.cached_messages_lock = loggingMutex("cached_messages", logging=get_settings().get_verbose())
         
         self.exitCode = 0  
         
@@ -332,27 +336,31 @@ class lunch_server(object):
     
     def _enqueue_event(self, data, ip, eventTime):
         log_debug("Peer of IP %s is unknown, enqueuing message" % ip)
-        if ip in self._message_queues:
-            queue = self._message_queues[ip]
-        else:
-            queue = (time(), [])
         
-        queue[1].append((eventTime, data))
-        self._message_queues[ip] = queue
-    
+        with self.message_queues_lock:
+            if ip in self._message_queues:
+                queue = self._message_queues[ip]
+            else:
+                queue = (time(), [])
+            
+            queue[1].append((eventTime, data))
+            self._message_queues[ip] = queue
+        
     def _process_queued_messages(self, ip):
-        if ip in self._message_queues:
-            if len(self._message_queues[ip][1]) > 0:
-                log_debug("Processing enqueued messages of IP", ip)
-            for eventTime, data in self._message_queues[ip][1]:
-                self._handle_event(data, ip, eventTime, newPeer=False, fromQueue=True)
-            del self._message_queues[ip]
+        with self.message_queues_lock:
+            if ip in self._message_queues:
+                if len(self._message_queues[ip][1]) > 0:
+                    log_debug("Processing enqueued messages of IP", ip)
+                for eventTime, data in self._message_queues[ip][1]:
+                    self._handle_event(data, ip, eventTime, newPeer=False, fromQueue=True)
+                del self._message_queues[ip]
     
     def _remove_timed_out_queues(self):
-        for ip in set(self._message_queues.keys()):
-            if time() - self._message_queues[ip][0] > get_settings().get_peer_timeout():
-                log_debug("Removing queued messages from IP", ip)
-                del self._message_queues[ip]
+        with self.message_queues_lock:
+            for ip in set(self._message_queues.keys()):
+                if time() - self._message_queues[ip][0] > get_settings().get_peer_timeout():
+                    log_debug("Removing queued messages from IP", ip)
+                    del self._message_queues[ip]
     
     def _should_call_info_on_event(self, data):
         return not data.startswith("HELO_REQUEST_INFO") and \
@@ -360,28 +368,32 @@ class lunch_server(object):
                not data.startswith("HELO_REQUEST_DICT")
     
     def _cache_message(self, peerID, ip, data, eventTime):
-        if peerID in self._last_messages:
-            lastMessages = self._last_messages[peerID]
-        else:
-            lastMessages = deque()
-        lastMessages.append((eventTime, ip, data))
-        self._last_messages[peerID] = lastMessages
+        with self.cached_messages_lock:
+            if peerID in self._last_messages:
+                lastMessages = self._last_messages[peerID]
+            else:
+                lastMessages = deque()
+            lastMessages.append((eventTime, ip, data))
+            self._last_messages[peerID] = lastMessages
         
     def _is_message_duplicate(self, peerID, ip, data):
         # with a high probability, the message is a duplicate if it comes
         # from the same ID but from a different IP.
-        if peerID in self._last_messages:
-            for _eventTime, old_ip, old_data in self._last_messages[peerID]:
-                if ip != old_ip and data == old_data:
-                    return True
+        
+        with self.cached_messages_lock:
+            if peerID in self._last_messages:
+                for _eventTime, old_ip, old_data in self._last_messages[peerID]:
+                    if ip != old_ip and data == old_data:
+                        return True
         return False
     
-    def _cleanup_cached_messages(self):
-        curTime = time()
-        for queue in self._last_messages.itervalues():
-            while len(queue) > 0 and curTime - queue[0][0] > get_settings().get_message_cache_timeout():
-                queue.popleft()
-    
+    def _cleanup_cached_messages(self):        
+        with self.cached_messages_lock:
+            curTime = time()
+            for queue in self._last_messages.itervalues():
+                while len(queue) > 0 and curTime - queue[0][0] > get_settings().get_message_cache_timeout():
+                    queue.popleft()
+        
     def _handle_event(self, data, ip, eventTime, newPeer, fromQueue):
         # if there is no HELO in the beginning, it's just a message and 
         # we handle it, if the peer is in our group

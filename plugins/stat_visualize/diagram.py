@@ -102,6 +102,9 @@ class statSwarmWidget(QtGui.QWidget):
         self.period = 1
         self.mtype = "HELO%"
         
+        self.last_painted_period = 0
+        self.last_painted_mtype = ""
+        
         #const:
         self.maxCircleSize = 50
         self.myCircleSize = 20        
@@ -123,8 +126,13 @@ class statSwarmWidget(QtGui.QWidget):
         return self.mtype
     
     def retrieveDataFromDatabase(self):
-        if time.time()<self.query_unbuffer:
+        if time.time()<self.query_unbuffer and \
+          self.last_painted_mtype == self.mtype and \
+          self.last_painted_period == self.period:
             return
+        
+        self.last_painted_period = self.period
+        self.last_painted_mtype = self.mtype
                 
         self.scale = 1
         self.numPeers = 0
