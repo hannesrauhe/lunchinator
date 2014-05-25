@@ -343,11 +343,13 @@ class LunchPeers(object):
                 if ip in self._peer_info and newPID in self._idToIp:
                     # this is an update
                     existing_info = self._peer_info[ip]
+                    newIP = False
                 elif ip not in self._peer_info and newPID in self._idToIp:
                     # this is a new IP for an existing peer
                     existing_info = self._peer_info[self._idToIp[newPID][-1]]
                     self._peer_info[ip] = existing_info
                     self._addPeerIPtoID(newPID, ip)
+                    newIP = True
                 elif ip in self._peer_info and newPID not in self._idToIp:
                     # we already know this IP but it is not this peer - should not happen
                     log_error("Something went wrong - ID", newPID, "is missing in _idToIp")
@@ -356,7 +358,7 @@ class LunchPeers(object):
                 old_info = deepcopy(existing_info)
                 self._peer_info[ip].update(newInfo)
                     
-                if old_info != self._peer_info[ip]:
+                if newIP or old_info != self._peer_info[ip]:
                     get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
                     log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
                 else:
