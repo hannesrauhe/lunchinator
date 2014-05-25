@@ -58,7 +58,7 @@ class members_table(iface_gui_plugin):
         
         self._lunchTimeColumnTimer = QTimer(self.membersModel)
         self._lunchTimeColumnTimer.timeout.connect(self._startSyncedTimer)
-        self._lunchTimeColumnTimer.start(msecUntilNextMinute)
+        self._lunchTimeColumnTimer.start(msecUntilNextMinute())
         
         return self.membersTable
     
