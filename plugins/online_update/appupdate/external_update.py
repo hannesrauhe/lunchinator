@@ -15,6 +15,7 @@ class ExternalUpdateHandler(AppUpdateHandler):
             call = ["dpkg", "-s", "lunchinator"]         
             fh = open(os.path.devnull,"w")
             p = subprocess.Popen(call,stdout=fh, stderr=fh)
+            p.communicate()
             retCode = p.returncode
             if retCode == 0:
                 return True
@@ -26,6 +27,7 @@ class ExternalUpdateHandler(AppUpdateHandler):
             call = "rpm -qa | grep lunchinator"         
             fh = open(os.path.devnull,"w")
             p = subprocess.Popen(call,stdout=fh, stderr=fh, shell=True)
+            p.communicate()
             retCode = p.returncode
             if retCode == 0:
                 return True
