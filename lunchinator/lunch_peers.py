@@ -173,7 +173,21 @@ class LunchPeers(object):
             self._memberIDs.remove(pID)
             get_notification_center().emitMemberRemoved(pID)  
     
-    ################ Peer Operations #####################            
+    ################ Peer Operations #####################    
+    def removePeer(self, pID):
+        pID = None
+        with self._lock:
+            if pID not in self._idToIp:
+                return
+            pIPs = self._idToIp.pop(pID)
+            self._removeMember(pID)
+            for pIP in pIPs:
+                self._peer_info.pop(pIP)
+        
+        #doing this outside of the lock:        
+        if pID:
+            get_notification_center().emitPeerRemoved(pID)
+                
     def removePeerIPs(self, toRemove):
         """removes the given IPs and drops information collected about these peers.
         If a peer is registered under multiple IPs and not all are removed its data 
@@ -395,12 +409,10 @@ class LunchPeers(object):
         
         if 0 == len(self._idToIp[pID]):
             # no IP associated with that ID -> remove peer
+            #remove member first
             self._removeMember(pID)
             self._idToIp.pop(pID)
             get_notification_center().emitPeerRemoved(pID)
-            
-            # if this peer is a member, remove it, too
-            self._removeMember(pID)
         else:
             get_notification_center().emitPeerUpdated(pID, deepcopy(self._peer_info[ip]))
      

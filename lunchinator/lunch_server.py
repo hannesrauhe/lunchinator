@@ -468,7 +468,9 @@ class lunch_server(object):
                     self.call_request_info([m_ip])
 
         elif cmd == "HELO_LEAVE":
-            self._peers.removeMembersByIP(ip)
+            #the peer tells me that he leaves, I'll remove all of his IPs
+            pID = self._peers.getPeerID(pIP=ip)
+            self._peers.removePeer(pID)
             
         elif cmd == "HELO":
             # this is just a ping with the members name
