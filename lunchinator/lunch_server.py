@@ -7,7 +7,6 @@ from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string
-from lunchinator.utilities import determineOwnIP
 from lunchinator.lunch_peers import LunchPeers
 from lunchinator.messages import Messages
 
@@ -34,7 +33,6 @@ class lunch_server(object):
         self.running = False
         self._peer_nr = 0
         self.plugin_manager = None
-        self.own_ip = None
         self._message_queues = {} # queues for messages from new peers
         
         self.exitCode = 0  
@@ -127,12 +125,6 @@ class lunch_server(object):
     def get_disable_broadcast(self):
         return self._disable_broadcast
         
-    def getOwnIP(self):
-        # TODO replace by getOwnID if possible
-        # answer Hannes: call getID on settings
-        return self.own_ip   
-
-        
     def getLunchPeers(self):
         return self._peers 
     
@@ -145,8 +137,6 @@ class lunch_server(object):
         
         self.my_master = -1  # the peer i use as master
         announce_name = -1  # how often did I announce my name
-        
-        self.own_ip = determineOwnIP(self._peers.getPeerIPs())
         
         is_in_broadcast_mode = False
         
@@ -199,8 +189,6 @@ class lunch_server(object):
                         if is_in_broadcast_mode:
                             is_in_broadcast_mode = False
                             log_warning("ending broadcast")                            
-                        if not self.own_ip:
-                            self.own_ip = determineOwnIP(self._peers.getPeerIPs())
                         
                         if announce_name == 0:
                             # it's time to announce my name again and switch the master

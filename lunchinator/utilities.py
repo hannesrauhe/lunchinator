@@ -175,7 +175,8 @@ def getGPG(secret=False):
             keyid = _findLunchinatorKeyID(gpg, secret)
     
     return gpg, keyid
-    
+
+# TODO not used anymore. May be removed.    
 '''for the external IP a connection to someone has to be opened briefly
    therefore a list of possible peers is needed'''
 def determineOwnIP(peers):

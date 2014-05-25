@@ -149,7 +149,7 @@ class remote_pictures(iface_gui_plugin):
             reject = True
             if trustPolicy == u"Local":
                 # TODO use ownID()
-                if ip == u"127.0.0.1" or ip == get_server().own_ip:
+                if ip == u"127.0.0.1" or peerID == get_settings().get_ID():
                     reject = False
             elif trustPolicy == "Everybody":
                 reject = False
