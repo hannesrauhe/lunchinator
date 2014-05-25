@@ -5,7 +5,7 @@ from lunchinator.lunch_settings import lunch_settings
 import time
 from functools import partial
 from datetime import datetime
-from PyQt4.QtCore import Qt, QVariant, QModelIndex, QTimer
+from PyQt4.QtCore import Qt, QVariant, QModelIndex
 from PyQt4.QtGui import QColor
 
 class MembersTableModel(TableModelBase):
@@ -52,7 +52,7 @@ class MembersTableModel(TableModelBase):
             timer.deleteLater()
         return TableModelBase.removeRow(self, row, parent)
         
-    def _updateLunchTimeItem(self, ip, infoDict, item):
+    def _updateLunchTimeItem(self, _ip, infoDict, item):
         oldTimer = item.data(self.LUNCH_TIME_TIMER_ROLE)
         if oldTimer != None:
             oldTimer.stop()
@@ -69,12 +69,6 @@ class MembersTableModel(TableModelBase):
                         item.setData(QColor(0, 255, 0), Qt.DecorationRole)
                     else:
                         item.setData(QColor(255, 0, 0), Qt.DecorationRole)
-                    
-                    if timeDifference != 0:
-                        timer = QTimer(item.model())
-                        timer.timeout.connect(partial(self._updateLunchTimeItem, ip, infoDict, item))
-                        timer.setSingleShot(True)
-                        timer.start(abs(timeDifference))
             except ValueError:
                 log_debug("Ignoring illegal lunch time:", infoDict[self._LUNCH_BEGIN_KEY])
         else:
@@ -86,10 +80,9 @@ class MembersTableModel(TableModelBase):
         else:
             item.setText(u"")
         
-    def _updateLastSeenItem(self, peerID, _, item):
-        intValue = -1
-        timeout = self.dataSource.getIDLastSeen(peerID)
-        if timeout != None:
-            intValue = int(time.time() - timeout)
-        item.setData(QVariant(intValue), Qt.DisplayRole)
-    
+    def _dataForKey(self, key):
+        return self.dataSource.getPeerInfo(pID=key)
+        
+    def updateLunchTimeColumn(self):
+        self.updateColumn(self.LUNCH_TIME_COL_INDEX)
+        

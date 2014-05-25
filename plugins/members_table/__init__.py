@@ -1,7 +1,6 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import log_exception, get_settings, get_server,\
-    get_notification_center, get_peers
-import urllib2,sys
+from lunchinator import get_server, get_notification_center, get_peers
+from lunchinator.utilities import msecUntilNextMinute
     
 class members_table(iface_gui_plugin):
     def __init__(self):
@@ -20,17 +19,6 @@ class members_table(iface_gui_plugin):
     def addHostClicked(self, text):
         if get_server().controller != None:
             get_server().controller.addHostClicked(text)        
-    
-    def destroy_widget(self):
-        iface_gui_plugin.destroy_widget(self)
-        
-        get_notification_center().disconnectPeerAppended(self.membersModel.externalRowAppended)
-        get_notification_center().disconnectPeerUpdated(self.membersModel.externalRowUpdated)
-        get_notification_center().disconnectPeerRemoved(self.membersModel.externalRowRemoved)
-
-        self.membersTable = None
-        self.membersModel = None
-        self.membersProxyModel = None
     
     def create_widget(self, parent):
         from PyQt4.QtGui import QSortFilterProxyModel
@@ -68,8 +56,32 @@ class members_table(iface_gui_plugin):
         get_notification_center().connectPeerUpdated(self.membersModel.externalRowUpdated)
         get_notification_center().connectPeerRemoved(self.membersModel.externalRowRemoved)
         
+        self._lunchTimeColumnTimer = QTimer(self.membersModel)
+        self._lunchTimeColumnTimer.timeout.connect(self._startSyncedTimer)
+        self._lunchTimeColumnTimer.start(msecUntilNextMinute)
+        
         return self.membersTable
     
+    def _startSyncedTimer(self):
+        self.membersModel.updateLunchTimeColumn()
+        self._lunchTimeColumnTimer.timeout.disconnect(self._startSyncedTimer)
+        self._lunchTimeColumnTimer.timeout.connect(self.membersModel.updateLunchTimeColumn)
+        self._lunchTimeColumnTimer.start(60000)
+
+    def destroy_widget(self):
+        iface_gui_plugin.destroy_widget(self)
+        
+        get_notification_center().disconnectPeerAppended(self.membersModel.externalRowAppended)
+        get_notification_center().disconnectPeerUpdated(self.membersModel.externalRowUpdated)
+        get_notification_center().disconnectPeerRemoved(self.membersModel.externalRowRemoved)
+
+        self._lunchTimeColumnTimer.stop()
+        self._lunchTimeColumnTimer.deleteLater()
+
+        self.membersTable = None
+        self.membersModel = None
+        self.membersProxyModel = None
+        
     def add_menu(self,menu):
         pass
 

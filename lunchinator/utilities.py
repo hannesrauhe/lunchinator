@@ -1,5 +1,5 @@
 import subprocess, sys, os, contextlib, json, shutil, socket
-from datetime import datetime
+from datetime import datetime, timedelta
 from lunchinator import log_exception, log_warning, log_debug, \
     get_settings, log_error
 
@@ -271,6 +271,12 @@ def getTimeDifference(begin, end):
     except:
         log_exception("don't know how to handle time span")
         return None
+
+def msecUntilNextMinute():
+    now = datetime.now()
+    nextMin = now.replace(second=0, microsecond=0) + timedelta(minutes=1, seconds=1)
+    td = nextMin - now
+    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
     
 def getApplicationBundle():
     """Determines the path to the Mac application bundle"""

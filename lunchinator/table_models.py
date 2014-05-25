@@ -1,14 +1,6 @@
-from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex, QString, QTimer, QModelIndex,\
-    QAbstractItemModel
-from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
-import time
-from functools import partial
-from datetime import datetime, timedelta
-from lunchinator import convert_string, get_peers, log_debug,\
-    get_server
-from lunch_settings import lunch_settings
-from lunchinator.utilities import getTimeDifference
-from time import mktime
+from PyQt4.QtCore import Qt, QVariant, QSize, QStringList, QString
+from PyQt4.QtGui import QStandardItemModel, QStandardItem
+from lunchinator import convert_string
 
 class TableModelBase(QStandardItemModel):
     KEY_ROLE = Qt.UserRole + 1
@@ -83,9 +75,13 @@ class TableModelBase(QStandardItemModel):
         self.keys.insert(0, key)
         self.insertRow(0, self.createRow(key, data))
 
+    def _dataForKey(self, _key):
+        """Override to support updateColumn"""
+        return None
+    
     def updateColumn(self, column):
         for row, key in enumerate(self.keys):
-            self.updateItem(key, None, row, column)
+            self.updateItem(key, self._dataForKey(key), row, column)
             
     def updateRow(self, key, data, row):
         for column in range(self.columnCount()):
