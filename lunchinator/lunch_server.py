@@ -562,7 +562,7 @@ class lunch_server(object):
         log_info(strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"), "Stopping the lunch notifier service")
         self._peers.finish()
         if self._messages:
-            self._messages.writeToFile(get_settings().get_messages_file())
+            self._messages.finish()
         self.controller.serverStopped(self.exitCode)
     
     def _broadcast(self):

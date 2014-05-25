@@ -52,13 +52,17 @@ class MessagesTableModel(QAbstractItemModel):
             elif index.column() == self.SENDER_COL:
                 # sender
                 peerID = message[1]
+                # look in peers first, it's always up to date
                 name = get_peers().getPeerName(pID=peerID, lock=False)
                 if not name:
-                    # check if peerID is IP (from old version)
-                    peerID = get_peers().getPeerID(pID=peerID, lock=False)
-                    if peerID:
-                        name = get_peers().getPeerName(pID=peerID, lock=False)
-                return QVariant(get_peers().getPeerName(pID=peerID, lock=False))
+                    # look up in stored peer names
+                    name = get_server().get_messages().getStoredPeerName(peerID) 
+                    if not name:
+                        # check if peerID is IP (from old version)
+                        name = get_peers().getPeerName(pIP=peerID, lock=False)
+                        if not name:
+                            name = peerID
+                return QVariant(name)
             else:
                 return QVariant(message[2])
         elif role == Qt.SizeHintRole:

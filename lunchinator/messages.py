@@ -1,5 +1,6 @@
 from lunchinator.logging_mutex import loggingMutex
-from lunchinator import log_exception, log_warning, log_debug, get_settings
+from lunchinator import log_exception, log_warning, log_debug, get_settings,\
+    get_notification_center, convert_string
 import lunchinator
 from time import localtime, mktime
 import codecs, json, os, sys
@@ -12,11 +13,12 @@ class Messages(object):
     def __init__(self, path, logging):
         self._lock = loggingMutex("messages", logging=logging)
         self._db, plugin_type = lunchinator.get_db_connection()
+        self._peerNameCache = {}
         
         if plugin_type != "SQLite Connection":
             log_warning("Your standard connection is not of type SQLite." + \
                 "Loading messages from another type is experimental.")
-            
+        
         if not self._db.existsTable("CORE_MESSAGE_VERSION"):
             self._db.execute("CREATE TABLE CORE_MESSAGE_VERSION(VERSION INTEGER)")
             self._db.execute("INSERT INTO CORE_MESSAGE_VERSION(VERSION) VALUES(?)", self._DB_VERSION_INITIAL)
@@ -27,9 +29,16 @@ class Messages(object):
             self._length = 0
             self._latest = None
             self.importOld(get_settings().get_legacy_messages_file())
+                        
+        if not self._db.existsTable("CORE_MESSAGE_PEER_NAMES"):
+            self._db.execute("CREATE TABLE CORE_MESSAGE_PEER_NAMES(PEER_ID TEXT PRIMARY KEY NOT NULL, PEER_NAME TEXT)")
+
         else:
             self._latest = self._getLatest()
             self._length = self._getNumMessages()
+            
+        get_notification_center().connectPeerAppended(self._addPeerName)
+        get_notification_center().connectPeerUpdated(self._addPeerName)
 
     def _getDBVersion(self):
         return self._db.query("SELECT VERSION FROM CORE_MESSAGE_VERSION")[0][0]
@@ -65,14 +74,35 @@ class Messages(object):
                 log_exception("Could not read messages file %s, but it seems to exist" % (path))
     
     
-    def writeToFile(self, path):
-        # TODO: writeToFile just closes DB connection? - remove this function or rename it
-        log_debug("write to file called in messages - not necessary")
-#        try:
-#            self._db.close()
-#        except:
-#            log_exception("Could not write messages to %s: %s" % (path, sys.exc_info()[0])) 
+    def finish(self):
+        get_notification_center().disconnectPeerAppended(self._addPeerName)
+        get_notification_center().disconnectPeerUpdated(self._addPeerName)
+        
+    def _addPeerName(self, peerID, peerInfo):
+        peerID = convert_string(peerID)
+        oldName = self.getStoredPeerName(peerID)
+        if oldName == None:
+            # need to insert
+            self._db.execute("INSERT INTO CORE_MESSAGE_PEER_NAMES VALUES(?, ?)", peerID, peerInfo[u"name"])
+        elif oldName != peerInfo[u"name"]:
+            # need to update
+            self._db.execute("UPDATE CORE_MESSAGE_PEER_NAMES SET PEER_NAME = ? WHERE PEER_ID = ?", peerInfo[u"name"], peerID)
+        self._peerNameCache[peerID] = peerInfo[u"name"]
+            
+    def _getPeerNameFromDB(self, peerID):
+        # TODO bulk loading if necessary
+        res = self._db.query("SELECT PEER_NAME FROM CORE_MESSAGE_PEER_NAMES WHERE PEER_ID = ?", peerID)
+        if len(res) > 0:
+            return res[0][0]
+        return None
     
+    def getStoredPeerName(self, peerID):
+        """Returns the peer name that was stored in the database."""
+        if peerID not in self._peerNameCache:
+            peerName = self._getPeerNameFromDB(peerID)
+            self._peerNameCache[peerID] = peerName
+        return self._peerNameCache[peerID]
+        
     def insert(self, mtime, addr, msg):
         """Insert a new message
         
