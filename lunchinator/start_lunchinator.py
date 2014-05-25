@@ -131,7 +131,7 @@ def startLunchinator():
     (options, _args) = parse_args()
     
     if options.verbose:
-        get_settings()
+        get_settings().set_verbose(True)
         setLoggingLevel(logging.DEBUG)
     usePlugins = options.noPlugins
     if options.exitWithStopCode:

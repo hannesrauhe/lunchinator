@@ -138,6 +138,7 @@ class lunch_settings(object):
         self._alarm_begin_time = u"11:30"
         self._alarm_end_time = u"13:00"
         self._mute_timeout = 30
+        self._verbose = False
         self._logging_level = u"ERROR"
         self._group_plugins = False
         self._default_db_connection = u"Standard"
@@ -502,8 +503,11 @@ class lunch_settings(object):
         elif self._logging_level == u"DEBUG":
             setLoggingLevel(logging.DEBUG)
         
+    def set_verbose(self, verbose):
+        """Set True to override logging level"""
+        self._verbose = verbose
     def get_verbose(self):
-        return self._logging_level == u"DEBUG"
+        return self._verbose or self._logging_level == u"DEBUG"
         
     def get_group_plugins(self):
         return self._group_plugins
