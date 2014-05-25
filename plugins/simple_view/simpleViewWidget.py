@@ -70,6 +70,9 @@ class SimpleViewWidget(QWidget):
         readyMembers = peers.getReadyMembers()
         notReadyMembers = peers.getMembers() - readyMembers
         
+        # don't display members with unknown status as ready
+        readyMembers = [pID for pID in readyMembers if peers.isPeerReadinessKnown(pID=pID)]
+        
         readyText = ", ".join([peers.getPeerName(pID=x) for x in readyMembers])
         notReadyText = ", ".join([peers.getPeerName(pID=x) for x in notReadyMembers])
         memToolTip += "<span style='color:green'>%s</span><br />" % readyText if len(readyMembers) else ""

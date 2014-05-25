@@ -443,6 +443,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         readyMembers = peers.getReadyMembers()
         notReadyMembers = peers.getMembers() - readyMembers
         
+        # don't display members with unknown status as ready
+        readyMembers = [pID for pID in readyMembers if peers.isPeerReadinessKnown(pID=pID)]
+        
         everybodyReady = False
         if not readyMembers and not notReadyMembers:
             status = u"No members."

@@ -240,9 +240,21 @@ class LunchPeers(object):
             return self._checkInfoForReady(self._peer_info[ip])
         return False    
     
+    @peerGetter()
+    def isPeerReadinessKnown(self, ip):
+        """returns True if there is a valid lunch time interval for the peer"""
+        if ip in self._peer_info:
+            p_info = self._peer_info[ip]
+            if p_info and p_info.has_key(u"next_lunch_begin") and p_info.has_key(u"next_lunch_end"):
+                diff = getTimeDifference(p_info[u"next_lunch_begin"], p_info[u"next_lunch_end"])
+                if diff != None:
+                    # valid format
+                    return True
+        return False
+        
     ############### Additional getters ##################
     
-    def _checkInfoForReady(self, p_info):        
+    def _checkInfoForReady(self, p_info):
         if p_info and p_info.has_key(u"next_lunch_begin") and p_info.has_key(u"next_lunch_end"):
             diff = getTimeDifference(p_info[u"next_lunch_begin"], p_info[u"next_lunch_end"])
             if diff == None:
