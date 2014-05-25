@@ -444,7 +444,8 @@ class iface_called_plugin(iface_plugin):
         
         If this method returns True, process_message, process_lunch_call
         and process_event may be called even though the sending peer is
-        not known yet. 
+        not known yet. Note that member_info will be None if the peer
+        is unknown.
         """ 
         return False
         
@@ -490,7 +491,8 @@ class iface_gui_plugin(iface_plugin):
         
         If this method returns True, process_message, process_lunch_call
         and process_event may be called even though the sending peer is
-        not known yet. 
+        not known yet. Note that member_info will be None if the peer
+        is unknown.
         """ 
         return False
     
