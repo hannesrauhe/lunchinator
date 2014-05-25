@@ -90,7 +90,7 @@ class lunch_server(object):
         '''Sends the information about my peers to one peer identified by its IP at a time'''      
         peers_dict = {}
         for pIP in self._peers.getPeerIPs():
-            peers_dict[pIP] = self._peers.getPeerNameByIP(pIP)
+            peers_dict[pIP] = self._peers.getPeerName(pIP=pIP)
         self.call("HELO_DICT " + json.dumps(peers_dict), peerIPs=[ip]) 
         
     def call_request_dict(self):
@@ -186,7 +186,7 @@ class lunch_server(object):
                     self._peers.seenIP(ip)
 
                     # check if we know this peer          
-                    isNewPeer = self._peers.getPeerInfoByIP(ip) == None          
+                    isNewPeer = self._peers.getPeerInfo(pIP=ip) == None          
                     if isNewPeer and self._should_call_info_on_event(data):
                         #this is a new member - we ask for info right away
                         self.call_request_info([ip])
@@ -260,7 +260,7 @@ class lunch_server(object):
         else:
             target = peerIPs
             for pID in peerIDs:
-                pIPs = self._peers.getPeerIPs(pID)
+                pIPs = self._peers.getPeerIPs(pID=pID)
                 if len(pIPs):
                     target = target.union(pIPs)
                 else:
@@ -274,7 +274,7 @@ class lunch_server(object):
            not msg.startswith(u"HELO") and \
            get_settings().get_lunch_trigger().upper() in msg.upper():
             # check if everyone is ready
-            notReadyMembers = [self._peers.getPeerNameByIP(ip) for ip in target if not self._peers.isPeerReadyByIP(ip)]
+            notReadyMembers = [self._peers.getPeerName(pIP=ip) for ip in target if not self._peers.isPeerReady(pIP=ip)]
             
             if notReadyMembers:
                     
@@ -382,7 +382,7 @@ class lunch_server(object):
             # only process message if we know the peer
             if newPeer:
                 self._enqueue_event(data, ip, eventTime)
-            if self._peers.isMemberByIP(ip):
+            if self._peers.isMember(pIP=ip):
                 try:
                     self.getController().processMessage(data, ip, eventTime, newPeer, fromQueue)
                 except:
@@ -443,7 +443,7 @@ class lunch_server(object):
             ext_members = json.loads(value)
             # add every entry and assume, the member is in my group
             for m_ip, _m_name in ext_members.iteritems():
-                if not self._peers.getPeerInfoByIP(m_ip):
+                if not self._peers.getPeerInfo(pIP=m_ip):
                     #this is a new peer - ask for info right away
                     self.call_request_info([m_ip])
 
@@ -452,7 +452,7 @@ class lunch_server(object):
             
         elif cmd == "HELO":
             # this is just a ping with the members name
-            if not self._peers.getPeerInfoByIP(ip):
+            if not self._peers.getPeerInfo(pIP=ip):
                 #this is a new peer - ask for info right away
                 self.call_request_info([ip])
             
@@ -462,7 +462,7 @@ class lunch_server(object):
         return r_value
 
     def requets_avatar(self, ip): 
-        info = self._peers.getPeerInfoByIP(ip)
+        info = self._peers.getPeerInfo(pIP=ip)
         if info and u"avatar" in info and not os.path.exists(os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])):
             self.call("HELO_REQUEST_AVATAR " + str(self.controller.getOpenTCPPort(ip)), peerIPs=[ip])  
             return True
@@ -484,7 +484,7 @@ class lunch_server(object):
             if len(values) > 1:
                 tcp_port = int(values[1].strip())
             file_name = ""
-            info = self._peers.getPeerInfoByIP(ip)
+            info = self._peers.getPeerInfo(pIP=ip)
             if u"avatar" in info:
                 file_name = os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])
             else:

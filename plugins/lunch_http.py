@@ -70,7 +70,7 @@ class lunch_http(iface_called_plugin):
             index = 0
             peerIDs = get_peers().getPeers()
             for peerID in peerIDs:
-                infodict = get_peers().getPeerInfo(peerID)
+                infodict = get_peers().getPeerInfo(pID=peerID)
                 if infodict == None:
                     infodict = {}
                 table_data["id"][index] = peerID

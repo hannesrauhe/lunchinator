@@ -109,7 +109,7 @@ class remote_pictures(iface_gui_plugin):
             aPeer = aPeer.strip()
             
             peerIDs = []
-            if get_peers().getPeerIPs(aPeer):
+            if get_peers().isPeerID(pID=aPeer):
                 # is a peer ID
                 peerIDs = [aPeer]
             else:
@@ -123,7 +123,7 @@ class remote_pictures(iface_gui_plugin):
                     
             for peerID in peerIDs:
                 # yield each IP for this peer ID 
-                for ip in get_peers().getPeerIPs(peerID):
+                for ip in get_peers().getPeerIPs(pID=peerID):
                     yield ip
             
     def generateTrustedIPs(self):
@@ -144,7 +144,7 @@ class remote_pictures(iface_gui_plugin):
             
     def process_event(self,cmd,value,ip,_info):
         if cmd=="HELO_REMOTE_PIC":
-            peerID = get_peers().getPeerID(ip)
+            peerID = get_peers().getPeerID(pIP=ip)
             trustPolicy = self.options['trust_policy']
             reject = True
             if trustPolicy == u"Local":
@@ -160,7 +160,7 @@ class remote_pictures(iface_gui_plugin):
                     from PyQt4.QtGui import QMessageBox
                     box = QMessageBox(QMessageBox.Question,
                                       "Accept Picture",
-                                      "%s wants to send you a picture. Do you want to accept pictures from this member?" % get_peers().getPeerName(peerID),
+                                      "%s wants to send you a picture. Do you want to accept pictures from this member?" % get_peers().getPeerName(pID=peerID),
                                       QMessageBox.Yes | QMessageBox.YesToAll | QMessageBox.No | QMessageBox.NoToAll,
                                       self.gui)
                     box.setDefaultButton(QMessageBox.No)
@@ -176,10 +176,10 @@ class remote_pictures(iface_gui_plugin):
                         reject = False
                     
             if reject:
-                log_debug("Rejecting remote picture from %s (%s)" % (ip, get_peers().getPeerID(peerID)))
+                log_debug("Rejecting remote picture from %s (%s)" % (ip, peerID))
                 return
             else:
-                log_debug("Accepting remote picture from %s (%s)" % (ip, get_peers().getPeerID(peerID)))
+                log_debug("Accepting remote picture from %s (%s)" % (ip, peerID))
             
             with contextlib.closing(StringIO(value.encode('utf-8'))) as strIn:
                 reader = csv.reader(strIn, delimiter = ' ', quotechar = '"')

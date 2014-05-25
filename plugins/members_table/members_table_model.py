@@ -32,7 +32,7 @@ class MembersTableModel(TableModelBase):
             self.appendContentRow(peerID, infoDict)
             
     def _getRowToolTip(self, peerID, _infoDict):
-        return u"ID: %s\nIPs: %s" % (peerID, ', '.join(get_peers().getPeerIPs(peerID)))
+        return u"ID: %s\nIPs: %s" % (peerID, ', '.join(get_peers().getPeerIPs(pID=peerID)))
 
     def _updateIpItem(self, ip, _, item):
         item.setData(QVariant(ip), Qt.DisplayRole)

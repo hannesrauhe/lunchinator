@@ -75,11 +75,7 @@ def processPluginCall(ip, call, newPeer, fromQueue):
         return
     from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
     
-    peerID = get_peers().getPeerID(ip)
-    member_info = get_peers().getPeerInfo(peerID)
-#     member_info = get_peers().getPeerInfo(ip)
-#     if member_info == None:
-#         member_info = {}
+    member_info = get_peers().getPeerInfo(pIP=ip)
     
     # called also contains gui plugins
     for pluginInfo in get_plugin_manager().getPluginsOfCategory("called")+get_plugin_manager().getPluginsOfCategory("gui"):

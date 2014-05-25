@@ -5,6 +5,37 @@ from lunchinator import get_settings, log_warning, log_exception, log_debug, log
 from lunchinator.utilities import getTimeDifference
 from lunchinator.logging_mutex import loggingMutex
         
+def peerGetter(needsID=False):
+    def peerDecorator(func):
+        if needsID:
+            def newGetter(self, pID=None, pIP=None, lock=True):
+                if lock:
+                    self._lock.acquire()
+                try:
+                    if not pID and pIP:
+                        if pIP in self._peer_info:
+                            pID = self._peer_info[pIP][u"ID"]
+                    return func(self, pID)
+                finally:
+                    if lock:
+                        self._lock.release()
+        else:
+            def newGetter(self, pIP=None, pID=None, lock=True):
+                if lock:
+                    self._lock.acquire()
+                try:
+                    if not pIP and pID:
+                        if pID in self._idToIp:
+                            pIP = iter(self._idToIp[pID]).next()
+                        else:
+                            pIP = None
+                    return func(self, pIP)
+                finally:
+                    if lock:
+                        self._lock.release()
+        return newGetter
+    return peerDecorator
+        
 class LunchPeers(object):    
     """This class holds information about all peers known to the lunchinator,
     Terminology:
@@ -86,22 +117,7 @@ class LunchPeers(object):
                 return -1
     
     ################ Member Operations #####################
-    def addMemberByIP(self, ip):
-        """promote a peer to member - the peer must be known"""
-        with self._lock:
-            if ip in self._peer_info:
-                self._addMember(self._peer_info[ip][u"ID"])
-            else:
-                log_warning("Tried to promote peer with IP %s to member, but I do not know that peer")
     
-    def isMemberByIP(self, ip):
-        """check if the given IP belongs to a member"""
-        with self._lock:
-            if ip in self._peer_info:
-                return self._peer_info[ip][u"ID"] in self._memberIDs
-            else:
-                return False
-            
     def removeMembersByIP(self, toRemove=None):
         """remove members identified by their IPs, if toRemove is None, all members are removed"""
         with self._lock:
@@ -124,27 +140,24 @@ class LunchPeers(object):
     def getMembers(self):
         """returns the IDs of all members"""
         return deepcopy(self._memberIDs)    
-    
+        
     def getReadyMembers(self):
         """returns a list of IDs of all members that are ready for lunch"""
         with self._lock:
-            return set([x for x in self._memberIDs if self._checkInfoForReady(self._getPeerInfoByID(x)) ])
+            return set([x for x in self._memberIDs if self._checkInfoForReady(self.getPeerInfo(pID=x, lock=False)) ])
 
     def _addMember(self, pID):
         if pID not in self._memberIDs:
             log_debug("Peer %s is a member" % pID) 
             self._memberIDs.add(pID)           
-            get_notification_center().emitMemberAppended(pID, deepcopy(self._getPeerInfoByID(pID)))
+            get_notification_center().emitMemberAppended(pID, deepcopy(self.getPeerInfo(pID=pID, lock=False)))
         else:  # something may have changed for the member data
-            get_notification_center().emitMemberUpdated(pID, deepcopy(self._getPeerInfoByID(pID)))
+            get_notification_center().emitMemberUpdated(pID, deepcopy(self.getPeerInfo(pID=pID, lock=False)))
             
     def _removeMember(self, pID):
         if pID in self._memberIDs:
             self._memberIDs.remove(pID)
             get_notification_center().emitMemberRemoved(pID)  
-    
-     
-    
     
     ################ Peer Operations #####################            
     def removePeerIPs(self, toRemove):
@@ -160,65 +173,86 @@ class LunchPeers(object):
                     pID = self._peer_info.pop(ip)[u"ID"]
                     self._removePeerIPfromID(pID, ip)
                      
-                        
-    def getPeerInfoByIP(self, ip):
-        """Returns the info dictionary for a peer identified by its IP 
-        or None if the ID is unknown"""
-        with self._lock:
-            if ip in self._peer_info:
-                return deepcopy(self._peer_info[ip])
-            
-        return None
+    ########### Getters for peer / member information ##############
+    # All of the following public methods take keyword arguments:
+    #  pID -- Identify peer via peer ID
+    #  pIP -- Identify peer via IP
+    #  lock -- If false, the getter won't be locked
+    # If a single argument is given, it is interpreted as a peer ID.  
     
-    def getPeerInfo(self, pID):
-        """Returns the info dictionary for a peer or None if the ID is unknown"""
-        with self._lock:
-            return deepcopy(self._getPeerInfoByID(pID))
-            
-        return None
+    @peerGetter(needsID=True)
+    def isMember(self, pID):
+        """check if the given IP/ID belongs to a member"""
+        return pID in self._memberIDs
+
+    @peerGetter()
+    def getPeerInfo(self, ip):
+        """Returns the info dictionary for a peer
         
-    def getPeerGroupByIP(self, ip):
-        """Returns the group of a peer identified by its IP"""
-        with self._lock:
-            if ip in self._peer_info:
-                return self._peer_info[ip][u'group']
+        Returns the info dictionary for the peer or None if the IP/ID
+        is unknown.
+        """
+        if ip in self._peer_info:
+            return deepcopy(self._peer_info[ip])
+        else:
+            return None
+    
+    @peerGetter()
+    def getPeerGroup(self, ip):
+        """Returns the group of a peer"""
+        if ip in self._peer_info:
+            return self._peer_info[ip][u'group']
         return None    
     
-    def getPeerName(self, pID):
+    @peerGetter()
+    def getPeerName(self, ip):
         """Returns the name of the peer or None if not a peer"""
-        with self._lock:
-            i = self._getPeerInfoByID(pID)
-            if i:
-                return i[u'name']
-        return None 
-    
-    def getPeerNameNoLock(self, pID):
-        """unlocked version, DO NOT use unless you know what you are doing"""
-        i = self._getPeerInfoByID(pID)
+        i = self.getPeerInfo(pIP=ip, lock=False)
         if i:
             return i[u'name']
-        return None
-    
-    def getPeerNameByIP(self, ip):
-        """Returns the name of the peer identified by its IP or None if not a peer"""
-        with self._lock:
-            if ip in self._peer_info:
-                return self._peer_info[ip][u'name']
         return None 
     
+    @peerGetter()    
     def getPeerID(self, ip):
         """Returns the ID of a peer that was sent from the given IP"""
-        with self._lock:
-            if ip in self._peer_info:
-                return self._peer_info[ip][u'ID']
-        return None
-    
-    def getPeerIDNoLock(self, ip):
-        """unlocked version, DO NOT use unless you know what you are doing"""
         if ip in self._peer_info:
             return self._peer_info[ip][u'ID']
         return None
+
+    @peerGetter(needsID=True)
+    def isPeerID(self, pID):
+        return pID in self._idToIp
     
+    @peerGetter(needsID=True)
+    def getPeerIPs(self, pID):
+        """returns the IPs of a peer or of all peers if pID==None"""
+        if pID == None:
+            return self._peer_info.keys()
+        
+        if pID in self._idToIp:
+            return set(self._idToIp[pID])
+        return []
+    
+    @peerGetter()
+    def isPeerReady(self, ip):
+        """returns true if the peer identified by the given IP is ready for lunch"""
+        if ip in self._peer_info:
+            return self._checkInfoForReady(self._peer_info[ip])
+        return False    
+    
+    ############### Additional getters ##################
+    
+    def _checkInfoForReady(self, p_info):        
+        if p_info and p_info.has_key(u"next_lunch_begin") and p_info.has_key(u"next_lunch_end"):
+            diff = getTimeDifference(p_info[u"next_lunch_begin"], p_info[u"next_lunch_end"])
+            if diff == None:
+                # illegal format, just assume ready
+                return True
+            return diff > 0
+        else:
+            # no lunch time information (only happening with very old lunchinators), assume ready
+            return True
+        
     def getPeerIDsByName(self, peerName):
         """Returns a list of peer IDs of peers with the given name."""
         names = []
@@ -232,29 +266,11 @@ class LunchPeers(object):
         """returns the IDs of all peers"""
         return self._idToIp.keys()
     
-    def getPeerIPs(self, pID=None):
-        """returns the IPs of a peer or of all peers if pID==None"""
-        if pID == None:
-            return self._peer_info.keys()
-        with self._lock:
-            if pID in self._idToIp:
-                return set(self._idToIp[pID])
-        return []
+    def getPeerInfoDict(self):
+        """Returns all data stored in the peerInfo dict -> all data on all peers"""
+        return deepcopy(self._peer_info)
     
-    def getPeerIPsNoLock(self, pID=None):
-        """unlocked version, DO NOT use unless you know what you are doing"""
-        if pID == None:
-            return self._peer_info.keys()
-        if pID in self._idToIp:
-            return set(self._idToIp[pID])
-        return [] 
-    
-    def isPeerReadyByIP(self, ip):
-        """returns true if the peer identified by the given IP is ready for lunch"""
-        with self._lock:
-            if ip in self._peer_info:
-                return self._checkInfoForReady(self._peer_info[ip])
-        return False
+    ############# Methods for initialization and update ################
     
     def _createPeerByIP(self, ip, info):  
         """adds a peer for that IP"""
@@ -332,22 +348,6 @@ class LunchPeers(object):
                         del self._peer_info[ip]
         except:
             log_exception("Something went wrong while trying to clean up the list of peers")
-    
-    def getPeerInfoDict(self):
-        """Returns all data stored in the peerInfo dict -> all data on all peers"""
-        return deepcopy(self._peer_info)
-            
-    # unlocked private operation:        
-    def _checkInfoForReady(self, p_info):        
-        if p_info and p_info.has_key(u"next_lunch_begin") and p_info.has_key(u"next_lunch_end"):
-            diff = getTimeDifference(p_info[u"next_lunch_begin"], p_info[u"next_lunch_end"])
-            if diff == None:
-                # illegal format, just assume ready
-                return True
-            return diff > 0
-        else:
-            # no lunch time information (only happening with very old lunchinators), assume ready
-            return True
              
     def _removePeerIPfromID(self, pID, ip):   
         log_debug("Removing %s from ID: %s" % (ip, pID))
@@ -370,12 +370,6 @@ class LunchPeers(object):
         else:
             self._idToIp[pID].add(ip)   
             
-    def _getPeerInfoByID(self, pID):
-        if pID not in self._idToIp:
-            return None
-        recentIP = list(self._idToIp[pID])[0]
-        return self._peer_info[recentIP]     
-    
     def initPeersFromFile(self):
         """Initializes peer IPs from file and returns a list of IPs
         to request info from."""

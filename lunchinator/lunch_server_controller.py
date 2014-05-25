@@ -100,7 +100,7 @@ class LunchServerController(object):
         t = strftime("%a, %d %b %Y %H:%M:%S", mtime).decode("utf-8")
         
         if not newPeer:
-            m = get_peers().getPeerInfoByIP(addr)
+            m = get_peers().getPeerInfo(pIP=addr)
             log_info("%s: [%s] %s" % (t, m[u"ID"], msg))
             self._insertMessage(mtime, m[u"ID"], msg)
             get_notification_center().emitMessagePrepended(mtime, m[u"ID"], msg)

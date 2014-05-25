@@ -458,7 +458,7 @@ class MembersWidget(QWidget):
             self.memberInformationTable.setHeaderLabel("No member selected.")
             return
 
-        memberInformation = get_peers().getPeerInfo(self.get_selected_log_member())
+        memberInformation = get_peers().getPeerInfo(pID=self.get_selected_log_member())
             
         if memberInformation == None:
             self.memberInformationTable.setColumnCount(0)
