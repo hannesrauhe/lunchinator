@@ -154,7 +154,7 @@ class NotificationCenter(object):
     def disconnectPeerAppended(self, callback):
         pass
     @_emitFunc
-    def emitPeerAppended(self, ip, infoDict):
+    def emitPeerAppended(self, peerID, infoDict):
         pass
         
     @_connectFunc
@@ -164,7 +164,7 @@ class NotificationCenter(object):
     def disconnectPeerUpdated(self, callback):
         pass
     @_emitFunc
-    def emitPeerUpdated(self, ip, infoDict):
+    def emitPeerUpdated(self, peerID, infoDict):
         pass
     
     @_connectFunc
@@ -174,7 +174,7 @@ class NotificationCenter(object):
     def disconnectPeerRemoved(self, callback):
         pass
     @_emitFunc
-    def emitPeerRemoved(self, ip):
+    def emitPeerRemoved(self, peerID):
         pass    
     
     @_connectFunc
@@ -184,7 +184,7 @@ class NotificationCenter(object):
     def disconnectMemberAppended(self, callback):
         pass
     @_emitFunc
-    def emitMemberAppended(self, ip, infoDict):
+    def emitMemberAppended(self, peerID, infoDict):
         pass
     
     @_connectFunc
@@ -194,7 +194,7 @@ class NotificationCenter(object):
     def disconnectMemberUpdated(self, callback):
         pass
     @_emitFunc
-    def emitMemberUpdated(self, ip, infoDict):
+    def emitMemberUpdated(self, peerID, infoDict):
         pass
     
     @_connectFunc
@@ -204,7 +204,7 @@ class NotificationCenter(object):
     def disconnectMemberRemoved(self, callback):
         pass
     @_emitFunc
-    def emitMemberRemoved(self, ip):
+    def emitMemberRemoved(self, peerID):
         pass    
         
     @_connectFunc

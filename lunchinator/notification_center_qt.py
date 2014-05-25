@@ -64,48 +64,48 @@ class NotificationCenterQt(QObject):
         self._signalPeerAppended.connect(callback)
     def disconnectPeerAppended(self, callback):
         self._signalPeerAppended.disconnect(callback)
-    def emitPeerAppended(self, ip, infoDict):
-        self._signalPeerAppended.emit(ip, infoDict)
+    def emitPeerAppended(self, peerID, infoDict):
+        self._signalPeerAppended.emit(peerID, infoDict)
         
     _signalPeerUpdated = pyqtSignal(unicode, dict)
     def connectPeerUpdated(self, callback):
         self._signalPeerUpdated.connect(callback)
     def disconnectPeerUpdated(self, callback):
         self._signalPeerUpdated.disconnect(callback)
-    def emitPeerUpdated(self, ip, infoDict):
-        self._signalPeerUpdated.emit(ip, infoDict)
+    def emitPeerUpdated(self, peerID, infoDict):
+        self._signalPeerUpdated.emit(peerID, infoDict)
     
     _signalPeerRemoved = pyqtSignal(unicode)
     def connectPeerRemoved(self, callback):
         self._signalPeerRemoved.connect(callback)
     def disconnectPeerRemoved(self, callback):
         self._signalPeerRemoved.disconnect(callback)
-    def emitPeerRemoved(self, ip):
-        self._signalPeerRemoved.emit(ip)
+    def emitPeerRemoved(self, peerID):
+        self._signalPeerRemoved.emit(peerID)
         
     _signalMemberAppended = pyqtSignal(unicode, dict)
     def connectMemberAppended(self, callback):
         self._signalMemberAppended.connect(callback)
     def disconnectMemberAppended(self, callback):
         self._signalMemberAppended.disconnect(callback)
-    def emitMemberAppended(self, ip, infoDict):
-        self._signalMemberAppended.emit(ip, infoDict)
+    def emitMemberAppended(self, peerID, infoDict):
+        self._signalMemberAppended.emit(peerID, infoDict)
     
     _signalMemberUpdated = pyqtSignal(unicode, dict)
     def connectMemberUpdated(self, callback):
         self._signalMemberUpdated.connect(callback)
     def disconnectMemberUpdated(self, callback):
         self._signalMemberUpdated.disconnect(callback)
-    def emitMemberUpdated(self, ip, infoDict):
-        self._signalMemberUpdated.emit(ip, infoDict)
+    def emitMemberUpdated(self, peerID, infoDict):
+        self._signalMemberUpdated.emit(peerID, infoDict)
     
     _signalMemberRemoved = pyqtSignal(unicode)
     def connectMemberRemoved(self, callback):
         self._signalMemberRemoved.connect(callback)
     def disconnectMemberRemoved(self, callback):
         self._signalMemberRemoved.disconnect(callback)
-    def emitMemberRemoved(self, ip):
-        self._signalMemberRemoved.emit(ip)
+    def emitMemberRemoved(self, peerID):
+        self._signalMemberRemoved.emit(peerID)
     
     _signalGroupAppended = pyqtSignal(unicode, set)
     def connectGroupAppended(self, callback):
