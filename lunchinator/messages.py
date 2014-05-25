@@ -22,6 +22,9 @@ class Messages(object):
         if not self._db.existsTable("CORE_MESSAGE_VERSION"):
             self._db.execute("CREATE TABLE CORE_MESSAGE_VERSION(VERSION INTEGER)")
             self._db.execute("INSERT INTO CORE_MESSAGE_VERSION(VERSION) VALUES(?)", self._DB_VERSION_INITIAL)
+                        
+        if not self._db.existsTable("CORE_MESSAGE_PEER_NAMES"):
+            self._db.execute("CREATE TABLE CORE_MESSAGE_PEER_NAMES(PEER_ID TEXT PRIMARY KEY NOT NULL, PEER_NAME TEXT)")
             
         if not self._db.existsTable("CORE_MESSAGES"):
             self._db.execute("CREATE TABLE CORE_MESSAGES(SENDER TEXT, TIME REAL, MESSAGE TEXT)")
@@ -32,9 +35,6 @@ class Messages(object):
         else:
             self._latest = self._getLatest()
             self._length = self._getNumMessages()    
-                        
-        if not self._db.existsTable("CORE_MESSAGE_PEER_NAMES"):
-            self._db.execute("CREATE TABLE CORE_MESSAGE_PEER_NAMES(PEER_ID TEXT PRIMARY KEY NOT NULL, PEER_NAME TEXT)")
             
         get_notification_center().connectPeerAppended(self._addPeerName)
         get_notification_center().connectPeerUpdated(self._addPeerName)
