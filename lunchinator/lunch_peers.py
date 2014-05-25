@@ -301,13 +301,6 @@ class LunchPeers(object):
     def _createPeerByIP(self, ip, info):  
         """adds a peer for that IP"""
         log_info("new peer: %s" % ip)
-        # I add a new peer -> if I do not have an ID yet, the ID is the ip
-        if u'group' not in info:
-            info[u'group'] = u""
-        if u'name' not in info:
-            info[u"name"] = ip
-        if u"ID" not in info:
-            info[u"ID"] = ip
         self._peer_info[ip] = info
         pID = self._peer_info[ip][u"ID"]
         self._addPeerIPtoID(pID, ip)
@@ -326,28 +319,48 @@ class LunchPeers(object):
         will be removed from the list of members. Further signals are emitted if the peer
         is in a group we do not know yet and for member append/remove/update
         """
+        # Make sure the required keys are in the dict
+        if u'group' not in newInfo:
+            newInfo[u'group'] = u""
+        if u'name' not in newInfo:
+            newInfo[u"name"] = ip
+        if u"ID" not in newInfo:
+            newInfo[u"ID"] = ip
+    
+        newPID = newInfo[u"ID"]
+    
         with self._lock:
-            if ip not in self._peer_info:
+            if ip in self._peer_info and self._peer_info[ip][u"ID"] != newPID:
+                # IP has a new ID, assume different peer -> old peer does not use IP any more
+                self._removePeerIPfromID(self._peer_info[ip][u"ID"], ip)
+                self._peer_info.remove(ip)
+            
+            if ip not in self._peer_info and newPID not in self._idToIp:
                 # this is a new peer
                 self._createPeerByIP(ip, newInfo)
-                newPID = self._peer_info[ip][u"ID"]
             else:
-                oldPID = self._peer_info[ip][u"ID"]
-                old_info = deepcopy(self._peer_info[ip])
+                # this is either an update to an existing IP or a new IP for an existing peer
+                if ip in self._peer_info and newPID in self._idToIp:
+                    # this is an update
+                    existing_info = self._peer_info[ip]
+                elif ip not in self._peer_info and newPID in self._idToIp:
+                    # this is a new IP for an existing peer
+                    self._addPeerIPtoID(newPID, ip)
+                    existing_info = self.getPeerInfo(pID=newPID)
+                    self._peer_info[ip] = existing_info
+                elif ip in self._peer_info and newPID not in self._idToIp:
+                    # we already know this IP but it is not this peer - should not happen
+                    log_error("Something went wrong - ID", newPID, "is missing in _idToIp")
+                    return
+                    
+                old_info = deepcopy(existing_info)
                 self._peer_info[ip].update(newInfo)
                     
-                newPID = self._peer_info[ip][u"ID"]
-                
-                if newPID != oldPID:
-                    self._removePeerIPfromID(oldPID, ip)
-                    self._addPeerIPtoID(newPID, ip)
+                if old_info != self._peer_info[ip]:
+                    get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
+                    log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
                 else:
-                    # TODO(Hannes) this info is now the most recent for this ID
-                    if old_info != self._peer_info[ip]:
-                        get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
-                        log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
-                    else:
-                        log_debug("%s sent info - without new info" % ip)
+                    log_debug("%s sent info - without new info" % ip)
             
             own_group = get_settings().get_group()
             
