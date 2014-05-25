@@ -8,16 +8,19 @@ from lunchinator.logging_mutex import loggingMutex
 class LunchPeers(object):    
     """This class holds information about all peers known to the lunchinator,
     Terminology:
-    * a peer is anyone who sent a UDP packet to the lunchinator port
+    * a peer is anyone who sent an info dictionary to this lunchinator.
     a peer can either be identified by its IP and additionally by any ID it told us
     (usually an UUID). This way a peer that changed its IP (e.g. because of switching 
     between LAN and WLAN, or because of DHCP) can be recognised later. If no ID was 
-    sent, the ID is the IP. Peers are removed after a defined timeout (default: 10000 sec 
+    sent, the ID is the IP. Peers are removed after a defined timeout (default: 300 sec 
     after the last contact or within approx. a minute if they are not reacting to our 
-    requests
-    * a member is a peer that sent at least one info call and sent anything within a 
-    defined timespan (default: 300 sec). If this lunchinator belongs to a group, i.e. the 
-    group-setting is not empty, a peer must also belong to our group to be a member.
+    requests)
+    * a candidate is an IP / a hostname that once was a peer. An append-only
+    list of candidates is maintained and used on startup to quickly reconnect with 
+    all other Lunchinators in the network.
+    * a member is a peer that belongs to the same group as this Lunchinator.
+    Lunchinators with an empty group form their own group that does not
+    communicate with other Lunchinators.
     
     With a few exception most calls to exchange information about the network or the instance
     are sent to all known peers (structural events). 
@@ -304,9 +307,9 @@ class LunchPeers(object):
                     else:
                         log_debug("%s sent info - without new info" % ip)
             
-            own_group = get_settings().get_group()       
+            own_group = get_settings().get_group()
             
-            if 0 == len(own_group) or self._peer_info[ip][u"group"] == own_group:
+            if self._peer_info[ip][u"group"] == own_group:
                 self._addMember(newPID)
                 self.addGroup(self._peer_info[ip][u"group"])
             else:
