@@ -343,13 +343,12 @@ class LunchPeers(object):
                 if ip in self._peer_info and newPID in self._idToIp:
                     # this is an update
                     existing_info = self._peer_info[ip]
-                    newIP = False
                 elif ip not in self._peer_info and newPID in self._idToIp:
                     # this is a new IP for an existing peer
+                    log_debug("New IP:", ip, "for ID:", newPID)
                     existing_info = self._peer_info[self._idToIp[newPID][-1]]
                     self._peer_info[ip] = existing_info
                     self._addPeerIPtoID(newPID, ip)
-                    newIP = True
                 elif ip in self._peer_info and newPID not in self._idToIp:
                     # we already know this IP but it is not this peer - should not happen
                     log_error("Something went wrong - ID", newPID, "is missing in _idToIp")
@@ -358,7 +357,7 @@ class LunchPeers(object):
                 old_info = deepcopy(existing_info)
                 self._peer_info[ip].update(newInfo)
                     
-                if newIP or old_info != self._peer_info[ip]:
+                if old_info != self._peer_info[ip]:
                     get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
                     log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
                 else:
@@ -402,6 +401,8 @@ class LunchPeers(object):
             
             # if this peer is a member, remove it, too
             self._removeMember(pID)
+        else:
+            get_notification_center().emitPeerUpdated(pID, deepcopy(self._peer_info[ip]))
      
     def _addPeerIPtoID(self, pID, ip):       
         if pID not in self._idToIp:
@@ -409,7 +410,8 @@ class LunchPeers(object):
             get_notification_center().emitPeerAppended(pID, deepcopy(self._peer_info[ip]))
         else:
             # last one is last seen one
-            self._idToIp[pID].append(ip)   
+            self._idToIp[pID].append(ip)
+            get_notification_center().emitPeerUpdated(pID, deepcopy(self._peer_info[ip]))
             
     def initPeersFromFile(self):
         """Initializes peer IPs from file and returns a list of IPs

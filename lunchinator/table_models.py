@@ -50,10 +50,7 @@ class TableModelBase(QStandardItemModel):
         toolTipText = self._getRowToolTip(key, data)
         if toolTipText:
             toolTip = QVariant(toolTipText)
-        else:
-            toolTip = None
-        for item in row:
-            if item.data(Qt.ToolTipRole) == None:
+            for item in row:
                 item.setData(toolTip, Qt.ToolTipRole)
             
     def createRow(self, key, data):
