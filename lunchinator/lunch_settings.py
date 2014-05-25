@@ -149,6 +149,7 @@ class lunch_settings(object):
         #also in config, but hidden
         self._ID = u""
         self._peer_timeout = 300
+        self._message_cache_timeout = 5 # cache lifetime to detect duplicate messages
         
         self._next_lunch_begin = None
         self._next_lunch_end = None
@@ -480,6 +481,12 @@ class lunch_settings(object):
     @hidden_setting()
     def set_peer_timeout(self, v):
         self._peer_timeout = v
+        
+    def get_message_cache_timeout(self):
+        return self._message_cache_timeout
+    @hidden_setting()
+    def set_message_cache_timeout(self, v):
+        self._message_cache_timeout = v
         
     def get_tcp_port(self):
         return self._tcp_port

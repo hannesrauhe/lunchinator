@@ -9,6 +9,7 @@ from lunchinator import log_debug, log_info, log_critical, get_settings, log_exc
     convert_string
 from lunchinator.lunch_peers import LunchPeers
 from lunchinator.messages import Messages
+from collections import deque
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -34,6 +35,7 @@ class lunch_server(object):
         self._peer_nr = 0
         self.plugin_manager = None
         self._message_queues = {} # queues for messages from new peers
+        self._last_messages = {} # last messages by peer ID, to avoid duplicates
         
         self.exitCode = 0  
         
@@ -157,7 +159,7 @@ class lunch_server(object):
                     data, addr = s.recvfrom(1024)
                     ip = unicode(addr[0])
                     
-                    log_debug("Incoming event from %s: %s" % (ip, data))
+                    log_debug(u"Incoming event from %s: %s" % (ip, convert_string(data)))
                     try:
                         data = data.decode('utf-8')
                     except:
@@ -197,13 +199,14 @@ class lunch_server(object):
                     
                             # clean up peers
                             self._peers.removeInactive()
-                            self._remove_timed_out_queues()
                     else:
                         if not self._disable_broadcast:
                             if not is_in_broadcast_mode:
                                 is_in_broadcast_mode = True
                                 log_warning("seems like you are alone - broadcasting for others")
                             self._broadcast()
+                    self._remove_timed_out_queues()
+                    self._cleanup_cached_messages()
                 except socket.error as e:
                     if e.errno != errno.EINTR:
                         raise
@@ -363,6 +366,29 @@ class lunch_server(object):
                not data.startswith("HELO_INFO") and \
                not data.startswith("HELO_REQUEST_DICT")
     
+    def _cache_message(self, peerID, ip, data, eventTime):
+        if peerID in self._last_messages:
+            lastMessages = self._last_messages[peerID]
+        else:
+            lastMessages = deque()
+        lastMessages.append((eventTime, ip, data))
+        self._last_messages[peerID] = lastMessages
+        
+    def _is_message_duplicate(self, peerID, ip, data):
+        # with a high probability, the message is a duplicate if it comes
+        # from the same ID but from a different IP.
+        if peerID in self._last_messages:
+            for _eventTime, old_ip, old_data in self._last_messages[peerID]:
+                if ip != old_ip and data == old_data:
+                    return True
+        return False
+    
+    def _cleanup_cached_messages(self):
+        curTime = time()
+        for queue in self._last_messages.itervalues():
+            while len(queue) > 0 and curTime - queue[0][0] > get_settings().get_message_cache_timeout():
+                queue.popleft()
+    
     def _handle_event(self, data, ip, eventTime, newPeer, fromQueue):
         # if there is no HELO in the beginning, it's just a message and 
         # we handle it, if the peer is in our group
@@ -370,13 +396,19 @@ class lunch_server(object):
             # only process message if we know the peer
             if newPeer:
                 self._enqueue_event(data, ip, eventTime)
-            if self._peers.isMember(pIP=ip):
-                try:
-                    self.getController().processMessage(data, ip, eventTime, newPeer, fromQueue)
-                except:
-                    log_exception("Error while handling incoming message from %s: %s" % (ip, data))
             else:
-                log_debug("Dropped a message from %s: %s" % (ip, data))
+                peerID = self._peers.getPeerID(pIP=ip)
+                if self._peers.isMember(pID=peerID):
+                    if self._is_message_duplicate(peerID, ip, data):
+                        log_debug("Dropping duplicate message from peer", peerID)
+                        return
+                    try:
+                        self.getController().processMessage(data, ip, eventTime, newPeer, fromQueue)
+                        self._cache_message(peerID, ip, data, eventTime)
+                    except:
+                        log_exception("Error while handling incoming message from %s: %s" % (ip, data))
+                else:
+                    log_debug("Dropped a message from %s: %s" % (ip, data))
             return
         
         cmd = u""
