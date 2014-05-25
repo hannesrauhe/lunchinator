@@ -29,13 +29,12 @@ class Messages(object):
             self._length = 0
             self._latest = None
             self.importOld(get_settings().get_legacy_messages_file())
+        else:
+            self._latest = self._getLatest()
+            self._length = self._getNumMessages()    
                         
         if not self._db.existsTable("CORE_MESSAGE_PEER_NAMES"):
             self._db.execute("CREATE TABLE CORE_MESSAGE_PEER_NAMES(PEER_ID TEXT PRIMARY KEY NOT NULL, PEER_NAME TEXT)")
-
-        else:
-            self._latest = self._getLatest()
-            self._length = self._getNumMessages()
             
         get_notification_center().connectPeerAppended(self._addPeerName)
         get_notification_center().connectPeerUpdated(self._addPeerName)
