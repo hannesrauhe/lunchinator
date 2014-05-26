@@ -22,6 +22,6 @@ class LunchButton(QPushButton):
             self.sendMessageField.clear()
             
         if len(optmsg):
-            get_server().call(optmsg)
+            get_server().call_all_members(optmsg)
         else:
-            get_server().call(get_settings().get_lunch_trigger())
+            get_server().call_all_members(get_settings().get_lunch_trigger())
