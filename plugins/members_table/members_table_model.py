@@ -26,6 +26,8 @@ class MembersTableModel(TableModelBase):
         super(MembersTableModel, self).__init__(dataSource, columns)
         
         self._grayBrush = QBrush(QColor(150,150,150))
+        self._blackBrush = QBrush(QColor(0,0,0))
+        
         self._green = QColor(0, 255, 0)
         self._grayGreen = QColor(150,220,150)
         
@@ -40,16 +42,18 @@ class MembersTableModel(TableModelBase):
     def _getRowToolTip(self, peerID, _infoDict):
         return u"ID: %s\nIPs: %s" % (peerID, ', '.join(get_peers().getPeerIPs(pID=peerID)))
 
-    def _grayOutItem(self, item):
-        item.setData(self._grayBrush, Qt.ForegroundRole)
+    def _grayOutIfNoMember(self, item, peerID):
+        if not self.dataSource.isMember(pID=peerID):
+            item.setData(self._grayBrush, Qt.ForegroundRole)
+        else:
+            item.setData(self._blackBrush, Qt.ForegroundRole)
 
     def _updateNameItem(self, peerID, infoDict, item):
         if self._NAME_KEY in infoDict:
             item.setText(infoDict[self._NAME_KEY])
         else:
             item.setText(peerID)
-        if not self.dataSource.isMember(pID=peerID):
-            self._grayOutItem(item)
+        self._grayOutIfNoMember(item, peerID)
         
     def removeRow(self, row, parent=QModelIndex()):
         # ensure no timer is active after a row has been removed
@@ -84,16 +88,14 @@ class MembersTableModel(TableModelBase):
         else:
             item.setData(QVariant(-1), self.SORT_ROLE)
             
-        if not isMember:
-            self._grayOutItem(item)
+        self._grayOutIfNoMember(item, peerID)
             
     def _updateGroupItem(self, peerID, infoDict, item):
         if self._GROUP_KEY in infoDict:
             item.setText(infoDict[self._GROUP_KEY])
         else:
             item.setText(u"")
-        if not self.dataSource.isMember(pID=peerID):
-            self._grayOutItem(item)
+        self._grayOutIfNoMember(item, peerID)
         
     def _dataForKey(self, key):
         return self.dataSource.getPeerInfo(pID=key)

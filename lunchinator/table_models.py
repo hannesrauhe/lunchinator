@@ -85,6 +85,11 @@ class TableModelBase(QStandardItemModel):
             self.updateItem(key, data, row, column)
         self._updateToolTips((self.item(row, colIndex) for colIndex in xrange(self.columnCount())), key, data)
             
+    def updateTable(self):
+        """Updates all rows in the table."""
+        for row, key in enumerate(self.keys):
+            self.updateRow(key, self._dataForKey(key), row)
+            
     @classmethod   
     def convertDict(cls, aDict):
         newDict = {}

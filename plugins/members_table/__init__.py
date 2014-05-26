@@ -1,5 +1,6 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import get_server, get_notification_center, get_peers
+from lunchinator import get_server, get_notification_center, get_peers,\
+    convert_string
 from lunchinator.utilities import msecUntilNextMinute
     
 class members_table(iface_gui_plugin):
@@ -28,15 +29,28 @@ class members_table(iface_gui_plugin):
         
         class NameSortProxyModel(QSortFilterProxyModel):
             def lessThan(self, left, right):
+                # compare by lunch time
                 ldata = self.sourceModel().data(left, MembersTableModel.SORT_ROLE)
                 rdata = self.sourceModel().data(right, MembersTableModel.SORT_ROLE)
-                if ldata == rdata:
-                    lindex = self.sourceModel().index(left.row(), 0)
-                    rindex = self.sourceModel().index(right.row(), 0)
-                    
-                    return super(NameSortProxyModel, self).lessThan(lindex, rindex)
+                if ldata != rdata:
+                    return super(NameSortProxyModel, self).lessThan(left, right)
                 
-                return super(NameSortProxyModel, self).lessThan(left, right)
+                # compare by name, case sensitive
+                lindex = self.sourceModel().index(left.row(), MembersTableModel.NAME_COL_INDEX)
+                rindex = self.sourceModel().index(right.row(), MembersTableModel.NAME_COL_INDEX)
+                
+                res = super(NameSortProxyModel, self).lessThan(lindex, rindex)
+                if res or super(NameSortProxyModel, self).lessThan(rindex, lindex):
+                    return res
+                
+                # compare by name, byte order
+                ls = convert_string(self.sourceModel().data(lindex, MembersTableModel.SORT_ROLE).toString())
+                rs = convert_string(self.sourceModel().data(rindex, MembersTableModel.SORT_ROLE).toString())
+                if ls != rs:
+                    return ls < rs
+                
+                # compare by peer ID 
+                return self.sourceModel().keys[left.row()] < self.sourceModel().keys[right.row()]
         
         self.membersTable = TableWidget(parent, "Add Host", self.addHostClicked, sortedColumn=MembersTableModel.LUNCH_TIME_COL_INDEX, placeholderText="Enter hostname")
         
@@ -55,6 +69,7 @@ class members_table(iface_gui_plugin):
         get_notification_center().connectPeerAppended(self.membersModel.externalRowAppended)
         get_notification_center().connectPeerUpdated(self.membersModel.externalRowUpdated)
         get_notification_center().connectPeerRemoved(self.membersModel.externalRowRemoved)
+        get_notification_center().connectGroupChanged(self.membersModel.updateTable)
         
         self._lunchTimeColumnTimer = QTimer(self.membersModel)
         self._lunchTimeColumnTimer.timeout.connect(self._startSyncedTimer)
@@ -74,6 +89,7 @@ class members_table(iface_gui_plugin):
         get_notification_center().disconnectPeerAppended(self.membersModel.externalRowAppended)
         get_notification_center().disconnectPeerUpdated(self.membersModel.externalRowUpdated)
         get_notification_center().disconnectPeerRemoved(self.membersModel.externalRowRemoved)
+        get_notification_center().disconnectGroupChanged(self.membersModel.updateTable)
 
         self._lunchTimeColumnTimer.stop()
         self._lunchTimeColumnTimer.deleteLater()
