@@ -125,7 +125,7 @@ class my_install(install.install):
         return outputs
 
 setup(
-    name =          'Lunchinator',
+    name =          'lunchinator',
     version =       version,
     url =           'http://www.lunchinator.de',
     #download_url =  'http://path/tp/Lunchinator-%s.tar.gz' % version,
