@@ -114,6 +114,14 @@ class NotificationCenterQt(QObject):
         self._signalGroupAppended.disconnect(callback)
     def emitGroupAppended(self, group, peer_groups):
         self._signalGroupAppended.emit(group, peer_groups)
+        
+    _signalGroupChanged = pyqtSignal(unicode, unicode)
+    def connectGroupChanged(self, callback):
+        self._signalGroupChanged.connect(callback)
+    def disconnectGroupChanged(self, callback):
+        self._signalGroupChanged.disconnect(callback)
+    def emitGroupChanged(self, oldGroup, newGroup):
+        self._signalGroupChanged.emit(oldGroup, newGroup)
     
     #signal with all sender info?: _signalMessagePrepended = pyqtSignal(time.struct_time, dict, list)
     _signalMessagePrepended = pyqtSignal(time.struct_time, unicode, unicode)

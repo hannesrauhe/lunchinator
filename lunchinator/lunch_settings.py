@@ -368,9 +368,11 @@ class lunch_settings(object):
     @gui_setting(u"Group Name")
     def set_group(self, value, init=False):
         from lunchinator import get_server
+        oldGroup = self._group
         self._group = value
         if not init:
             get_server().changeGroup(unicode(value))
+            get_notification_center().emitGroupChanged(oldGroup, self._group)
       
     def get_avatar_dir(self):
         return self._avatar_dir

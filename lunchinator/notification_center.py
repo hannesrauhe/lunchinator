@@ -218,6 +218,16 @@ class NotificationCenter(object):
         pass
     
     @_connectFunc
+    def connectGroupChanged(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectGroupChanged(self, callback):
+        pass
+    @_emitFunc
+    def emitGroupChanged(self, oldGroup, newGroup):
+        pass
+    
+    @_connectFunc
     def connectMessagePrepended(self, callback):
         pass
     @_disconnectFunc
