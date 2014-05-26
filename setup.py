@@ -125,7 +125,7 @@ class my_install(install.install):
         outputs.extend(sorted(dirs))
         return outputs
 
-name = "Lunchinator"
+name = "lunchinator"
 branch = os.getenv("__lunchinator_branch")
 if branch and branch!="master":
     name +="-"+branch
