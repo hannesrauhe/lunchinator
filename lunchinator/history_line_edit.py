@@ -30,15 +30,20 @@ class HistoryBase(object):
             self.setText(self.getText(self.index))
         return True
     
+    def isQueryKey(self, event):
+        return (event.key() == Qt.Key_Return and (int(event.modifiers()) & self.keyModifiers) == self.keyModifiers) or\
+                event.key() == Qt.Key_Enter
+    
     def event(self, event):
-        if event.type() == QEvent.KeyPress and event.modifiers() == self.keyModifiers:
-            if (event.key() == Qt.Key_Up):
-                if len(self.history) > self.index:
-                    return self.handleHistory(self.index + 1)
-            elif(event.key() == Qt.Key_Down):
-                if self.index > 0:
-                    return self.handleHistory(self.index - 1)
-            elif event.key() == Qt.Key_Return:
+        if event.type() == QEvent.KeyPress:
+            if (int(event.modifiers()) & self.keyModifiers) == self.keyModifiers:
+                if (event.key() == Qt.Key_Up):
+                    if len(self.history) > self.index:
+                        return self.handleHistory(self.index + 1)
+                elif(event.key() == Qt.Key_Down):
+                    if self.index > 0:
+                        return self.handleHistory(self.index - 1)
+            if self.isQueryKey(event):
                 if len(self.text()) > 0:
                     if len(self.history) == 0 or self.getText(1) != self.text():
                         # only append to history if new text is different from last history entry
@@ -74,9 +79,8 @@ class HistoryTextEdit(GrowingTextEdit, HistoryBase):
     
     def event(self, event):
         retVal = HistoryBase.event(self, event)
-        if (event.type() == QEvent.KeyPress):
-            if event.key() == Qt.Key_Return and event.modifiers() == Qt.ControlModifier:
-                self.returnPressed.emit()
+        if event.type() == QEvent.KeyPress and self.isQueryKey(event):
+            self.returnPressed.emit()
         if not retVal:
             return super(HistoryTextEdit, self).event(event)
         return True
