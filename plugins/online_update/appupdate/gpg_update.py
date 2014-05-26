@@ -132,7 +132,7 @@ class GPGUpdateHandler(AppUpdateHandler):
         log_debug("Updater: Signature OK, checking version info")
         
         for l in signedString.splitlines():
-            info = l.split(":", 2)
+            info = l.split(":", 1)
             if len(info) > 1:
                 self._version_info[info[0]] = info[1].strip()
                 
@@ -153,7 +153,12 @@ class GPGUpdateHandler(AppUpdateHandler):
         self._local_installer_file = os.path.join(get_settings().get_main_config_dir(), self._installer_url.rsplit('/', 1)[1])
         
         if self._hasNewVersion() and u"Change Log" in self._version_info:
-            self._setChangeLog(json.loads(self._version_info[u"Change Log"]))
+            try:
+                changeLog = json.loads(self._version_info[u"Change Log"])
+                self._setChangeLog(changeLog)
+            except:
+                log_exception("Error reading change log.")
+                self._setChangeLog(["Error loading change log"])
         
         if self._hasNewVersion():
             # check if we already downloaded this version before
