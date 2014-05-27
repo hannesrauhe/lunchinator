@@ -2,7 +2,7 @@ import sys, os, getpass, ConfigParser, types, logging, codecs, contextlib, uuid
 
 '''integrate the cli-parser into the default_config sooner or later'''
 from lunchinator import log_exception, log_error, setLoggingLevel, convert_string, MAIN_CONFIG_DIR,\
-    log_warning, get_notification_center
+    log_warning, get_notification_center, log_info
 from datetime import datetime
 import json
 from lunchinator.repositories import PluginRepositories
@@ -371,6 +371,7 @@ class lunch_settings(object):
         oldGroup = self._group
         self._group = value
         if not init:
+            log_info("Changing Group: '%s' -> '%s'" % (oldGroup, self._group))
             get_server().changeGroup(unicode(value))
             get_notification_center().emitGroupChanged(oldGroup, self._group)
       
