@@ -63,6 +63,10 @@ class LunchPeers(object):
     says something else ^^.
     
     """
+    
+    _INSERTION = 0
+    _UPDATE = 1
+    _REMOVAL = 2
 
     def __init__(self):
         """after initializing all variables, the peer information form the lust run is read from a file"""
@@ -74,11 +78,53 @@ class LunchPeers(object):
         
         self._groups = set()  # seen group names
         
+        # used to queue notifications
+        self._peerChanges = []
+        self._memberChanges = []
+        self._groupChanges = []
+        
         self._lock = loggingMutex("peers", logging=get_settings().get_verbose())
         
     def finish(self):
         """should be called for a clean shutdown of the program, the peer information will be stored in a file"""
         self._writePeersToFile()
+    
+    def _processNotifications(self):
+        with self._lock:
+            peerChanges = list(self._peerChanges)
+            self._peerChanges = []
+        for noti in peerChanges:
+            peerID = noti[0]
+            action = noti[1]
+            if action == self._REMOVAL:
+                get_notification_center().emitPeerRemoved(peerID)
+            else:
+                info = noti[2]
+                if action == self._INSERTION:
+                    get_notification_center().emitPeerAppended(peerID, info)
+                else:
+                    get_notification_center().emitPeerUpdated(peerID, info)
+                    
+        with self._lock:
+            memberChanges = list(self._memberChanges)
+            self._memberChanges = []
+        for noti in memberChanges:
+            memberID = noti[0]
+            action = noti[1]
+            if action == self._REMOVAL:
+                get_notification_center().emitMemberRemoved(memberID)
+            else:
+                info = noti[2]
+                if action == self._INSERTION:
+                    get_notification_center().emitMemberAppended(memberID, info)
+                else:
+                    get_notification_center().emitMemberUpdated(memberID, info)
+                    
+        with self._lock:
+            groupChanges = list(self._groupChanges)
+            self._groupChanges = []
+        for groupName in groupChanges:
+            get_notification_center().emitGroupAppended(groupName, self._groups)
     
     ################ Group Operations #####################
     # no lock -> groups are not removed  
@@ -86,13 +132,12 @@ class LunchPeers(object):
         """returns a collection of all lunch groups"""
         return self._groups
     
-    def addGroup(self, group_name):
-        """adds a new group 
-        (done by the lunch server thread)"""
+    def _addGroup(self, group_name):
+        """adds a new group"""
         if group_name not in self._groups:
             self._groups.add(group_name)
             # TODO: what was the second parameter supposed to be?
-            get_notification_center().emitGroupAppended(group_name, self._groups)
+            self._groupChanges.append(group_name)
     
     ################ IP Timestamp Operations #####################
     # no locks needed: timeouts are not removed
@@ -147,6 +192,7 @@ class LunchPeers(object):
             for ip in toRemove:
                 if ip in self._peer_info:
                     self._removeMember(self._peer_info[ip][u"ID"])
+        self._processNotifications()
     
     def getMemberIPs(self):
         """returns the IPs of all members"""
@@ -165,15 +211,15 @@ class LunchPeers(object):
     def _addMember(self, pID):
         if pID not in self._memberIDs:
             log_debug("Peer %s is a member" % pID) 
-            self._memberIDs.add(pID)           
-            get_notification_center().emitMemberAppended(pID, deepcopy(self.getPeerInfo(pID=pID, lock=False)))
+            self._memberIDs.add(pID)
+            self._memberChanges.append((pID, self._INSERTION, deepcopy(self.getPeerInfo(pID=pID, lock=False))))
         else:  # something may have changed for the member data
-            get_notification_center().emitMemberUpdated(pID, deepcopy(self.getPeerInfo(pID=pID, lock=False)))
+            self._memberChanges.append((pID, self._UPDATE, deepcopy(self.getPeerInfo(pID=pID, lock=False))))
             
     def _removeMember(self, pID):
         if pID in self._memberIDs:
             self._memberIDs.remove(pID)
-            get_notification_center().emitMemberRemoved(pID)  
+            self._memberChanges.append((pID, self._REMOVAL))
     
     ################ Peer Operations #####################    
     def removePeer(self, pID):
@@ -189,6 +235,7 @@ class LunchPeers(object):
         #doing this outside of the lock:        
         if pID:
             get_notification_center().emitPeerRemoved(pID)
+        self._processNotifications()
                 
     def removePeerIPs(self, toRemove):
         """removes the given IPs and drops information collected about these peers.
@@ -202,6 +249,7 @@ class LunchPeers(object):
                 if ip in self._peer_info:
                     pID = self._peer_info.pop(ip)[u"ID"]
                     self._removePeerIPfromID(pID, ip)
+        self._processNotifications()
                      
     ########### Getters for peer / member information ##############
     # All of the following public methods take keyword arguments:
@@ -374,7 +422,7 @@ class LunchPeers(object):
                 self._peer_info[ip].update(newInfo)
                     
                 if old_info != self._peer_info[ip]:
-                    get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
+                    self._peerChanges.append((newPID, self._UPDATE, deepcopy(self._peer_info[ip])))
                     log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
                 else:
                     log_debug("%s sent info - without new info" % ip)
@@ -383,9 +431,11 @@ class LunchPeers(object):
             
             if self._peer_info[ip][u"group"] == own_group:
                 self._addMember(newPID)
-                self.addGroup(self._peer_info[ip][u"group"])
+                self._addGroup(self._peer_info[ip][u"group"])
             else:
                 self._removeMember(newPID)
+            
+        self._processNotifications()
                 
     def removeInactive(self):
         """
@@ -402,6 +452,7 @@ class LunchPeers(object):
                         pID = self._peer_info[ip][u"ID"]
                         self._removePeerIPfromID(pID, ip)
                         del self._peer_info[ip]
+            self._processNotifications()
         except:
             log_exception("Something went wrong while trying to clean up the list of peers")
              
@@ -414,18 +465,18 @@ class LunchPeers(object):
             #remove member first
             self._removeMember(pID)
             self._idToIp.pop(pID)
-            get_notification_center().emitPeerRemoved(pID)
+            self._peerChanges.append((pID, self._REMOVAL))
         else:
-            get_notification_center().emitPeerUpdated(pID, deepcopy(self._peer_info[ip]))
+            self._peerChanges.append((pID, self._UPDATE, deepcopy(self._peer_info[ip])))
      
     def _addPeerIPtoID(self, pID, ip):       
         if pID not in self._idToIp:
             self._idToIp[pID] = [ip]
-            get_notification_center().emitPeerAppended(pID, deepcopy(self._peer_info[ip]))
+            self._peerChanges.append((pID, self._INSERTION, deepcopy(self._peer_info[ip])))
         else:
             # last one is last seen one
             self._idToIp[pID].append(ip)
-            get_notification_center().emitPeerUpdated(pID, deepcopy(self._peer_info[ip]))
+            self._peerChanges.append((pID, self._UPDATE, deepcopy(self._peer_info[ip])))
             
     def initPeersFromFile(self):
         """Initializes peer IPs from file and returns a list of IPs
