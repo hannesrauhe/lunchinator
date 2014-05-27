@@ -136,7 +136,9 @@ class LunchPeers(object):
         """remove members identified by their IPs, if toRemove is None, all members are removed"""
         with self._lock:
             if toRemove == None:
-                self._memberIDs.clear()
+                mem = deepcopy(self._memberIDs)
+                for mID in mem:
+                    self._removeMember(mID)
                 return
                 
             if type(toRemove) != set:
