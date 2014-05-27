@@ -69,13 +69,21 @@ class members_table(iface_gui_plugin):
         get_notification_center().connectPeerAppended(self.membersModel.externalRowAppended)
         get_notification_center().connectPeerUpdated(self.membersModel.externalRowUpdated)
         get_notification_center().connectPeerRemoved(self.membersModel.externalRowRemoved)
-        get_notification_center().connectGroupChanged(self.membersModel.updateTable)
+        
+        get_notification_center().connectMemberAppended(self._updatePeer)
+        get_notification_center().connectMemberRemoved(self._updatePeer)
         
         self._lunchTimeColumnTimer = QTimer(self.membersModel)
         self._lunchTimeColumnTimer.timeout.connect(self._startSyncedTimer)
         self._lunchTimeColumnTimer.start(msecUntilNextMinute())
         
         return self.membersTable
+
+    def _updatePeer(self, peerID, infoDict=None):
+        peerID = convert_string(peerID)
+        if infoDict == None:
+            infoDict = get_peers().getPeerInfo(pID=peerID)
+        self.membersModel.externalRowUpdated(peerID, infoDict)
     
     def _startSyncedTimer(self):
         self.membersModel.updateLunchTimeColumn()
@@ -89,8 +97,10 @@ class members_table(iface_gui_plugin):
         get_notification_center().disconnectPeerAppended(self.membersModel.externalRowAppended)
         get_notification_center().disconnectPeerUpdated(self.membersModel.externalRowUpdated)
         get_notification_center().disconnectPeerRemoved(self.membersModel.externalRowRemoved)
-        get_notification_center().disconnectGroupChanged(self.membersModel.updateTable)
 
+        get_notification_center().disconnectMemberAppended(self._updatePeer)
+        get_notification_center().disconnectMemberRemoved(self._updatePeer)
+        
         self._lunchTimeColumnTimer.stop()
         self._lunchTimeColumnTimer.deleteLater()
 
