@@ -397,7 +397,7 @@ class LunchPeers(object):
             if ip in self._peer_info and self._peer_info[ip][u"ID"] != newPID:
                 # IP has a new ID, assume different peer -> old peer does not use IP any more
                 self._removePeerIPfromID(self._peer_info[ip][u"ID"], ip)
-                self._peer_info.remove(ip)
+                del self._peer_info[ip]
             
             if ip not in self._peer_info and newPID not in self._idToIp:
                 # this is a new peer
