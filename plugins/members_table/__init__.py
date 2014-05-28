@@ -83,6 +83,12 @@ class members_table(iface_gui_plugin):
         peerID = convert_string(peerID)
         if infoDict == None:
             infoDict = get_peers().getPeerInfo(pID=peerID)
+        
+        if infoDict == None:
+            #this happens when a peer that is also a member is removed 
+            #-> the peer is not there anymore when the member removed signal arrives
+            return
+        
         self.membersModel.externalRowUpdated(peerID, infoDict)
     
     def _startSyncedTimer(self):

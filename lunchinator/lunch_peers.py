@@ -185,7 +185,7 @@ class LunchPeers(object):
             for pIP in pIPs:
                 self._peer_info.pop(pIP)
         
-            get_notification_center().emitPeerRemoved(pID)
+        get_notification_center().emitPeerRemoved(pID)
                 
     def removePeerIPs(self, toRemove):
         """removes the given IPs and drops information collected about these peers.
