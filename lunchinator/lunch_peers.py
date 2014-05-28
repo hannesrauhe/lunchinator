@@ -177,7 +177,6 @@ class LunchPeers(object):
     
     ################ Peer Operations #####################    
     def removePeer(self, pID):
-        pID = None
         with self._lock:
             if pID not in self._idToIp:
                 return
@@ -186,8 +185,6 @@ class LunchPeers(object):
             for pIP in pIPs:
                 self._peer_info.pop(pIP)
         
-        #doing this outside of the lock:        
-        if pID:
             get_notification_center().emitPeerRemoved(pID)
                 
     def removePeerIPs(self, toRemove):
