@@ -31,6 +31,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         
         text = QString(optionV4.text)
         if not text:
+            option.decorationAlignment = Qt.AlignLeft
             return super(MessageItemDelegate, self).paint(painter, option, modelIndex)
     
         style = optionV4.widget.style() if optionV4.widget else QApplication.style()
