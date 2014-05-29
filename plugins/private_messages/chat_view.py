@@ -1,10 +1,9 @@
 from PyQt4.QtGui import QTreeView, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy,\
     QFrame, QStandardItemModel, QStandardItem, QIcon, QHeaderView,\
     QStyledItemDelegate, QStyleOptionViewItemV4, QApplication, QTextDocument,\
-    QStyle, QAbstractTextDocumentLayout, QPalette, QFontMetrics, QItemDelegate,\
-    QCursor, QStyleOptionViewItem
-from PyQt4.QtCore import Qt, QSize, QVariant, QString, QEvent, QPointF, QPoint,\
-    QRect
+    QStyle, QAbstractTextDocumentLayout, QPalette, QItemDelegate,\
+    QStyleOptionViewItem
+from PyQt4.QtCore import Qt, QSize, QVariant, QString, QEvent, QPointF, QPoint
 from lunchinator import convert_string, get_settings
 from lunchinator.history_line_edit import HistoryTextEdit
 import webbrowser
@@ -121,10 +120,6 @@ class ChatWidget(QWidget):
         self._ownIcon = ownIcon
         self._otherIcon = otherIcon
         
-        # create HBox in VBox for each table
-        # Create message table
-        tableBottomLayout = QHBoxLayout()
-        
         self._model = QStandardItemModel(self)
         self._model.setColumnCount(3)
         
@@ -148,19 +143,13 @@ class ChatWidget(QWidget):
         self.table.setFrameShape(QFrame.NoFrame)
         self.table.setFocusPolicy(Qt.NoFocus)
         
-        
-        self.entry = HistoryTextEdit(self)
-        tableBottomLayout.addWidget(self.entry)
-        button = QPushButton(u"Send", self)
-        button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
-        tableBottomLayout.addWidget(button, 0, Qt.AlignBottom)
-        
+        # TODO option to change behavior
+        self.entry = HistoryTextEdit(self, True)
         tableLayout = QVBoxLayout(self)
         tableLayout.addWidget(self.table)
-        tableLayout.addLayout(tableBottomLayout)
+        tableLayout.addWidget(self.entry)
         
         self.entry.returnPressed.connect(self.eventTriggered)
-        button.clicked.connect(self.eventTriggered)
         
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
         
