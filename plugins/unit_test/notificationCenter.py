@@ -1,12 +1,18 @@
 import unittest, Queue
-from lunchinator import get_notification_center, get_peers, get_settings
+from lunchinator import get_notification_center, get_peers, get_settings, get_server
 
 class notificationCenterTestCase(unittest.TestCase):
     def setUp(self):
-        self.testResult = Queue.Queue()
+        if not get_server().has_gui():
+            self.testResult = Queue.Queue()
         
     def tearDown(self):
-        assert "Success" == self.testResult.get(timeout=10)
+        if not get_server().has_gui():
+            assert "Success" == self.testResult.get(timeout=10)
+        
+    def setTestResult(self, result):
+        if not get_server().has_gui():
+            self.testResult.put(result)
         
     def testMemberRemovalLock(self):
         get_notification_center().connectMemberRemoved(self.connect_testMemberRemovalLock)
@@ -21,7 +27,7 @@ class notificationCenterTestCase(unittest.TestCase):
         print get_peers().getPeerIPs(pID=peerID)
         
         get_notification_center().disconnectMemberRemoved(self.connect_testMemberRemovalLock)
-        self.testResult.put("Success")
+        self.setTestResult("Success")
         
     def testDBSettingChanged(self):
         get_notification_center().connectDBSettingChanged(self.connect_testDBSettingChanged)
@@ -31,6 +37,6 @@ class notificationCenterTestCase(unittest.TestCase):
     def connect_testDBSettingChanged(self,connName):
         get_notification_center().disconnectDBSettingChanged(self.connect_testDBSettingChanged)
         if connName == "UnitTestConn":
-            self.testResult.put("Success")        
+            self.setTestResult("Success")        
         else:
-            self.testResult.put("%s changed, expected UnitTestconn"%connName) 
+            self.setTestResult("%s changed, expected UnitTestconn"%connName) 
