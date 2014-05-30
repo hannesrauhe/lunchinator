@@ -37,7 +37,7 @@ class statistics(iface_called_plugin):
             
             if plugin_type == "SQLite Connection":
                 self.connectionPlugin = statistics_sqlite(dbPlugin)
-                log_debug("Statistics: Using DB Connection ",type(plugin_type))
+                log_debug("Statistics: Using DB Connection ",plugin_type)
             else:
                 self.connectionPlugin = None
                 return False
