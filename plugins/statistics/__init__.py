@@ -1,7 +1,7 @@
 from lunchinator.iface_plugins import *
 from lunchinator import get_server, log_debug,\
     get_settings, get_db_connection, log_warning, \
-    get_notification_center
+    get_notification_center, get_peers
 import threading
 
 class statistics(iface_called_plugin):
@@ -76,31 +76,52 @@ class statistics_dbase(object):
     def __init__(self, newconn):
         self.dbConn = newconn
         
-        try:            
-            if not newconn.existsTable("members"):
-                newconn.execute(self.members_schema)
-            if not newconn.existsTable("messages"):
-                newconn.execute(self.messages_schema)
+        try:
+            self.migrate()
         except:
-            log_exception("Problem while initializing database in SQLite")  
-            raise 
+            log_exception("Problem while migrating dataset to new version")
     
     def isOpen(self):
         if self.dbConn:
             return self.dbConn.isOpen()
         return False
+    
+    def migrate(self):
+        raise NotImplementedError("Migration not implmented")
 
 class statistics_sqlite(statistics_dbase):
-    messages_schema = "CREATE TABLE messages (m_id INTEGER PRIMARY KEY AUTOINCREMENT, \
-            mtype TEXT, message TEXT, sender TEXT, rtime INTEGER)"
-    members_schema = "CREATE TABLE members (IP TEXT, name TEXT, avatar TEXT, lunch_begin TEXT, lunch_end TEXT, rtime INTEGER)"
+    version_schema = "CREATE TABLE statistics_version (commit_count INTEGER, migrate_time INTEGER)"
+    messages_schema = "CREATE TABLE statistics_messages (m_id INTEGER PRIMARY KEY AUTOINCREMENT, \
+            mtype TEXT, message TEXT, sender TEXT, senderIP TEXT, rtime INTEGER)"
+    members_schema = "CREATE TABLE statistics_members (peerID TEXT, name TEXT, avatar TEXT, lunch_begin TEXT, lunch_end TEXT, rtime INTEGER)"
     
+    def migrate(self):                   
+        if not self.dbConn.existsTable("statistics_version"):
+            self.dbConn.execute(self.version_schema)
+            if self.dbConn.existsTable("messages"):
+                #migrate from first version
+                #create tables with statistics_prefix
+                self.dbConn.execute("ALTER TABLE messages RENAME TO statistics_messages")
+                self.dbConn.execute("ALTER TABLE statistics_messages ADD COLUMN senderIP TEXT DEFAULT \"\" ") 
+                self.dbConn.execute("UPDATE statistics_messages SET senderIP=sender WHERE senderIP=\"\"")
+                self.dbConn.execute("CREATE TABLE statistics_members (peerID TEXT, name TEXT, avatar TEXT, lunch_begin TEXT, lunch_end TEXT, rtime INTEGER)")
+                self.dbConn.execute("INSERT INTO statistics_members SELECT * FROM members") 
+                self.dbConn.execute("INSERT INTO statistics_version VALUES (1300, strftime('%s', 'now'))")
         
-    def insert_call(self,mtype,msg,sender):
-        self.dbConn.execute("INSERT INTO messages(mtype,message,sender,rtime) VALUES (?,?,?,strftime('%s', 'now'))",mtype,msg,sender)
+        #in case no migration has happened create empty tables
+        if not self.dbConn.existsTable("statistics_members"):
+            self.dbConn.execute(self.members_schema)
+        if not self.dbConn.existsTable("statistics_messages"):
+            self.dbConn.execute(self.messages_schema)
+            
+    def insert_call(self,mtype,msg,senderIP):
+        senderID = get_peers().getPeerID(pIP=senderIP)
+        self.dbConn.execute("INSERT INTO statistics_messages(mtype,message,sender,senderIP,rtime) VALUES (?,?,?,?,strftime('%s', 'now'))",mtype,msg,senderID,senderIP)
     
-    def insert_members(self,ip,name,avatar,lunch_begin,lunch_end):
-        self.dbConn.execute("INSERT INTO members(IP, name, avatar, lunch_begin, lunch_end, rtime) VALUES (?,?,?,?,?,strftime('%s', 'now'))",ip,name,avatar,lunch_begin,lunch_end)
+    def insert_members(self,peer_id,name,avatar,lunch_begin,lunch_end):
+        self.dbConn.execute("INSERT INTO statistics_members(peerID, name, avatar, lunch_begin, lunch_end, rtime) VALUES (?,?,?,?,?,strftime('%s', 'now'))",peer_id,name,avatar,lunch_begin,lunch_end)
         
     def get_newest_members_data(self):    
-        return self.dbConn.query("SELECT IP,name,avatar,lunch_begin,lunch_end,MAX(rtime) FROM members GROUP BY IP")
+        return self.dbConn.query("SELECT peerID,name,avatar,lunch_begin,lunch_end,MAX(rtime) FROM statistics_members GROUP BY peerID")
+    
+#class statistics_hana(statistics_dbase):
