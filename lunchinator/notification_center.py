@@ -280,6 +280,18 @@ class NotificationCenter(object):
     def emitGeneralSettingChanged(self, settingName):
         pass
     
+    """Notifies Plugins when a database connection is changed, 
+    so the plugin can decide whether to re-initialize the database"""    
+    @_connectFunc
+    def connectDBSettingChanged(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectDBSettingChanged(self, callback):
+        pass
+    @_emitFunc
+    def emitDBSettingChanged(self, dbConnName):
+        pass
+    
 if __name__ == '__main__':
     def _testCallback(a, b, c):
         print a, b, c

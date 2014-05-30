@@ -132,10 +132,9 @@ class db_connections(iface_general_plugin):
                 self.conn_properties[conn_name] = props
                 
                 if conn_name in self.open_connections:
-                    '''@todo: handle plugins that use this connection (not sure if 
-                    necessary, will be re-opened automatically)'''
                     conn = self.open_connections.pop(conn_name)
                     conn.close()
+                    get_notification_center().emitDBSettingChanged(conn_name)
                     get_notification_center().emitRestartRequired("DB Settings were changed - you should restart")
                 
         get_settings().set_available_db_connections(self.conn_properties.keys())

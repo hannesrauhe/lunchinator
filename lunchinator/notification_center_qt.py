@@ -142,3 +142,11 @@ class NotificationCenterQt(QObject):
     def emitGeneralSettingChanged(self, settingName):
         self._signalGeneralSettingChanged.emit(settingName)
         
+    _signalDBSettingChanged = pyqtSignal(unicode)
+    def connectDBSettingChanged(self, callback):
+        self._signalDBSettingChanged.connect(callback, type=Qt.QueuedConnection)
+    def disconnectDBSettingChanged(self, callback):
+        self._signalDBSettingChanged.disconnect(callback)
+    def emitDBSettingChanged(self, dbConnName):
+        self._signalDBSettingChanged.emit(dbConnName)
+        

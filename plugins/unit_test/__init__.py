@@ -1,5 +1,6 @@
 from lunchinator.iface_plugins import iface_called_plugin
-from lunchinator import get_server, get_settings, get_peers, get_notification_center, log_exception, log_error
+from lunchinator import get_server, get_settings, get_peers, \
+  get_notification_center, log_exception, log_error, log_warning
 from lunchinator.utilities import displayNotification
 from PyQt4.QtGui import QTextEdit
 import json
@@ -13,4 +14,7 @@ class unit_test(iface_called_plugin):
             import unittest
             from notificationCenter import notificationCenterTestCase
             runner = unittest.TextTestRunner()
-            runner.run(notificationCenterTestCase("testMemberRemovalLock"))
+            
+            log_warning("Starting SelfTest")
+            suite = unittest.makeSuite(notificationCenterTestCase,'test')
+            runner.run(suite)
