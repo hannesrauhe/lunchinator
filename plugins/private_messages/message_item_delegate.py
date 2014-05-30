@@ -1,7 +1,8 @@
 from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QApplication, QTextDocument,\
     QStyle, QAbstractTextDocumentLayout, QPalette, QItemDelegate,\
-    QStyleOptionViewItem
-from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint
+    QStyleOptionViewItem, QBrush, QColor, QGradient, QLinearGradient, QPainter
+from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
+    QRectF, QSizeF
 import webbrowser
 
 class MessageItemDelegate(QStyledItemDelegate):
@@ -18,6 +19,18 @@ class MessageItemDelegate(QStyledItemDelegate):
         self.document = QTextDocument()
         self.mouseOverDocument = self.document
         self.lastTextPos = QPoint(0, 0)
+        
+        ownGradient = QLinearGradient(0, 0, 0, 10)
+        ownGradient.setColorAt(0, QColor(194, 215, 252))
+        ownGradient.setColorAt(1, QColor(182, 208, 251))
+        self._ownBrush = QBrush(ownGradient)
+        self._ownPenColor = QColor(104, 126, 164)
+        
+        otherGradient = QLinearGradient(0, 0, 0, 10)
+        otherGradient.setColorAt(0, QColor(236, 236, 236))
+        otherGradient.setColorAt(1, QColor(200, 200, 200))
+        self._otherBrush = QBrush(otherGradient)
+        self._otherPenColor = QColor(153, 153, 153)
 
     def paint(self, painter, option, modelIndex):
         optionV4 = QStyleOptionViewItemV4(option)
@@ -53,7 +66,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         painter.save()
         
         if rightAligned:
-            xOffset = textRect.width() - self.document.idealWidth()
+            xOffset = textRect.width() - self.document.idealWidth() - 3
         else:
             xOffset = 0
         
@@ -71,6 +84,14 @@ class MessageItemDelegate(QStyledItemDelegate):
             self.lastTextPos = textPos
         
         painter.translate(textPos)
+        
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setBrush(self._ownBrush if rightAligned else self._otherBrush)
+        painter.setPen(self._ownPenColor if rightAligned else self._otherPenColor)
+        painter.drawRoundedRect(QRectF(QPointF(0, 0.5),
+                                       QSizeF(self.document.size().width(),
+                                              self.document.size().height() - 1.)),
+                                7, 7)
         painter.setClipRect(textRect.translated(-textRect.topLeft()))
         self.document.documentLayout().draw(painter, ctx)
         painter.restore()
