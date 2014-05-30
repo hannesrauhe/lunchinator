@@ -2,6 +2,8 @@ from PyQt4.QtCore import pyqtSignal, QObject, Qt
 import time
 
 class NotificationCenterQt(QObject):
+    def finish(self):
+        pass
     
     _signalOutdatedRepositoriesChanged = pyqtSignal()
     def connectOutdatedRepositoriesChanged(self, callback):

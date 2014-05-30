@@ -134,3 +134,4 @@ class LunchServerController(object):
             for pluginInfo in get_plugin_manager().getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:
                     pluginInfo.plugin_object.deactivate()
+        get_notification_center().finish()
