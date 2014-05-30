@@ -1,7 +1,10 @@
-from PyQt4.QtCore import pyqtSignal, QObject, Qt
+from PyQt4.QtCore import pyqtSignal, QObject, Qt, QCoreApplication
 import time
 
 class NotificationCenterQt(QObject):
+    def processSignalsNow(self):
+        QCoreApplication.processEvents()
+        
     def finish(self):
         pass
     
@@ -125,7 +128,7 @@ class NotificationCenterQt(QObject):
     def emitGroupChanged(self, oldGroup, newGroup):
         self._signalGroupChanged.emit(oldGroup, newGroup)
     
-    #signal with all sender info?: _signalMessagePrepended = pyqtSignal(time.struct_time, dict, list)
+    # signal with all sender info?: _signalMessagePrepended = pyqtSignal(time.struct_time, dict, list)
     _signalMessagePrepended = pyqtSignal(time.struct_time, unicode, unicode)
     def connectMessagePrepended(self, callback):
         self._signalMessagePrepended.connect(callback, type=Qt.QueuedConnection)

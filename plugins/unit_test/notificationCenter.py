@@ -3,16 +3,15 @@ from lunchinator import get_notification_center, get_peers, get_settings, get_se
 
 class notificationCenterTestCase(unittest.TestCase):
     def setUp(self):
-        if not get_server().has_gui():
-            self.testResult = Queue.Queue()
+        self.testResult = Queue.Queue()
         
     def tearDown(self):
-        if not get_server().has_gui():
-            assert "Success" == self.testResult.get(timeout=10)
-        
+        if get_server().has_gui():
+            get_notification_center().processSignalsNow()
+        assert "Success" == self.testResult.get(timeout=10)
+            
     def setTestResult(self, result):
-        if not get_server().has_gui():
-            self.testResult.put(result)
+        self.testResult.put(result)
         
     def testMemberRemovalLock(self):
         get_notification_center().connectMemberRemoved(self.connect_testMemberRemovalLock)
