@@ -51,6 +51,7 @@ class db_connections(iface_general_plugin):
                                                               k)
                     p_options["plugin_type"]=plugin_type
                     self.conn_properties[conn_name] = p_options.copy()
+                    get_notification_center().emitDBConnReady()
             except:
                 raise
             finally:

@@ -149,4 +149,12 @@ class NotificationCenterQt(QObject):
         self._signalDBSettingChanged.disconnect(callback)
     def emitDBSettingChanged(self, dbConnName):
         self._signalDBSettingChanged.emit(dbConnName)
+       
+    _signalDBConnReady = pyqtSignal() 
+    def connectDBConnReady(self, callback):
+        self._signalDBConnReady.connect(callback, type=Qt.QueuedConnection)
+    def disconnectDBConnReady(self, callback):
+        self._signalDBConnReady.disconnect(callback)
+    def emitDBConnReady(self):
+        self._signalDBConnReady.emit()
         

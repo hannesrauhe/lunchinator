@@ -13,7 +13,6 @@ class MultiThreadSQLite(threading.Thread, lunch_db):
         self.db_file=db_file
         self.results={}
         self.reqs=Queue.Queue()
-        self.is_open = False
         
     def run(self):
         cnx = sqlite3.connect(self.db_file) 
@@ -78,18 +77,6 @@ class MultiThreadSQLite(threading.Thread, lunch_db):
             return header,resultList
         if returnResults:
             return resultList
-        
-        
-    
-    '''Statistics'''
-    def insert_call(self,mtype,msg,sender):
-        self.execute("INSERT INTO messages(mtype,message,sender,rtime) VALUES (?,?,?,strftime('%s', 'now'))",mtype,msg,sender)
-    
-    def insert_members(self,ip,name,avatar,lunch_begin,lunch_end):
-        self.execute("INSERT INTO members(IP, name, avatar, lunch_begin, lunch_end, rtime) VALUES (?,?,?,?,?,strftime('%s', 'now'))",ip,name,avatar,lunch_begin,lunch_end)
-        
-    def get_newest_members_data(self):    
-        return self.query("SELECT IP,name,avatar,lunch_begin,lunch_end,MAX(rtime) FROM members GROUP BY IP")
         
     def existsTable(self, tableName):
         result = self.query("select sql from sqlite_master where type = 'table' and upper(name) = '%s'" % tableName.upper())
