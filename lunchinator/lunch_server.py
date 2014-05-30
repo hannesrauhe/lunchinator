@@ -34,6 +34,7 @@ class lunch_server(object):
         self._disable_broadcast = False
         self.running = False
         self._peer_nr = 0
+        self._peers = None
         self.plugin_manager = None
         self._message_queues = {} # queues for messages from new peers
         self._last_messages = {} # last messages by peer ID, to avoid duplicates

@@ -329,6 +329,20 @@ class LunchPeers(object):
                     # valid format
                     return True
         return False
+    
+    @peerGetter()
+    def getPeerAvatarFile(self, ip):
+        """Returns the path to a peer's avatar file, if it exists.
+
+        The method returns None if the peer does not have an avatar or
+        the file does not exist.
+        """
+        peerInfo = self.getPeerInfo(pIP=ip, lock=False)
+        if peerInfo != None and "avatar" in peerInfo:
+            avatarFile = os.path.join(get_settings().get_avatar_dir(), peerInfo["avatar"])
+            if os.path.exists(avatarFile):
+                return avatarFile
+        return None
         
     ############### Additional getters ##################
     

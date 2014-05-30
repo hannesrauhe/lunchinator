@@ -1,18 +1,50 @@
 from PyQt4.QtGui import QTreeView, QWidget, QVBoxLayout, QSizePolicy,\
     QFrame, QStandardItemModel, QStandardItem, QIcon, QHeaderView, QHBoxLayout,\
-    QLabel, QPixmap, QPalette
-from PyQt4.QtCore import Qt, QSize, QVariant
+    QLabel, QPixmap, QTextCharFormat, QTextCursor
+from PyQt4.QtCore import Qt, QSize, QVariant, pyqtSignal, QRegExp
 from lunchinator import convert_string, get_settings
 from lunchinator.history_line_edit import HistoryTextEdit
 from private_messages.message_item_delegate import MessageItemDelegate
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
+    _URI_REGEX="""
+    (
+      (
+        [A-Za-z][A-Za-z0-9\+\.\-]*:\/\/
+        [A-Za-z0-9\.\-]+
+        |
+        www\.
+        [A-Za-z0-9\.\-]+
+        \.[A-Za-z]+
+      )
+      (
+        (?:\/[\+~%\/\.\w\-]*)
+        ?\??(?:[\-\+=&;%@\.\w]*) 
+        #?(?:[\.\!\/\\\w]*)
+      )?
+    )
+    """.replace("\n", "").replace(" ", "")
     
-    def __init__(self, parent, triggeredEvent, ownName, otherName, ownPicFile, otherPicFile):
+    _MAIL_REGEX="""
+    (
+      (
+        [\-;:&=\+\$,\w]+@
+        [A-Za-z0-9\.\-]+
+        \.[A-Za-z]+
+      )
+    )
+    """.replace("\n", "").replace(" ", "")
+    
+    _URI_MATCHER=QRegExp(_URI_REGEX)
+    _MAIL_MATCHER=QRegExp(_MAIL_REGEX)
+    
+    sendMessage = pyqtSignal(unicode, unicode) # peer ID, message HTML
+        
+    def __init__(self, parent, ownName, otherName, ownPicFile, otherPicFile, otherID):
         super(ChatWidget, self).__init__(parent)
         
-        self.externalEvent = triggeredEvent
+        self._otherID = otherID
         
         self._ownIcon = QIcon(ownPicFile)
         self._otherIcon = QIcon(otherPicFile)
@@ -125,29 +157,50 @@ class ChatWidget(QWidget):
         self._otherIcon = icon
         
     def eventTriggered(self):
-        text = convert_string(self.entry.text())
-        ret_val = self.externalEvent(text)
-        if ret_val != False:
-            self.entry.clear()
+        self._detectHyperlinks()
+        text = convert_string(self.entry.toHtml())
+        self.sendMessage.emit(self._otherID, text)
+        self.entry.setEnabled(False)
     
+    def _insertAnchors(self, cursor, plainText, matcher, hrefFunc):
+        pos = 0
+        while pos != -1:
+            pos = matcher.indexIn(plainText, pos)
+            if pos == -1:
+                break
+            
+            cursor.setPosition(pos);
+            cursor.setPosition(pos + matcher.matchedLength(), QTextCursor.KeepAnchor)
+
+            fmt = QTextCharFormat()
+            fmt.setAnchor(True)
+            fmt.setAnchorHref(hrefFunc(matcher.cap()))
+            cursor.mergeCharFormat(fmt)
+            
+            pos += matcher.matchedLength()
+        
+    def _detectHyperlinks(self):
+        cursor = QTextCursor(self.entry.document())
+        plainText = self.entry.toPlainText()
+        self._insertAnchors(cursor, plainText, self._URI_MATCHER, lambda uri : uri)
+        self._insertAnchors(cursor, plainText, self._MAIL_MATCHER, lambda mail : u"mailto:" + convert_string(mail))
+        
     def sizeHint(self):
         sizeHint = QWidget.sizeHint(self)
         return QSize(self.PREFERRED_WIDTH, sizeHint.height())
         
 if __name__ == '__main__':
     from lunchinator.iface_plugins import iface_gui_plugin
-    def foo(text):
-        print text
     
     def createTable(window):
-        ownIcon = get_settings().get_resource("images", "mini_breakfast.png")
+        ownIcon = get_settings().get_resource("images", "me.png")
         otherIcon = get_settings().get_resource("images", "lunchinator.png")
-        tw = ChatWidget(window, foo, "Corny", "Other Guy", ownIcon, otherIcon)
+        tw = ChatWidget(window, "Me", "Other Guy", ownIcon, otherIcon, "ID")
         tw.addOwnMessage("<p align=right>foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten</p>")
         tw.addOtherMessage("<a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a>")
         tw.addOtherMessage("foo")
         tw.addOtherMessage("foo")
-        tw.addOtherMessage("foo")
+        tw.addOtherMessage("<a href=\"mailto:info@lunchinator.de\">Lunchinator Mail</a>")
         tw.addOwnMessage("bar")
         tw.addOtherMessage("foo")
         tw.addOtherMessage("foo")
