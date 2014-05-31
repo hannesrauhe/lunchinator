@@ -41,10 +41,13 @@ class statistics(iface_called_plugin):
             
             if plugin_type == "SQLite Connection":
                 self.connectionPlugin = statistics_sqlite(dbPlugin)
-                log_debug("Statistics: Using DB Connection ",plugin_type)
+            elif plugin_type == "HANA Connection":
+                self.connectionPlugin = statistics_hana(dbPlugin)
             else:
                 self.connectionPlugin = None
                 return False
+                
+            log_debug("Statistics: Using DB Connection ",plugin_type)
                         
             return True
         
@@ -91,7 +94,7 @@ class statistics_dbase(object):
         return False
     
     def migrate(self):
-        raise NotImplementedError("Migration not implmented")
+        raise NotImplementedError("Migration not implemented")
 
 class statistics_sqlite(statistics_dbase):
     version_schema = "CREATE TABLE statistics_version (commit_count INTEGER, migrate_time INTEGER)"
@@ -128,4 +131,24 @@ class statistics_sqlite(statistics_dbase):
     def get_newest_members_data(self):    
         return self.dbConn.query("SELECT peerID,name,avatar,lunch_begin,lunch_end,MAX(rtime) FROM statistics_members GROUP BY peerID")
     
-#class statistics_hana(statistics_dbase):
+class statistics_hana(statistics_dbase):
+    messages_schema = "CREATE INSERT ONLY COLUMN TABLE messages ( \
+            mtype VARCHAR(100), message VARCHAR(5000), sender VARCHAR(100), rtime SECONDDATE, receiver VARCHAR(100))";
+    members_schema = "CREATE COLUMN TABLE members (IP VARCHAR(15), name VARCHAR(255), \
+            avatar VARCHAR(255), lunch_begin VARCHAR(5), lunch_end VARCHAR(5), rtime SECONDDATE)"; 
+    
+    def migrate(self):
+        if not self.dbconn.existsTable("members"):
+            self.dbconn.execute(self.members_schema)
+        if not self.dbconn.existsTable("messages"):
+            self.dbconn.execute(self.messages_schema)
+                
+    def insert_call(self,mtype,msg,sender):
+        self.dbconn.execute("INSERT INTO messages(mtype,message,sender,rtime,receiver) VALUES (?,?,?,now(),?)",mtype,msg,sender,get_settings().get_ID())          
+    
+    def insert_members(self,ip,name,avatar,lunch_begin,lunch_end):
+        self.dbconn.execute("INSERT INTO members(IP, name, avatar, lunch_begin, lunch_end, rtime) VALUES (?,?,?,?,?,now())",ip,name,avatar,lunch_begin,lunch_end)
+                
+    def get_newest_members_data(self):  
+        return self.dbconn.query("select * from members, (SELECT ip as maxtimeip,MAX(rtime) as maxtime FROM members GROUP BY IP) as maxtable where maxtimeip=ip and maxtime = rtime")      
+
