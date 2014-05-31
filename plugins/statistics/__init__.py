@@ -22,6 +22,10 @@ class statistics(iface_called_plugin):
         get_notification_center().connectPeerUpdated(self.peer_update)
         
     def deactivate(self):
+        get_notification_center().disconnectDBSettingChanged(self.connect_to_db)
+        get_notification_center().disconnectDBConnReady(self.connect_to_db)
+        get_notification_center().disconnectPeerAppended(self.peer_update)
+        get_notification_center().disconnectPeerUpdated(self.peer_update)
         iface_called_plugin.deactivate(self)
         
     def connect_to_db(self, changedDBConn = None):
