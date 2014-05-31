@@ -40,7 +40,7 @@ class statTimelineWidget(QtGui.QWidget):
         
         maxTime = time.time()
         minTime = int(maxTime - size.width() * self.scale)
-        tmp = self.connPlugin.query("SELECT mtype, count(*) FROM messages " + \
+        tmp = self.connPlugin.query("SELECT mtype, count(*) FROM statistics_messages " + \
                                     "WHERE rtime between %d and %d GROUP BY mtype" % (minTime, maxTime))
         numYAreas = len(tmp)
         if 0 == numYAreas:
@@ -64,7 +64,7 @@ class statTimelineWidget(QtGui.QWidget):
         
         qp.setPen(QtCore.Qt.red)
         timelineData = self.connPlugin.query("SELECT mtype, sender, rtime " + \
-                                            "FROM messages " + \
+                                            "FROM statistics_messages " + \
                                             "WHERE rtime between %d and %d" % (minTime, maxTime))
 
         lastx = -1
@@ -141,7 +141,7 @@ class statSwarmWidget(QtGui.QWidget):
         maxTime = time.time()
         minTime = maxTime - self.period*60*60
         
-        tmp = self.connPlugin.query("SELECT sender, count(*) FROM messages " + \
+        tmp = self.connPlugin.query("SELECT sender, count(*) FROM statistics_messages " + \
                                     "WHERE rtime between ? and ? "+ \
                                     "AND mType LIKE ?"
                                     "GROUP BY sender", minTime, maxTime, str(self.mtype))

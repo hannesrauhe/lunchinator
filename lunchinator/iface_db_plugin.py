@@ -116,10 +116,6 @@ class lunch_db(object):
         
     def insertLunchPart(self, date, textAndAdditivesList, update, table):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
-    '''maintenance plugin methods'''    
-    def getBugsFromDB(self,mode="open"):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
             
        
         
