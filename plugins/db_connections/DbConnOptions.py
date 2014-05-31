@@ -30,10 +30,10 @@ class DbConnOptions(QWidget):
         lay.addWidget(self.conn_details, 2, 0, 1, 2)        
         newConnButton = QPushButton("New Connection", parent)
         lay.addWidget(newConnButton, 3, 1)
-        warningLbl = QLabel("The standard connection is used by the lunchinator internally to store messages etc." + \
-                             " DO NOT change this connection unless you know what you are doing.")
-        warningLbl.setWordWrap(True)
-        lay.addWidget(warningLbl, 4, 0, 4, 2)
+        self.warningLbl = QLabel("The standard connection is used by the lunchinator internally to store messages etc." + \
+                             " It can be used by plugins as well, but it cannot be changed.")
+        self.warningLbl.setWordWrap(True)
+        lay.addWidget(self.warningLbl, 4, 0, 4, 2)
         
         for p in self.available_types.values():
             w = p.create_db_options_widget(parent)
@@ -80,6 +80,15 @@ class DbConnOptions(QWidget):
         
         p = self.available_types[self.last_type]
         p.fill_options_widget(self.conn_properties[self.last_name])
+            
+        if self.nameCombo.currentText()=="Standard":
+            self.typeCombo.setEnabled(False)
+            self.conn_details.setEnabled(False)
+            self.warningLbl.setVisible(True)
+        else:
+            self.typeCombo.setEnabled(True)
+            self.conn_details.setEnabled(True)
+            self.warningLbl.setVisible(False)
         
     def type_changed(self, index):
         self.conn_details.setCurrentIndex(index)
@@ -94,7 +103,7 @@ class DbConnOptions(QWidget):
             self.fill_conn_details()
         else:
             self.typeCombo.setCurrentIndex(type_index)
-    
+            
     def new_conn(self):
         new_conn_name = "Conn %d" % len(self.conn_properties)
         self.conn_properties[new_conn_name] = {"plugin_type" : str(self.typeCombo.currentText()) }
