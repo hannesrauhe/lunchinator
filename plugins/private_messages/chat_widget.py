@@ -5,6 +5,7 @@ from PyQt4.QtCore import Qt, QSize, QVariant, pyqtSignal, QRegExp
 from lunchinator import convert_string, get_settings
 from lunchinator.history_line_edit import HistoryTextEdit
 from private_messages.message_item_delegate import MessageItemDelegate
+from private_messages.chat_messages_view import ChatMessagesView
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -98,27 +99,7 @@ class ChatWidget(QWidget):
         self._model.setColumnCount(3)
         
     def _initMessageTable(self):
-        self.table = QTreeView(self)
-        self.table.setIconSize(QSize(32,32))
-        self.table.setModel(self._model)
-        self.table.header().setStretchLastSection(False)
-        self.table.header().setResizeMode(1, QHeaderView.Stretch)
-        self.table.setColumnWidth(0, 32)
-        self.table.setColumnWidth(2, 32)
-        
-        self.table.setItemDelegate(MessageItemDelegate(self.table))
-        self.table.setAutoFillBackground(False)
-        self.table.viewport().setAutoFillBackground(False)
-        
-        self.table.setSelectionMode(QTreeView.NoSelection)
-        self.table.setSortingEnabled(False)
-        self.table.setHeaderHidden(True)
-        self.table.setAlternatingRowColors(False)
-        self.table.setIndentation(0)
-        
-        self.table.setFrameShadow(QFrame.Plain)
-        self.table.setFrameShape(QFrame.NoFrame)
-        self.table.setFocusPolicy(Qt.NoFocus)
+        self.table = ChatMessagesView(self._model, self)
         
     def _createIconItem(self, icon):
         item = QStandardItem()
@@ -129,7 +110,7 @@ class ChatWidget(QWidget):
         
     def _createMessageIcon(self, msg, alignRight):
         item = QStandardItem()
-        item.setEditable(False)
+        item.setEditable(True)
         item.setData(msg, Qt.DisplayRole)
         item.setData(Qt.AlignHCenter | (Qt.AlignRight if alignRight else Qt.AlignLeft),
                      Qt.TextAlignmentRole)
@@ -161,7 +142,7 @@ class ChatWidget(QWidget):
         text = convert_string(self.entry.toHtml())
         self.sendMessage.emit(self._otherID, text)
         self.entry.setEnabled(False)
-    
+
     def _insertAnchors(self, cursor, plainText, matcher, hrefFunc):
         pos = 0
         while pos != -1:
@@ -196,7 +177,7 @@ if __name__ == '__main__':
         ownIcon = get_settings().get_resource("images", "me.png")
         otherIcon = get_settings().get_resource("images", "lunchinator.png")
         tw = ChatWidget(window, "Me", "Other Guy", ownIcon, otherIcon, "ID")
-        tw.addOwnMessage("<p align=right>foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten</p>")
+        tw.addOwnMessage("foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten")
         tw.addOtherMessage("<a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a>")
         tw.addOtherMessage("foo")
         tw.addOtherMessage("foo")

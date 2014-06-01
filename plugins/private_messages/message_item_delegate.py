@@ -1,10 +1,37 @@
 from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QApplication, QTextDocument,\
     QStyle, QAbstractTextDocumentLayout, QPalette, QItemDelegate,\
-    QStyleOptionViewItem, QBrush, QColor, QGradient, QLinearGradient, QPainter
+    QStyleOptionViewItem, QBrush, QColor, QGradient, QLinearGradient, QPainter,\
+    QTextEdit, QHBoxLayout, QFrame, QSizePolicy
 from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
     QRectF, QSizeF
 import webbrowser
+from PyQt4.Qt import QWidget
 
+class ItemEditor(QTextEdit):
+    def __init__(self, document, textSize, rightAligned, parent):
+        super(ItemEditor, self).__init__(parent)
+        self.setDocument(document)
+        self._textSize = textSize
+        self.setReadOnly(True)
+        
+        self.viewport().setAutoFillBackground(False)
+        self.setAutoFillBackground(False)
+        self.setFrameShadow(QFrame.Plain)
+        self.setFrameStyle(QFrame.NoFrame)
+        
+        self.setViewportMargins(-4 if rightAligned else 0, 0, -5, -5)
+        
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding)
+        self.setMinimumSize(textSize)
+        self.setMaximumSize(textSize)
+        self.setFocusPolicy(Qt.StrongFocus)
+        
+    def sizeHint(self):
+        return self._textSize
+            
 class MessageItemDelegate(QStyledItemDelegate):
     def __init__(self, parentView):
         QItemDelegate.__init__(self, parentView)
@@ -19,6 +46,8 @@ class MessageItemDelegate(QStyledItemDelegate):
         self.document = QTextDocument()
         self.mouseOverDocument = self.document
         self.lastTextPos = QPoint(0, 0)
+        self._editIndex = None
+        self._editor = None
         
         ownGradient = QLinearGradient(0, 0, 0, 10)
         ownGradient.setColorAt(0, QColor(194, 215, 252))
@@ -31,13 +60,57 @@ class MessageItemDelegate(QStyledItemDelegate):
         otherGradient.setColorAt(1, QColor(200, 200, 200))
         self._otherBrush = QBrush(otherGradient)
         self._otherPenColor = QColor(153, 153, 153)
-
+        
+        self.closeEditor.connect(self._editorClosing)
+    
+    def setEditIndex(self, modelIndex):
+        self._editIndex = modelIndex
+        
+    def getEditIndex(self):
+        return self._editIndex
+        
+    def _editorClosing(self, _editor, _hint):
+        self._editor = None
+        self.setEditIndex(None)
+        
+    def getEditor(self):
+        return self._editor
+    
+    def createEditor(self, parent, option, modelIndex):
+        self.setEditIndex(modelIndex)
+        
+        optionV4 = QStyleOptionViewItemV4(option)
+        self.initStyleOption(optionV4, modelIndex)
+        
+        rightAligned = (int(optionV4.displayAlignment) & int(Qt.AlignRight)) != 0
+        if rightAligned:
+            optionV4.decorationPosition = QStyleOptionViewItem.Right
+            
+        text = QString(optionV4.text)
+        doc = QTextDocument()
+        doc.setHtml(text)
+        
+        doc.setTextWidth(optionV4.rect.width())
+    
+        editorWidget = QWidget(parent)
+        editorLayout = QHBoxLayout(editorWidget)
+        editorLayout.setContentsMargins(0, 0, 0, 0)
+        editor = ItemEditor(doc, QSize(doc.idealWidth(), doc.size().height()), rightAligned, editorWidget)
+        editorLayout.addWidget(editor, 0, Qt.AlignRight if rightAligned else Qt.AlignLeft)
+        
+        self._editor = editorWidget
+        return editorWidget
+    
+    def setModelData(self, *_args, **_kwargs):
+        pass
+    
     def paint(self, painter, option, modelIndex):
         optionV4 = QStyleOptionViewItemV4(option)
         self.initStyleOption(optionV4, modelIndex)
         
         rightAligned = (int(optionV4.displayAlignment) & int(Qt.AlignRight)) != 0
         selected = (int(optionV4.state) & int(QStyle.State_Selected)) != 0
+        editing = self._editIndex == modelIndex
         
         if rightAligned:
             optionV4.decorationPosition = QStyleOptionViewItem.Right
@@ -86,18 +159,26 @@ class MessageItemDelegate(QStyledItemDelegate):
         painter.translate(textPos)
         
         painter.setRenderHint(QPainter.Antialiasing)
-        painter.setBrush(self._ownBrush if rightAligned else self._otherBrush)
+        if not editing:
+            painter.setBrush(self._ownBrush if rightAligned else self._otherBrush)
         painter.setPen(self._ownPenColor if rightAligned else self._otherPenColor)
         painter.drawRoundedRect(QRectF(QPointF(0, 0.5),
                                        QSizeF(self.document.size().width(),
                                               self.document.size().height() - 1.)),
                                 7, 7)
         painter.setClipRect(textRect.translated(-textRect.topLeft()))
-        self.document.documentLayout().draw(painter, ctx)
+        if not editing:
+            self.document.documentLayout().draw(painter, ctx)
         painter.restore()
 
-    def editorEvent(self, event, model, option, index):
-        if event.type() not in [QEvent.MouseMove, QEvent.MouseButtonRelease] \
+    def editorEvent(self, event, _model, option, modelIndex):
+        self.initStyleOption(option, modelIndex)
+        text = QString(option.text)
+        if not text:
+            self.parent().unsetCursor()
+            return False
+        
+        if event.type() not in (QEvent.MouseMove, QEvent.MouseButtonRelease) \
             or not (option.state & QStyle.State_Enabled):
             return False
         
@@ -107,7 +188,11 @@ class MessageItemDelegate(QStyledItemDelegate):
         #print pos
         anchor = self.mouseOverDocument.documentLayout().anchorAt(pos)
         if anchor == "":
-            self.parent().unsetCursor()
+            textRext = QRectF(0, 0, self.mouseOverDocument.size().width(), self.mouseOverDocument.size().height())
+            if textRext.contains(pos):
+                self.parent().setCursor(Qt.IBeamCursor)
+            else:
+                self.parent().unsetCursor()
         else:
             self.parent().setCursor(Qt.PointingHandCursor)               
             if event.type() == QEvent.MouseButtonRelease:
