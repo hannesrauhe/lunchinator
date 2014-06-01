@@ -66,6 +66,15 @@ class ChatWidget(QWidget):
         
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
         
+    def nextInFocusChain(self):
+        return self.entry
+    
+    def previousInFocusChain(self):
+        return self.entry
+    
+    def focusInEvent(self, _event):
+        self.entry.setFocus(Qt.OtherFocusReason)
+        
     def _addTopLayout(self, ownName, otherName, ownPicFile, otherPicFile, mainLayout):
         topWidget = QWidget(self)
         topLayout = QHBoxLayout(topWidget)

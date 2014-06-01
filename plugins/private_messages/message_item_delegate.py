@@ -3,7 +3,7 @@ from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QApplicatio
     QStyleOptionViewItem, QBrush, QColor, QGradient, QLinearGradient, QPainter,\
     QTextEdit, QHBoxLayout, QFrame, QSizePolicy
 from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
-    QRectF, QSizeF
+    QRectF, QSizeF, pyqtSignal, QModelIndex
 import webbrowser
 from PyQt4.Qt import QWidget
 
@@ -45,6 +45,7 @@ class MessageItemDelegate(QStyledItemDelegate):
 
         self.document = QTextDocument()
         self.mouseOverDocument = self.document
+        self.mouseOverOption = None
         self.lastTextPos = QPoint(0, 0)
         self._editIndex = None
         self._editor = None
@@ -61,7 +62,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         self._otherBrush = QBrush(otherGradient)
         self._otherPenColor = QColor(153, 153, 153)
         
-        self.closeEditor.connect(self._editorClosing)
+        self.closeEditor.connect(self.editorClosing)
     
     def setEditIndex(self, modelIndex):
         self._editIndex = modelIndex
@@ -69,7 +70,7 @@ class MessageItemDelegate(QStyledItemDelegate):
     def getEditIndex(self):
         return self._editIndex
         
-    def _editorClosing(self, _editor, _hint):
+    def editorClosing(self, _editor, _hint):
         self._editor = None
         self.setEditIndex(None)
         
@@ -79,18 +80,17 @@ class MessageItemDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, modelIndex):
         self.setEditIndex(modelIndex)
         
-        optionV4 = QStyleOptionViewItemV4(option)
-        self.initStyleOption(optionV4, modelIndex)
+        self.initStyleOption(option, modelIndex)
         
-        rightAligned = (int(optionV4.displayAlignment) & int(Qt.AlignRight)) != 0
+        rightAligned = (int(option.displayAlignment) & int(Qt.AlignRight)) != 0
         if rightAligned:
-            optionV4.decorationPosition = QStyleOptionViewItem.Right
+            option.decorationPosition = QStyleOptionViewItem.Right
             
-        text = QString(optionV4.text)
+        text = QString(option.text)
         doc = QTextDocument()
         doc.setHtml(text)
         
-        doc.setTextWidth(optionV4.rect.width())
+        doc.setTextWidth(option.rect.width())
     
         editorWidget = QWidget(parent)
         editorLayout = QHBoxLayout(editorWidget)
@@ -104,72 +104,102 @@ class MessageItemDelegate(QStyledItemDelegate):
     def setModelData(self, *_args, **_kwargs):
         pass
     
-    def paint(self, painter, option, modelIndex):
-        optionV4 = QStyleOptionViewItemV4(option)
-        self.initStyleOption(optionV4, modelIndex)
+    def _getMessageRect(self, option, doc, relativeToItem=False):
+        rightAligned = (int(option.displayAlignment) & int(Qt.AlignRight)) != 0
+        textRect = option.rect
         
-        rightAligned = (int(optionV4.displayAlignment) & int(Qt.AlignRight)) != 0
-        selected = (int(optionV4.state) & int(QStyle.State_Selected)) != 0
-        editing = self._editIndex == modelIndex
-        
+        documentWidth = doc.idealWidth()
         if rightAligned:
-            optionV4.decorationPosition = QStyleOptionViewItem.Right
+            xOffset = textRect.width() - documentWidth - 3
+        else:
+            xOffset = 0
         
-        text = QString(optionV4.text)
-        if not text:
-            option.decorationAlignment = Qt.AlignLeft
-            return super(MessageItemDelegate, self).paint(painter, option, modelIndex)
+        if doc.size().height() < textRect.height():
+            yOffset = (float(textRect.height()) - doc.size().height()) / 2
+        else:
+            yOffset = 0
+        
+        textPos = QPoint(0,0) if relativeToItem else textRect.topLeft()
+        textPos += QPoint(xOffset, yOffset)
+        return QRect(textPos, QSize(documentWidth, doc.size().height()))
     
-        style = optionV4.widget.style() if optionV4.widget else QApplication.style()
+    def paint(self, painter, option1, modelIndex):
+        option = QStyleOptionViewItemV4(option1)
+        self.initStyleOption(option, modelIndex)
+        
+        text = QString(option.text)
+        if not text:
+            option1.decorationAlignment = Qt.AlignLeft
+            return super(MessageItemDelegate, self).paint(painter, option1, modelIndex)
+        
+        self.initStyleOption(option, modelIndex)
+        rightAligned = (int(option.displayAlignment) & int(Qt.AlignRight)) != 0
+        selected = (int(option.state) & int(QStyle.State_Selected)) != 0
+        editing = self._editIndex == modelIndex
+    
+        if rightAligned:
+            option.decorationPosition = QStyleOptionViewItem.Right
+            
+        style = option.widget.style() if option.widget else QApplication.style()
     
         self.document.setHtml(text)
+        self.document.setTextWidth(option.rect.width())
     
         # Painting item without text
-        optionV4.text = QString()
-        style.drawControl(QStyle.CE_ItemViewItem, optionV4, painter);
+        option.text = QString()
+        style.drawControl(QStyle.CE_ItemViewItem, option, painter);
+        option.text = text
         
         ctx = QAbstractTextDocumentLayout.PaintContext()
     
         # Highlighting text if item is selected
         if selected:
-            ctx.palette.setColor(QPalette.Text, optionV4.palette.color(QPalette.Active, QPalette.HighlightedText))
+            ctx.palette.setColor(QPalette.Text, option.palette.color(QPalette.Active, QPalette.HighlightedText))
     
-        textRect = style.subElementRect(QStyle.SE_ItemViewItemText, optionV4)
+        # total rect for us to paint in
+        textRect = option.rect
+        # final rect to paint message in
+        messageRect = self._getMessageRect(option, self.document)
         
         painter.save()
-        
-        if rightAligned:
-            xOffset = textRect.width() - self.document.idealWidth() - 3
-        else:
-            xOffset = 0
-        
-        if self.document.size().height() < textRect.height():
-            yOffset = (float(textRect.height()) - self.document.size().height()) / 2
-        else:
-            yOffset = 0
-        
-        textPos = textRect.topLeft() + QPoint(xOffset, yOffset)
         
         mouseOver = (int(option.state) & int(QStyle.State_MouseOver)) != 0
         if mouseOver:
             self.mouseOverDocument = QTextDocument()
             self.mouseOverDocument.setHtml(text)
-            self.lastTextPos = textPos
+            self.mouseOverDocument.setTextWidth(option.rect.width())
+            self.lastTextPos = textRect.topLeft()
+            self.mouseOverOption = option
         
-        painter.translate(textPos)
+        painter.translate(messageRect.topLeft())
         
         painter.setRenderHint(QPainter.Antialiasing)
         if not editing:
             painter.setBrush(self._ownBrush if rightAligned else self._otherBrush)
         painter.setPen(self._ownPenColor if rightAligned else self._otherPenColor)
         painter.drawRoundedRect(QRectF(QPointF(0, 0.5),
-                                       QSizeF(self.document.size().width(),
+                                       QSizeF(self.document.idealWidth(),
                                               self.document.size().height() - 1.)),
                                 7, 7)
         painter.setClipRect(textRect.translated(-textRect.topLeft()))
         if not editing:
             self.document.documentLayout().draw(painter, ctx)
         painter.restore()
+
+    startEditing = pyqtSignal(QModelIndex)
+
+    def shouldStartEditAt(self, eventPos, modelIndex):
+        option = QStyleOptionViewItemV4()
+        option.initFrom(self.parent())
+        option.rect.setHeight(32)
+        self.initStyleOption(option, modelIndex)
+        
+        messageRect = self._getMessageRect(self.mouseOverOption, self.mouseOverDocument)
+        anchor = self.mouseOverDocument.documentLayout().anchorAt(eventPos - messageRect.topLeft())
+        if anchor != "":
+            return False
+        
+        return messageRect.contains(eventPos)
 
     def editorEvent(self, event, _model, option, modelIndex):
         self.initStyleOption(option, modelIndex)
@@ -178,18 +208,16 @@ class MessageItemDelegate(QStyledItemDelegate):
             self.parent().unsetCursor()
             return False
         
-        if event.type() not in (QEvent.MouseMove, QEvent.MouseButtonRelease) \
+        if event.type() not in (QEvent.MouseMove, QEvent.MouseButtonRelease, QEvent.MouseButtonPress) \
             or not (option.state & QStyle.State_Enabled):
             return False
         
         # Get the link at the mouse position
-        # (the explicit QPointF conversion is only needed for PyQt)
-        pos = QPointF(event.pos() - self.lastTextPos)
-        #print pos
-        anchor = self.mouseOverDocument.documentLayout().anchorAt(pos)
+        pos = event.pos()
+        messageRect = self._getMessageRect(option, self.mouseOverDocument)
+        anchor = self.mouseOverDocument.documentLayout().anchorAt(pos - messageRect.topLeft())
         if anchor == "":
-            textRext = QRectF(0, 0, self.mouseOverDocument.size().width(), self.mouseOverDocument.size().height())
-            if textRext.contains(pos):
+            if messageRect.contains(pos):
                 self.parent().setCursor(Qt.IBeamCursor)
             else:
                 self.parent().unsetCursor()
@@ -201,13 +229,12 @@ class MessageItemDelegate(QStyledItemDelegate):
         return False
 
     def sizeHint(self, option, index):
-        optionV4 = QStyleOptionViewItemV4(option)
-        self.initStyleOption(optionV4, index)
+        self.initStyleOption(option, index)
         
-        if not optionV4.text:
+        if not option.text:
             return super(MessageItemDelegate, self).sizeHint(option, index)
     
         doc = QTextDocument()
-        doc.setHtml(optionV4.text)
-        doc.setTextWidth(optionV4.rect.width())
-        return QSize(doc.idealWidth(), doc.size().height())
+        doc.setHtml(option.text)
+        doc.setTextWidth(option.rect.width())
+        return QSize(doc.idealWidth(), max(32, doc.size().height()))

@@ -26,12 +26,26 @@ class ChatMessagesView(QTreeView):
         self.setFrameShape(QFrame.NoFrame)
         self.setFocusPolicy(Qt.NoFocus)
         
+    def stopEditing(self):
+        if self.itemDelegate().getEditor() != None:
+            self.closeEditor(self.itemDelegate().getEditor(), QAbstractItemDelegate.NoHint)
+            self.itemDelegate().editorClosing(self.itemDelegate().getEditor(), QAbstractItemDelegate.NoHint)
+            
+    def focusInEvent(self, _event):
+        # I definitely don't want the focus
+        self.clearFocus()
+        self.parent().setFocus(Qt.OtherFocusReason)
+        
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             index = self.indexAt(event.pos())
-            if index.column() == 1 and index != self.itemDelegate().getEditIndex():
-                if self.itemDelegate().getEditor() != None:
-                    self.closeEditor(self.itemDelegate().getEditor(), QAbstractItemDelegate.NoHint)
-                self.itemDelegate().setEditIndex(index)
-                self.edit(index)
+            if index.column() == 1 and self.itemDelegate().shouldStartEditAt(event.pos(), index):
+                # do not start editing if already editing
+                if index != self.itemDelegate().getEditIndex():
+                    self.stopEditing()
+                    self.itemDelegate().setEditIndex(index)
+                    self.edit(index)
+            else:
+                # clicked somewhere else -> stop editing
+                self.stopEditing()
         super(ChatMessagesView, self).mousePressEvent(event)
