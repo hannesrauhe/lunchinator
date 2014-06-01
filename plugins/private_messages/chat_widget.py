@@ -130,7 +130,8 @@ class ChatWidget(QWidget):
         item.setEditable(False)
         return item
         
-    def addOwnMessage(self, msg):
+    def addOwnMessage(self, msg, error=False, errorMsg=None):
+        # TODO implement errorMsg
         self._model.appendRow([self._createEmptyItem(),
                                self._createMessageIcon(msg, True),
                                self._createIconItem(self._ownIcon)])

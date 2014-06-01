@@ -1,25 +1,31 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import log_exception, get_settings, get_server,\
-    get_notification_center, log_debug, get_peers, log_error, convert_string
+    get_notification_center, log_debug, get_peers, log_error, convert_string,\
+    log_info, log_warning
 import urllib2, sys, os, json
 from datetime import datetime, timedelta
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent
     
 class private_messages(iface_gui_plugin):
+    _nextMessageID = 0
+    
     def __init__(self):
         super(private_messages, self).__init__()
-        self._openChats = {} # mapping peer ID -> ChatDockWidget
         
     def activate(self):
         iface_gui_plugin.activate(self)
+        self._waitingForAck = {} # message ID : (otherID, message)
+        # TODO load _nextMessageIF
         
     def deactivate(self):
+        # TODO store _nextMessageID
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
         # TODO use this to browse messages history later
         from PyQt4.QtGui import QWidget
         # TODO remove this
+        self._openChats = {} # mapping peer ID -> ChatDockWidget
         self._openChat("Corny", "Other", get_settings().get_resource("images", "me.png"), get_settings().get_resource("images", "lunchinator.png"), "otherID")
         return QWidget(parent)
     
@@ -29,29 +35,102 @@ class private_messages(iface_gui_plugin):
     def process_event(self, cmd, value, _ip, peerInfo):
         peerID = peerInfo[u"ID"]
         if cmd.startswith(u"HELO_PM_ACK"):
-            mID = value.split()[0]
-            self._processAck(peerID, mID)
+            self._processAck(peerID, value)
+        elif cmd.startswith(u"HELO_PM_ERROR"):
+            self._processAck(peerID, value, error=True)
         elif cmd.startswith(u"HELO_PM"):
-            try:
-                msgDict = json.loads(value)
-                self._processMessage(peerID, msgDict)
-            except:
-                log_exception("Error processing private message from", peerID, "data:", value)
+            self._processMessage(peerID, value)
     
-    def _processAck(self, otherID, mID):
-        pass
+    def _processAck(self, ackPeerID, valueJSON, error=False):
+        try:
+            answerDict = json.loads(valueJSON)
+        except:
+            log_error("Error reading ACK message:", valueJSON)
+            return
+        
+        if not u"id" in answerDict:
+            log_error("No message ID in ACK message:", valueJSON)
+            return
+        
+        msgID = answerDict[u"id"]
+        if not msgID in self._waitingForAck:
+            log_warning("Received ACK for message ID '%s' that was not sent." % msgID)
+            return
+        
+        otherID, msgHTML = self._waitingForAck.pop(msgID)
+        if otherID != ackPeerID:
+            log_warning("Received ACK from different peer ID than the message was sent to ('%s' != '%s')" % (otherID, ackPeerID))
+            return
+        
+        errorMsg = None
+        if error:
+            if u"err" in answerDict:
+                errorMsg = answerDict[u"err"]
+                log_warning("Message '%s' could not be processed by '%s': %s" % (msgID, otherID, errorMsg))
+            else:
+                log_warning("Message '%s' could not be processed by '%s'" % (msgID, otherID))
+                
+        if otherID in self._openChats:
+            chatWindow = self._openChats[otherID]
+            chatWindow.getChatWidget().addOwnMessage(msgHTML, error, errorMsg)
+            # TODO store message
+        else:
+            # TODO probably store somewhere that the message was processed
+            pass
     
-    def _processMessage(self, otherID, msgDict):
-        pass
+    def _processMessage(self, otherID, msgDictJSON):
+        try:
+            msgDict = json.loads(msgDictJSON)
+        except:
+            self._sendAnswer(otherID, msgDict, "Error loading message: %s" % msgDictJSON)
+            return
+        
+        if not u"data" in msgDict:
+            self._sendAnswer(otherID, msgDict, u"Message does not contain data:%s" % msgDict)
+            return
+        
+        if u"format" in msgDict:
+            if msgDict[u"format"] == u"html":
+                msgHTML = msgDict[u"data"]
+            else:
+                self._sendAnswer(otherID, msgDict, u"Unknown message format: %s" % msgDict[u"format"])
+                return
+        else:
+            log_info("Message without format. Assuming plain text or HTML.")
+            msgHTML = msgDict[u"data"]
+        
+        chatWindow = self.openChat(otherID)
+        chatWindow.getChatWidget().addOtherMessage(msgHTML)
+        self._sendAnswer(otherID, msgDict)
+        # TODO store message
+        
+    def _sendAnswer(self, otherID, msgDict, errorMsg=None):
+        if u"id" not in msgDict:
+            log_debug("Message has no ID, cannot send answer.")
+            return
+        
+        answerDict = {u"id": msgDict[u"id"]}
+        if not errorMsg:
+            get_server().call("HELO_PM_ACK " + json.dumps(answerDict), peerIDs=[otherID])
+        else:
+            answerDict[u"err"] = errorMsg 
+            log_error(errorMsg)
+            get_server().call("HELO_PM_ERROR " + json.dumps(answerDict), peerIDs=[otherID])  
     
     def _sendMessage(self, otherID, msgHTML):
-        print msgHTML
+        msgDict = {u"id": self._nextMessageID,
+                   u"format": u"html",
+                   u"data": msgHTML}
+        get_server().call(json.dumps(msgDict), peerIDs=[otherID])
+        self._waitingForAck[self._nextMessageID] = (otherID, msgHTML)
+        self._nextMessageID += 1
     
     def _activateChat(self, chatWindow):
         chatWindow.show()
         if getPlatform() == PLATFORM_MAC:
             chatWindow.activateWindow()
         chatWindow.raise_()
+        return chatWindow
     
     def _openChat(self, myName, otherName, myAvatar, otherAvatar, otherID):
         from private_messages.chat_window import ChatWindow
@@ -59,7 +138,7 @@ class private_messages(iface_gui_plugin):
         newWindow.windowClosing.connect(self._chatClosed)
         newWindow.getChatWidget().sendMessage.connect(self._sendMessage)
         self._openChats[otherID] = newWindow
-        self._activateChat(newWindow)
+        return self._activateChat(newWindow)
         
     def _chatClosed(self, pID):
         pID = convert_string(pID)
@@ -72,7 +151,7 @@ class private_messages(iface_gui_plugin):
         
     def openChat(self, pID):
         if pID in self._openChats:
-            self._activateChat(self._openChats[pID])
+            return self._activateChat(self._openChats[pID])
         
         otherName = get_peers().getPeerName(pID=pID)
         if otherName == None:
@@ -87,7 +166,7 @@ class private_messages(iface_gui_plugin):
         if not os.path.exists(myAvatar):
             myAvatar = get_settings().get_resource("images", "me.png")
         
-        self._openChat(myName, otherName, myAvatar, otherAvatar, pID)
+        return self._openChat(myName, otherName, myAvatar, otherAvatar, pID)
 
 if __name__ == '__main__':
     pm = private_messages()
