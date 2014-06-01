@@ -82,7 +82,7 @@ class sql_interface(iface_gui_plugin):
 class sql_commands_sqlite(db_for_plugin_iface):
     def init_db(self):
         if not self.get_db_conn().existsTable("SQL_INTERFACE_HISTORY"):
-            self.get_db_conn().execute("CREATE TABLE SQL_INTERFACE_COMMANDS(cmd_id INTEGER PRIMARY KEY AUTOINCREMENT, CMD TEXT) ")
+            self.get_db_conn().execute("CREATE TABLE SQL_INTERFACE_HISTORY(cmd_id INTEGER PRIMARY KEY AUTOINCREMENT, CMD TEXT) ")
 
     def insert_command(self, cmd):
         self.get_db_conn().execute("INSERT INTO SQL_INTERFACE_HISTORY(CMD) VALUES(?)",cmd)
