@@ -312,6 +312,8 @@ class lunch_server(object):
     
     def _cleanup(self):
         with self._cleanupLock:
+            if not self.running:
+                return
             log_debug("clean up thread runs")
             try:
                 # it's time to announce my name again and switch the master
