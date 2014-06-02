@@ -5,8 +5,6 @@ from lunchinator import log_exception, get_settings, get_server,\
 import urllib2, sys, os, json
 from datetime import datetime, timedelta
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent
-from PyQt4.QtCore import pyqtSlot
-from PyQt4.QtGui import QPushButton, QVBoxLayout
     
 class private_messages(iface_gui_plugin):
     _nextMessageID = 0
@@ -28,7 +26,7 @@ class private_messages(iface_gui_plugin):
     
     def create_widget(self, parent):
         # TODO use this to browse messages history later
-        from PyQt4.QtGui import QWidget
+        from PyQt4.QtGui import QWidget, QVBoxLayout, QPushButton
         # TODO remove this
         self._openChats = {} # mapping peer ID -> ChatDockWidget
         self._openChat("Corny", "Other", get_settings().get_resource("images", "me.png"), get_settings().get_resource("images", "lunchinator.png"), "otherID")
@@ -86,8 +84,11 @@ class private_messages(iface_gui_plugin):
                 log_warning("Message '%s' could not be processed by '%s'" % (msgID, otherID))
                 
         if otherID in self._openChats:
+            from private_messages.chat_widget import ChatWidget
             chatWindow = self._openChats[otherID]
-            chatWindow.getChatWidget().addOwnMessage(msgHTML, error, errorMsg)
+            chatWindow.getChatWidget().addOwnMessage(msgHTML,
+                                                     ChatWidget.MESSAGE_STATE_ERROR if error else ChatWidget.MESSAGE_STATE_OK,
+                                                     errorMsg)
             # TODO store message
         else:
             # TODO probably store somewhere that the message was processed
@@ -134,7 +135,6 @@ class private_messages(iface_gui_plugin):
             log_error(errorMsg)
             get_server().call("HELO_PM_ERROR " + json.dumps(answerDict), peerIDs=[otherID])  
     
-    @pyqtSlot(unicode, unicode)
     def _sendMessage(self, otherID, msgHTML):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
@@ -168,7 +168,6 @@ class private_messages(iface_gui_plugin):
         self._openChats[otherID] = newWindow
         return self._activateChat(newWindow)
         
-    @pyqtSlot(unicode)
     def _chatClosed(self, pID):
         pID = convert_string(pID)
         if pID in self._openChats:

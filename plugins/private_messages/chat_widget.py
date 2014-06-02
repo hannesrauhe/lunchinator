@@ -1,14 +1,17 @@
-from PyQt4.QtGui import QTreeView, QWidget, QVBoxLayout, QSizePolicy,\
-    QFrame, QStandardItemModel, QStandardItem, QIcon, QHeaderView, QHBoxLayout,\
+from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
+    QFrame, QStandardItemModel, QStandardItem, QIcon, QHBoxLayout,\
     QLabel, QPixmap, QTextCharFormat, QTextCursor
 from PyQt4.QtCore import Qt, QSize, QVariant, pyqtSignal, QRegExp
 from lunchinator import convert_string, get_settings
 from lunchinator.history_line_edit import HistoryTextEdit
-from private_messages.message_item_delegate import MessageItemDelegate
 from private_messages.chat_messages_view import ChatMessagesView
 from xml.etree import ElementTree
 
 class ChatWidget(QWidget):
+    MESSAGE_STATE_OK = None
+    MESSAGE_STATE_WARNING = 1
+    MESSAGE_STATE_ERROR = 2
+    
     PREFERRED_WIDTH = 400
     _URI_REGEX="""
     (
@@ -50,6 +53,14 @@ class ChatWidget(QWidget):
         
         self._ownIcon = QIcon(ownPicFile)
         self._otherIcon = QIcon(otherPicFile)
+        try:
+            from PyQt4.QtGui import QCommonStyle, QStyle
+            style = QCommonStyle()
+            self._errIcon = style.standardIcon(QStyle.SP_MessageBoxCritical)
+            self._warnIcon = style.standardIcon(QStyle.SP_MessageBoxWarning)
+        except:
+            self._errIcon = QIcon(get_settings().get_resource("images", "error.png"))
+            self._warnIcon = QIcon(get_settings().get_resource("images", "warning.png"))
         
         self._initMessageModel()
         self._initMessageTable()
@@ -118,10 +129,20 @@ class ChatWidget(QWidget):
         item.setData(QSize(32, 32), Qt.SizeHintRole)
         return item
         
-    def _createMessageIcon(self, msg, alignRight):
+    def _createMessageItem(self, msg, alignRight, messageState=None, toolTip=None):
         item = QStandardItem()
         item.setEditable(True)
         item.setData(msg, Qt.DisplayRole)
+        
+        if messageState == self.MESSAGE_STATE_WARNING:
+            item.setData(QVariant(self._warnIcon), Qt.DecorationRole)
+        elif messageState == self.MESSAGE_STATE_ERROR:
+            item.setData(QVariant(self._errIcon), Qt.DecorationRole)
+        
+        if toolTip:
+            item.setData(QVariant(toolTip), Qt.ToolTipRole)
+        elif messageState == self.MESSAGE_STATE_ERROR:
+            item.setData(QVariant(u"Unknown error, message could not be delivered."), Qt.ToolTipRole)
         item.setData(Qt.AlignHCenter | (Qt.AlignRight if alignRight else Qt.AlignLeft),
                      Qt.TextAlignmentRole)
         return item
@@ -131,17 +152,16 @@ class ChatWidget(QWidget):
         item.setEditable(False)
         return item
         
-    def addOwnMessage(self, msg, error=False, errorMsg=None):
-        # TODO implement errorMsg
+    def addOwnMessage(self, msg, messageState=None, toolTip=None):
         self._model.appendRow([self._createEmptyItem(),
-                               self._createMessageIcon(msg, True),
+                               self._createMessageItem(msg, True, messageState, toolTip),
                                self._createIconItem(self._ownIcon)])
         self.entry.clear()
         self.entry.setEnabled(True)
         
     def addOtherMessage(self, msg):
         self._model.appendRow([self._createIconItem(self._otherIcon),
-                               self._createMessageIcon(msg, False),
+                               self._createMessageItem(msg, False),
                                self._createEmptyItem()])
         
     def setOwnIcon(self, icon):
@@ -202,12 +222,12 @@ if __name__ == '__main__':
         ownIcon = get_settings().get_resource("images", "me.png")
         otherIcon = get_settings().get_resource("images", "lunchinator.png")
         tw = ChatWidget(window, "Me", "Other Guy", ownIcon, otherIcon, "ID")
-        tw.addOwnMessage("foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten")
+        tw.addOwnMessage("foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten", ChatWidget.MESSAGE_STATE_WARNING, "Not delivered yet.")
         tw.addOtherMessage("<a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a>")
         tw.addOtherMessage("foo")
         tw.addOtherMessage("foo")
         tw.addOtherMessage("<a href=\"mailto:info@lunchinator.de\">Lunchinator Mail</a>")
-        tw.addOwnMessage("bar")
+        tw.addOwnMessage("bar", ChatWidget.MESSAGE_STATE_ERROR)
         tw.addOtherMessage("foo")
         tw.addOtherMessage("foo")
         tw.addOtherMessage("foo")

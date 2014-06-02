@@ -111,11 +111,16 @@ class MessageItemDelegate(QStyledItemDelegate):
         documentWidth = doc.idealWidth()
         if rightAligned:
             xOffset = textRect.width() - documentWidth - 3
+            if not option.icon.isNull():
+                xOffset -= 20
         else:
-            xOffset = 0
+            xOffset = 3
+            if not option.icon.isNull():
+                xOffset += 20
         
-        if doc.size().height() < textRect.height():
-            yOffset = (float(textRect.height()) - doc.size().height()) / 2
+        if doc.size().height() < 32:
+            # vertically center
+            yOffset = (32. - doc.size().height()) / 2 + 1
         else:
             yOffset = 0
         
@@ -132,23 +137,14 @@ class MessageItemDelegate(QStyledItemDelegate):
             option1.decorationAlignment = Qt.AlignLeft
             return super(MessageItemDelegate, self).paint(painter, option1, modelIndex)
         
-        self.initStyleOption(option, modelIndex)
         rightAligned = (int(option.displayAlignment) & int(Qt.AlignRight)) != 0
         selected = (int(option.state) & int(QStyle.State_Selected)) != 0
         editing = self._editIndex == modelIndex
     
-        if rightAligned:
-            option.decorationPosition = QStyleOptionViewItem.Right
-            
-        style = option.widget.style() if option.widget else QApplication.style()
-    
+        option.decorationPosition = Qt.AlignRight if rightAligned else Qt.AlignLeft
+        
         self.document.setHtml(text)
         self.document.setTextWidth(option.rect.width())
-    
-        # Painting item without text
-        option.text = QString()
-        style.drawControl(QStyle.CE_ItemViewItem, option, painter);
-        option.text = text
         
         ctx = QAbstractTextDocumentLayout.PaintContext()
     
@@ -171,9 +167,20 @@ class MessageItemDelegate(QStyledItemDelegate):
             self.lastTextPos = textRect.topLeft()
             self.mouseOverOption = option
         
-        painter.translate(messageRect.topLeft())
         
+        # draw decoration
+        painter.translate(textRect.topLeft())
+        if not option.icon.isNull():
+            if rightAligned:
+                option.icon.paint(painter, textRect.size().width() - 19, 8, 16, 16, Qt.AlignCenter)
+            else:
+                option.icon.paint(painter, 3, 8, 16, 16, Qt.AlignCenter)
+                
+        # draw message
+        painter.restore()
+        painter.save()
         painter.setRenderHint(QPainter.Antialiasing)
+        painter.translate(messageRect.topLeft())
         if not editing:
             painter.setBrush(self._ownBrush if rightAligned else self._otherBrush)
         painter.setPen(self._ownPenColor if rightAligned else self._otherPenColor)
