@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # coding=utf-8
 
-import socket, sys, os, json, contextlib, tarfile, platform, random, errno, threading
-from time import strftime, localtime, time, sleep
+import socket, sys, os, json, contextlib, tarfile, platform, random, errno
+from time import strftime, localtime, time
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
@@ -11,6 +11,7 @@ from lunchinator.lunch_peers import LunchPeers
 from lunchinator.messages import Messages
 from lunchinator.logging_mutex import loggingMutex
 from collections import deque
+from threading import Timer
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -107,7 +108,7 @@ class lunch_server(object):
         if len(peers):
             self._peer_nr = (self._peer_nr + 1) % len(peers)            
     
-    def changeGroup(self, newgroup):
+    def changeGroup(self, _newgroup):
         """Call get_setting().set_group(...) to change the group programatically."""
         self.call("HELO_LEAVE Changing Group")
         self._peers.removeMembersByIP()
@@ -150,8 +151,8 @@ class lunch_server(object):
             s.bind(("", 50000)) 
             s.settimeout(5.0)
             self.running = True
-            cThread = lunch_interval_thread(self)
-            cThread.start()
+            self._cleanupLock = loggingMutex("cleanup", logging=get_settings().get_verbose())
+            self._startCleanupTimer()
             self.controller.initDone()
             
             #first thing to do: ask stored peers for their info:
@@ -215,7 +216,8 @@ class lunch_server(object):
             self.running = False
             try:
                 #make sure to close the cleanup thread first
-                cThread.join()
+                with self._cleanupLock:
+                    self._cleanupTimer.cancel()
                 
                 self.call("HELO_LEAVE bye")
                 s.close()  
@@ -303,6 +305,26 @@ class lunch_server(object):
         return i
             
     """ ---------------------- PRIVATE -------------------------------- """
+    
+    def _startCleanupTimer(self):
+        self._cleanupTimer = Timer(30, self._cleanup)
+        self._cleanupTimer.start()
+    
+    def _cleanup(self):
+        with self._cleanupLock:
+            log_debug("clean up thread runs")
+            try:
+                # it's time to announce my name again and switch the master
+                self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getPeerIPs())
+                self.call_request_dict()
+        
+                # clean up peers
+                self._peers.removeInactive()            
+                self._remove_timed_out_queues()
+                self._cleanup_cached_messages()
+            except:
+                log_exception("Something went wrong in the lunch interval thread")
+            self._startCleanupTimer()
     
     def _build_info_string(self):
         from lunchinator.utilities import getPlatform, PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS
@@ -579,32 +601,3 @@ class lunch_server(object):
             s_broad.close()
         except:
             log_exception("Problem while broadcasting")
-            
-class lunch_interval_thread(threading.Thread):
-    '''this thread does everything that's necessary on a regular basis'''
-    
-    def __init__(self, server_obj):
-        super(lunch_interval_thread, self).__init__()
-        self.server_obj = server_obj
-            
-    def run(self):    
-        #running through the loop every 3 seconds, but only do something every 30 seconds
-        #->thread can end faster   
-        announce_name = 1  #nothing happens the first 30 seconds
-        while self.server_obj.running:                          
-            announce_name = (announce_name + 1) % 10
-            if announce_name == 0:
-                log_debug("clean up thread runs")
-                try:
-                    # it's time to announce my name again and switch the master
-                    self.server_obj.call("HELO " + get_settings().get_user_name(), peerIPs=self.server_obj._peers.getPeerIPs())
-                    self.server_obj.call_request_dict()
-            
-                    # clean up peers
-                    self.server_obj._peers.removeInactive()            
-                    self.server_obj._remove_timed_out_queues()
-                    self.server_obj._cleanup_cached_messages()
-                except:
-                    log_exception("Something went wrong in the lunch interval thread")
-            sleep(3)
-                        
