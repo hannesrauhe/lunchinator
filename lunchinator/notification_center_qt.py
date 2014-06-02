@@ -1,11 +1,13 @@
-from PyQt4.QtCore import pyqtSignal, QObject
+from PyQt4.QtCore import pyqtSignal, QObject, Qt
 import time
 
 class NotificationCenterQt(QObject):
+    def finish(self):
+        pass
     
     _signalOutdatedRepositoriesChanged = pyqtSignal()
     def connectOutdatedRepositoriesChanged(self, callback):
-        self._signalOutdatedRepositoriesChanged.connect(callback)
+        self._signalOutdatedRepositoriesChanged.connect(callback, type=Qt.QueuedConnection)
     def disconnectOutdatedRepositoriesChanged(self, callback):
         self._signalOutdatedRepositoriesChanged.disconnect(callback)
     def emitOutdatedRepositoriesChanged(self):
@@ -13,7 +15,7 @@ class NotificationCenterQt(QObject):
         
     _signalUpToDateRepositoriesChanged = pyqtSignal()
     def connectUpToDateRepositoriesChanged(self, callback):
-        self._signalUpToDateRepositoriesChanged.connect(callback)
+        self._signalUpToDateRepositoriesChanged.connect(callback, type=Qt.QueuedConnection)
     def disconnectUpToDateRepositoriesChanged(self, callback):
         self._signalUpToDateRepositoriesChanged.disconnect(callback)
     def emitUpToDateRepositoriesChanged(self):
@@ -21,7 +23,7 @@ class NotificationCenterQt(QObject):
         
     _signalRepositoriesChanged = pyqtSignal()
     def connectRepositoriesChanged(self, callback):
-        self._signalRepositoriesChanged.connect(callback)
+        self._signalRepositoriesChanged.connect(callback, type=Qt.QueuedConnection)
     def disconnectRepositoriesChanged(self, callback):
         self._signalRepositoriesChanged.disconnect(callback)
     def emitRepositoriesChanged(self):
@@ -29,7 +31,7 @@ class NotificationCenterQt(QObject):
 
     _signalApplicationUpdate = pyqtSignal()
     def connectApplicationUpdate(self, callback):
-        self._signalApplicationUpdate.connect(callback)
+        self._signalApplicationUpdate.connect(callback, type=Qt.QueuedConnection)
     def disconnectApplicationUpdate(self, callback):
         self._signalApplicationUpdate.disconnect(callback)
     def emitApplicationUpdate(self):
@@ -37,7 +39,7 @@ class NotificationCenterQt(QObject):
         
     _signalUpdatesDisabled = pyqtSignal()
     def connectUpdatesDisabled(self, callback):
-        self._signalUpdatesDisabled.connect(callback)
+        self._signalUpdatesDisabled.connect(callback, type=Qt.QueuedConnection)
     def disconnectUpdatesDisabled(self, callback):
         self._signalUpdatesDisabled.disconnect(callback)
     def emitUpdatesDisabled(self):
@@ -45,7 +47,7 @@ class NotificationCenterQt(QObject):
         
     _signalInstallUpdate = pyqtSignal()
     def connectInstallUpdates(self, callback):
-        self._signalInstallUpdate.connect(callback)
+        self._signalInstallUpdate.connect(callback, type=Qt.QueuedConnection)
     def disconnectInstallUpdates(self, callback):
         self._signalInstallUpdate.disconnect(callback)
     def emitInstallUpdates(self):
@@ -53,7 +55,7 @@ class NotificationCenterQt(QObject):
     
     _signalRestartRequired = pyqtSignal(unicode)
     def connectRestartRequired(self, callback):
-        self._signalRestartRequired.connect(callback)
+        self._signalRestartRequired.connect(callback, type=Qt.QueuedConnection)
     def disconnectRestartRequired(self, callback):
         self._signalRestartRequired.disconnect(callback)
     def emitRestartRequired(self, reason):
@@ -61,7 +63,7 @@ class NotificationCenterQt(QObject):
     
     _signalPeerAppended = pyqtSignal(unicode, dict)
     def connectPeerAppended(self, callback):
-        self._signalPeerAppended.connect(callback)
+        self._signalPeerAppended.connect(callback, type=Qt.QueuedConnection)
     def disconnectPeerAppended(self, callback):
         self._signalPeerAppended.disconnect(callback)
     def emitPeerAppended(self, peerID, infoDict):
@@ -69,7 +71,7 @@ class NotificationCenterQt(QObject):
         
     _signalPeerUpdated = pyqtSignal(unicode, dict)
     def connectPeerUpdated(self, callback):
-        self._signalPeerUpdated.connect(callback)
+        self._signalPeerUpdated.connect(callback, type=Qt.QueuedConnection)
     def disconnectPeerUpdated(self, callback):
         self._signalPeerUpdated.disconnect(callback)
     def emitPeerUpdated(self, peerID, infoDict):
@@ -77,7 +79,7 @@ class NotificationCenterQt(QObject):
     
     _signalPeerRemoved = pyqtSignal(unicode)
     def connectPeerRemoved(self, callback):
-        self._signalPeerRemoved.connect(callback)
+        self._signalPeerRemoved.connect(callback, type=Qt.QueuedConnection)
     def disconnectPeerRemoved(self, callback):
         self._signalPeerRemoved.disconnect(callback)
     def emitPeerRemoved(self, peerID):
@@ -85,7 +87,7 @@ class NotificationCenterQt(QObject):
         
     _signalMemberAppended = pyqtSignal(unicode, dict)
     def connectMemberAppended(self, callback):
-        self._signalMemberAppended.connect(callback)
+        self._signalMemberAppended.connect(callback, type=Qt.QueuedConnection)
     def disconnectMemberAppended(self, callback):
         self._signalMemberAppended.disconnect(callback)
     def emitMemberAppended(self, peerID, infoDict):
@@ -93,7 +95,7 @@ class NotificationCenterQt(QObject):
     
     _signalMemberUpdated = pyqtSignal(unicode, dict)
     def connectMemberUpdated(self, callback):
-        self._signalMemberUpdated.connect(callback)
+        self._signalMemberUpdated.connect(callback, type=Qt.QueuedConnection)
     def disconnectMemberUpdated(self, callback):
         self._signalMemberUpdated.disconnect(callback)
     def emitMemberUpdated(self, peerID, infoDict):
@@ -101,7 +103,7 @@ class NotificationCenterQt(QObject):
     
     _signalMemberRemoved = pyqtSignal(unicode)
     def connectMemberRemoved(self, callback):
-        self._signalMemberRemoved.connect(callback)
+        self._signalMemberRemoved.connect(callback, type=Qt.QueuedConnection)
     def disconnectMemberRemoved(self, callback):
         self._signalMemberRemoved.disconnect(callback)
     def emitMemberRemoved(self, peerID):
@@ -109,7 +111,7 @@ class NotificationCenterQt(QObject):
     
     _signalGroupAppended = pyqtSignal(unicode, set)
     def connectGroupAppended(self, callback):
-        self._signalGroupAppended.connect(callback)
+        self._signalGroupAppended.connect(callback, type=Qt.QueuedConnection)
     def disconnectGroupAppended(self, callback):
         self._signalGroupAppended.disconnect(callback)
     def emitGroupAppended(self, group, peer_groups):
@@ -117,7 +119,7 @@ class NotificationCenterQt(QObject):
         
     _signalGroupChanged = pyqtSignal(unicode, unicode)
     def connectGroupChanged(self, callback):
-        self._signalGroupChanged.connect(callback)
+        self._signalGroupChanged.connect(callback, type=Qt.QueuedConnection)
     def disconnectGroupChanged(self, callback):
         self._signalGroupChanged.disconnect(callback)
     def emitGroupChanged(self, oldGroup, newGroup):
@@ -126,7 +128,7 @@ class NotificationCenterQt(QObject):
     #signal with all sender info?: _signalMessagePrepended = pyqtSignal(time.struct_time, dict, list)
     _signalMessagePrepended = pyqtSignal(time.struct_time, unicode, unicode)
     def connectMessagePrepended(self, callback):
-        self._signalMessagePrepended.connect(callback)
+        self._signalMessagePrepended.connect(callback, type=Qt.QueuedConnection)
     def disconnectMessagePrepended(self, callback):
         self._signalMessagePrepended.disconnect(callback)
     def emitMessagePrepended(self, messageTime, senderID, messageText):
@@ -134,9 +136,17 @@ class NotificationCenterQt(QObject):
     
     _signalGeneralSettingChanged = pyqtSignal(unicode)
     def connectGeneralSettingChanged(self, callback):
-        self._signalGeneralSettingChanged.connect(callback)
+        self._signalGeneralSettingChanged.connect(callback, type=Qt.QueuedConnection)
     def disconnectGeneralSettingChanged(self, callback):
         self._signalGeneralSettingChanged.disconnect(callback)
     def emitGeneralSettingChanged(self, settingName):
         self._signalGeneralSettingChanged.emit(settingName)
+        
+    _signalDBSettingChanged = pyqtSignal(unicode)
+    def connectDBSettingChanged(self, callback):
+        self._signalDBSettingChanged.connect(callback, type=Qt.QueuedConnection)
+    def disconnectDBSettingChanged(self, callback):
+        self._signalDBSettingChanged.disconnect(callback)
+    def emitDBSettingChanged(self, dbConnName):
+        self._signalDBSettingChanged.emit(dbConnName)
         

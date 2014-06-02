@@ -1,3 +1,31 @@
+import threading, Queue
+from lunchinator import log_exception, log_debug, log_info
+
+class EventSignalLoop(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        
+        self.reqs = Queue.Queue()
+        
+    def run(self):
+        while True:
+            req, args, kwargs = self.reqs.get()
+            log_debug("processing Signal: %s"%req)
+            if req == 'exit': 
+                break
+            try:
+                req(*args, **kwargs)
+            except Exception, e:
+                log_exception("Error in Signal handling; executed method: %s; Error: %s"%(str(req), str(e)))
+            except:
+                log_exception("Error in Signal handling; executed method:  %s; no additional info"%str(req))
+    
+    def append(self, func, *args, **kwargs):
+        self.reqs.put((func, args, kwargs))
+    
+    def finish(self):
+        self.reqs.put(("exit", None, None))
+
 def _connectFunc(func):
     signal = func.__name__[7:]
     def newFunc(self, callback):
@@ -45,6 +73,11 @@ class NotificationCenter(object):
         
     def __init__(self):
         self._callbacks = {}
+        self.eventloop = EventSignalLoop()
+        self.eventloop.start()
+        
+    def finish(self):
+        self.eventloop.finish()
         
     def _addCallback(self, signal, callback):
         if signal in self._callbacks:
@@ -64,7 +97,7 @@ class NotificationCenter(object):
         if not signal in self._callbacks:
             return
         for callback in self._callbacks[signal]:
-            callback(*args, **kwargs)
+            self.eventloop.append(callback, *args, **kwargs)
 
     """Called whenever the set of outdated plugin repository changes."""    
     @_connectFunc
@@ -245,6 +278,18 @@ class NotificationCenter(object):
         pass
     @_emitFunc
     def emitGeneralSettingChanged(self, settingName):
+        pass
+    
+    """Notifies Plugins when a database connection is changed, 
+    so the plugin can decide whether to re-initialize the database"""    
+    @_connectFunc
+    def connectDBSettingChanged(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectDBSettingChanged(self, callback):
+        pass
+    @_emitFunc
+    def emitDBSettingChanged(self, dbConnName):
         pass
     
 if __name__ == '__main__':
