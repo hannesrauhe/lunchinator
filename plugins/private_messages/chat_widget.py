@@ -6,6 +6,7 @@ from lunchinator import convert_string, get_settings
 from lunchinator.history_line_edit import HistoryTextEdit
 from private_messages.message_item_delegate import MessageItemDelegate
 from private_messages.chat_messages_view import ChatMessagesView
+from xml.etree import ElementTree
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -135,6 +136,8 @@ class ChatWidget(QWidget):
         self._model.appendRow([self._createEmptyItem(),
                                self._createMessageIcon(msg, True),
                                self._createIconItem(self._ownIcon)])
+        self.entry.clear()
+        self.entry.setEnabled(True)
         
     def addOtherMessage(self, msg):
         self._model.appendRow([self._createIconItem(self._otherIcon),
@@ -149,9 +152,21 @@ class ChatWidget(QWidget):
         
     def eventTriggered(self):
         self._detectHyperlinks()
-        text = convert_string(self.entry.toHtml())
+        text = self._cleanHTML(convert_string(self.entry.toHtml()))
         self.sendMessage.emit(self._otherID, text)
         self.entry.setEnabled(False)
+
+    def _cleanHTML(self, html):
+        # only body, no paragraph attributes
+        cleaned = u""
+        e = ElementTree.fromstring(html)
+        body = e.iter("html").next().iter("body").next()
+        for p in body.iter("p"):
+            if not p.text:
+                cleaned += u"<p/>"
+            else:
+                cleaned += u"<p>%s</p>" % p.text
+        return cleaned
 
     def _insertAnchors(self, cursor, plainText, matcher, hrefFunc):
         pos = 0

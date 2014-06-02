@@ -5,12 +5,17 @@ from lunchinator import log_exception, get_settings, get_server,\
 import urllib2, sys, os, json
 from datetime import datetime, timedelta
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent
+from PyQt4.QtCore import pyqtSlot
+from PyQt4.QtGui import QPushButton, QVBoxLayout
     
 class private_messages(iface_gui_plugin):
     _nextMessageID = 0
     
     def __init__(self):
         super(private_messages, self).__init__()
+        
+    def get_displayed_name(self):
+        return u"Chat"
         
     def activate(self):
         iface_gui_plugin.activate(self)
@@ -27,7 +32,17 @@ class private_messages(iface_gui_plugin):
         # TODO remove this
         self._openChats = {} # mapping peer ID -> ChatDockWidget
         self._openChat("Corny", "Other", get_settings().get_resource("images", "me.png"), get_settings().get_resource("images", "lunchinator.png"), "otherID")
-        return QWidget(parent)
+        
+        w = QWidget(parent)
+        l = QVBoxLayout(w)
+        b = QPushButton("Open Chat")
+        b.clicked.connect(self._openChatWithMyself)
+        l.addWidget(b)
+        return w
+    
+    def _openChatWithMyself(self):
+        myID = get_settings().get_ID()
+        self.openChat(myID)
     
     def destroy_widget(self):
         iface_gui_plugin.destroy_widget(self)
@@ -54,7 +69,7 @@ class private_messages(iface_gui_plugin):
         
         msgID = answerDict[u"id"]
         if not msgID in self._waitingForAck:
-            log_warning("Received ACK for message ID '%s' that was not sent." % msgID)
+            log_warning("Received ACK for message ID '%s' that I was not waiting for." % msgID)
             return
         
         otherID, msgHTML = self._waitingForAck.pop(msgID)
@@ -82,7 +97,7 @@ class private_messages(iface_gui_plugin):
         try:
             msgDict = json.loads(msgDictJSON)
         except:
-            self._sendAnswer(otherID, msgDict, "Error loading message: %s" % msgDictJSON)
+            self._sendAnswer(otherID, {}, "Error loading message: %s" % msgDictJSON)
             return
         
         if not u"data" in msgDict:
@@ -106,6 +121,8 @@ class private_messages(iface_gui_plugin):
         
     def _sendAnswer(self, otherID, msgDict, errorMsg=None):
         if u"id" not in msgDict:
+            if errorMsg:
+                log_error(errorMsg)
             log_debug("Message has no ID, cannot send answer.")
             return
         
@@ -117,11 +134,22 @@ class private_messages(iface_gui_plugin):
             log_error(errorMsg)
             get_server().call("HELO_PM_ERROR " + json.dumps(answerDict), peerIDs=[otherID])  
     
+    @pyqtSlot(unicode, unicode)
     def _sendMessage(self, otherID, msgHTML):
+        otherID = convert_string(otherID)
+        msgHTML = convert_string(msgHTML)
+        
         msgDict = {u"id": self._nextMessageID,
                    u"format": u"html",
                    u"data": msgHTML}
-        get_server().call(json.dumps(msgDict), peerIDs=[otherID])
+        
+        try:
+            msgDictJSON = json.dumps(msgDict)
+        except:
+            log_exception("Error serializing private message:", msgDict)
+            return
+        
+        get_server().call("HELO_PM " + msgDictJSON, peerIDs=[otherID])
         self._waitingForAck[self._nextMessageID] = (otherID, msgHTML)
         self._nextMessageID += 1
     
@@ -134,12 +162,13 @@ class private_messages(iface_gui_plugin):
     
     def _openChat(self, myName, otherName, myAvatar, otherAvatar, otherID):
         from private_messages.chat_window import ChatWindow
-        newWindow = ChatWindow(getValidQtParent(), myName, otherName, myAvatar, otherAvatar, otherID)
+        newWindow = ChatWindow(None, myName, otherName, myAvatar, otherAvatar, otherID)
         newWindow.windowClosing.connect(self._chatClosed)
         newWindow.getChatWidget().sendMessage.connect(self._sendMessage)
         self._openChats[otherID] = newWindow
         return self._activateChat(newWindow)
         
+    @pyqtSlot(unicode)
     def _chatClosed(self, pID):
         pID = convert_string(pID)
         if pID in self._openChats:
