@@ -1,4 +1,5 @@
-from PyQt4.QtGui import QTreeView, QHeaderView, QFrame, QAbstractItemDelegate
+from PyQt4.QtGui import QTreeView, QHeaderView, QFrame, QAbstractItemDelegate,\
+    QPalette, QColor
 from PyQt4.QtCore import Qt, QSize
 from private_messages.message_item_delegate import MessageItemDelegate
 
@@ -14,6 +15,11 @@ class ChatMessagesView(QTreeView):
         
         self.setItemDelegate(MessageItemDelegate(self))
         self.setAutoFillBackground(False)
+        
+        pal = QPalette(self.palette())
+        pal.setColor(QPalette.Base, QColor(0,0,0,0));
+        self.setPalette(pal);
+        
         self.viewport().setAutoFillBackground(False)
         
         self.setSelectionMode(QTreeView.NoSelection)
