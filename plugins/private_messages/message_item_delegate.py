@@ -77,6 +77,12 @@ class MessageItemDelegate(QStyledItemDelegate):
     def getEditor(self):
         return self._editor
     
+    def initStyleOption(self, option, modelIndex):
+        if modelIndex.column() == 1:
+            # we're handling this ourselves
+            option.decorationSize = QSize(0,0)
+        return QStyledItemDelegate.initStyleOption(self, option, modelIndex)
+    
     def createEditor(self, parent, option, modelIndex):
         self.setEditIndex(modelIndex)
         
@@ -91,12 +97,17 @@ class MessageItemDelegate(QStyledItemDelegate):
         doc.setHtml(text)
         
         doc.setTextWidth(option.rect.width())
+        
+        messageRect = self._getMessageRect(option, doc, relativeToItem=True)
     
         editorWidget = QWidget(parent)
-        editorLayout = QHBoxLayout(editorWidget)
-        editorLayout.setContentsMargins(0, 0, 0, 0)
         editor = ItemEditor(doc, QSize(doc.idealWidth(), doc.size().height()), rightAligned, editorWidget)
-        editorLayout.addWidget(editor, 0, Qt.AlignRight if rightAligned else Qt.AlignLeft)
+
+        pos = messageRect.topLeft()
+        if rightAligned:
+            pos += QPoint(4, 0)
+        editor.move(pos)
+        editor.resize(messageRect.size())
         
         self._editor = editorWidget
         return editorWidget
