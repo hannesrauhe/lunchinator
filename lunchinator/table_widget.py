@@ -20,6 +20,7 @@ class TableWidget(QWidget):
         self.table.setHeaderHidden(False)
         self.table.setAlternatingRowColors(True)
         self.table.setIndentation(0)
+        self.table.setUniformRowHeights(True)
         if sortedColumn != None:
             self.table.sortByColumn(sortedColumn, Qt.AscendingOrder if ascending else Qt.DescendingOrder)
         
