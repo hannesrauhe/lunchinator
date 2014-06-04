@@ -76,7 +76,13 @@ class iface_db_plugin(iface_plugin):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
 
-class lunch_db(object):                
+class lunch_db(object):              
+    def __init__(self):
+        self.is_open = False
+        
+    def isOpen(self):
+        return self.is_open
+        
     '''convenience calls'''    
     def execute(self, query, *wildcards):
         return self._execute(query, wildcards, returnResults=False, commit=True)
@@ -104,28 +110,11 @@ class lunch_db(object):
             
     '''The following maybe should be moved to the other class'''
     
-    '''message statistics plugin methods''' 
-    def insert_call(self,mtype,msg,sender):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
-    def get_calls(self):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
-    def insert_members(self,ip,name,avatar,lunch_begin,lunch_end):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-        
-    def get_newest_members_data(self):    
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
     '''lunch statistics plugin methods'''    
     def lastUpdateForLunchDay(self, date, tableName):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
         
     def insertLunchPart(self, date, textAndAdditivesList, update, table):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-    
-    '''maintenance plugin methods'''    
-    def getBugsFromDB(self,mode="open"):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
             
        

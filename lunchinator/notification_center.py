@@ -292,6 +292,17 @@ class NotificationCenter(object):
     def emitDBSettingChanged(self, dbConnName):
         pass
     
+    """Notifies Plugins when all database connections are ready"""    
+    @_connectFunc
+    def connectDBConnReady(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectDBConnReady(self, callback):
+        pass
+    @_emitFunc
+    def emitDBConnReady(self):
+        pass
+
 if __name__ == '__main__':
     def _testCallback(a, b, c):
         print a, b, c

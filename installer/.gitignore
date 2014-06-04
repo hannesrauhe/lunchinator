@@ -1,9 +1,0 @@
-/build
-/dist
-/win
-/mac
-/linux
-/deb_*
-*.log
-/osc
-.last-tag

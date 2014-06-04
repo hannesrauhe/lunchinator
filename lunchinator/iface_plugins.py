@@ -1,7 +1,7 @@
 from yapsy.IPlugin import IPlugin
 from lunchinator import log_error, log_exception, convert_string, \
-    get_notification_center
-import types, sys, logging
+    get_notification_center, get_db_connection, log_debug
+import types, sys, logging, threading
 from copy import deepcopy
 
 class iface_plugin(IPlugin):    
@@ -14,6 +14,10 @@ class iface_plugin(IPlugin):
         self.option_choice = {}
         self.hidden_options = None
         self.force_activation = False
+        
+        self._supported_dbms = {} #mapping from db plugin type to db_for_plugin_iface subclasses
+        self._specialized_db_conn = None
+        self._specialized_db_connect_lock = threading.Lock()
 
         super(iface_plugin, self).__init__()
     
@@ -27,12 +31,18 @@ class iface_plugin(IPlugin):
         
         self._initOptions()
         self._readOptionsFromFile()
+        if len(self._supported_dbms)>0:
+            get_notification_center().connectDBSettingChanged(self.connect_to_db)
+            get_notification_center().connectDBConnReady(self.connect_to_db)            
         return
 
     def deactivate(self):
         """
         Just call the parent class's method
         """
+        if len(self._supported_dbms)>0:
+            get_notification_center().disconnectDBSettingChanged(self.connect_to_db)
+            get_notification_center().disconnectDBConnReady(self.connect_to_db)
         IPlugin.deactivate(self)
         self.option_widgets = {}
     
@@ -406,6 +416,51 @@ class iface_plugin(IPlugin):
         """
         return self.force_activation
     
+    """ DB functions """ 
+        
+    def add_supported_dbms(self, db_type, db_iface):
+        """
+        calling this method allows DB connections of type db_type (can also be "default")
+        when called at least once, the class db_iface will be initialized every time the 
+        db connection is changed
+        """
+        if not issubclass(db_iface, db_for_plugin_iface):
+            raise Exception("Adding supported DBMS only allowed via class inherited for db_for_plugin_iface")
+        self._supported_dbms[db_type] = db_iface
+        
+    def connect_to_db(self, changedDBConn = None):
+        """
+        this method should be called by a signal and not directly, 
+        should definitely not be called before all plugins are activated, especially not in activate of a plugin
+        """
+        with self._specialized_db_connect_lock:
+            if self._specialized_db_conn and changedDBConn and changedDBConn != self.options["db_connection"]:
+                return
+            dbPlugin, plugin_type = get_db_connection(self.options["db_connection"])
+            
+            if not dbPlugin:
+                log_error("Plugin %s: DB  connection %s not available: Maybe DB Connections are not active yet?"
+                          %(type(self),self.options["db_connection"]))
+                return False
+            
+            if plugin_type in self._supported_dbms:
+                self._specialized_db_conn = self._supported_dbms[plugin_type](dbPlugin)
+            elif "default" in self._supported_dbms:
+                self._specialized_db_conn = self._supported_dbms["default"](dbPlugin)
+            else:
+                self._specialized_db_conn = None
+                return False
+                
+            log_debug("Plugin %s uses DB Connection of type %s "%(type(self),plugin_type))
+                        
+            return True
+        
+    def is_db_ready(self):
+        return self._specialized_db_conn and self._specialized_db_conn.is_open()
+    
+    def specialized_db_conn(self):
+        return self._specialized_db_conn
+    
     """ Used for testing """
     
     @classmethod
@@ -434,6 +489,32 @@ class iface_plugin(IPlugin):
     def run_options_widget(self):
         _window, app = iface_general_plugin.prepare_application(self._init_run_options_widget)
         sys.exit(app.exec_())
+                    
+class db_for_plugin_iface(object):
+    """to support different DBMS within a plugin, a class inherited from this one is needed"""
+    
+    def __init__(self, newconn):
+        self.dbConn = newconn
+        
+        try:
+            self.init_db()
+        except:
+            log_exception("Problem while migrating dataset to new version")
+    
+    def is_open(self):
+        if self.dbConn:
+            return self.dbConn.isOpen()
+        return False
+    
+    def get_db_conn(self):
+        return self.dbConn
+    
+    def init_db(self):
+        """
+        This method must be overwritten to create necessary tables
+        it is also possible to migrate tables from older versions
+        """
+        raise NotImplementedError("Initialization not implemented")
         
 class iface_general_plugin(iface_plugin): 
     pass

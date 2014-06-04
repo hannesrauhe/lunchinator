@@ -1,6 +1,7 @@
 from functools import partial
 from lunchinator.cli import LunchCLIModule
 from lunchinator import get_settings, get_plugin_manager, log_exception
+from __init__ import get_notification_center
 
 class CLIPluginHandling(LunchCLIModule):
     def __init__(self, parent):
@@ -53,7 +54,9 @@ class CLIPluginHandling(LunchCLIModule):
                     print "Plugin already loaded."
                 else:
                     po = get_plugin_manager().activatePluginByName(pInfo.name,pInfo.categories[0])
-                    self.parent.addModule(po)
+                    self.parent.addModule(po)                    
+                    #plugins with db connection wait for this signal
+                    get_notification_center().emitDBConnReady()
             except:
                 log_exception("while loading plugin")
             
