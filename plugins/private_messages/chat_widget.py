@@ -1,11 +1,12 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
-    QFrame, QStandardItemModel, QStandardItem, QIcon, QHBoxLayout,\
+    QFrame, QStandardItem, QIcon, QHBoxLayout,\
     QLabel, QPixmap, QTextCharFormat, QTextCursor
 from PyQt4.QtCore import Qt, QSize, QVariant, pyqtSignal, QRegExp
 from lunchinator import convert_string, get_settings
 from lunchinator.history_line_edit import HistoryTextEdit
 from private_messages.chat_messages_view import ChatMessagesView
 from xml.etree import ElementTree
+from private_messages.chat_messages_model import ChatMessagesModel
 
 class ChatWidget(QWidget):
     MESSAGE_STATE_OK = None
@@ -116,8 +117,7 @@ class ChatWidget(QWidget):
         self.entry = HistoryTextEdit(self, True)
         
     def _initMessageModel(self):
-        self._model = QStandardItemModel(self)
-        self._model.setColumnCount(3)
+        self._model = ChatMessagesModel(self)
         
     def _initMessageTable(self):
         self.table = ChatMessagesView(self._model, self)
@@ -129,22 +129,22 @@ class ChatWidget(QWidget):
         item.setData(QSize(32, 32), Qt.SizeHintRole)
         return item
         
-    def _createMessageItem(self, msg, alignRight, messageState=None, toolTip=None):
+    def _createMessageItem(self, msg, ownMessage, messageState=None, toolTip=None):
         item = QStandardItem()
         item.setEditable(True)
         item.setData(msg, Qt.DisplayRole)
         
         if messageState == self.MESSAGE_STATE_WARNING:
-            item.setData(QVariant(self._warnIcon), Qt.DecorationRole)
+            item.setData(QVariant(self._warnIcon), ChatMessagesModel.STATUS_ICON_ROLE)
         elif messageState == self.MESSAGE_STATE_ERROR:
-            item.setData(QVariant(self._errIcon), Qt.DecorationRole)
+            item.setData(QVariant(self._errIcon), ChatMessagesModel.STATUS_ICON_ROLE)
         
         if toolTip:
             item.setData(QVariant(toolTip), Qt.ToolTipRole)
         elif messageState == self.MESSAGE_STATE_ERROR:
             item.setData(QVariant(u"Unknown error, message could not be delivered."), Qt.ToolTipRole)
-        item.setData(Qt.AlignHCenter | (Qt.AlignRight if alignRight else Qt.AlignLeft),
-                     Qt.TextAlignmentRole)
+        item.setData(Qt.AlignHCenter, Qt.TextAlignmentRole)
+        item.setData(ownMessage, ChatMessagesModel.OWN_MESSAGE_ROLE)
         return item
     
     def _createEmptyItem(self):

@@ -1,14 +1,15 @@
-from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QApplication, QTextDocument,\
+from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QTextDocument,\
     QStyle, QAbstractTextDocumentLayout, QPalette, QItemDelegate,\
-    QStyleOptionViewItem, QBrush, QColor, QGradient, QLinearGradient, QPainter,\
-    QTextEdit, QHBoxLayout, QFrame, QSizePolicy
+    QBrush, QColor, QLinearGradient, QPainter,\
+    QTextEdit, QFrame, QSizePolicy, QIcon
 from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
     QRectF, QSizeF, pyqtSignal, QModelIndex
 import webbrowser
 from PyQt4.Qt import QWidget
+from private_messages.chat_messages_model import ChatMessagesModel
 
 class ItemEditor(QTextEdit):
-    def __init__(self, document, textSize, rightAligned, parent):
+    def __init__(self, document, textSize, parent):
         super(ItemEditor, self).__init__(parent)
         self.setDocument(document)
         self._textSize = textSize
@@ -19,7 +20,7 @@ class ItemEditor(QTextEdit):
         self.setFrameShadow(QFrame.Plain)
         self.setFrameStyle(QFrame.NoFrame)
         
-        self.setViewportMargins(-4 if rightAligned else 0, 0, -5, -5)
+        self.setViewportMargins(0, 0, -5, -5)
         
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -51,13 +52,13 @@ class MessageItemDelegate(QStyledItemDelegate):
         self._editor = None
         
         ownGradient = QLinearGradient(0, 0, 0, 10)
-        ownGradient.setColorAt(0, QColor(194, 215, 252))
+        ownGradient.setColorAt(0, QColor(229, 239, 254))
         ownGradient.setColorAt(1, QColor(182, 208, 251))
         self._ownBrush = QBrush(ownGradient)
         self._ownPenColor = QColor(104, 126, 164)
         
         otherGradient = QLinearGradient(0, 0, 0, 10)
-        otherGradient.setColorAt(0, QColor(236, 236, 236))
+        otherGradient.setColorAt(0, QColor(248, 248, 248))
         otherGradient.setColorAt(1, QColor(200, 200, 200))
         self._otherBrush = QBrush(otherGradient)
         self._otherPenColor = QColor(153, 153, 153)
@@ -88,24 +89,18 @@ class MessageItemDelegate(QStyledItemDelegate):
         
         self.initStyleOption(option, modelIndex)
         
-        rightAligned = (int(option.displayAlignment) & int(Qt.AlignRight)) != 0
-        if rightAligned:
-            option.decorationPosition = QStyleOptionViewItem.Right
-            
         text = QString(option.text)
         doc = QTextDocument()
         doc.setHtml(text)
         
         doc.setTextWidth(option.rect.width())
         
-        messageRect = self._getMessageRect(option, doc, relativeToItem=True)
+        messageRect = self._getMessageRect(option, doc, modelIndex, relativeToItem=True)
     
         editorWidget = QWidget(parent)
-        editor = ItemEditor(doc, QSize(doc.idealWidth(), doc.size().height()), rightAligned, editorWidget)
+        editor = ItemEditor(doc, QSize(doc.idealWidth(), doc.size().height()), editorWidget)
 
         pos = messageRect.topLeft()
-        if rightAligned:
-            pos += QPoint(4, 0)
         editor.move(pos)
         editor.resize(messageRect.size())
         
@@ -115,18 +110,20 @@ class MessageItemDelegate(QStyledItemDelegate):
     def setModelData(self, *_args, **_kwargs):
         pass
     
-    def _getMessageRect(self, option, doc, relativeToItem=False):
-        rightAligned = (int(option.displayAlignment) & int(Qt.AlignRight)) != 0
+    def _getMessageRect(self, option, doc, modelIndex, relativeToItem=False):
+        rightAligned = modelIndex.data(ChatMessagesModel.OWN_MESSAGE_ROLE).toBool()
+        statusIcon = modelIndex.data(ChatMessagesModel.STATUS_ICON_ROLE)
+        hasStatusIcon = statusIcon != None and not statusIcon.isNull()
         textRect = option.rect
         
         documentWidth = doc.idealWidth()
         if rightAligned:
             xOffset = textRect.width() - documentWidth - 3
-            if not option.icon.isNull():
+            if hasStatusIcon:
                 xOffset -= 20
         else:
             xOffset = 3
-            if not option.icon.isNull():
+            if hasStatusIcon:
                 xOffset += 20
         
         if doc.size().height() < 32:
@@ -148,12 +145,10 @@ class MessageItemDelegate(QStyledItemDelegate):
             option1.decorationAlignment = Qt.AlignLeft
             return super(MessageItemDelegate, self).paint(painter, option1, modelIndex)
         
-        rightAligned = (int(option.displayAlignment) & int(Qt.AlignRight)) != 0
+        rightAligned = modelIndex.data(ChatMessagesModel.OWN_MESSAGE_ROLE).toBool()
         selected = (int(option.state) & int(QStyle.State_Selected)) != 0
         editing = self._editIndex == modelIndex
     
-        option.decorationPosition = Qt.AlignRight if rightAligned else Qt.AlignLeft
-        
         self.document.setHtml(text)
         self.document.setTextWidth(option.rect.width())
         
@@ -166,7 +161,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         # total rect for us to paint in
         textRect = option.rect
         # final rect to paint message in
-        messageRect = self._getMessageRect(option, self.document)
+        messageRect = self._getMessageRect(option, self.document, modelIndex)
         
         painter.save()
         
@@ -178,14 +173,15 @@ class MessageItemDelegate(QStyledItemDelegate):
             self.lastTextPos = textRect.topLeft()
             self.mouseOverOption = option
         
-        
         # draw decoration
         painter.translate(textRect.topLeft())
-        if not option.icon.isNull():
+        statusIcon = modelIndex.data(ChatMessagesModel.STATUS_ICON_ROLE)
+        if statusIcon != None and not statusIcon.isNull():
+            statusIcon = QIcon(statusIcon)
             if rightAligned:
-                option.icon.paint(painter, textRect.size().width() - 19, 8, 16, 16, Qt.AlignCenter)
+                statusIcon.paint(painter, textRect.size().width() - 19, 8, 16, 16, Qt.AlignCenter)
             else:
-                option.icon.paint(painter, 3, 8, 16, 16, Qt.AlignCenter)
+                statusIcon.paint(painter, 3, 8, 16, 16, Qt.AlignCenter)
                 
         # draw message
         painter.restore()
@@ -212,7 +208,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         option.rect.setHeight(32)
         self.initStyleOption(option, modelIndex)
         
-        messageRect = self._getMessageRect(self.mouseOverOption, self.mouseOverDocument)
+        messageRect = self._getMessageRect(self.mouseOverOption, self.mouseOverDocument, modelIndex)
         anchor = self.mouseOverDocument.documentLayout().anchorAt(eventPos - messageRect.topLeft())
         if anchor != "":
             return False
@@ -232,7 +228,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         
         # Get the link at the mouse position
         pos = event.pos()
-        messageRect = self._getMessageRect(option, self.mouseOverDocument)
+        messageRect = self._getMessageRect(option, self.mouseOverDocument, modelIndex)
         anchor = self.mouseOverDocument.documentLayout().anchorAt(pos - messageRect.topLeft())
         if anchor == "":
             if messageRect.contains(pos):
