@@ -143,7 +143,6 @@ class ChatWidget(QWidget):
             item.setData(QVariant(toolTip), Qt.ToolTipRole)
         elif messageState == self.MESSAGE_STATE_ERROR:
             item.setData(QVariant(u"Unknown error, message could not be delivered."), Qt.ToolTipRole)
-        item.setData(Qt.AlignHCenter, Qt.TextAlignmentRole)
         item.setData(ownMessage, ChatMessagesModel.OWN_MESSAGE_ROLE)
         return item
     
