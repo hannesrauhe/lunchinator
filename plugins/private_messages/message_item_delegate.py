@@ -7,6 +7,7 @@ from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
 import webbrowser
 from PyQt4.Qt import QWidget
 from private_messages.chat_messages_model import ChatMessagesModel
+from lunchinator import log_warning
 
 class ItemEditor(QTextEdit):
     def __init__(self, document, textSize, parent):
@@ -46,6 +47,7 @@ class MessageItemDelegate(QStyledItemDelegate):
 
         self.document = QTextDocument()
         self.mouseOverDocument = self.document
+        self.mouseOverDocumentRow = -1
         self.mouseOverOption = None
         self.lastTextPos = QPoint(0, 0)
         self._editIndex = None
@@ -64,7 +66,9 @@ class MessageItemDelegate(QStyledItemDelegate):
         self._otherPenColor = QColor(153, 153, 153)
         
         self.closeEditor.connect(self.editorClosing)
-    
+        
+        self._rowHeights = {}
+        
     def setEditIndex(self, modelIndex):
         self._editIndex = modelIndex
         
@@ -78,12 +82,6 @@ class MessageItemDelegate(QStyledItemDelegate):
     def getEditor(self):
         return self._editor
     
-    def initStyleOption(self, option, modelIndex):
-        if modelIndex.column() == 1:
-            # we're handling this ourselves
-            option.decorationSize = QSize(0,0)
-        return QStyledItemDelegate.initStyleOption(self, option, modelIndex)
-    
     def createEditor(self, parent, option, modelIndex):
         self.setEditIndex(modelIndex)
         
@@ -93,7 +91,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         doc = QTextDocument()
         doc.setHtml(text)
         
-        doc.setTextWidth(option.rect.width())
+        doc.setTextWidth(self._preferredMessageWidth(option.rect.width()))
         
         messageRect = self._getMessageRect(option, doc, modelIndex, relativeToItem=True)
     
@@ -109,6 +107,9 @@ class MessageItemDelegate(QStyledItemDelegate):
     
     def setModelData(self, *_args, **_kwargs):
         pass
+    
+    def _preferredMessageWidth(self, textRectWidth):
+        return textRectWidth - 50
     
     def _getMessageRect(self, option, doc, modelIndex, relativeToItem=False):
         rightAligned = modelIndex.data(ChatMessagesModel.OWN_MESSAGE_ROLE).toBool()
@@ -126,15 +127,22 @@ class MessageItemDelegate(QStyledItemDelegate):
             if hasStatusIcon:
                 xOffset += 20
         
-        if doc.size().height() < 32:
+        height = doc.size().height()
+        if modelIndex.row() not in self._rowHeights:
+            self._rowHeights[modelIndex.row()] = height
+        elif self._rowHeights[modelIndex.row()] != height:
+            self._rowHeights[modelIndex.row()] = height
+            self.sizeHintChanged.emit(modelIndex)
+            
+        if height < 32:
             # vertically center
-            yOffset = (32. - doc.size().height()) / 2 + 1
+            yOffset = (32. - height) / 2 + 1
         else:
             yOffset = 0
         
         textPos = QPoint(0,0) if relativeToItem else textRect.topLeft()
         textPos += QPoint(xOffset, yOffset)
-        return QRect(textPos, QSize(documentWidth, doc.size().height()))
+        return QRect(textPos, QSize(documentWidth, height))
     
     def paint(self, painter, option1, modelIndex):
         option = QStyleOptionViewItemV4(option1)
@@ -150,7 +158,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         editing = self._editIndex == modelIndex
     
         self.document.setHtml(text)
-        self.document.setTextWidth(option.rect.width())
+        self.document.setTextWidth(self._preferredMessageWidth(option.rect.width()))
         
         ctx = QAbstractTextDocumentLayout.PaintContext()
     
@@ -169,7 +177,8 @@ class MessageItemDelegate(QStyledItemDelegate):
         if mouseOver:
             self.mouseOverDocument = QTextDocument()
             self.mouseOverDocument.setHtml(text)
-            self.mouseOverDocument.setTextWidth(option.rect.width())
+            self.mouseOverDocument.setTextWidth(self._preferredMessageWidth(option.rect.width()))
+            self.mouseOverDocumentRow = modelIndex.row()
             self.lastTextPos = textRect.topLeft()
             self.mouseOverOption = option
         
@@ -208,6 +217,10 @@ class MessageItemDelegate(QStyledItemDelegate):
         option.rect.setHeight(32)
         self.initStyleOption(option, modelIndex)
         
+        if modelIndex.row() != self.mouseOverDocumentRow:
+            # TODO reset document
+            log_warning("shouldStartEditAt(): wrong mouse over document")
+            return False
         messageRect = self._getMessageRect(self.mouseOverOption, self.mouseOverDocument, modelIndex)
         anchor = self.mouseOverDocument.documentLayout().anchorAt(eventPos - messageRect.topLeft())
         if anchor != "":
@@ -226,6 +239,9 @@ class MessageItemDelegate(QStyledItemDelegate):
             or not (option.state & QStyle.State_Enabled):
             return False
         
+        if modelIndex.row() != self.mouseOverDocumentRow:
+            return False
+        
         # Get the link at the mouse position
         pos = event.pos()
         messageRect = self._getMessageRect(option, self.mouseOverDocument, modelIndex)
@@ -242,13 +258,19 @@ class MessageItemDelegate(QStyledItemDelegate):
                 return True 
         return False
 
-    def sizeHint(self, option, index):
+    def sizeHint(self, option1, index):
+        option = QStyleOptionViewItemV4(option1)
         self.initStyleOption(option, index)
         
         if not option.text:
             return super(MessageItemDelegate, self).sizeHint(option, index)
-    
+        
+        # option.rect is a zero rect
+        width = self.parent().columnWidth(index.column())
+        
         doc = QTextDocument()
         doc.setHtml(option.text)
-        doc.setTextWidth(option.rect.width())
+        doc.setTextWidth(self._preferredMessageWidth(width))
+        
         return QSize(doc.idealWidth(), max(32, doc.size().height()))
+    
