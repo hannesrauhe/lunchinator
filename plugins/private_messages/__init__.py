@@ -5,6 +5,7 @@ from lunchinator import log_exception, get_settings, get_server,\
 import urllib2, sys, os, json
 from datetime import datetime, timedelta
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent
+from time import time
     
 class private_messages(iface_gui_plugin):
     _nextMessageID = 0
@@ -17,7 +18,7 @@ class private_messages(iface_gui_plugin):
         
     def activate(self):
         iface_gui_plugin.activate(self)
-        self._waitingForAck = {} # message ID : (otherID, message)
+        self._waitingForAck = {} # message ID : (otherID, time, message)
         # TODO load _nextMessageIF
         
     def deactivate(self):
@@ -70,7 +71,7 @@ class private_messages(iface_gui_plugin):
             log_warning("Received ACK for message ID '%s' that I was not waiting for." % msgID)
             return
         
-        otherID, msgHTML = self._waitingForAck.pop(msgID)
+        otherID, _time, msgHTML = self._waitingForAck.pop(msgID)
         if otherID != ackPeerID:
             log_warning("Received ACK from different peer ID than the message was sent to ('%s' != '%s')" % (otherID, ackPeerID))
             return
@@ -150,7 +151,7 @@ class private_messages(iface_gui_plugin):
             return
         
         get_server().call("HELO_PM " + msgDictJSON, peerIDs=[otherID])
-        self._waitingForAck[self._nextMessageID] = (otherID, msgHTML)
+        self._waitingForAck[self._nextMessageID] = (otherID, time(), msgHTML)
         self._nextMessageID += 1
     
     def _activateChat(self, chatWindow):
