@@ -13,8 +13,11 @@ class ChatWindow(QMainWindow):
         self.setWindowTitle(otherName)
 
     def closeEvent(self, event):
-        self.windowClosing.emit(self._otherID)
-        return QMainWindow.closeEvent(self, event)
+        if not self.getChatWidget().canClose():
+            event.ignore()
+        else:
+            self.windowClosing.emit(self._otherID)
+            event.accept()
     
     def getChatWidget(self):
         return self._chatWidget

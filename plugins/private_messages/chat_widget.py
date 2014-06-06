@@ -129,6 +129,9 @@ class ChatWidget(QWidget):
     def delayedDelivery(self, msgID):
         return self._model.messageDelivered(msgID)
         
+    def canClose(self):
+        return self.entry.isEnabled()
+        
     def getOwnIcon(self):
         return self._ownIcon    
     def setOwnIcon(self, icon):
