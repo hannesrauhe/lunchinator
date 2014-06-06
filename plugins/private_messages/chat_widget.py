@@ -9,10 +9,6 @@ from xml.etree import ElementTree
 from private_messages.chat_messages_model import ChatMessagesModel
 
 class ChatWidget(QWidget):
-    MESSAGE_STATE_OK = None
-    MESSAGE_STATE_WARNING = 1
-    MESSAGE_STATE_ERROR = 2
-    
     PREFERRED_WIDTH = 400
     _URI_REGEX="""
     (
@@ -117,57 +113,37 @@ class ChatWidget(QWidget):
         self.entry = HistoryTextEdit(self, True)
         
     def _initMessageModel(self):
-        self._model = ChatMessagesModel(self)
+        self._model = ChatMessagesModel(self, self)
         
     def _initMessageTable(self):
         self.table = ChatMessagesView(self._model, self)
         
-    def _createIconItem(self, icon):
-        item = QStandardItem()
-        item.setEditable(False)
-        item.setData(QVariant(icon), Qt.DecorationRole)
-        item.setData(QSize(32, 32), Qt.SizeHintRole)
-        return item
-        
-    def _createMessageItem(self, msg, ownMessage, messageState=None, toolTip=None):
-        item = QStandardItem()
-        item.setEditable(True)
-        item.setData(msg, Qt.DisplayRole)
-        
-        if messageState == self.MESSAGE_STATE_WARNING:
-            item.setData(QVariant(self._warnIcon), ChatMessagesModel.STATUS_ICON_ROLE)
-        elif messageState == self.MESSAGE_STATE_ERROR:
-            item.setData(QVariant(self._errIcon), ChatMessagesModel.STATUS_ICON_ROLE)
-        
-        if toolTip:
-            item.setData(QVariant(toolTip), Qt.ToolTipRole)
-        elif messageState == self.MESSAGE_STATE_ERROR:
-            item.setData(QVariant(u"Unknown error, message could not be delivered."), Qt.ToolTipRole)
-        item.setData(ownMessage, ChatMessagesModel.OWN_MESSAGE_ROLE)
-        return item
-    
-    def _createEmptyItem(self):
-        item = QStandardItem()
-        item.setEditable(False)
-        return item
-        
-    def addOwnMessage(self, msg, messageState=None, toolTip=None):
-        self._model.appendRow([self._createEmptyItem(),
-                               self._createMessageItem(msg, True, messageState, toolTip),
-                               self._createIconItem(self._ownIcon)])
+    def addOwnMessage(self, msgID, msg, messageState=None, toolTip=None):
+        self._model.addOwnMessage(msgID, msg, messageState, toolTip)
         self.entry.clear()
         self.entry.setEnabled(True)
         
     def addOtherMessage(self, msg):
-        self._model.appendRow([self._createIconItem(self._otherIcon),
-                               self._createMessageItem(msg, False),
-                               self._createEmptyItem()])
+        self._model.addOtherMessage(msg)
         
+    def delayedDelivery(self, msgID):
+        return self._model.messageDelivered(msgID)
+        
+    def getOwnIcon(self):
+        return self._ownIcon    
     def setOwnIcon(self, icon):
         self._ownIcon = icon
-        
+
+    def getOtherIcon(self):
+        return self._otherIcon        
     def setOtherIcon(self, icon):
         self._otherIcon = icon
+        
+    def getWarnIcon(self):
+        return self._warnIcon
+    
+    def getErrorIcon(self):
+        return self._errIcon
         
     def eventTriggered(self):
         self._detectHyperlinks()
@@ -221,17 +197,17 @@ if __name__ == '__main__':
         ownIcon = get_settings().get_resource("images", "me.png")
         otherIcon = get_settings().get_resource("images", "lunchinator.png")
         tw = ChatWidget(window, "Me", "Other Guy", ownIcon, otherIcon, "ID")
-        tw.addOwnMessage("foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten", ChatWidget.MESSAGE_STATE_WARNING, "Not delivered yet.")
+        tw.addOwnMessage(0, "foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten", ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED)
         tw.addOtherMessage("<a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a>")
         tw.addOtherMessage("foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh")
         tw.addOtherMessage("foo")
         tw.addOtherMessage("foo")
         tw.addOtherMessage("<a href=\"mailto:info@lunchinator.de\">Lunchinator Mail</a>")
-        tw.addOwnMessage("bar", ChatWidget.MESSAGE_STATE_ERROR)
-        tw.addOwnMessage("foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh")
+        tw.addOwnMessage(1, "bar", ChatMessagesModel.MESSAGE_STATE_ERROR)
+        tw.addOwnMessage(2, "foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh")
         tw.addOtherMessage("foo")
         tw.addOtherMessage("foo")
-        tw.addOwnMessage("bar")
+        tw.addOwnMessage(3, "bar")
         return tw
         
     iface_gui_plugin.run_standalone(createTable)

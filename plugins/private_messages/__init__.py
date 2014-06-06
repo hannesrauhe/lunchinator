@@ -8,6 +8,7 @@ from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent
 from time import time
     
 class private_messages(iface_gui_plugin):
+    ACK_TIMEOUT = 3 # seconds until message delivery is marked as timed out
     _nextMessageID = 0
     
     def __init__(self):
@@ -19,13 +20,18 @@ class private_messages(iface_gui_plugin):
     def activate(self):
         iface_gui_plugin.activate(self)
         self._waitingForAck = {} # message ID : (otherID, time, message)
-        # TODO load _nextMessageIF
+        # TODO load _nextMessageID
         
     def deactivate(self):
         # TODO store _nextMessageID
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
+        from PyQt4.QtCore import QTimer
+        self._cleanupTimer = QTimer(parent)
+        self._cleanupTimer.timeout.connect(self._cleanup)
+        self._cleanupTimer.start(2000)
+        
         # TODO use this to browse messages history later
         from PyQt4.QtGui import QWidget, QVBoxLayout, QPushButton
         # TODO remove this
@@ -39,13 +45,33 @@ class private_messages(iface_gui_plugin):
         l.addWidget(b)
         return w
     
+    def destroy_widget(self):
+        iface_gui_plugin.destroy_widget(self)
+        
+    def _cleanup(self):
+        curTime = time()
+        for msgID, tup in dict(self._waitingForAck).iteritems():
+            otherID, msgTime, msgHTML = tup
+            if curTime - msgTime > self.ACK_TIMEOUT:
+                self._deliveryTimedOut(otherID, msgID, msgHTML)
+                del self._waitingForAck[msgID]
+    
+    def _deliveryTimedOut(self, otherID, msgID, msgHTML):
+        from private_messages.chat_messages_model import ChatMessagesModel
+        self._displayOwnMessage(otherID, msgID, msgHTML, ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED)
+        
+    def _checkDelayedAck(self, otherID, msgID):
+        # TODO check storage first
+        if otherID in self._openChats:
+            from private_messages.chat_widget import ChatWidget
+            chatWindow = self._openChats[otherID]
+            return chatWindow.getChatWidget().delayedDelivery(msgID)
+        return False
+        
     def _openChatWithMyself(self):
         myID = get_settings().get_ID()
         self.openChat(myID)
     
-    def destroy_widget(self):
-        iface_gui_plugin.destroy_widget(self)
-        
     def process_event(self, cmd, value, _ip, peerInfo):
         peerID = peerInfo[u"ID"]
         if cmd.startswith(u"HELO_PM_ACK"):
@@ -68,6 +94,9 @@ class private_messages(iface_gui_plugin):
         
         msgID = answerDict[u"id"]
         if not msgID in self._waitingForAck:
+            if self._checkDelayedAck(ackPeerID, msgID):
+                log_debug("Delayed delivery of message", msgID, "to", ackPeerID)
+                return
             log_warning("Received ACK for message ID '%s' that I was not waiting for." % msgID)
             return
         
@@ -84,12 +113,14 @@ class private_messages(iface_gui_plugin):
             else:
                 log_warning("Message '%s' could not be processed by '%s'" % (msgID, otherID))
                 
+        from private_messages.chat_messages_model import ChatMessagesModel
+        self._displayOwnMessage(otherID, msgID, msgHTML, ChatMessagesModel.MESSAGE_STATE_ERROR if error else ChatMessagesModel.MESSAGE_STATE_OK, errorMsg)
+        
+    def _displayOwnMessage(self, otherID, msgID, msgHTML, status, errorMsg=None):
         if otherID in self._openChats:
             from private_messages.chat_widget import ChatWidget
             chatWindow = self._openChats[otherID]
-            chatWindow.getChatWidget().addOwnMessage(msgHTML,
-                                                     ChatWidget.MESSAGE_STATE_ERROR if error else ChatWidget.MESSAGE_STATE_OK,
-                                                     errorMsg)
+            chatWindow.getChatWidget().addOwnMessage(msgID, msgHTML, status, errorMsg)
             # TODO store message
         else:
             # TODO probably store somewhere that the message was processed
