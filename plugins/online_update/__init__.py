@@ -164,7 +164,7 @@ class online_update(iface_general_plugin):
             # user clicked on "Install GPG"
             return self.install_gpg()
         
-        self._set_status("Checking for Update...")
+        self._set_status("Checking %s for Update..."%self.hidden_options["check_url"])
         
         if self.getCheckURLBase() == None:
             self._set_status("Auto Update does not work on your OS yet.", True)
