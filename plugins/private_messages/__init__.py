@@ -8,6 +8,9 @@ from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent
 from time import time
     
 class private_messages(iface_gui_plugin):
+    VERSION_INITIAL = 0
+    VERSION_CURRENT = VERSION_INITIAL
+    
     ACK_TIMEOUT = 3 # seconds until message delivery is marked as timed out
     _nextMessageID = 0
     
@@ -47,6 +50,12 @@ class private_messages(iface_gui_plugin):
     
     def destroy_widget(self):
         iface_gui_plugin.destroy_widget(self)
+        
+    def extendsInfoDict(self):
+        return True
+        
+    def extendInfoDict(self, infoDict):
+        infoDict[u"PM_v"] = self.VERSION_CURRENT
         
     def _cleanup(self):
         curTime = time()
