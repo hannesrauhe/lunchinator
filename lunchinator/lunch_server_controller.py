@@ -1,7 +1,7 @@
 """Base class for Lunch Server Controller classes"""
 import sys
 from lunchinator import get_server, get_settings, log_info, get_notification_center,\
-    log_debug, get_peers, log_exception, get_plugin_manager
+    log_debug, get_peers, log_exception, get_plugin_manager, convert_string
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall, getTimeDifference
 from lunchinator.notification_center import NotificationCenter
@@ -12,6 +12,8 @@ class LunchServerController(object):
         super(LunchServerController, self).__init__()
         self.last_lunch_call = 0
         self._initNotificationCenter()
+        get_notification_center().connectPluginActivated(self._checkSendInfoDict)
+        get_notification_center().connectPluginDeactivated(self._checkSendInfoDict)
         
     def _initNotificationCenter(self):
         NotificationCenter.setSingletonInstance(NotificationCenter())
@@ -20,14 +22,14 @@ class LunchServerController(object):
         pass
     
     def initPlugins(self):
-        if get_settings().get_plugins_enabled():  
+        if get_settings().get_plugins_enabled():
             from yapsy.PluginManager import PluginManagerSingleton
             from iface_plugins import iface_called_plugin, iface_general_plugin, iface_gui_plugin
             from iface_db_plugin import iface_db_plugin
-            from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
+            from lunchinator.notification_plugin_manager import NotificationPluginManager
             
             PluginManagerSingleton.setBehaviour([
-                ConfigurablePluginManager,
+                NotificationPluginManager,
             ])
             self.plugin_manager = PluginManagerSingleton.get()
             self.plugin_manager.app = self
@@ -48,8 +50,7 @@ class LunchServerController(object):
             
             for p in self.plugin_manager.getAllPlugins():
                 if p.plugin_object.is_activation_forced() and not p.plugin_object.is_activated:
-                    self.plugin_manager.activatePluginByName(p.name, p.category)
-                    
+                    self.plugin_manager.activatePluginByName(p.name, p.category, emit=False)
         else:
             log_info("lunchinator initialised without plugins")
     
@@ -67,9 +68,16 @@ class LunchServerController(object):
         """Shutdown when server is not yet running"""
         sys.exit(0)
     
-    def extendMemberInfo(self, _infoDict):
+    def extendMemberInfo(self, infoDict):
         """Add some specific information to the info dictionary"""
-        pass
+        if not get_settings().get_plugins_enabled():
+            return
+        for pluginInfo in get_plugin_manager().getAllPlugins():
+            if pluginInfo.plugin_object.is_activated and pluginInfo.plugin_object.extendsInfoDict():
+                try:
+                    pluginInfo.plugin_object.extendInfoDict(infoDict)
+                except:
+                    log_exception(u"plugin error in %s while extending member info" % pluginInfo.name)
     
     def getOpenTCPPort(self, _senderIP):
         # TODO really get open port
@@ -89,6 +97,15 @@ class LunchServerController(object):
     def processEvent(self, cmd, value, addr, _eventTime, newPeer, fromQueue):
         """ process any non-message event """
         processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info), newPeer, fromQueue)
+    
+    def _checkSendInfoDict(self, pluginName, category):
+        pluginName = convert_string(pluginName)
+        category = convert_string(category)
+        pi = get_plugin_manager().getPluginByName(pluginName, category)
+        if pi != None:
+            po = pi.plugin_object
+            if po.extendsInfoDict():
+                get_server().call_info()
     
     def _insertMessage(self,mtime, addr, msg):
         if get_server().get_messages():
@@ -134,4 +151,6 @@ class LunchServerController(object):
             for pluginInfo in get_plugin_manager().getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:
                     pluginInfo.plugin_object.deactivate()
+        get_notification_center().disconnectPluginActivated(self._checkSendInfoDict)
+        get_notification_center().disconnectPluginDeactivated(self._checkSendInfoDict)
         get_notification_center().finish()

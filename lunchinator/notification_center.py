@@ -99,6 +99,28 @@ class NotificationCenter(object):
         for callback in self._callbacks[signal]:
             self.eventloop.append(callback, *args, **kwargs)
 
+    """Called whenever a plugin was activated. The plugin is already activated when the signal is emitted."""    
+    @_connectFunc
+    def connectPluginActivated(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPluginActivated(self, callback):
+        pass
+    @_emitFunc
+    def emitPluginActivated(self, pluginName, category):
+        pass
+    
+    """Called whenever a plugin was deactivated. The plugin is already deactivated when the signal is emitted."""    
+    @_connectFunc
+    def connectPluginDeactivated(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPluginDeactivated(self, callback):
+        pass
+    @_emitFunc
+    def emitPluginDeactivated(self, pluginName, category):
+        pass
+    
     """Called whenever the set of outdated plugin repository changes."""    
     @_connectFunc
     def connectOutdatedRepositoriesChanged(self, callback):
