@@ -315,6 +315,17 @@ class iface_plugin(IPlugin):
         t.setRowStretch(row, 1)
         return optionsWidget
     
+    def extendsInfoDict(self):
+        """Returns True if this plugin overrides extendInfoDict"""
+        return False
+    
+    def extendInfoDict(self, infoDict):
+        """Plugins can use this method to modify the info dict
+        
+        Make sure that extendsInfoDict() returns True.
+        """
+        pass
+    
     def get_option_description(self, key):
         """Returns the readable description of an option."""
         if self.get_option_names(False) != None:

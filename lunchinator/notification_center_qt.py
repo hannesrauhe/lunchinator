@@ -8,6 +8,22 @@ class NotificationCenterQt(QObject):
     def finish(self):
         pass
     
+    _signalPluginActivated = pyqtSignal(unicode, unicode)
+    def connectPluginActivated(self, callback):
+        self._signalPluginActivated.connect(callback, type=Qt.QueuedConnection)
+    def disconnectPluginActivated(self, callback):
+        self._signalPluginActivated.disconnect(callback)
+    def emitPluginActivated(self, pluginName, category):
+        self._signalPluginActivated.emit(pluginName, category)
+        
+    _signalPluginDeactivated = pyqtSignal(unicode, unicode)
+    def connectPluginDeactivated(self, callback):
+        self._signalPluginDeactivated.connect(callback, type=Qt.QueuedConnection)
+    def disconnectPluginDeactivated(self, callback):
+        self._signalPluginDeactivated.disconnect(callback)
+    def emitPluginDeactivated(self, pluginName, category):
+        self._signalPluginDeactivated.emit(pluginName, category)
+        
     _signalOutdatedRepositoriesChanged = pyqtSignal()
     def connectOutdatedRepositoriesChanged(self, callback):
         self._signalOutdatedRepositoriesChanged.connect(callback, type=Qt.QueuedConnection)

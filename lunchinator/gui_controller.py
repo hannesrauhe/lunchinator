@@ -233,6 +233,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             self._updateRequested.emit()    
 
     def extendMemberInfo(self, infoDict):
+        super(LunchinatorGuiController, self).extendMemberInfo(infoDict)
         infoDict['pyqt_version'] = QtCore.PYQT_VERSION_STR
         infoDict['qt_version'] = QtCore.QT_VERSION_STR
             
@@ -342,8 +343,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         self.pluginActions = None
         if get_settings().get_plugins_enabled():
-            from yapsy.PluginManager import PluginManagerSingleton
-            allPlugins = [x for x in PluginManagerSingleton.get().getAllPlugins() if not x.plugin_object.is_activation_forced()]
+            allPlugins = [x for x in get_plugin_manager().getAllPlugins() if not x.plugin_object.is_activation_forced()]
             
             if get_settings().get_group_plugins():
                 self.pluginActions = {}
