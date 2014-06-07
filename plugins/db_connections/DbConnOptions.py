@@ -1,13 +1,13 @@
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QComboBox, QWidget, QGridLayout, QLabel, QStackedWidget, QPushButton
-from yapsy.PluginManager import PluginManagerSingleton
 from copy import deepcopy
+from lunchinator import get_plugin_manager
 
 class DbConnOptions(QWidget):
     def __init__(self, parent, conn_properties):        
         super(DbConnOptions, self).__init__(parent)
         
-        self.plugin_manager = PluginManagerSingleton.get()
+        self.plugin_manager = get_plugin_manager()
         self.available_types = {}
         self.conn_properties = None
         

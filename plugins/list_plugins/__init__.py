@@ -1,5 +1,5 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from yapsy.PluginManager import PluginManagerSingleton
+from lunchinator import get_plugin_manager
     
 class list_plugins(iface_gui_plugin):
     def __init__(self):
@@ -14,7 +14,7 @@ class list_plugins(iface_gui_plugin):
         
     def get_plugin_info(self):
         info = {}
-        for pluginInfo in PluginManagerSingleton.get().getAllPlugins():   
+        for pluginInfo in get_plugin_manager().getAllPlugins():   
             p = {}
             p["name"]=pluginInfo.name
 #            txt+=pluginInfo.path +" "
