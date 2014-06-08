@@ -6,6 +6,17 @@ import urllib2, sys, os, json
 from datetime import datetime, timedelta
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent
 from time import time
+from lunchinator.peer_actions import PeerAction
+    
+class _OpenChatAction(PeerAction):
+    def getName(self):
+        return "Chat"
+    
+    def performAction(self, peerID, _peerInfo):
+        self.getPluginObject().openChat(peerID)
+        
+    def appliesToPeer(self, _peerID, peerInfo):
+        return u"PM_v" in peerInfo
     
 class private_messages(iface_gui_plugin):
     VERSION_INITIAL = 0
@@ -16,6 +27,7 @@ class private_messages(iface_gui_plugin):
     
     def __init__(self):
         super(private_messages, self).__init__()
+        self._peerActions = [_OpenChatAction()]
         
     def get_displayed_name(self):
         return u"Chat"
@@ -56,6 +68,9 @@ class private_messages(iface_gui_plugin):
         
     def extendInfoDict(self, infoDict):
         infoDict[u"PM_v"] = self.VERSION_CURRENT
+        
+    def get_peer_actions(self):
+        return self._peerActions
         
     def _cleanup(self):
         curTime = time()

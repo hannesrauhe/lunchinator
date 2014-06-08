@@ -1,11 +1,12 @@
 """Base class for Lunch Server Controller classes"""
 import sys
 from lunchinator import get_server, get_settings, log_info, get_notification_center,\
-    log_debug, get_peers, log_exception, get_plugin_manager, convert_string
+    log_debug, get_peers, log_exception, get_plugin_manager, convert_string,\
+    get_peer_actions
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall, getTimeDifference
 from lunchinator.notification_center import NotificationCenter
-from time import localtime, strftime, mktime
+from time import localtime, strftime
 
 class LunchServerController(object):
     def __init__(self):
@@ -51,6 +52,8 @@ class LunchServerController(object):
             for p in self.plugin_manager.getAllPlugins():
                 if p.plugin_object.is_activation_forced() and not p.plugin_object.is_activated:
                     self.plugin_manager.activatePluginByName(p.name, p.category, emit=False)
+            
+            get_peer_actions().initialize()
         else:
             log_info("lunchinator initialised without plugins")
     

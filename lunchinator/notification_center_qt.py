@@ -177,3 +177,11 @@ class NotificationCenterQt(QObject):
     def emitDBConnReady(self):
         self._signalDBConnReady.emit()
         
+    _signalPeerActionsChanged = pyqtSignal() 
+    def connectPeerActionsChanged(self, callback):
+        self._signalPeerActionsChanged.connect(callback, type=Qt.QueuedConnection)
+    def disconnectPeerActionsChanged(self, callback):
+        self._signalPeerActionsChanged.disconnect(callback)
+    def emitPeerActionsChanged(self):
+        self._signalPeerActionsChanged.emit()
+        

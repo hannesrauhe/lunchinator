@@ -146,6 +146,10 @@ def get_plugin_manager():
         return PluginManagerSingleton.get()
     else:
         log_exception("Cannnot load plugin manager: plugins are disabled")   
+        
+def get_peer_actions():
+    from lunchinator.peer_actions import PeerActions
+    return PeerActions.get()
     
 def get_db_connection(name=""):
     """returns tuple (connection_handle, connection_type) of the given connection"""

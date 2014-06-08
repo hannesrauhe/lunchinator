@@ -324,6 +324,17 @@ class NotificationCenter(object):
     @_emitFunc
     def emitDBConnReady(self):
         pass
+    
+    """Emitted whenever a peer action is added or removed."""    
+    @_connectFunc
+    def connectPeerActionsChanged(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPeerActionsChanged(self, callback):
+        pass
+    @_emitFunc
+    def emitPeerActionsChanged(self):
+        pass
 
 if __name__ == '__main__':
     def _testCallback(a, b, c):
