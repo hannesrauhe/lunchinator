@@ -20,6 +20,9 @@ class TableModelBase(QStandardItemModel):
 
     def hasKey(self, key):
         return key in self.keys
+    
+    def keyAtIndex(self, index):
+        return self.keys[index.row()]
 
     def callItemInitializer(self, column, key, data, item):
         item.setData(None, self.SORT_ROLE)

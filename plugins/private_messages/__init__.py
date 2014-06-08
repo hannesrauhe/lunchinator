@@ -10,7 +10,7 @@ from lunchinator.peer_actions import PeerAction
     
 class _OpenChatAction(PeerAction):
     def getName(self):
-        return "Chat"
+        return "Open Chat"
     
     def performAction(self, peerID, _peerInfo):
         self.getPluginObject().openChat(peerID)
@@ -47,17 +47,11 @@ class private_messages(iface_gui_plugin):
         self._cleanupTimer.timeout.connect(self._cleanup)
         self._cleanupTimer.start(2000)
         
-        # TODO use this to browse messages history later
-        from PyQt4.QtGui import QWidget, QVBoxLayout, QPushButton
-        # TODO remove this
         self._openChats = {} # mapping peer ID -> ChatDockWidget
-        self._openChat("Corny", "Other", get_settings().get_resource("images", "me.png"), get_settings().get_resource("images", "lunchinator.png"), "otherID")
         
+        # TODO use this to browse messages history later
+        from PyQt4.QtGui import QWidget
         w = QWidget(parent)
-        l = QVBoxLayout(w)
-        b = QPushButton("Open Chat")
-        b.clicked.connect(self._openChatWithMyself)
-        l.addWidget(b)
         return w
     
     def destroy_widget(self):

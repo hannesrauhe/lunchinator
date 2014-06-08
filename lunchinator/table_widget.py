@@ -58,6 +58,8 @@ class TableWidget(QWidget):
     def setColumnWidth(self, column, width):
         self.table.setColumnWidth(column, width)
         
+    def getTable(self):
+        return self.table
         
 if __name__ == '__main__':
     from lunchinator.iface_plugins import iface_gui_plugin

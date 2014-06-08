@@ -1,7 +1,8 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import get_server, get_notification_center, get_peers,\
-    convert_string
+    convert_string, get_peer_actions
 from lunchinator.utilities import msecUntilNextMinute
+from functools import partial
     
 class members_table(iface_gui_plugin):
     def __init__(self):
@@ -53,6 +54,8 @@ class members_table(iface_gui_plugin):
                 return self.sourceModel().keys[left.row()] < self.sourceModel().keys[right.row()]
         
         self.membersTable = TableWidget(parent, "Add Host", self.addHostClicked, sortedColumn=MembersTableModel.LUNCH_TIME_COL_INDEX, placeholderText="Enter hostname")
+        self.membersTable.getTable().setContextMenuPolicy(Qt.CustomContextMenu)
+        self.membersTable.getTable().customContextMenuRequested.connect(self._showContextMenu)
         
         # initialize members table
         self.membersModel = MembersTableModel(get_peers())
@@ -96,6 +99,29 @@ class members_table(iface_gui_plugin):
         self._lunchTimeColumnTimer.timeout.disconnect(self._startSyncedTimer)
         self._lunchTimeColumnTimer.timeout.connect(self.membersModel.updateLunchTimeColumn)
         self._lunchTimeColumnTimer.start(60000)
+
+    def _showContextMenu(self, point):
+        from PyQt4.QtGui import QMenu, QCursor
+        index = self.membersTable.getTable().indexAt(point)
+        if index != None:
+            peerID = self.membersModel.keyAtIndex(index)
+            if peerID:
+                peerInfo = get_peers().getPeerInfo(pID=peerID)
+                actionsDict = get_peer_actions().getPeerActions(peerID, peerInfo)
+                if actionsDict:
+                    popupMenu = QMenu(self.membersTable.getTable())
+                    for pluginName, actions in actionsDict.iteritems():
+                        displayedName = actions[0].getPluginObject().get_displayed_name()
+                        if not displayedName:
+                            displayedName = pluginName
+                        header = popupMenu.addAction(displayedName)
+                        header.setEnabled(False)
+                        
+                        for action in actions:
+                            popupMenu.addAction(action.getName(), partial(action.performAction, peerID, peerInfo))
+                            
+                    popupMenu.exec_(QCursor.pos())
+                    popupMenu.deleteLater()
 
     def destroy_widget(self):
         iface_gui_plugin.destroy_widget(self)

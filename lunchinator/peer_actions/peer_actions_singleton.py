@@ -1,5 +1,5 @@
 from lunchinator import get_settings, get_notification_center,\
-    get_plugin_manager
+    get_plugin_manager, convert_string
 from lunchinator.logging_mutex import loggingMutex
 
 class PeerActions(object):
@@ -21,27 +21,29 @@ class PeerActions(object):
         """Called from lunch server controller"""
         with self._lock:
             for pi in get_plugin_manager().getAllPlugins():
-                self._addActionsForPlugin(pi)
+                if pi.plugin_object.is_activated:
+                    self._addActionsForPlugin(pi)
                         
         get_notification_center().emitPeerActionsChanged()
         
     def _addActionsForPlugin(self, pi):
-        added = False
-        if pi.plugin_object.is_activated and pi.plugin_object.get_peer_actions() != None:
-            for action in pi.plugin_object.get_peer_actions():
-                added = True
-                self._addPeerAction(action, pi.name, pi.plugin_object)
-        return added
+        peerActions = pi.plugin_object.get_peer_actions()
+        if peerActions:
+            for peerAction in peerActions:
+                peerAction.setParentPlugin(pi.name, pi.plugin_object)
+            self._peerActions[pi.name] = peerActions
+            return True
+        return False
         
     def _removeActionsForPlugin(self, pi):
-        removed = False
-        if not pi.plugin_object.is_activated and pi.plugin_object.get_peer_actions() != None:
-            for action in pi.plugin_object.get_peer_actions():
-                removed = True
-                self._removePeerAction(action, pi.name)
-        return removed
+        if pi.name in self._peerActions:
+            del self._peerActions[pi.name]
+            return True
+        return False
         
     def _pluginActivated(self, pluginName, category):
+        pluginName = convert_string(pluginName)
+        category = convert_string(category)
         pi = get_plugin_manager().getPluginByName(pluginName, category)
         if pi:
             with self._lock:
@@ -50,6 +52,8 @@ class PeerActions(object):
                 get_notification_center().emitPeerActionsChanged()
                 
     def _pluginDeactivated(self, pluginName, category):
+        pluginName = convert_string(pluginName)
+        category = convert_string(category)
         pi = get_plugin_manager().getPluginByName(pluginName, category)
         if pi:
             with self._lock:
@@ -57,20 +61,6 @@ class PeerActions(object):
             if removed:
                 get_notification_center().emitPeerActionsChanged()
         
-    def _addPeerAction(self, peerAction, parentPluginName, parentPluginObject):
-        peerAction.setParentPlugin(parentPluginName, parentPluginObject)
-        
-        if parentPluginName in self._peerActions:
-            actions = self._peerActions[parentPluginName]
-        else:
-            actions = []
-        actions.append(peerAction)
-        self._peerActions[parentPluginName] = peerAction
-        
-    def _removePeerAction(self, peerAction, parentPluginName):
-        if parentPluginName in self._peerActions and peerAction in self._peerActions[parentPluginName]:
-            self._peerActions[parentPluginName].remove(peerAction)
-            
     def iterPeerActions(self, peerID, peerInfo):
         """Iterates over peer actions for the given peer
         
@@ -85,7 +75,7 @@ class PeerActions(object):
     def _getPeerActions(self, peerID=None, peerInfo=None, ignoreApplies=False):
         result = {}
         with self._lock:
-            for pluginName, actions in self._peerActions:
+            for pluginName, actions in self._peerActions.iteritems():
                 newActions = []
                 for action in actions:
                     if ignoreApplies or action.appliesToPeer(peerID, peerInfo):
