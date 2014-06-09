@@ -23,13 +23,13 @@ class ChatMessagesModel(QStandardItemModel):
     def addOwnMessage(self, msgID, msg, messageState=None, toolTip=None):
         self._idToRow[msgID] = self.rowCount()
         self.appendRow([self._createEmptyItem(),
-                               self._createMessageItem(msg, True, messageState, toolTip),
-                               self._createIconItem(self._delegate.getOwnIcon())])
+                        self._createMessageItem(msg, True, messageState, toolTip),
+                        self._createIconItem(self._delegate.getOwnIcon())])
         
     def addOtherMessage(self, msg):
         self.appendRow([self._createIconItem(self._delegate.getOtherIcon()),
-                               self._createMessageItem(msg, False),
-                               self._createEmptyItem()])
+                        self._createMessageItem(msg, False),
+                        self._createEmptyItem()])
         
     def _createIconItem(self, icon):
         item = QStandardItem()

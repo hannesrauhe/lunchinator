@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent
 from time import time
 from lunchinator.peer_actions import PeerAction
+from private_messages.chat_messages_storage import ChatMessagesStorage
     
 class _OpenChatAction(PeerAction):
     def getName(self):
@@ -23,22 +24,21 @@ class private_messages(iface_gui_plugin):
     VERSION_CURRENT = VERSION_INITIAL
     
     ACK_TIMEOUT = 3 # seconds until message delivery is marked as timed out
-    _nextMessageID = 0
     
     def __init__(self):
         super(private_messages, self).__init__()
-        self._peerActions = [_OpenChatAction()]
         
     def get_displayed_name(self):
         return u"Chat"
         
     def activate(self):
         iface_gui_plugin.activate(self)
+        self._peerActions = [_OpenChatAction()]
         self._waitingForAck = {} # message ID : (otherID, time, message)
-        # TODO load _nextMessageID
+        self._nextMessageID = None
+        self._storage = None
         
     def deactivate(self):
-        # TODO store _nextMessageID
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
@@ -66,6 +66,16 @@ class private_messages(iface_gui_plugin):
     def get_peer_actions(self):
         return self._peerActions
         
+    def _getStorage(self):
+        if self._storage == None:
+            self._storage = ChatMessagesStorage()
+            self._nextMessageID = self._storage.getNextMessageID()
+        
+    def _getNextMessageID(self):
+        if self._nextMessageID == None:
+            self._getStorage()
+        return self._nextMessageID
+        
     def _cleanup(self):
         curTime = time()
         for msgID, tup in dict(self._waitingForAck).iteritems():
@@ -79,11 +89,17 @@ class private_messages(iface_gui_plugin):
         self._displayOwnMessage(otherID, msgID, msgHTML, ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED)
         
     def _checkDelayedAck(self, otherID, msgID):
-        # TODO check storage first
-        if otherID in self._openChats:
-            from private_messages.chat_widget import ChatWidget
-            chatWindow = self._openChats[otherID]
-            return chatWindow.getChatWidget().delayedDelivery(msgID)
+        from private_messages.chat_messages_model import ChatMessagesModel
+        currentState = self._storage.getMessageState(msgID)
+        if currentState == ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED:
+            self._storage.updateMessageState(msgID, ChatMessagesModel.MESSAGE_STATE_OK)
+            
+            if otherID in self._openChats:
+                from private_messages.chat_widget import ChatWidget
+                chatWindow = self._openChats[otherID]
+                chatWindow.getChatWidget().delayedDelivery(msgID)
+            
+            return True
         return False
         
     def _openChatWithMyself(self):
@@ -135,14 +151,14 @@ class private_messages(iface_gui_plugin):
         self._displayOwnMessage(otherID, msgID, msgHTML, ChatMessagesModel.MESSAGE_STATE_ERROR if error else ChatMessagesModel.MESSAGE_STATE_OK, errorMsg)
         
     def _displayOwnMessage(self, otherID, msgID, msgHTML, status, errorMsg=None):
+        msgTime = time()
         if otherID in self._openChats:
             from private_messages.chat_widget import ChatWidget
             chatWindow = self._openChats[otherID]
+            # TODO add message time to model
             chatWindow.getChatWidget().addOwnMessage(msgID, msgHTML, status, errorMsg)
-            # TODO store message
-        else:
-            # TODO probably store somewhere that the message was processed
-            pass
+        
+        self._storage.addOwnMessage(msgID, otherID, msgTime, status, msgHTML)
     
     def _processMessage(self, otherID, msgDictJSON):
         try:
@@ -166,9 +182,16 @@ class private_messages(iface_gui_plugin):
             msgHTML = msgDict[u"data"]
         
         chatWindow = self.openChat(otherID)
+        msgTime = time()
+        
+        # TODO add message time to model
         chatWindow.getChatWidget().addOtherMessage(msgHTML)
-        self._sendAnswer(otherID, msgDict)
-        # TODO store message
+        
+        if u"id" in msgDict and msgDict[u"id"] != None:
+            self._storage.addOtherMessage(msgDict[u"id"], otherID, msgTime, msgHTML)
+            self._sendAnswer(otherID, msgDict)
+        else:
+            log_warning("Message has no ID, cannot store or send answer.")
         
     def _sendAnswer(self, otherID, msgDict, errorMsg=None):
         if u"id" not in msgDict:
@@ -189,7 +212,7 @@ class private_messages(iface_gui_plugin):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
         
-        msgDict = {u"id": self._nextMessageID,
+        msgDict = {u"id": self._getNextMessageID(),
                    u"format": u"html",
                    u"data": msgHTML}
         
@@ -200,7 +223,7 @@ class private_messages(iface_gui_plugin):
             return
         
         get_server().call("HELO_PM " + msgDictJSON, peerIDs=[otherID])
-        self._waitingForAck[self._nextMessageID] = (otherID, time(), msgHTML)
+        self._waitingForAck[self._getNextMessageID()] = (otherID, time(), msgHTML)
         self._nextMessageID += 1
     
     def _activateChat(self, chatWindow):
