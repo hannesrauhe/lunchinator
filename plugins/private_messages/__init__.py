@@ -245,7 +245,7 @@ class private_messages(iface_gui_plugin):
             if getPlatform() == PLATFORM_MAC:
                 chatWindow.activateWindow()
             chatWindow.raise_()
-            return chatWindow
+        return chatWindow
     
     def _openChat(self, myName, otherName, myAvatar, otherAvatar, otherID):
         from private_messages.chat_window import ChatWindow
