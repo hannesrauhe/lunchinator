@@ -122,6 +122,7 @@ class ChatWidget(QWidget):
         self._model.addOwnMessage(msgID, msg, messageState, toolTip)
         self.entry.clear()
         self.entry.setEnabled(True)
+        self.entry.setFocus(Qt.OtherFocusReason)
         
     def addOtherMessage(self, msg):
         self._model.addOtherMessage(msg)
