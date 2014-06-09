@@ -287,9 +287,9 @@ class LunchPeers(object):
         the file does not exist.
         """
         peerInfo = self.getPeerInfo(pIP=ip, lock=False)
-        if peerInfo != None and "avatar" in peerInfo:
+        if peerInfo != None and u"avatar" in peerInfo and peerInfo[u"avatar"]:
             avatarFile = os.path.join(get_settings().get_avatar_dir(), peerInfo["avatar"])
-            if os.path.exists(avatarFile):
+            if os.path.isfile(avatarFile):
                 return avatarFile
         return None
         
