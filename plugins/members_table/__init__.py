@@ -103,6 +103,7 @@ class members_table(iface_gui_plugin):
     def _showContextMenu(self, point):
         from PyQt4.QtGui import QMenu, QCursor
         index = self.membersTable.getTable().indexAt(point)
+        index = self.membersProxyModel.mapToSource(index)
         if index != None:
             peerID = self.membersModel.keyAtIndex(index)
             if peerID:
