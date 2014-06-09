@@ -130,7 +130,7 @@ class ChatWidget(QWidget):
         self.entry.clear()
         self.entry.setEnabled(True)
         self.entry.setFocus(Qt.OtherFocusReason)
-        self._scrollToEnd()
+        self.scrollToEnd()
         
     def addOtherMessage(self, msg, scroll=True):
         self._model.addOtherMessage(msg)
