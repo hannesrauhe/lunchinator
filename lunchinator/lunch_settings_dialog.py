@@ -25,7 +25,10 @@ class LunchinatorSettingsDialog(QDialog):
             if get_settings().get_plugins_enabled():
                 for pluginInfo in get_plugin_manager().getAllPlugins():
                     if pluginInfo.plugin_object.is_activated:
-                        self.addPlugin(pluginInfo.plugin_object, pluginInfo.name)
+                        if pluginInfo.plugin_object.get_displayed_name():
+                            self.addPlugin(pluginInfo.plugin_object, pluginInfo.plugin_object.get_displayed_name())
+                        else:
+                            self.addPlugin(pluginInfo.plugin_object, pluginInfo.name)
         except:
             log_exception("while including plugins in settings window")
         
