@@ -79,3 +79,7 @@ class ChatMessagesStorage(object):
             raise Exception("No partner provided")
         
         self._db.query("DELETE FROM PRIVATE_MESSAGES WHERE PARTNER = ?", partner)
+        
+    def getPreviousMessages(self, partner, numMessages):
+        return self._db.query("SELECT * FROM PRIVATE_MESSAGES WHERE PARTNER = ? ORDER BY TIME DESC LIMIT ?", partner, numMessages)
+        

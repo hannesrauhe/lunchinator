@@ -23,16 +23,17 @@ class private_messages(iface_gui_plugin):
     VERSION_INITIAL = 0
     VERSION_CURRENT = VERSION_INITIAL
     
-    ACK_TIMEOUT = 3 # seconds until message delivery is marked as timed out
-    
     def __init__(self):
         super(private_messages, self).__init__()
+        self.options = [((u"prev_messages", u"Number of previous messages to display"), 5)]
+        self.hidden_options = {u"ack_timeout" : 3} # seconds until message delivery is marked as timed out
         
     def get_displayed_name(self):
         return u"Chat"
         
     def activate(self):
         iface_gui_plugin.activate(self)
+        self._ackTimeout = self.hidden_options[u"ack_timeout"]
         self._peerActions = [_OpenChatAction()]
         self._waitingForAck = {} # message ID : (otherID, time, message)
         self._nextMessageID = None
@@ -81,7 +82,7 @@ class private_messages(iface_gui_plugin):
         curTime = time()
         for msgID, tup in dict(self._waitingForAck).iteritems():
             otherID, msgTime, msgHTML = tup
-            if curTime - msgTime > self.ACK_TIMEOUT:
+            if curTime - msgTime > self._ackTimeout:
                 self._deliveryTimedOut(otherID, msgID, msgHTML)
                 del self._waitingForAck[msgID]
     
@@ -190,7 +191,7 @@ class private_messages(iface_gui_plugin):
             log_info("Message without format. Assuming plain text or HTML.")
             msgHTML = msgDict[u"data"]
         
-        chatWindow = self.openChat(otherID)
+        chatWindow = self.openChat(otherID, forceForeground=False)
         msgTime = time()
         
         # TODO add message time to model
@@ -238,12 +239,13 @@ class private_messages(iface_gui_plugin):
         self._waitingForAck[self._getNextMessageID()] = (otherID, time(), msgHTML)
         self._nextMessageID += 1
     
-    def _activateChat(self, chatWindow):
+    def _activateChat(self, chatWindow, forceForeground=True):
         chatWindow.show()
-        if getPlatform() == PLATFORM_MAC:
-            chatWindow.activateWindow()
-        chatWindow.raise_()
-        return chatWindow
+        if forceForeground:
+            if getPlatform() == PLATFORM_MAC:
+                chatWindow.activateWindow()
+            chatWindow.raise_()
+            return chatWindow
     
     def _openChat(self, myName, otherName, myAvatar, otherAvatar, otherID):
         from private_messages.chat_window import ChatWindow
@@ -251,6 +253,16 @@ class private_messages(iface_gui_plugin):
         newWindow.windowClosing.connect(self._chatClosed)
         newWindow.getChatWidget().sendMessage.connect(self._sendMessage)
         self._openChats[otherID] = newWindow
+        
+        prevMessages = self._getStorage().getPreviousMessages(otherID, self.get_option(u"prev_messages"))
+        for row in reversed(prevMessages):
+            # partner, ID, own, time, status, text
+            ownMessage = row[2] != 0
+            if ownMessage:
+                newWindow.getChatWidget().addOwnMessage(row[1], row[5], row[4])
+            else:
+                newWindow.getChatWidget().addOtherMessage(row[5])
+            
         return self._activateChat(newWindow)
         
     def _chatClosed(self, pID):
@@ -262,9 +274,9 @@ class private_messages(iface_gui_plugin):
         else:
             log_error("Closed chat window was not maintained:", pID)
         
-    def openChat(self, pID):
+    def openChat(self, pID, forceForeground=False):
         if pID in self._openChats:
-            return self._activateChat(self._openChats[pID])
+            return self._activateChat(self._openChats[pID], forceForeground)
         
         otherName = get_peers().getPeerName(pID=pID)
         if otherName == None:
