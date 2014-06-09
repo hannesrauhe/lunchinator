@@ -7,6 +7,7 @@ from lunchinator.history_line_edit import HistoryTextEdit
 from private_messages.chat_messages_view import ChatMessagesView
 from xml.etree import ElementTree
 from private_messages.chat_messages_model import ChatMessagesModel
+from cmath import rect
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -117,11 +118,13 @@ class ChatWidget(QWidget):
         
     def _initMessageTable(self):
         self.table = ChatMessagesView(self._model, self)
-        
+       
     def scrollToEnd(self, force=True):
         lastIndex = self._model.getLastIndex()
         if not force:
-            if self.table.isIndexHidden(lastIndex):
+            rect = self.table.visualRect(lastIndex)
+            if rect.topLeft().y() > self.table.viewport().height():
+                # last item not visible -> don't scroll
                 return
         self.table.scrollTo(lastIndex)
         
@@ -130,11 +133,13 @@ class ChatWidget(QWidget):
         self.entry.clear()
         self.entry.setEnabled(True)
         self.entry.setFocus(Qt.OtherFocusReason)
-        self.scrollToEnd()
+        if scroll:
+            self.scrollToEnd()
         
     def addOtherMessage(self, msg, scroll=True):
         self._model.addOtherMessage(msg)
-        self.scrollToEnd(force=False)
+        if scroll:
+            self.scrollToEnd(force=False)
         
     def delayedDelivery(self, msgID):
         return self._model.messageDelivered(msgID)
