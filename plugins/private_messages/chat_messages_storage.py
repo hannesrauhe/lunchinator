@@ -72,7 +72,7 @@ class ChatMessagesStorage(object):
         rows = self._db.query("SELECT MAX(M_ID) FROM PRIVATE_MESSAGES WHERE IS_OWN_MESSAGE = ?", True)
         if not rows or rows[0][0] == None:
             return 0
-        return rows[0][0]
+        return rows[0][0] + 1
       
     def deleteMessagesForPartner(self, partner):
         if not partner:

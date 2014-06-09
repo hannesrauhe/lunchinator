@@ -70,6 +70,7 @@ class private_messages(iface_gui_plugin):
         if self._storage == None:
             self._storage = ChatMessagesStorage()
             self._nextMessageID = self._storage.getNextMessageID()
+        return self._storage
         
     def _getNextMessageID(self):
         if self._nextMessageID == None:
@@ -90,9 +91,12 @@ class private_messages(iface_gui_plugin):
         
     def _checkDelayedAck(self, otherID, msgID):
         from private_messages.chat_messages_model import ChatMessagesModel
-        currentState = self._storage.getMessageState(msgID)
+        currentState = self._getStorage().getMessageState(msgID)
         if currentState == ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED:
-            self._storage.updateMessageState(msgID, ChatMessagesModel.MESSAGE_STATE_OK)
+            try:
+                self._getStorage().updateMessageState(msgID, ChatMessagesModel.MESSAGE_STATE_OK)
+            except:
+                log_exception("Error updating message state")
             
             if otherID in self._openChats:
                 from private_messages.chat_widget import ChatWidget
@@ -107,12 +111,14 @@ class private_messages(iface_gui_plugin):
         self.openChat(myID)
     
     def process_event(self, cmd, value, _ip, peerInfo):
-        peerID = peerInfo[u"ID"]
         if cmd.startswith(u"HELO_PM_ACK"):
+            peerID = peerInfo[u"ID"]
             self._processAck(peerID, value)
         elif cmd.startswith(u"HELO_PM_ERROR"):
+            peerID = peerInfo[u"ID"]
             self._processAck(peerID, value, error=True)
         elif cmd.startswith(u"HELO_PM"):
+            peerID = peerInfo[u"ID"]
             self._processMessage(peerID, value)
     
     def _processAck(self, ackPeerID, valueJSON, error=False):
@@ -158,7 +164,10 @@ class private_messages(iface_gui_plugin):
             # TODO add message time to model
             chatWindow.getChatWidget().addOwnMessage(msgID, msgHTML, status, errorMsg)
         
-        self._storage.addOwnMessage(msgID, otherID, msgTime, status, msgHTML)
+        try:
+            self._getStorage().addOwnMessage(msgID, otherID, msgTime, status, msgHTML)
+        except:
+            log_exception("Error storing own message")
     
     def _processMessage(self, otherID, msgDictJSON):
         try:
@@ -188,8 +197,11 @@ class private_messages(iface_gui_plugin):
         chatWindow.getChatWidget().addOtherMessage(msgHTML)
         
         if u"id" in msgDict and msgDict[u"id"] != None:
-            self._storage.addOtherMessage(msgDict[u"id"], otherID, msgTime, msgHTML)
             self._sendAnswer(otherID, msgDict)
+            try:
+                self._getStorage().addOtherMessage(msgDict[u"id"], otherID, msgTime, msgHTML)
+            except:
+                log_exception("Error storing partner message")
         else:
             log_warning("Message has no ID, cannot store or send answer.")
         
