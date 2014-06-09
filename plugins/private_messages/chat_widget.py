@@ -118,14 +118,23 @@ class ChatWidget(QWidget):
     def _initMessageTable(self):
         self.table = ChatMessagesView(self._model, self)
         
-    def addOwnMessage(self, msgID, msg, messageState=None, toolTip=None):
+    def scrollToEnd(self, force=True):
+        lastIndex = self._model.getLastIndex()
+        if not force:
+            if self.table.isIndexHidden(lastIndex):
+                return
+        self.table.scrollTo(lastIndex)
+        
+    def addOwnMessage(self, msgID, msg, messageState=None, toolTip=None, scroll=True):
         self._model.addOwnMessage(msgID, msg, messageState, toolTip)
         self.entry.clear()
         self.entry.setEnabled(True)
         self.entry.setFocus(Qt.OtherFocusReason)
+        self._scrollToEnd()
         
-    def addOtherMessage(self, msg):
+    def addOtherMessage(self, msg, scroll=True):
         self._model.addOtherMessage(msg)
+        self.scrollToEnd(force=False)
         
     def delayedDelivery(self, msgID):
         return self._model.messageDelivered(msgID)
@@ -157,6 +166,7 @@ class ChatWidget(QWidget):
 
     def _cleanHTML(self, html):
         # only body, no paragraph attributes
+        html = html.encode("utf-8")
         cleaned = u""
         e = ElementTree.fromstring(html)
         body = e.iter("html").next().iter("body").next()

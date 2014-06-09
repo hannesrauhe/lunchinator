@@ -80,3 +80,5 @@ class ChatMessagesModel(QStandardItemModel):
                 return True
         return False
         
+    def getLastIndex(self):
+        return self.index(self.rowCount() - 1, 1)

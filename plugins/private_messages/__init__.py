@@ -259,10 +259,10 @@ class private_messages(iface_gui_plugin):
             # partner, ID, own, time, status, text
             ownMessage = row[2] != 0
             if ownMessage:
-                newWindow.getChatWidget().addOwnMessage(row[1], row[5], row[4])
+                newWindow.getChatWidget().addOwnMessage(row[1], row[5], row[4], scroll=False)
             else:
-                newWindow.getChatWidget().addOtherMessage(row[5])
-            
+                newWindow.getChatWidget().addOtherMessage(row[5], scroll=False)
+        newWindow.getChatWidget().scrollToEnd()
         return self._activateChat(newWindow)
         
     def _chatClosed(self, pID):
