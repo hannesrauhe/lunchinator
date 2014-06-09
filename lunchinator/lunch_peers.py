@@ -21,7 +21,7 @@ def peerGetter(needsID=False):
                     if lock:
                         self._lock.release()
         else:
-            def newGetter(self, pIP=None, pID=None, lock=True):
+            def newGetter(self, pID=None, pIP=None, lock=True):
                 if lock:
                     self._lock.acquire()
                 try:

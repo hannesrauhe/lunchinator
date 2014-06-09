@@ -19,10 +19,13 @@ class DropdownModel(TableModelBase):
         
         # Called before server is running, no need to lock here
         for peerID in self.dataSource:
-            infoDict = dataSource.getPeerInfo(peerID)
+            infoDict = dataSource.getPeerInfo(pID=peerID)
             self.appendContentRow(peerID, infoDict)
             
     def _updateNameItem(self, _ip, infoDict, item):
+        if infoDict == None:
+            import traceback
+            traceback.print_stack()
         peerID = infoDict[self._ID_KEY] if self._ID_KEY in infoDict else u""
         m_name = infoDict[self._NAME_KEY] if self._NAME_KEY in infoDict else u""
         
