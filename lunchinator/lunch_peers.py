@@ -456,7 +456,7 @@ class LunchPeers(object):
                         ip = unicode(socket.gethostbyname(hostn))
                         peerIPs.append(ip)
                     except socket.error:
-                        log_warning("cannot find host specified in members_file by %s with name %s" % (p_file, hostn))
+                        log_debug("cannot find host specified in members_file by %s with name %s" % (p_file, hostn))
         return peerIPs
     
     def _writePeersToFile(self):
