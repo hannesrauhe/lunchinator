@@ -1,5 +1,5 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
-    QFrame, QStandardItem, QIcon, QHBoxLayout,\
+    QFrame, QIcon, QHBoxLayout,\
     QLabel, QPixmap, QTextCharFormat, QTextCursor
 from PyQt4.QtCore import Qt, QSize, QVariant, pyqtSignal, QRegExp
 from lunchinator import convert_string, get_settings
@@ -8,6 +8,7 @@ from private_messages.chat_messages_view import ChatMessagesView
 from xml.etree import ElementTree
 from private_messages.chat_messages_model import ChatMessagesModel
 from cmath import rect
+from StringIO import StringIO
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -176,10 +177,10 @@ class ChatWidget(QWidget):
         e = ElementTree.fromstring(html)
         body = e.iter("html").next().iter("body").next()
         for p in body.iter("p"):
-            if not p.text:
-                cleaned += u"<p/>"
-            else:
-                cleaned += u"<p>%s</p>" % p.text
+            p.attrib = {}
+            sio = StringIO()
+            ElementTree.ElementTree(p).write(sio, "utf-8")
+            cleaned += sio.getvalue().replace('<br />', '').decode("utf-8")
         return cleaned
 
     def _insertAnchors(self, cursor, plainText, matcher, hrefFunc):
@@ -202,7 +203,7 @@ class ChatWidget(QWidget):
     def _detectHyperlinks(self):
         cursor = QTextCursor(self.entry.document())
         plainText = self.entry.toPlainText()
-        self._insertAnchors(cursor, plainText, self._URI_MATCHER, lambda uri : uri)
+        self._insertAnchors(cursor, plainText, self._URI_MATCHER, lambda uri : u"http://" + convert_string(uri) if uri.startsWith(u"www.") else uri)
         self._insertAnchors(cursor, plainText, self._MAIL_MATCHER, lambda mail : u"mailto:" + convert_string(mail))
         
     def sizeHint(self):
