@@ -14,7 +14,19 @@ def parse_args():
                       help="Process ID of old Lunchinator instance.")
     return optionParser.parse_args()
 
-def isRunning(pid):        
+def isRunning(pid):
+    if platform.system()=="Windows":
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        SYNCHRONIZE = 0x100000
+    
+        process = kernel32.OpenProcess(SYNCHRONIZE, 0, pid)
+        if process != 0:
+            kernel32.CloseHandle(process)
+            return True
+        else:
+            return False
+        
     try:
         os.kill(pid, 0)
     except OSError as err:
@@ -31,11 +43,21 @@ def restart():
     try:
         pid = int(options.pid)
         log_info("Waiting for Lunchinator (pid %s) to terminate" % options.pid)
-        while isRunning(pid):
+        c = 0
+        while isRunning(pid) and c<100:
             time.sleep(1. / 5)
+            c+=1
+            if 0==c%10:
+                log_info("Lunchinator (pid %s) still running" % options.pid)
+            
+        if isRunning(pid):            
+            log_info("Lunchinator (pid %s) still running, aborting restart" % options.pid)
+            sys.exit(1)
+            
     except ValueError:
         log_error("Invalid pid:", options.pid)
     
+    log_info("Lunchinator gone")
     # execute commands while Lunchinator is not running
     cmdString = options.commands
     if cmdString:
