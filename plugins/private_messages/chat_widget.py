@@ -50,6 +50,7 @@ class ChatWidget(QWidget):
         
         self._otherID = otherID
         
+        self._otherName = otherName
         self._ownIcon = QIcon(ownPicFile)
         self._otherIcon = QIcon(otherPicFile)
         try:
@@ -157,6 +158,9 @@ class ChatWidget(QWidget):
         return self._otherIcon        
     def setOtherIcon(self, icon):
         self._otherIcon = icon
+        
+    def getOtherName(self):
+        return self._otherName
         
     def getWarnIcon(self):
         return self._warnIcon

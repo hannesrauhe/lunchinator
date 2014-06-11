@@ -4,7 +4,8 @@ from lunchinator import log_exception, get_settings, get_server,\
     log_info, log_warning
 import urllib2, sys, os, json
 from datetime import datetime, timedelta
-from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent
+from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
+    displayNotification
 from time import time
 from lunchinator.peer_actions import PeerAction
 from private_messages.chat_messages_storage import ChatMessagesStorage
@@ -196,6 +197,13 @@ class private_messages(iface_gui_plugin):
         
         # TODO add message time to model
         chatWindow.getChatWidget().addOtherMessage(msgHTML)
+        if not chatWindow.isActiveWindow():
+            from PyQt4.QtGui import QTextDocument
+            doc = QTextDocument()
+            doc.setHtml(msgHTML)
+            displayNotification(chatWindow.getChatWidget().getOtherName(),
+                                convert_string(doc.toPlainText()),
+                                chatWindow.getChatWidget().getOtherIcon())
         
         if u"id" in msgDict and msgDict[u"id"] != None:
             self._sendAnswer(otherID, msgDict)
