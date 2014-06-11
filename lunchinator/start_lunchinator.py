@@ -145,7 +145,6 @@ def startLunchinator():
         initialize_logger()
         get_settings().set_plugins_enabled(False)
         get_server().set_has_gui(False)
-        get_server().initialize()
         get_server().stop_server(stop_any=True)
         print "Sent stop command to local lunchinator"
     elif options.cli:
