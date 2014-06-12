@@ -1,9 +1,0 @@
-[Core]
-Name = HTTP Server
-Module = lunch_http
-
-[Documentation]
-Author = Hannes Rauhe
-Version = 0.1
-Website = http://www.lunchinator.de
-Description = An http server which makes additional information available via webbrowser (mostly for debugging)
