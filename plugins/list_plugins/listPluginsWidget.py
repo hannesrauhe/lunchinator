@@ -80,12 +80,14 @@ class listPluginsWidget(QWidget):
         if len(p["requirements"])==0:
             self.ui.requirementsView.addItem("None")
             self.ui.requirementsView.setDisabled(True)
+            self.ui.installReqButton.setDisabled(True)
 #             self.ui.requirementsView.setVisible(False)
         else:
 #             self.ui.requirementsView.setVisible(True)
             for req in p["requirements"]:
                 self.ui.requirementsView.addItem(req)
             self.ui.requirementsView.setDisabled(False)
+            self.ui.installReqButton.setDisabled(False)
             
     def install_req_clicked(self):
         plug = self.ui.pluginView.currentItem()

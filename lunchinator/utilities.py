@@ -398,10 +398,11 @@ def installPipDependencyWindows(package, notifyRestart=True):
     rc = win32process.GetExitCodeProcess(procHandle)
     log_debug("Process handle %s returned code %s" % (procHandle, rc))
 
-#     if notifyRestart:
-#         try:
-#             from lunchinator import getNotificationCenter
-#         except:
-#             pass
+    if notifyRestart:
+        try:
+            from lunchinator import get_notification_center
+            get_notification_center().emitRestartRequired("Dependecies were installed, please restart")
+        except:
+            log_error("Restart Notification failed")
     
 

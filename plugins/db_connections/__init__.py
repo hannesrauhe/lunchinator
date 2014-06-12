@@ -41,8 +41,9 @@ class db_connections(iface_general_plugin):
                     if p and p.plugin_object.is_activated:
                         self.conn_plugins[conn_name] = p.plugin_object
                     else:
-                        raise Exception("DB Connection %s requires plugin of type \
+                        log_error("DB Connection %s requires plugin of type \
                         %s which is not available"%(conn_name,plugin_type))
+                        continue
                     p_options = p.plugin_object.options
                     for k,v in p_options.items():
                         '''this takes care of the option-type'''
