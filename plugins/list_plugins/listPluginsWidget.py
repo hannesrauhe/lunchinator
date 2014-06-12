@@ -16,6 +16,10 @@ class listPluginsWidget(QWidget):
         
         get_notification_center().connectPluginActivated(self.update_plugin_view)  
         get_notification_center().connectPluginDeactivated(self.update_plugin_view)  
+        
+    def finish(self):
+        get_notification_center().disconnectPluginActivated(self.update_plugin_view)  
+        get_notification_center().disconnectPluginDeactivated(self.update_plugin_view) 
     
     def get_plugin_info(self):
         info = {}
