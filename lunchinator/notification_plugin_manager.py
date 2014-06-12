@@ -1,6 +1,6 @@
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from yapsy.IPlugin import IPlugin
-from lunchinator import get_notification_center
+from lunchinator import get_notification_center, log_info
 
 class NotificationPluginManager(ConfigurablePluginManager):
     def __init__(self,
@@ -26,12 +26,14 @@ class NotificationPluginManager(ConfigurablePluginManager):
         self._emitSignals = True
     
     def activatePluginByName(self, plugin_name, category_name="Default", save_state=True, emit=True):
+        log_info("Activating plugin '%s' of type '%s'" % (plugin_name, category_name))
         result = ConfigurablePluginManager.activatePluginByName(self, plugin_name, category_name=category_name, save_state=save_state)
         if emit and self._emitSignals and result != None:
             get_notification_center().emitPluginActivated(plugin_name, category_name)
         return result
     
     def deactivatePluginByName(self, plugin_name, category_name="Default", save_state=True, emit=True):
+        log_info("Deactivating plugin '%s' of type '%s'" % (plugin_name, category_name))
         result = ConfigurablePluginManager.deactivatePluginByName(self, plugin_name, category_name=category_name, save_state=save_state)
         if emit and self._emitSignals and result != None:
             get_notification_center().emitPluginDeactivated(plugin_name, category_name)

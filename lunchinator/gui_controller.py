@@ -506,7 +506,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         p_cat = convert_string(p_cat)
         p_name = convert_string(w.property(self._PLUGIN_NAME_PROPERTY).toString())
         if new_state:
-            log_info("Activating plugin '%s' of type '%s'" % (p_name, p_cat))
             po = get_plugin_manager().activatePluginByName(p_name, p_cat)
             if p_cat == "gui" and self.mainWindow != None:
                 self.mainWindow.addPluginWidget(po, p_name, makeVisible=True)
@@ -515,7 +514,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
             #plugins with db connection wait for this signal
             get_notification_center().emitDBConnReady()
         else:
-            log_info("Deactivating plugin '%s' of type '%s'" % (p_name, p_cat))
             po = get_plugin_manager().deactivatePluginByName(p_name, p_cat)  
             if p_cat == "gui" and self.mainWindow != None:
                 po.destroy_widget()
