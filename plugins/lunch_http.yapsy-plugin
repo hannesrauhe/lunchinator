@@ -6,4 +6,4 @@ Module = lunch_http
 Author = Hannes Rauhe
 Version = 0.1
 Website = http://www.lunchinator.de
-Description = A http server which makes additional informations available via the webbrowser
+Description = An http server which makes additional information available via webbrowser (mostly for debugging)

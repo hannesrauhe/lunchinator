@@ -370,4 +370,38 @@ def restart():
             subprocess.Popen(sys.executable, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
             
     restartWithCommands(None)
+    
+def installPipDependencyWindows(package, notifyRestart=True):
+    log_debug("Trying to install %s"%package)
+    
+    import win32api, win32con, win32event, win32process, types
+    from win32com.shell.shell import ShellExecuteEx
+    from win32com.shell import shellcon
+
+    python_exe = sys.executable
+    
+    if type(package)==types.ListType:
+        packageStr = " ".join(package)
+    else:
+        packageStr = package
+
+    params = '-m pip install %s' % (packageStr)
+
+    procInfo = ShellExecuteEx(nShow=win32con.SW_SHOWNORMAL,
+                              fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
+                              lpVerb='runas',
+                              lpFile='"%s"'%python_exe,
+                              lpParameters=params)
+
+    procHandle = procInfo['hProcess']    
+    obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
+    rc = win32process.GetExitCodeProcess(procHandle)
+    log_debug("Process handle %s returned code %s" % (procHandle, rc))
+
+#     if notifyRestart:
+#         try:
+#             from lunchinator import getNotificationCenter
+#         except:
+#             pass
+    
 
