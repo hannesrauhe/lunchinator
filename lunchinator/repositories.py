@@ -17,13 +17,15 @@ class PluginRepositories(object):
         self._upToDate = set()
         self._lock = loggingMutex("repositories", logging=logging)
         
-    def getPluginDirs(self):
+    def getPluginDirs(self, onlyActive=True):
         """Returns a list of directories in which to search for plugins.
         
         The returned list is a copy.
         """
         with self._lock:
-            return [self._internalDir] + [tup[self.PATH_INDEX] for tup in self._externalRepos]
+            return [self._internalDir] + [tup[self.PATH_INDEX]
+                                          for tup in self._externalRepos
+                                          if not onlyActive or tup[self.ACTIVE_INDEX]]
     
     def getExternalRepositories(self):
         """Returns the internal data structure holding the plugin repository information.
