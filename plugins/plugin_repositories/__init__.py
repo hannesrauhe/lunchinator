@@ -60,10 +60,8 @@ class plugin_repositories(iface_general_plugin):
             self._needsRestart()
             self._modified = True
     
-    def _itemChanged(self, item):
+    def _itemChanged(self, _item):
         self._modified = True
-        if item.column() == PluginRepositoriesGUI.ACTIVE_COLUMN:
-            self._needsRestart()
         
     def _rowsRemoved(self, _parent, _start, _end):
         self._modified = True
@@ -124,7 +122,7 @@ class plugin_repositories(iface_general_plugin):
     def discard_changes(self):
         self._initRepositories()
         
-    def save_options_widget_data(self, **kwargs):
+    def save_options_widget_data(self, **_kwargs):
         if self._modified:
             from PyQt4.QtCore import Qt
             repos = []
@@ -135,9 +133,9 @@ class plugin_repositories(iface_general_plugin):
                 autoUpdate = model.item(row, PluginRepositoriesGUI.AUTO_UPDATE_COLUMN).checkState() == Qt.Checked
                 repos.append((path, active, autoUpdate))
                 
-            get_settings().get_plugin_repositories().setExternalRepositories(repos)
+            activeChanged = get_settings().get_plugin_repositories().setExternalRepositories(repos)
             self._modified = False
-            if self._restartRequired:
+            if self._restartRequired or activeChanged:
                 self._restartRequired = False
                 get_notification_center().emitRestartRequired(u"Plugin Repositories have been modified.")
     

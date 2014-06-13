@@ -40,6 +40,7 @@ class PluginRepositories(object):
         This method is used by lunch_settings and the plugin_repositories plugin.
         """
         with self._lock:
+            activeChanged = False # did any repository change its active state
             outDatedChanged = False
             upToDateChanged = False
             allRepos = set()
@@ -53,6 +54,10 @@ class PluginRepositories(object):
                     if self._isUpToDate(newRepo[self.PATH_INDEX]):
                         upToDateChanged = True
                         self._upToDate.remove(newRepo[self.PATH_INDEX])
+            
+                oldActiveState = self._isActive(newRepo[self.PATH_INDEX])
+                if oldActiveState != None and oldActiveState != newRepo[self.ACTIVE_INDEX]:
+                    activeChanged = True
             
             # check for removed repos
             removedOutdated = self._outdated - allRepos
@@ -70,6 +75,8 @@ class PluginRepositories(object):
         if upToDateChanged:
             get_notification_center().emitUpToDateRepositoriesChanged()
         get_notification_center().emitRepositoriesChanged()
+        
+        return activeChanged
 
     def checkForUpdates(self, forced=False):
         """Checks each repository for updates.
@@ -147,10 +154,17 @@ class PluginRepositories(object):
     def _isAutoUpdateEnabled(self, path):
         """Returns True if auto update is enabled for the given repository."""
         for repo in self.getExternalRepositories():
-            if repo[0] == path:
-                return repo[2]
+            if repo[self.PATH_INDEX] == path:
+                return repo[self.AUTO_UPDATE_INDEX]
         return False
        
+    def _isActive(self, path):
+        """Returns True if auto update is enabled for the given repository."""
+        for repo in self.getExternalRepositories():
+            if repo[self.PATH_INDEX] == path:
+                return repo[self.ACTIVE_INDEX]
+        return None
+    
     def __enter__(self):
         return self._lock.__enter__()
     
