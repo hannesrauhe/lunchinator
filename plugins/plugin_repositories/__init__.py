@@ -60,8 +60,10 @@ class plugin_repositories(iface_general_plugin):
             self._needsRestart()
             self._modified = True
     
-    def _itemChanged(self, _item):
+    def _itemChanged(self, item):
         self._modified = True
+        if item.column() == PluginRepositoriesGUI.ACTIVE_COLUMN:
+            self._needsRestart()
         
     def _rowsRemoved(self, _parent, _start, _end):
         self._modified = True
