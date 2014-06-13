@@ -9,6 +9,7 @@ from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
 from time import time
 from lunchinator.peer_actions import PeerAction
 from private_messages.chat_messages_storage import ChatMessagesStorage
+from private_messages.chat_history_view import ChatHistoryWidget
     
 class _OpenChatAction(PeerAction):
     def getName(self):
@@ -51,9 +52,7 @@ class private_messages(iface_gui_plugin):
         
         self._openChats = {} # mapping peer ID -> ChatDockWidget
         
-        # TODO use this to browse messages history later
-        from PyQt4.QtGui import QWidget
-        w = QWidget(parent)
+        w = ChatHistoryWidget(parent)
         return w
     
     def destroy_widget(self):
