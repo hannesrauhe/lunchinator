@@ -230,7 +230,17 @@ class NotificationCenter(object):
         pass
     @_emitFunc
     def emitPeerRemoved(self, peerID):
-        pass    
+        pass
+    
+    @_connectFunc
+    def connectDisplayedPeerNameChanged(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectDisplayedPeerNameChanged(self, callback):
+        pass
+    @_emitFunc
+    def emitDisplayedPeerNameChanged(self, peerID, newDisplayedName, infoDict):
+        pass
     
     @_connectFunc
     def connectMemberAppended(self, callback):

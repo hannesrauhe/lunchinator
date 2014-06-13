@@ -140,6 +140,12 @@ def get_server():
 def get_peers():
     return get_server().getLunchPeers()
 
+def get_messages():
+    return get_server().get_messages()
+
+def get_peer_names():
+    return get_server().get_peer_names()
+
 def get_plugin_manager():
     if get_settings().get_plugins_enabled():
         from yapsy.PluginManager import PluginManagerSingleton

@@ -104,6 +104,14 @@ class NotificationCenterQt(QObject):
     def emitPeerRemoved(self, peerID):
         self._signalPeerRemoved.emit(peerID)
         
+    _signalDisplayedPeerNameChanged = pyqtSignal(unicode, unicode, dict)
+    def connectDisplayedPeerNameChanged(self, callback):
+        self._signalDisplayedPeerNameChanged.connect(callback, type=Qt.QueuedConnection)
+    def disconnectDisplayedPeerNameChanged(self, callback):
+        self._signalDisplayedPeerNameChanged.disconnect(callback)
+    def emitDisplayedPeerNameChanged(self, peerID, newDisplayedName, infoDict):
+        self._signalDisplayedPeerNameChanged.emit(peerID, newDisplayedName, infoDict)
+        
     _signalMemberAppended = pyqtSignal(unicode, dict)
     def connectMemberAppended(self, callback):
         self._signalMemberAppended.connect(callback, type=Qt.QueuedConnection)

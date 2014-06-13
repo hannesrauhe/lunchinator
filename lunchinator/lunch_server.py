@@ -8,7 +8,6 @@ from cStringIO import StringIO
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string
 from lunchinator.lunch_peers import LunchPeers
-from lunchinator.messages import Messages
 from lunchinator.logging_mutex import loggingMutex
 from collections import deque
 from threading import Timer
@@ -65,9 +64,13 @@ class lunch_server(object):
         #separation of gui Plugins necessary - but how *sigh*? 
         if get_settings().get_plugins_enabled():
             self.controller.initPlugins()
-            self._messages = Messages(get_settings().get_messages_file(), logging=get_settings().get_verbose())
+            from lunchinator.messages import Messages
+            from lunchinator.peer_names import PeerNames
+            self._messages = Messages(logging=get_settings().get_verbose())
+            self._peerNames = PeerNames(logging=get_settings().get_verbose())
         else:
-            self._messages = None            
+            self._messages = None 
+            self._peerNames = None           
             
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
     def call(self, msg, peerIDs=[], peerIPs=[]):
@@ -116,6 +119,9 @@ class lunch_server(object):
                
     def get_messages(self):
         return self._messages
+    
+    def get_peer_names(self):
+        return self._peerNames
         
     def is_running(self):
         return self.running
@@ -592,6 +598,8 @@ class lunch_server(object):
         self._peers.finish()
         if self._messages:
             self._messages.finish()
+        if self._peerNames:
+            self._peerNames.finish()
         self.controller.serverStopped(self.exitCode)
     
     def _broadcast(self):

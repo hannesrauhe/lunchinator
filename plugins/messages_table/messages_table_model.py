@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QAbstractItemModel, Qt, QModelIndex, QVariant, QSize
-from lunchinator import get_server, get_peers
+from lunchinator import get_server, get_peers, get_peer_names
 import time
 from time import mktime
 from datetime import datetime, timedelta
@@ -56,7 +56,7 @@ class MessagesTableModel(QAbstractItemModel):
                 name = get_peers().getPeerName(pID=peerID, lock=False)
                 if not name:
                     # look up in stored peer names
-                    name = get_server().get_messages().getStoredPeerName(peerID) 
+                    name = get_peer_names().getDisplayedPeerName(peerID) 
                     if not name:
                         # check if peerID is IP (from old version)
                         name = get_peers().getPeerName(pIP=peerID, lock=False)
