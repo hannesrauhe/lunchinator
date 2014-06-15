@@ -7,7 +7,6 @@ from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string
-from lunchinator.lunch_peers import LunchPeers
 from lunchinator.logging_mutex import loggingMutex
 from collections import deque
 from threading import Timer
@@ -58,19 +57,17 @@ class lunch_server(object):
             from lunchinator.lunch_server_controller import LunchServerController
             self.controller = LunchServerController()
             
-        self._peers = LunchPeers()
-        
         #TODO: Plugin init cannot be done in controller constructor because the GUI has to be ready
         #separation of gui Plugins necessary - but how *sigh*? 
         if get_settings().get_plugins_enabled():
             self.controller.initPlugins()
             from lunchinator.messages import Messages
-            from lunchinator.peer_names import PeerNames
             self._messages = Messages(logging=get_settings().get_verbose())
-            self._peerNames = PeerNames(logging=get_settings().get_verbose())
         else:
-            self._messages = None 
-            self._peerNames = None           
+            self._messages = None
+             
+        from lunchinator.lunch_peers import LunchPeers
+        self._peers = LunchPeers()
             
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
     def call(self, msg, peerIDs=[], peerIPs=[]):
@@ -99,7 +96,7 @@ class lunch_server(object):
         '''Sends the information about my peers to one peer identified by its IP at a time'''      
         peers_dict = {}
         for pIP in self._peers.getPeerIPs():
-            peers_dict[pIP] = self._peers.getPeerName(pIP=pIP)
+            peers_dict[pIP] = self._peers.getRealPeerName(pIP=pIP)
         self.call("HELO_DICT " + json.dumps(peers_dict), peerIPs=[ip]) 
         
     def call_request_dict(self):
@@ -120,9 +117,6 @@ class lunch_server(object):
     def get_messages(self):
         return self._messages
     
-    def get_peer_names(self):
-        return self._peerNames
-        
     def is_running(self):
         return self.running
         
@@ -270,7 +264,7 @@ class lunch_server(object):
            not msg.startswith(u"HELO") and \
            get_settings().get_lunch_trigger().upper() in msg.upper():
             # check if everyone is ready
-            notReadyMembers = [self._peers.getPeerName(pID=peerID) for peerID in peerIDs if not self._peers.isPeerReady(pID=peerID)]
+            notReadyMembers = [self._peers.getDisplayedPeerName(pID=peerID) for peerID in peerIDs if not self._peers.isPeerReady(pID=peerID)]
             
             if notReadyMembers:
                     
@@ -598,8 +592,6 @@ class lunch_server(object):
         self._peers.finish()
         if self._messages:
             self._messages.finish()
-        if self._peerNames:
-            self._peerNames.finish()
         self.controller.serverStopped(self.exitCode)
     
     def _broadcast(self):

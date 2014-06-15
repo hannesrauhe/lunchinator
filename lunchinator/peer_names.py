@@ -1,4 +1,3 @@
-from lunchinator.logging_mutex import loggingMutex
 from lunchinator import log_warning, get_notification_center, convert_string,\
     get_db_connection, log_error
         
@@ -6,8 +5,8 @@ class PeerNames(object):
     _DB_VERSION_INITIAL = 0
     _DB_VERSION_CURRENT = _DB_VERSION_INITIAL
     
-    def __init__(self, logging):
-        self._lock = loggingMutex("peer names", logging=logging)
+    def __init__(self, lock):
+        self._lock = lock
         self._db, plugin_type = get_db_connection()
         self._peerNameCache = {} # peer ID -> (peer name, custom name)
         
@@ -85,22 +84,30 @@ class PeerNames(object):
             self._db.execute("UPDATE CORE_PEER_NAMES SET CUSTOM_NAME = ? WHERE PEER_ID = ?", customName, peerID)
             get_notification_center().emitDisplayedPeerNameChanged(peerID, self.getDisplayedPeerName(peerID), infoDict)
     
-    def getDisplayedPeerName(self, peerID, lock=True):
-        """Returns the displayed peer name for a diven peer ID.
+    def getDisplayedPeerName(self, peerID):
+        """Returns the displayed peer name for a given peer ID.
         
         The displayed name is the last known peer name in the
         info dict of the given peer if no custom name was specified.
         Else, the custom name is returned.
+        
+        This method does not lock; use get_peers().getDisplayedPeerName
+        instead
+        """        
+        self._checkCache(peerID)
+        peerName, customName = self._peerNameCache[peerID]
+        if customName:
+            return customName
+        else:
+            return peerName
+
+    def iterPeerIDsByName(self, searchedName):
+        """Iterates over peer IDs with a given name.
+        
+        The name can either be a real name or a custom name.
+        This method does not block, use get_peers.getPeerIDsByName instead.
         """
-        if lock:
-            self._lock.acquire()
-        try:
-            self._checkCache(peerID)
-            peerName, customName = self._peerNameCache[peerID]
-            if customName:
-                return customName
-            else:
-                return peerName
-        finally:
-            if lock:
-                self._lock.release()
+        for peerID, aTuple in self._peerNameCache:
+            peerName, customName = aTuple
+            if peerName == searchedName or customName == searchedName:
+                yield peerID

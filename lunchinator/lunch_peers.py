@@ -5,6 +5,7 @@ from lunchinator import get_settings, log_warning, log_exception, log_debug, log
     log_error
 from lunchinator.utilities import getTimeDifference
 from lunchinator.logging_mutex import loggingMutex
+from lunchinator.peer_names import PeerNames
         
 def peerGetter(needsID=False):
     def peerDecorator(func):
@@ -75,6 +76,11 @@ class LunchPeers(object):
         self._groups = set()  # seen group names
         
         self._lock = loggingMutex("peers", logging=get_settings().get_verbose())
+        
+        if get_settings().get_plugins_enabled():
+            self._peerNames = PeerNames(self._lock)
+        else:
+            self._peerNames = None 
         
     def finish(self):
         """should be called for a clean shutdown of the program, the peer information will be stored in a file"""
@@ -232,12 +238,25 @@ class LunchPeers(object):
         return None    
     
     @peerGetter()
-    def getPeerName(self, ip):
-        """Returns the name of the peer or None if not a peer"""
+    def getRealPeerName(self, ip):
+        """Returns the real name of the peer, as provided by its info dict."""
         i = self.getPeerInfo(pIP=ip, lock=False)
         if i:
             return i[u'name']
         return None 
+
+    @peerGetter(needsID=True)
+    def getDisplayedPeerName(self, peerID):
+        """Returns the displayed peer name for a given peer ID.
+        
+        The displayed name is the last known peer name in the
+        info dict of the given peer if no custom name was specified.
+        Else, the custom name is returned.
+        """
+        if self._peerNames != None:
+            return self._peerNames.getDisplayedPeerName(peerID)
+        else:
+            return self.getRealPeerName(pID=peerID, lock=False)
     
     @peerGetter()    
     def getPeerID(self, ip):
@@ -307,13 +326,19 @@ class LunchPeers(object):
             return True
         
     def getPeerIDsByName(self, peerName):
-        """Returns a list of peer IDs of peers with the given name."""
-        names = []
-        with self._lock:
-            for anID, aDict in self._peer_info.iteritems():
-                if u"name" in aDict and aDict[u"name"] == peerName:
-                    names.append(anID)
-        return names
+        """Returns a list of peer IDs of peers with the given name.
+        
+        The name can either be a peer's real name or a custom name.
+        """
+        if self._peerNames != None:
+            return [peerID for peerID in self._peerNames.iterPeerIDsByName(peerName)]
+        else:
+            names = []
+            with self._lock:
+                for anID, aDict in self._peer_info.iteritems():
+                    if u"name" in aDict and aDict[u"name"] == peerName:
+                        names.append(anID)
+            return names
     
     def getPeers(self):
         """returns the IDs of all peers"""

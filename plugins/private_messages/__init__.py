@@ -285,7 +285,7 @@ class private_messages(iface_gui_plugin):
         if pID in self._openChats:
             return self._activateChat(self._openChats[pID], forceForeground)
         
-        otherName = get_peers().getPeerName(pID=pID)
+        otherName = get_peers().getDisplayedPeerName(pID=pID)
         if otherName == None:
             log_error("Could not get info of chat partner", pID)
             return

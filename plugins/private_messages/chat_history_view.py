@@ -1,7 +1,5 @@
-from PyQt4.QtGui import QWidget, QStandardItemModel, QHBoxLayout, QTreeView
-from PyQt4.Qt import QTreeWidget
-from lunchinator import get_db_connection, get_peers, get_peer_names,\
-    log_warning
+from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView
+from lunchinator import get_db_connection, get_peers, log_warning
 from lunchinator.table_models import TableModelBase
 from Carbon.AppleEvents import pID
 
@@ -14,7 +12,7 @@ class HistoryPeersModel(TableModelBase):
         super(HistoryPeersModel, self).__init__(dataSource, columns)
             
     def _updateNameItem(self, pID, _data, item):
-        m_name = get_peer_names().getDisplayedPeerName(pID)
+        m_name = get_peers().getDisplayedPeerName(pID=pID)
         if m_name == None:
             log_warning("displayed peer name (%s) should not be None" % pID)
             m_name = pID
