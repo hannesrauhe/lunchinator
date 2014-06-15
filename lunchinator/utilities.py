@@ -2,6 +2,8 @@ import subprocess, sys, os, contextlib, json, shutil, socket
 from datetime import datetime, timedelta
 from lunchinator import log_exception, log_warning, log_debug, \
     get_settings, log_error
+from time import mktime
+import time
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -356,3 +358,13 @@ def restart():
     """Restarts the Lunchinator"""
     restartWithCommands(None)
 
+def formatTime(mTime):
+    """Returns a human readable time representation given a struct_time"""
+    dt = datetime.fromtimestamp(mktime(mTime))
+    if dt.date() == datetime.today().date():
+        return time.strftime("Today %H:%M", mTime)
+    elif dt.date() == (datetime.today() - timedelta(days=1)).date():
+        return time.strftime("Yesterday %H:%M", mTime)
+    elif dt.date().year == datetime.today().date().year:
+        return time.strftime("%b %d, %H:%M", mTime)
+    return time.strftime("%b %d %Y, %H:%M", mTime)

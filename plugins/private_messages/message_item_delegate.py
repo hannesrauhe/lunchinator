@@ -36,7 +36,7 @@ class ItemEditor(QTextEdit):
             
 class MessageItemDelegate(QStyledItemDelegate):
     def __init__(self, parentView):
-        QItemDelegate.__init__(self, parentView)
+        super(MessageItemDelegate, self).__init__(parentView)
 
         # We need that to receive mouse move events in editorEvent
         parentView.setMouseTracking(True)
