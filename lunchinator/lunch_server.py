@@ -231,7 +231,7 @@ class lunch_server(object):
         if stop_any is true it will send a stop call in case another instance has to be stopped'''
         
         if stop_any or self.running:
-            self.call("HELO_STOP shutdown", peerIPs=set([u"127.0.0.1"]))
+            self.perform_call("HELO_STOP shutdown", peerIPs=set([u"127.0.0.1"]), peerIDs=set())
             # Just in case the call does not reach the socket:
             self.running = False
         else:

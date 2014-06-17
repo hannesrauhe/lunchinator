@@ -296,6 +296,7 @@ def getApplicationBundle():
     return path
 
 def spawnProcess(args):
+    log_debug("spawning process: %s"%str(args))
     if getPlatform() in (PLATFORM_LINUX, PLATFORM_MAC):
         #somehow fork() is not safe on Mac OS. I guess this will do fine on Linux, too. 
         fh = open(os.path.devnull, "w")
@@ -317,7 +318,7 @@ def _getStartCommand():
         args.extend(sys.argv)
         return args
     elif getPlatform() == PLATFORM_WINDOWS:
-        return ["pythonw", os.path.join(get_settings().get_main_package_path(), "start_lunchinator.py")]
+        return [_getPythonInterpreter(), os.path.join(get_settings().get_main_package_path(), "start_lunchinator.py")]
     else:
         log_error("Restart not yet implemented for your OS.")
             
@@ -325,8 +326,12 @@ def _getStartCommand():
     
 def _getPythonInterpreter():
     # sys.executable does not always return the python interpreter
-    if getPlatform() == PLATFORM_WINDOWS:
-        return "pythonw"
+    if getPlatform() == PLATFORM_WINDOWS: 
+        frozen = getattr(sys, 'frozen', '')
+        if frozen:
+            raise Exception("There is no python interpreter in pyinstaller packages.")
+        else:
+            return sys.executable
     return which("python")
     
 def restartWithCommands(commands):
@@ -356,7 +361,52 @@ def restartWithCommands(commands):
     
 def restart():
     """Restarts the Lunchinator"""
+    
+    #on Windows with pyinstaller we use this special handling for now
+    if getPlatform()==PLATFORM_WINDOWS:  
+        frozen = getattr(sys, 'frozen', '')
+        if frozen:
+            log_debug("Trying to spawn %s"%sys.executable)
+            from lunchinator import get_server
+            get_server().stop_server()
+            subprocess.Popen(sys.executable, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
+            
     restartWithCommands(None)
+    
+def installPipDependencyWindows(package, notifyRestart=True):
+    log_debug("Trying to install %s"%package)
+    
+    import win32api, win32con, win32event, win32process, types
+    from win32com.shell.shell import ShellExecuteEx
+    from win32com.shell import shellcon
+
+    python_exe = sys.executable
+    
+    if type(package)==types.ListType:
+        packageStr = " ".join(package)
+    else:
+        packageStr = package
+
+    params = '-m pip install %s' % (packageStr)
+
+    procInfo = ShellExecuteEx(nShow=win32con.SW_SHOWNORMAL,
+                              fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
+                              lpVerb='runas',
+                              lpFile='"%s"'%python_exe,
+                              lpParameters=params)
+
+    procHandle = procInfo['hProcess']    
+    obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
+    rc = win32process.GetExitCodeProcess(procHandle)
+    log_debug("Process handle %s returned code %s" % (procHandle, rc))
+
+    if notifyRestart:
+        try:
+            from lunchinator import get_notification_center
+            get_notification_center().emitRestartRequired("Dependecies were installed, please restart")
+        except:
+            log_error("Restart Notification failed")
+    
 
 def formatTime(mTime):
     """Returns a human readable time representation given a struct_time"""
