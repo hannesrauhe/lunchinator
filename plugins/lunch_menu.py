@@ -1,13 +1,14 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-import urllib2
+import urllib2, contextlib
 from lunchinator.callables import AsyncCall
 from lunchinator.utilities import getValidQtParent
     
 class lunch_menu(iface_gui_plugin):
     def __init__(self):
         super(lunch_menu, self).__init__()
-        self.options = {"url":"http://lunchinator.de/files/menu_dummy.txt" }
-        
+        self.options = [(("no_proxy", "Don't use proxy server"),False),
+                        (("url", "URL"),"http://lunchinator.de/files/menu_dummy.txt")]
+
     def activate(self):
         iface_gui_plugin.activate(self)
         
@@ -26,6 +27,14 @@ class lunch_menu(iface_gui_plugin):
         return self._textview
     
     def _downloadText(self):
+        if self.options["no_proxy"]:
+            hdr = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
+            req = urllib2.Request(self.options["url"], headers=hdr)
+            proxy_handler = urllib2.ProxyHandler({})
+            opener = urllib2.build_opener(proxy_handler)   
+            with contextlib.closing(opener.open(req)) as u:
+                return u.read
+            
         resp = urllib2.urlopen(self.options["url"])
         return resp.read()
     
