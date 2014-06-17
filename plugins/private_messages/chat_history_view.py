@@ -3,7 +3,6 @@ from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView,\
 from lunchinator import get_db_connection, get_peers, log_warning,\
     convert_string
 from lunchinator.table_models import TableModelBase
-from Carbon.AppleEvents import pID
 from lunchinator.utilities import formatTime
 from time import localtime
 from PyQt4.QtCore import Qt
