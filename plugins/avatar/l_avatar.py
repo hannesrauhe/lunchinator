@@ -25,7 +25,7 @@ class l_avatar(object):
                 qtimage = QImage(infile)
                 pixmap = QPixmap.fromImage(qtimage)
                 pixmap = pixmap.scaled(self.width, self.height, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                pixmap.save(outfile, "JPEG")
+                pixmap.save(outfile, "PNG")
             except IOError:
                 log_exception("cannot create thumbnail for '%s'" % infile)
     
@@ -33,10 +33,10 @@ class l_avatar(object):
         if not os.path.exists(file_path):
             log_error("no image found at", file_path, ", exiting")
 
-        self.scale_image(file_path, os.path.join(get_settings().get_avatar_dir(), "tmp.jpg"))
-        avatar_name = unicode(self.md5_for_file(file_path) + ".jpg")
-        shutil.copy(os.path.join(get_settings().get_avatar_dir(), "tmp.jpg"),
-                    os.path.join(get_settings().get_avatar_dir(), avatar_name))
+        tmpPath = os.path.join(get_settings().get_avatar_dir(), "tmp.png")
+        self.scale_image(file_path, tmpPath)
+        avatar_name = unicode(self.md5_for_file(file_path) + ".png")
+        shutil.move(tmpPath, os.path.join(get_settings().get_avatar_dir(), avatar_name))
         
         get_settings().set_avatar_file(avatar_name)
         return os.path.join(get_settings().get_avatar_dir(), avatar_name)
