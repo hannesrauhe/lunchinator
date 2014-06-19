@@ -217,6 +217,11 @@ class LunchPeers(object):
     def isMember(self, pID):
         """check if the given IP/ID belongs to a member"""
         return pID in self._memberIDs
+    
+    @peerGetter(needsID=True)
+    def isMe(self, pID):
+        """check if the given IP/ID belongs to a member"""
+        return pID == get_settings().get_ID()
 
     @peerGetter()
     def getPeerInfo(self, ip):
