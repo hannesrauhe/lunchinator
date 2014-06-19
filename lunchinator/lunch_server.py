@@ -532,7 +532,6 @@ class lunch_server(object):
             return
         
         if cmd == "HELO_AVATAR":
-            print "avatar"
             # someone wants to send me his pic via TCP
             values = value.split()
             file_size = int(values[0].strip())
