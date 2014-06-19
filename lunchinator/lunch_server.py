@@ -467,22 +467,27 @@ class lunch_server(object):
             log_exception("Unexpected error while handling event from group member %s call: %s" % (ip, str(sys.exc_info())))
             log_critical("The data received was: %s" % data)
     
+    def _updateInfoDict(self, ip, value):
+        self._peers.updatePeerInfoByIP(ip, json.loads(value))
+        if self._peers.getAvatarOutdated(pIP=ip):
+            self.request_avatar(ip)
+    
     def _handle_structure_event(self, ip, cmd, value, newPeer):
         r_value = True
         
         if cmd == "HELO_INFO":
-            self._peers.updatePeerInfoByIP(ip, json.loads(value))
+            self._updateInfoDict(ip, value)
             if newPeer:
                 self._process_queued_messages(ip)
             
         elif cmd == "HELO_REQUEST_INFO":
-            self._peers.updatePeerInfoByIP(ip, json.loads(value))
+            self._updateInfoDict(ip, value)
             self.call_info()
             if newPeer:
                 self._process_queued_messages(ip)
         
         elif cmd == "HELO_REQUEST_DICT":
-            self._peers.updatePeerInfoByIP(ip, json.loads(value))   
+            self._updateInfoDict(ip, value)
             self.call_dict(ip)           
             if newPeer:
                 self._process_queued_messages(ip)
@@ -512,14 +517,13 @@ class lunch_server(object):
             
         return r_value
 
-    def requets_avatar(self, ip): 
+    def request_avatar(self, ip): 
         info = self._peers.getPeerInfo(pIP=ip)
         if info and u"avatar" in info and not os.path.exists(os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])):
             self.call("HELO_REQUEST_AVATAR " + str(self.controller.getOpenTCPPort(ip)), peerIPs=[ip])  
             return True
         return False   
       
-            
     def _handle_incoming_event(self, ip, cmd, value, newPeer, _fromQueue):
         # todo: maybe from here on this should be in plugins?
         
@@ -528,6 +532,7 @@ class lunch_server(object):
             return
         
         if cmd == "HELO_AVATAR":
+            print "avatar"
             # someone wants to send me his pic via TCP
             values = value.split()
             file_size = int(values[0].strip())

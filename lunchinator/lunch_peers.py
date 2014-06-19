@@ -311,6 +311,16 @@ class LunchPeers(object):
             if os.path.isfile(avatarFile):
                 return avatarFile
         return None
+    
+    @peerGetter()
+    def getAvatarOutdated(self, ip):
+        """Returns True if the peer has an avatar but we don't have it"""
+        peerInfo = self.getPeerInfo(pIP=ip, lock=False)
+        if peerInfo != None and u"avatar" in peerInfo and peerInfo[u"avatar"]:
+            avatarFile = os.path.join(get_settings().get_avatar_dir(), peerInfo["avatar"])
+            return not os.path.exists(avatarFile)
+        # doesn't have avatar
+        return False
         
     ############### Additional getters ##################
     
