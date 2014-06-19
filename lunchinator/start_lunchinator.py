@@ -105,7 +105,7 @@ def checkDependencies(noPlugins, gui = False):
             if result == EXIT_CODE_UPDATE:
                 # need to restart
                 restart()
-                return
+                return False
             
             try:
                 import yapsy
