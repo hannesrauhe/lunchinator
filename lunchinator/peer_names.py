@@ -107,7 +107,7 @@ class PeerNames(object):
         The name can either be a real name or a custom name.
         This method does not block, use get_peers.getPeerIDsByName instead.
         """
-        for peerID, aTuple in self._peerNameCache:
+        for peerID, aTuple in self._peerNameCache.iteritems():
             peerName, customName = aTuple
             if peerName == searchedName or customName == searchedName:
                 yield peerID
