@@ -369,6 +369,8 @@ def restartWithCommands(commands):
         return
     if get_server().getController():
         get_server().getController().shutdown()
+    else:
+        sys.exit(0)
     
 def restart():
     """Restarts the Lunchinator"""
