@@ -333,7 +333,20 @@ def _getPythonInterpreter():
         else:
             return sys.executable
     return which("python")
-    
+
+def stopWithCommands(args):
+    """
+    Stops Lunchinator and execute commands
+    """
+    from lunchinator import get_server
+    try:        
+        spawnProcess(args)
+    except:
+        log_exception("Error in stopWithCommands")
+        return
+    if get_server().getController():
+        get_server().getController().shutdown()
+            
 def restartWithCommands(commands):
     """
     Restart Lunchinator and execute commands in background while it is stopped.

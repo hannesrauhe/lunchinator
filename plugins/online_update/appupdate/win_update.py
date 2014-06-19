@@ -1,5 +1,7 @@
 from online_update.appupdate.gpg_update import GPGUpdateHandler
-from lunchinator.utilities import PLATFORM_WINDOWS, getPlatform
+from lunchinator.utilities import PLATFORM_WINDOWS, getPlatform, stopWithCommands
+from lunchinator import log_exception
+import os
 
 class WinUpdateHandler(GPGUpdateHandler):
     @classmethod
@@ -10,5 +12,13 @@ class WinUpdateHandler(GPGUpdateHandler):
         return self._urlBase + "/win/"
     
     def _prepareInstallation(self, localFile, commands):
-        commands.addShellCommand([localFile, "/SILENT"])
+        pass
+    
+    def executeInstallation(self, commands):
+        """installer restarts the lunchinator"""
+        if os.path.isfile(self._local_installer_file):        
+            stopWithCommands([self._local_installer_file, "/SILENT"])
+        else:
+            log_exception("Local Installer not found: %s"%self._local_installer_file)
+    
         

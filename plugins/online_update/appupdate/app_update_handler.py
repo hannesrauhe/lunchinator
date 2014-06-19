@@ -1,6 +1,6 @@
 from lunchinator import log_error, log_info, get_settings,\
     get_notification_center
-from lunchinator.utilities import displayNotification
+from lunchinator.utilities import displayNotification, restartWithCommands
 
 class AppUpdateHandler(object):
     """Abstract base class for Lunchinator application update handlers.
@@ -109,4 +109,9 @@ class AppUpdateHandler(object):
                     that should be executed to perform the update.
         """
         raise NotImplementedError()
+    
+    def executeInstallation(self, commands):
+        """Usually means to install and restart"""
+        
+        restartWithCommands(commands)
     

@@ -90,10 +90,10 @@ class online_update(iface_general_plugin):
         
         if self._appUpdateHandler.isInstallReady():
             self._appUpdateHandler.prepareInstallation(commands)
+            self._appUpdateHandler.executeInstallation(commands)
         if self._repoUpdateHandler.areUpdatesAvailable():
-            self._repoUpdateHandler.prepareInstallation(commands)
-            
-        restartWithCommands(commands)
+            self._repoUpdateHandler.prepareInstallation(commands)            
+            restartWithCommands(commands)
         
 if __name__ == '__main__':
     from lunchinator.iface_plugins import iface_gui_plugin
