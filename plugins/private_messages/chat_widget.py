@@ -1,8 +1,9 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
     QFrame, QIcon, QHBoxLayout,\
     QLabel, QPixmap, QTextCharFormat, QTextCursor
-from PyQt4.QtCore import Qt, QSize, QVariant, pyqtSignal, QRegExp
-from lunchinator import convert_string, get_settings
+from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp
+from lunchinator import convert_string, get_settings, get_notification_center,\
+    get_peers
 from lunchinator.history_line_edit import HistoryTextEdit
 from private_messages.chat_messages_view import ChatMessagesView
 from xml.etree import ElementTree
@@ -48,6 +49,9 @@ class ChatWidget(QWidget):
     def __init__(self, parent, ownName, otherName, ownPicFile, otherPicFile, otherID):
         super(ChatWidget, self).__init__(parent)
         
+        self._offline = False
+        self._delivering = False
+        
         self._otherID = otherID
         
         self._otherName = otherName
@@ -70,17 +74,52 @@ class ChatWidget(QWidget):
         self._initMessageTable()
         self._initTextEntry()
         
-        # TODO option to change behavior
         mainLayout = QVBoxLayout(self)
         mainLayout.setSpacing(0)
         
-        self._addTopLayout(ownName, otherName, ownPicFile, otherPicFile, mainLayout)
+        self._addTopLayout(ownName, mainLayout)
         mainLayout.addWidget(self.table)
         mainLayout.addWidget(self.entry)
         
+        # TODO option to change behavior
         self.entry.returnPressed.connect(self.eventTriggered)
         
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
+        
+        get_notification_center().connectPeerAppended(self._peerAppended)
+        get_notification_center().connectPeerRemoved(self._peerRemoved)
+        
+        if get_peers():
+            self._setOffline(get_peers().isPeerID(self._otherID))
+        else:
+            self._setOffline(True)
+        
+    def _setOffline(self, offline):
+        self._offline = offline
+        if offline:
+            title = self._otherName + " (Offline)"
+        else:
+            title = self._otherName
+            
+        self._otherPicLabel.setEnabled(not offline)
+        self._otherNameLabel.setText(title)
+        self.parent().setWindowTitle(title)
+        self._checkEntryState()
+        
+    def _peerAppended(self, peerID, peerInfo):
+        if peerID == self._otherID:
+            self._setOffline(u"PM_v" not in peerInfo)
+    
+    def _peerRemoved(self, peerID, _peerInfo):
+        if peerID == self._otherID:
+            self._setOffline(True)
+        
+    def _checkEntryState(self):
+        self.entry.setEnabled(not self._offline and not self._delivering)
+        if self._offline:
+            self.entry.setText("Partner is offline")
+        elif self._delivering:
+            self.entry.setText("Delivering...")
         
     def nextInFocusChain(self):
         return self.entry
@@ -91,20 +130,20 @@ class ChatWidget(QWidget):
     def focusInEvent(self, _event):
         self.entry.setFocus(Qt.OtherFocusReason)
         
-    def _addTopLayout(self, ownName, otherName, ownPicFile, otherPicFile, mainLayout):
+    def _addTopLayout(self, ownName, mainLayout):
         topWidget = QWidget(self)
         topLayout = QHBoxLayout(topWidget)
         topLayout.setContentsMargins(0, 0, 0, 0)
         
-        otherNameLabel = QLabel(otherName, topWidget)
-        otherPicLabel = QLabel(topWidget)
-        otherPicLabel.setPixmap(QPixmap(otherPicFile).scaled(24,24, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        topLayout.addWidget(otherPicLabel, 0, Qt.AlignLeft)
-        topLayout.addWidget(otherNameLabel, 1, Qt.AlignLeft)
+        self._otherNameLabel = QLabel(self._otherName, topWidget)
+        self._otherPicLabel = QLabel(topWidget)
+        self._otherPicLabel.setPixmap(QPixmap(self._otherIconPath).scaled(24,24, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        topLayout.addWidget(self._otherPicLabel, 0, Qt.AlignLeft)
+        topLayout.addWidget(self._otherNameLabel, 1, Qt.AlignLeft)
         
         ownNameLabel = QLabel(ownName, topWidget)
         ownPicLabel = QLabel(topWidget)
-        ownPicLabel.setPixmap(QPixmap(ownPicFile).scaled(24,24, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        ownPicLabel.setPixmap(QPixmap(self._ownIconPath).scaled(24,24, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         topLayout.addWidget(ownNameLabel, 1, Qt.AlignRight)
         topLayout.addWidget(ownPicLabel, 0, Qt.AlignRight)
         
@@ -137,7 +176,8 @@ class ChatWidget(QWidget):
     def addOwnMessage(self, msgID, msg, messageState=None, toolTip=None, scroll=True):
         self._model.addOwnMessage(msgID, msg, messageState, toolTip)
         self.entry.clear()
-        self.entry.setEnabled(True)
+        self._delivering = False
+        self._checkEntryState()
         self.entry.setFocus(Qt.OtherFocusReason)
         if scroll:
             self.scrollToEnd()
@@ -184,7 +224,8 @@ class ChatWidget(QWidget):
         self._detectHyperlinks()
         text = self._cleanHTML(convert_string(self.entry.toHtml()))
         self.sendMessage.emit(self._otherID, text)
-        self.entry.setEnabled(False)
+        self._delivering = True
+        self._checkEntryState()
 
     def _cleanHTML(self, html):
         # only body, no paragraph attributes
