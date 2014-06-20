@@ -73,8 +73,8 @@ class SimpleViewWidget(QWidget):
         # don't display members with unknown status as ready
         readyMembers = [pID for pID in readyMembers if peers.isPeerReadinessKnown(pID=pID)]
         
-        readyText = ", ".join([peers.getPeerName(pID=x) for x in readyMembers])
-        notReadyText = ", ".join([peers.getPeerName(pID=x) for x in notReadyMembers])
+        readyText = ", ".join([peers.getDisplayedPeerName(pID=x) for x in readyMembers])
+        notReadyText = ", ".join([peers.getDisplayedPeerName(pID=x) for x in notReadyMembers])
         memToolTip += "<span style='color:green'>%s</span><br />" % readyText if len(readyMembers) else ""
         memToolTip += "<span style='color:red'>%s</span>" % notReadyText if len(notReadyMembers) else ""
         
@@ -86,7 +86,7 @@ class SimpleViewWidget(QWidget):
         with get_server().get_messages():
             messages = get_server().get_messages().getAll(time() - (180 * 60))
         for timest, peerID, msg in messages:
-            member = get_peers().getPeerName(pID=peerID)
+            member = get_peers().getDisplayedPeerName(pID=peerID)
             color = self.getMemberColor(peerID)
             msgTexts += "<span style='color:#%s'><b>%s</b> \
                         <i>[%s]</i>: %s</span><br />\n" % (color, member,strftime("%H:%M",timest), msg)

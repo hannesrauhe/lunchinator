@@ -1,6 +1,7 @@
 from functools import partial
 from lunchinator.cli import LunchCLIModule
-from lunchinator import get_settings, get_plugin_manager, log_exception
+from lunchinator import get_settings, get_plugin_manager, log_exception,\
+ get_notification_center
 
 class CLIPluginHandling(LunchCLIModule):
     def __init__(self, parent):

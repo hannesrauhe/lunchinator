@@ -1,7 +1,6 @@
 from lunchinator.logging_mutex import loggingMutex
-from lunchinator import log_exception, log_warning, log_debug, get_settings,\
-    get_notification_center, convert_string
-import lunchinator
+from lunchinator import log_exception, log_warning, get_settings,\
+    get_db_connection
 from time import localtime, mktime
 import codecs, json, os, sys
 from collections import deque
@@ -10,10 +9,9 @@ class Messages(object):
     _DB_VERSION_INITIAL = 0
     _DB_VERSION_CURRENT = _DB_VERSION_INITIAL
     
-    def __init__(self, path, logging):
+    def __init__(self, logging):
         self._lock = loggingMutex("messages", logging=logging)
-        self._db, plugin_type = lunchinator.get_db_connection()
-        self._peerNameCache = {}
+        self._db, plugin_type = get_db_connection()
         
         if plugin_type != "SQLite Connection":
             log_warning("Your standard connection is not of type SQLite." + \
@@ -21,11 +19,8 @@ class Messages(object):
         
         if not self._db.existsTable("CORE_MESSAGE_VERSION"):
             self._db.execute("CREATE TABLE CORE_MESSAGE_VERSION(VERSION INTEGER)")
-            self._db.execute("INSERT INTO CORE_MESSAGE_VERSION(VERSION) VALUES(?)", self._DB_VERSION_INITIAL)
+            self._db.execute("INSERT INTO CORE_MESSAGE_VERSION(VERSION) VALUES(?)", self._DB_VERSION_CURRENT)
                         
-        if not self._db.existsTable("CORE_MESSAGE_PEER_NAMES"):
-            self._db.execute("CREATE TABLE CORE_MESSAGE_PEER_NAMES(PEER_ID TEXT PRIMARY KEY NOT NULL, PEER_NAME TEXT)")
-            
         if not self._db.existsTable("CORE_MESSAGES"):
             self._db.execute("CREATE TABLE CORE_MESSAGES(SENDER TEXT, TIME REAL, MESSAGE TEXT)")
             self._db.execute("CREATE INDEX CORE_MESSAGE_TIME_INDEX on CORE_MESSAGES(TIME ASC)")
@@ -36,9 +31,6 @@ class Messages(object):
             self._latest = self._getLatest()
             self._length = self._getNumMessages()    
             
-        get_notification_center().connectPeerAppended(self._addPeerName)
-        get_notification_center().connectPeerUpdated(self._addPeerName)
-
     def _getDBVersion(self):
         return self._db.query("SELECT VERSION FROM CORE_MESSAGE_VERSION")[0][0]
     
@@ -72,35 +64,8 @@ class Messages(object):
             except:
                 log_exception("Could not read messages file %s, but it seems to exist" % (path))
     
-    
     def finish(self):
-        get_notification_center().disconnectPeerAppended(self._addPeerName)
-        get_notification_center().disconnectPeerUpdated(self._addPeerName)
-        
-    def _addPeerName(self, peerID, peerInfo):
-        peerID = convert_string(peerID)
-        oldName = self.getStoredPeerName(peerID)
-        if oldName == None:
-            # need to insert
-            self._db.execute("INSERT INTO CORE_MESSAGE_PEER_NAMES VALUES(?, ?)", peerID, peerInfo[u"name"])
-        elif oldName != peerInfo[u"name"]:
-            # need to update
-            self._db.execute("UPDATE CORE_MESSAGE_PEER_NAMES SET PEER_NAME = ? WHERE PEER_ID = ?", peerInfo[u"name"], peerID)
-        self._peerNameCache[peerID] = peerInfo[u"name"]
-            
-    def _getPeerNameFromDB(self, peerID):
-        # TODO bulk loading if necessary
-        res = self._db.query("SELECT PEER_NAME FROM CORE_MESSAGE_PEER_NAMES WHERE PEER_ID = ?", peerID)
-        if len(res) > 0:
-            return res[0][0]
-        return None
-    
-    def getStoredPeerName(self, peerID):
-        """Returns the peer name that was stored in the database."""
-        if peerID not in self._peerNameCache:
-            peerName = self._getPeerNameFromDB(peerID)
-            self._peerNameCache[peerID] = peerName
-        return self._peerNameCache[peerID]
+        pass
         
     def insert(self, mtime, addr, msg):
         """Insert a new message

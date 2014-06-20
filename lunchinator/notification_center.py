@@ -1,5 +1,5 @@
 import threading, Queue
-from lunchinator import log_exception, log_debug, log_info
+from lunchinator import log_exception, log_debug
 
 class EventSignalLoop(threading.Thread):
     def __init__(self):
@@ -59,8 +59,8 @@ class NotificationCenter(object):
         lunchinator.get_notification_center() instead.
         """
         if cls._instance == None:
-            # fallback if it was not set from outside
-            cls._instance = NotificationCenter()
+            # fallback if it was not set from outside, no event loop in this case
+            cls._instance = NotificationCenter(loop=False)
         return cls._instance
     
     @classmethod
@@ -71,10 +71,13 @@ class NotificationCenter(object):
         """
         cls._instance = instance
         
-    def __init__(self):
+    def __init__(self, loop=True):
         self._callbacks = {}
-        self.eventloop = EventSignalLoop()
-        self.eventloop.start()
+        if loop:
+            self.eventloop = EventSignalLoop()
+            self.eventloop.start()
+        else:
+            self.eventloop = None
         
     def finish(self):
         self.eventloop.finish()
@@ -96,8 +99,13 @@ class NotificationCenter(object):
     def _emit(self, signal, *args, **kwargs):
         if not signal in self._callbacks:
             return
-        for callback in self._callbacks[signal]:
-            self.eventloop.append(callback, *args, **kwargs)
+        if self.eventloop:
+            for callback in self._callbacks[signal]:
+                self.eventloop.append(callback, *args, **kwargs)
+        else:
+            # no event loop, call directly
+            for callback in self._callbacks[signal]:
+                callback(*args, **kwargs)
 
     """Called whenever a plugin was activated. The plugin is already activated when the signal is emitted."""    
     @_connectFunc
@@ -230,7 +238,17 @@ class NotificationCenter(object):
         pass
     @_emitFunc
     def emitPeerRemoved(self, peerID):
-        pass    
+        pass
+    
+    @_connectFunc
+    def connectDisplayedPeerNameChanged(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectDisplayedPeerNameChanged(self, callback):
+        pass
+    @_emitFunc
+    def emitDisplayedPeerNameChanged(self, peerID, newDisplayedName, infoDict):
+        pass
     
     @_connectFunc
     def connectMemberAppended(self, callback):
@@ -323,6 +341,17 @@ class NotificationCenter(object):
         pass
     @_emitFunc
     def emitDBConnReady(self):
+        pass
+    
+    """Emitted whenever a peer action is added or removed."""    
+    @_connectFunc
+    def connectPeerActionsChanged(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPeerActionsChanged(self, callback):
+        pass
+    @_emitFunc
+    def emitPeerActionsChanged(self):
         pass
 
 if __name__ == '__main__':

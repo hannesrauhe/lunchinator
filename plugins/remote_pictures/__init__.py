@@ -159,7 +159,7 @@ class remote_pictures(iface_gui_plugin):
                     from PyQt4.QtGui import QMessageBox
                     box = QMessageBox(QMessageBox.Question,
                                       "Accept Picture",
-                                      "%s wants to send you a picture. Do you want to accept pictures from this member?" % get_peers().getPeerName(pID=peerID),
+                                      "%s wants to send you a picture. Do you want to accept pictures from this member?" % get_peers().getDisplayedPeerName(pID=peerID),
                                       QMessageBox.Yes | QMessageBox.YesToAll | QMessageBox.No | QMessageBox.NoToAll,
                                       self.gui)
                     box.setDefaultButton(QMessageBox.No)

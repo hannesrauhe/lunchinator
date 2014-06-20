@@ -129,9 +129,9 @@ class LunchCLIModule(object):
     
     def _getHostnames(self, _args, _argNum, prefix):
         with get_peers():
-            lunchmemberNames = set((get_peers().getPeerName(pID=peerID, lock=False).replace(u" ", u"\\ ")\
+            lunchmemberNames = set((get_peers().getRealPeerName(pID=peerID, lock=False).replace(u" ", u"\\ ")\
                                     for peerID in get_peers()\
-                                    if get_peers().getPeerName(pID=peerID, lock=False).replace(u" ", u"\\ ").startswith(prefix)))
+                                    if get_peers().getRealPeerName(pID=peerID, lock=False).replace(u" ", u"\\ ").startswith(prefix)))
             for peerID in get_peers():
                 lunchmemberNames.union((ip for ip in get_peers().getPeerIPs(pID=peerID, lock=False) if ip.startswith(prefix)))
             lunchmembers = list(lunchmemberNames.union((peerID for peerID in get_peers() if peerID.startswith(prefix))))

@@ -134,7 +134,7 @@ class Notify(iface_called_plugin):
         name = " ["+addr+"]"
         icon = self.options[u"icon_file"]
         if member_info.has_key("avatar"):
-            icon = get_settings().get_avatar_dir()+"/"+member_info["avatar"]
+            icon = os.path.join(get_settings().get_avatar_dir(), member_info["avatar"])
         if member_info.has_key("name"):
             name = " [" + member_info["name"] + "]"
         

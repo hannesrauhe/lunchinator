@@ -3,6 +3,7 @@ from lunchinator import get_server, get_peers
 import time
 from time import mktime
 from datetime import datetime, timedelta
+from lunchinator.utilities import formatTime
 
 class MessagesTableModel(QAbstractItemModel):
     SORT_ROLE = Qt.UserRole + 1
@@ -32,34 +33,24 @@ class MessagesTableModel(QAbstractItemModel):
     def _getMessage(self, row):
         return self._messages[len(self._messages) - 1 - row]
     
-    def _formatTime(self, mTime):
-        dt = datetime.fromtimestamp(mktime(mTime))
-        if dt.date() == datetime.today().date():
-            return time.strftime("Today %H:%M", mTime)
-        elif dt.date() == (datetime.today() - timedelta(days=1)).date():
-            return time.strftime("Yesterday %H:%M", mTime)
-        elif dt.date().year == datetime.today().date().year:
-            return time.strftime("%b %d, %H:%M", mTime)
-        return time.strftime("%b %d %Y, %H:%M", mTime)
-    
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             message = self._getMessage(index.row())
             if index.column() == self.TIME_COL:
                 # time
                 mTime = message[0]
-                return QVariant(self._formatTime(mTime))
+                return QVariant(formatTime(mTime))
             elif index.column() == self.SENDER_COL:
                 # sender
                 peerID = message[1]
                 # look in peers first, it's always up to date
-                name = get_peers().getPeerName(pID=peerID, lock=False)
+                name = get_peers().getDisplayedPeerName(pID=peerID, lock=False)
                 if not name:
                     # look up in stored peer names
-                    name = get_server().get_messages().getStoredPeerName(peerID) 
+                    name = get_peers().getDisplayedPeerName(pID=peerID) 
                     if not name:
                         # check if peerID is IP (from old version)
-                        name = get_peers().getPeerName(pIP=peerID, lock=False)
+                        name = get_peers().getDisplayedPeerName(pIP=peerID, lock=False)
                         if not name:
                             name = peerID
                 return QVariant(name)

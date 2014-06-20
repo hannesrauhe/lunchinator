@@ -326,6 +326,10 @@ class iface_plugin(IPlugin):
         """
         pass
     
+    def get_peer_actions(self):
+        """Returns a list of PeerAction instances"""
+        return None
+    
     def get_option_description(self, key):
         """Returns the readable description of an option."""
         if self.get_option_names(False) != None:

@@ -2,6 +2,8 @@ import subprocess, sys, os, contextlib, json, shutil, socket
 from datetime import datetime, timedelta
 from lunchinator import log_exception, log_warning, log_debug, \
     get_settings, log_error
+from time import mktime
+import time
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -275,7 +277,7 @@ def getTimeDifference(begin, end):
 
 def msecUntilNextMinute():
     now = datetime.now()
-    nextMin = now.replace(second=0, microsecond=0) + timedelta(minutes=1, seconds=1)
+    nextMin = now.replace(second=0, microsecond=0) + timedelta(minutes=1, milliseconds=100)
     td = nextMin - now
     return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
     
@@ -421,3 +423,13 @@ def installPipDependencyWindows(package, notifyRestart=True):
             log_error("Restart Notification failed")
     
 
+def formatTime(mTime):
+    """Returns a human readable time representation given a struct_time"""
+    dt = datetime.fromtimestamp(mktime(mTime))
+    if dt.date() == datetime.today().date():
+        return time.strftime("Today %H:%M", mTime)
+    elif dt.date() == (datetime.today() - timedelta(days=1)).date():
+        return time.strftime("Yesterday %H:%M", mTime)
+    elif dt.date().year == datetime.today().date().year:
+        return time.strftime("%b %d, %H:%M", mTime)
+    return time.strftime("%b %d %Y, %H:%M", mTime)
