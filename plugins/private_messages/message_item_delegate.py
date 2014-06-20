@@ -1,5 +1,5 @@
 from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QTextDocument,\
-    QStyle, QAbstractTextDocumentLayout, QPalette, QItemDelegate,\
+    QStyle, QAbstractTextDocumentLayout, QPalette,\
     QBrush, QColor, QLinearGradient, QPainter,\
     QTextEdit, QFrame, QSizePolicy, QIcon
 from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
@@ -272,5 +272,5 @@ class MessageItemDelegate(QStyledItemDelegate):
         doc.setHtml(option.text)
         doc.setTextWidth(self._preferredMessageWidth(width))
         
-        return QSize(doc.idealWidth(), max(32, doc.size().height()))
+        return QSize(doc.idealWidth(), max(32, doc.size().height() + 4))
     
