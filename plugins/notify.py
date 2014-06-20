@@ -1,7 +1,105 @@
 from lunchinator.iface_plugins import iface_called_plugin
-from lunchinator import get_settings, log_error
-from lunchinator.utilities import displayNotification, drawAttention
-import os
+from lunchinator import get_settings, log_error, log_debug, log_exception
+from lunchinator.utilities import displayNotification, getPlatform,\
+    PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS
+import os, threading, subprocess, ctypes
+
+class AttentionGetter(object):
+    _instance = None
+    
+    class AttentionThread(threading.Thread):
+        def __init__(self, audioFile, openTray):
+            super(AttentionGetter.AttentionThread, self).__init__()
+            self._audioFile = audioFile
+            self._openTray = openTray
+        
+        def run(self):        
+            myPlatform = getPlatform()
+            if myPlatform == PLATFORM_LINUX:
+                _drawAttentionLinux(self._audioFile, self._openTray)
+            elif myPlatform == PLATFORM_MAC:
+                _drawAttentionMac(self._audioFile, self._openTray)
+            elif myPlatform == PLATFORM_WINDOWS:
+                _drawAttentionWindows(self._audioFile, self._openTray)
+    
+    def __init__(self):
+        super(AttentionGetter, self).__init__()
+        self.attentionThread = None
+        
+    @classmethod
+    def getInstance(cls):
+        if cls._instance == None:
+            cls._instance = cls()
+        return cls._instance
+    
+    def drawAttention(self, audioFile, openTray):
+        if self.attentionThread != None and self.attentionThread.isAlive():
+            # someone is already drawing attention at the moment
+            log_debug("Drawing attention is already in progress.")
+            return
+        else:
+            log_debug("Starting new attention thread.")
+            self.attentionThread = self.AttentionThread(audioFile, openTray)
+            self.attentionThread.start()
+        
+def drawAttention(audioFile, openTray):
+    AttentionGetter.getInstance().drawAttention(audioFile, openTray)
+        
+def _drawAttentionLinux(audioFile, openTray):
+    if openTray:    
+        try:
+            subprocess.call(["eject", "-T", "/dev/cdrom"])
+        except:
+            log_exception("notify error: eject error (open)")
+    
+    try:
+        subprocess.call(["play", "-q", audioFile])    
+    except:
+        log_exception("notify error: sound error")
+
+    if openTray:
+        try:
+            subprocess.call(["eject", "-T", "/dev/cdrom"])
+        except:
+            log_exception("notify error: eject error (close)")
+        
+def _drawAttentionMac(audioFile, openTray):
+    if openTray:      
+        try:
+            subprocess.call(["drutil", "tray", "eject"])
+        except:
+            log_exception("notify error: eject error (open)")
+         
+    try:
+        subprocess.call(["afplay", audioFile])    
+    except:
+        log_exception("notify error: sound error")
+         
+    if openTray:
+        try:
+            subprocess.call(["drutil", "tray", "close"])
+        except:
+            log_exception("notify error: eject error (close)")
+
+def _drawAttentionWindows(audioFile, openTray):
+    if openTray:
+        try:
+            ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
+        except:
+            log_exception("notify error: eject error (open)")
+    
+    try:
+        from PyQt4.QtGui import QSound
+        q = QSound(audioFile)
+        q.play()
+    except:        
+        log_exception("notify error: sound")
+    
+    if openTray:    
+        try:
+            ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
+        except:
+            log_exception("notify error: eject error (close)")
 
 class Notify(iface_called_plugin):    
     def __init__(self):
@@ -31,7 +129,7 @@ class Notify(iface_called_plugin):
                 log_error("configured audio file %s does not exist in sounds folder, using old one"%new_value)
             # don't set the new value, keep old value
         return audio_file
-            
+    
     def process_message(self,msg,addr,member_info):
         name = " ["+addr+"]"
         icon = self.options[u"icon_file"]
@@ -43,7 +141,7 @@ class Notify(iface_called_plugin):
         displayNotification(name, msg, icon)
             
     def process_lunch_call(self,_msg,_ip,_member_info):
-        drawAttention(self.options["audio_file"])
+        drawAttention(self.options[u"audio_file"], self.options[u"open_optival_drive"])
 
     def process_event(self,cmd,value,ip,member_info):
         pass

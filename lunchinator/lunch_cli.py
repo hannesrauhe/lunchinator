@@ -1,6 +1,7 @@
 import cmd, threading, time, inspect
 from functools import partial
-from lunchinator import get_server, log_error, utilities, log_exception
+from lunchinator import get_server, log_error, utilities, log_exception,\
+    get_notification_center, get_settings, get_plugin_manager
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.cli.cli_message import CLIMessageHandling
 from lunchinator.cli.cli_option import CLIOptionHandling
@@ -27,12 +28,12 @@ class ServerThread(threading.Thread):
             get_server().running = False
         
     def stop(self):
-        get_server().call("HELO_STOP shutdown", "127.0.0.1")
-        get_server().running = False
+        get_server().stop_server()
 
 class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
     def __init__(self):
         cmd.Cmd.__init__(self)
+        LunchServerController.__init__(self)
 
         self.prompt = "> "
         self.commands = set(["exit"])
@@ -42,10 +43,12 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
         
         get_server().initialize(self)
         
-        if get_server().get_plugins_enabled():
-            for pluginInfo in get_server().plugin_manager.getAllPlugins():
+        if get_settings().get_plugins_enabled():
+            for pluginInfo in get_plugin_manager().getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:
                     self.addModule(pluginInfo.plugin_object)
+                
+        get_notification_center().connectApplicationUpdate(self.notifyUpdates)
                 
         self.exitCode = 0
         # if serverStopped is called, we can determine if it was a regular exit.
@@ -130,7 +133,6 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
                 print "^C"
     
     def notifyUpdates(self):
-        super(LunchCommandLineInterface, self).notifyUpdates()
         print "There are updates available for you. Please exit to fetch the updates."
         self.prompt = "(update available)> "
     

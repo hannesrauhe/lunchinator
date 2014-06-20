@@ -1,12 +1,7 @@
-import subprocess,sys,ctypes
-from lunchinator import log_exception, log_warning, log_debug,\
+import subprocess, sys, os, contextlib, json, shutil, socket
+from datetime import datetime, timedelta
+from lunchinator import log_exception, log_warning, log_debug, \
     get_settings, log_error
-import os
-import threading
-import contextlib
-from datetime import datetime
-from lunchinator.git import GitHandler
-import lunchinator
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -47,7 +42,7 @@ def displayNotification(name, msg, icon=None):
                 return
             
             call = [exe, "-title", "Lunchinator: %s" % name, "-message", msg]
-            if False and AttentionGetter.getInstance().existsBundle: # no sender until code signing is fixed (probably never)
+            if False and checkBundleIdentifier(_LUNCHINATOR_BUNDLE_IDENTIFIER): # no sender until code signing is fixed (probably never)
                 call.extend(["-sender", _LUNCHINATOR_BUNDLE_IDENTIFIER])
                 
             log_debug(call)
@@ -59,97 +54,6 @@ def displayNotification(name, msg, icon=None):
     except:
         log_exception("error displaying notification")
         
-class AttentionGetter(object):
-    _instance = None
-    
-    class AttentionThread(threading.Thread):
-        def __init__(self, audioFile):
-            super(AttentionGetter.AttentionThread, self).__init__()
-            self._audioFile = audioFile
-        
-        def run(self):        
-            myPlatform = getPlatform()
-            if myPlatform == PLATFORM_LINUX:
-                _drawAttentionLinux(self._audioFile)
-            elif myPlatform == PLATFORM_MAC:
-                _drawAttentionMac(self._audioFile)
-            elif myPlatform == PLATFORM_WINDOWS:
-                _drawAttentionWindows(self._audioFile)
-    
-    def __init__(self):
-        super(AttentionGetter, self).__init__()
-        self.attentionThread = None
-        if getPlatform() == PLATFORM_MAC:
-            self.existsBundle = checkBundleIdentifier(_LUNCHINATOR_BUNDLE_IDENTIFIER)
-        
-    @classmethod
-    def getInstance(cls):
-        if cls._instance == None:
-            cls._instance = cls()
-        return cls._instance
-    
-    def drawAttention(self, audioFile):
-        if self.attentionThread != None and self.attentionThread.isAlive():
-            # someone is already drawing attention at the moment
-            log_debug("Drawing attention is already in progress.")
-            return
-        else:
-            log_debug("Starting new attention thread.")
-            self.attentionThread = self.AttentionThread(audioFile)
-            self.attentionThread.start()
-        
-def drawAttention(audioFile):
-    AttentionGetter.getInstance().drawAttention(audioFile)
-        
-def _drawAttentionLinux(audioFile):       
-    try:
-        subprocess.call(["eject", "-T", "/dev/cdrom"])
-    except:
-        log_exception("notify error: eject error (open)")
-    
-    try:
-        subprocess.call(["play", "-q", audioFile])    
-    except:
-        log_exception("notify error: sound error")
-
-    try:
-        subprocess.call(["eject", "-T", "/dev/cdrom"])
-    except:
-        log_exception("notify error: eject error (close)")
-        
-def _drawAttentionMac(audioFile):      
-    try:
-        subprocess.call(["drutil", "tray", "eject"])
-    except:
-        log_exception("notify error: eject error (open)")
-         
-    try:
-        subprocess.call(["afplay", audioFile])    
-    except:
-        log_exception("notify error: sound error")
-         
-    try:
-        subprocess.call(["drutil", "tray", "close"])
-    except:
-        log_exception("notify error: eject error (close)")
-
-def _drawAttentionWindows(audioFile):    
-    try:
-        ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
-    except:
-        log_exception("notify error: eject error (open)")
-    try:
-        from PyQt4.QtGui import QSound
-        q = QSound(audioFile)
-        q.play()
-    except:        
-        log_exception("notify error: sound")
-        
-    try:
-        ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open", None, 0, None)
-    except:
-        log_exception("notify error: eject error (close)")
-
 qtParent = None 
 
 def setValidQtParent(parent):
@@ -165,22 +69,25 @@ def getValidQtParent():
         return qtParent
     raise Exception("Could not find a valid QObject instance")
     
-def processPluginCall(ip, call):
-    from lunchinator import get_server
-    if not get_server().get_plugins_enabled():
+def processPluginCall(ip, call, newPeer, fromQueue):
+    from lunchinator import get_peers, get_plugin_manager
+    if not get_settings().get_plugins_enabled():
         return
     from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
-    member_info = {}
-    if get_server().get_peer_info().has_key(ip):
-        member_info = get_server().get_peer_info()[ip]
+    
+    member_info = get_peers().getPeerInfo(pIP=ip)
+    
     # called also contains gui plugins
-    for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("called")+get_server().plugin_manager.getPluginsOfCategory("gui"):
-        if not (isinstance(pluginInfo.plugin_object, iface_called_plugin) or  isinstance(pluginInfo.plugin_object, iface_gui_plugin)):
+    for pluginInfo in get_plugin_manager().getPluginsOfCategory("called")+get_plugin_manager().getPluginsOfCategory("gui"):
+        if not (isinstance(pluginInfo.plugin_object, iface_called_plugin) or \
+                isinstance(pluginInfo.plugin_object, iface_gui_plugin)):
             log_warning("Plugin '%s' is not a called/gui plugin" % pluginInfo.name)
             continue
         if pluginInfo.plugin_object.is_activated:
             try:
-                call(pluginInfo.plugin_object, ip, member_info)
+                if (pluginInfo.plugin_object.processes_events_immediately() and not fromQueue) or \
+                   (not pluginInfo.plugin_object.processes_events_immediately() and not newPeer):
+                    call(pluginInfo.plugin_object, ip, member_info)
             except:
                 log_exception(u"plugin error in %s while processing event" % pluginInfo.name)
                 
@@ -269,6 +176,30 @@ def getGPG(secret=False):
     
     return gpg, keyid
 
+# TODO not used anymore. May be removed.    
+'''for the external IP a connection to someone has to be opened briefly
+   therefore a list of possible peers is needed'''
+def determineOwnIP(peers):
+    if 0 == len(peers):
+        log_debug("Cannot determine IP if there is no peer given")
+        return None
+    
+    own_ip = None
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      
+    for m in peers:
+        try:
+            # connect to UDF discard port 9
+            s.connect((m, 9))
+            own_ip = unicode(s.getsockname()[0])
+            break
+        except:
+            log_debug("While getting own IP, problem to connect to", m)
+            continue
+    if own_ip:
+        log_debug("Found my IP:", own_ip)
+    s.close()
+    return own_ip
+
 def getTimeDelta(end):
     """
     calculates the correlation of now and the specified time
@@ -341,6 +272,12 @@ def getTimeDifference(begin, end):
     except:
         log_exception("don't know how to handle time span")
         return None
+
+def msecUntilNextMinute():
+    now = datetime.now()
+    nextMin = now.replace(second=0, microsecond=0) + timedelta(minutes=1, seconds=1)
+    td = nextMin - now
+    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
     
 def getApplicationBundle():
     """Determines the path to the Mac application bundle"""
@@ -355,35 +292,132 @@ def getApplicationBundle():
     if path == None or not os.path.exists(os.path.join(path, "Contents", "MacOS", "Lunchinator")):
         return None
     return path
-    
-def stopWithCommand(args):
-    from lunchinator import get_server
+
+def spawnProcess(args):
+    log_debug("spawning process: %s"%str(args))
     if getPlatform() in (PLATFORM_LINUX, PLATFORM_MAC):
         #somehow fork() is not safe on Mac OS. I guess this will do fine on Linux, too. 
-        subprocess.Popen(['nohup'] + args, close_fds=True)
-        get_server().call("HELO_STOP restart", client="127.0.0.1")
+        fh = open(os.path.devnull, "w")
+        subprocess.Popen(['nohup'] + args, close_fds=True, stdout=fh, stderr=fh)
     elif getPlatform() == PLATFORM_WINDOWS:
         subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
-        get_server().call("HELO_STOP restart", client="127.0.0.1")
     else:
-        log_error("Restart not yet implemented for your OS.")
-    
-def restart():
-    """Tries to restart the Lunchinator"""
-    
-    restartScript = get_settings().get_resource("bin", "restart.sh")
-    args = None
+        raise NotImplementedError("Process spawning not implemented for your OS.")
+
+def _getStartCommand():
     if getPlatform() == PLATFORM_MAC:
         # Git or Application bundle?
         bundlePath = getApplicationBundle()
         if bundlePath:
-            args = [restartScript, str(os.getpid()), "open " + bundlePath]
+            return ["open", bundlePath]
     
-    if args == None:
-        if getPlatform() in (PLATFORM_MAC, PLATFORM_LINUX):
-            args = [restartScript, str(os.getpid()), "%s %s" % (sys.executable, " ".join(sys.argv))]
+    if getPlatform() in (PLATFORM_MAC, PLATFORM_LINUX):
+        args = ["nohup", sys.executable]
+        args.extend(sys.argv)
+        return args
+    elif getPlatform() == PLATFORM_WINDOWS:
+        return [_getPythonInterpreter(), os.path.join(get_settings().get_main_package_path(), "start_lunchinator.py")]
+    else:
+        log_error("Restart not yet implemented for your OS.")
+            
+    return None
+    
+def _getPythonInterpreter():
+    # sys.executable does not always return the python interpreter
+    if getPlatform() == PLATFORM_WINDOWS: 
+        frozen = getattr(sys, 'frozen', '')
+        if frozen:
+            raise Exception("There is no python interpreter in pyinstaller packages.")
         else:
-            log_error("Restart not yet implemented for your OS.")
+            return sys.executable
+    return which("python")
+
+def stopWithCommands(args):
+    """
+    Stops Lunchinator and execute commands
+    """
+    from lunchinator import get_server
+    try:        
+        spawnProcess(args)
+    except:
+        log_exception("Error in stopWithCommands")
+        return
+    if get_server().getController():
+        get_server().getController().shutdown()
+            
+def restartWithCommands(commands):
+    """
+    Restart Lunchinator and execute commands in background while it is stopped.
+    commands: lunchinator.commands.Commands instance
+    """
+    from lunchinator import get_server
+    try:
+        # copy restart script to safe place
+        shutil.copy(get_settings().get_resource("bin", "restart.py"), get_settings().get_main_config_dir())
+        
+        startCmd = _getStartCommand()
+        args = [_getPythonInterpreter(), get_settings().get_config("restart.py"),
+                "--lunchinator-path", get_settings().get_main_package_path(),
+                "--start-cmd", json.dumps(startCmd),
+                "--pid", str(os.getpid())]
+        if commands != None:
+            args.extend(["--commands", commands.toString()])
+        
+        spawnProcess(args)
+    except:
+        log_exception("Error in restartWithCommands")
+        return
+    if get_server().getController():
+        get_server().getController().shutdown()
+    else:
+        sys.exit(0)
     
-    if args != None:
-        stopWithCommand(args)
+def restart():
+    """Restarts the Lunchinator"""
+    
+    #on Windows with pyinstaller we use this special handling for now
+    if getPlatform()==PLATFORM_WINDOWS:  
+        frozen = getattr(sys, 'frozen', '')
+        if frozen:
+            log_debug("Trying to spawn %s"%sys.executable)
+            from lunchinator import get_server
+            get_server().stop_server()
+            subprocess.Popen(sys.executable, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
+            
+    restartWithCommands(None)
+    
+def installPipDependencyWindows(package, notifyRestart=True):
+    log_debug("Trying to install %s"%package)
+    
+    import win32api, win32con, win32event, win32process, types
+    from win32com.shell.shell import ShellExecuteEx
+    from win32com.shell import shellcon
+
+    python_exe = sys.executable
+    
+    if type(package)==types.ListType:
+        packageStr = " ".join(package)
+    else:
+        packageStr = package
+
+    params = '-m pip install %s' % (packageStr)
+
+    procInfo = ShellExecuteEx(nShow=win32con.SW_SHOWNORMAL,
+                              fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
+                              lpVerb='runas',
+                              lpFile='"%s"'%python_exe,
+                              lpParameters=params)
+
+    procHandle = procInfo['hProcess']    
+    obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
+    rc = win32process.GetExitCodeProcess(procHandle)
+    log_debug("Process handle %s returned code %s" % (procHandle, rc))
+
+    if notifyRestart:
+        try:
+            from lunchinator import get_notification_center
+            get_notification_center().emitRestartRequired("Dependecies were installed, please restart")
+        except:
+            log_error("Restart Notification failed")
+    
+

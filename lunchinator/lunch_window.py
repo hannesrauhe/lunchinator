@@ -1,6 +1,6 @@
 from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplication, QMenu, QKeySequence, QIcon
 from PyQt4.QtCore import Qt, QSettings, QVariant, QEvent
-from lunchinator import get_settings, get_server, log_exception, convert_string
+from lunchinator import get_settings, get_server, log_exception, convert_string, get_plugin_manager
 import sys
 from StringIO import StringIO
 import traceback
@@ -43,8 +43,8 @@ class LunchinatorWindow(QMainWindow):
         
         # add plugins
         try:
-            if get_server().get_plugins_enabled():
-                for pluginInfo in get_server().plugin_manager.getPluginsOfCategory("gui"):
+            if get_settings().get_plugins_enabled():
+                for pluginInfo in get_plugin_manager().getPluginsOfCategory("gui"):
                     if pluginInfo.plugin_object.is_activated:
                         self.addPluginWidget(pluginInfo.plugin_object, pluginInfo.name, noTabs=True)
         except:
@@ -106,12 +106,12 @@ class LunchinatorWindow(QMainWindow):
             aDockWidget.setFeatures(aDockWidget.features() | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
             
     def addPluginWidgetByName(self, name):
-        if not get_server().get_plugins_enabled():
+        if not get_settings().get_plugins_enabled():
             return
         try:
-            pluginInfo = get_server().plugin_manager.getPluginByName(name, u"gui")
+            pluginInfo = get_plugin_manager().getPluginByName(name, u"gui")
             if not pluginInfo.plugin_object.is_activated:
-                po = get_server().plugin_manager.activatePluginByName(name, u"gui")
+                po = get_plugin_manager().activatePluginByName(name, u"gui")
             else:
                 po = pluginInfo.plugin_object
             self.addPluginWidget(po, name)
@@ -129,7 +129,8 @@ class LunchinatorWindow(QMainWindow):
             # widget already visible
             return
         
-        dockWidget = PluginDockWidget(name, self, self.closePlugin)
+        displayedName = po.get_displayed_name() if po.get_displayed_name() else name
+        dockWidget = PluginDockWidget(displayedName, self, self.closePlugin)
         dockWidget.setObjectName(u"plugin.%s" % name)
         newWidget = self.window_msgCheckCreatePluginWidget(dockWidget, po, name)
         dockWidget.setWidget(newWidget)
@@ -189,7 +190,7 @@ class LunchinatorWindow(QMainWindow):
 
     def event(self, event):
         if event.type() == QEvent.WindowActivate:
-            self.guiHandler.dehighlightIcon()
+            self.guiHandler.windowActivated()
         return QMainWindow.event(self, event)
          
     def closeEvent(self, closeEvent):

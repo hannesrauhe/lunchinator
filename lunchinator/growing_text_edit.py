@@ -15,11 +15,18 @@ class GrowingTextEdit(QTextEdit):
         self.sizeChange()
         return QTextEdit.resizeEvent(self, *args, **kwargs)
 
+    def setDocHeight(self, height):
+        self.setMinimumHeight(height)
+        self.setMaximumHeight(height)
+
     def sizeChange(self):
         docHeight = self.document().size().height()
         if self.heightMin <= docHeight <= self.heightMax:
-            self.setMinimumHeight(docHeight + 2)
-            self.setMaximumHeight(docHeight + 2)
+            self.setDocHeight(docHeight + 2)
+        elif docHeight < self.heightMin:
+            self.setDocHeight(self.heightMin)
+        else:
+            self.setDocHeight(self.heightMax)
             
     def setVisible(self, *args, **kwargs):
         QTextEdit.setVisible(self, *args, **kwargs)

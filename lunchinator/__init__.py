@@ -24,37 +24,40 @@ class _lunchinator_logger:
     logfileHandler = None
      
     @classmethod
-    def get_singleton_logger(cls):
+    def get_singleton_logger(cls, path=None):
         if cls.lunch_logger == None:
-            if not os.path.exists(MAIN_CONFIG_DIR ):
-                os.makedirs(MAIN_CONFIG_DIR )
-            log_file = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
-                
-            cls.logfileHandler = logging.handlers.RotatingFileHandler(log_file,'a',0,9)
-            cls.logfileHandler.setFormatter(_log_formatter())
-            cls.logfileHandler.setLevel(logging.DEBUG)
-            
-            cls.streamHandler = logging.StreamHandler()
-            cls.streamHandler.setFormatter(logging.Formatter("[%(levelname)7s] %(message)s"))
+            if not os.path.exists(MAIN_CONFIG_DIR):
+                os.makedirs(MAIN_CONFIG_DIR)
             
             cls.lunch_logger = logging.getLogger("LunchinatorLogger")
             cls.lunch_logger.setLevel(logging.DEBUG)
-            cls.lunch_logger.addHandler(cls.logfileHandler)
+            
+            cls.streamHandler = logging.StreamHandler()
+            cls.streamHandler.setFormatter(logging.Formatter("[%(levelname)7s] %(message)s"))
             cls.lunch_logger.addHandler(cls.streamHandler)
+            
+            if path:
+                try:
+                    cls.logfileHandler = logging.handlers.RotatingFileHandler(path, 'a', 0, 9)
+                    cls.logfileHandler.setFormatter(_log_formatter())
+                    cls.logfileHandler.setLevel(logging.DEBUG)
+                    
+                    cls.lunch_logger.addHandler(cls.logfileHandler)
+                    
+                    if os.path.getsize(path) > 0:
+                        cls.logfileHandler.doRollover()
+                except IOError:
+                    cls.lunch_logger.error("Could not initialize log file.")
             
             yapsi_logger = logging.getLogger('yapsy')
             yapsi_logger.setLevel(logging.WARNING)
             yapsi_logger.addHandler(cls.logfileHandler)
             yapsi_logger.addHandler(cls.streamHandler)
             
-            if os.path.getsize(log_file) > 0:
-                cls.logfileHandler.doRollover()
         return cls.lunch_logger
 
-def initialize_logger():
-    _lunchinator_logger.get_singleton_logger()
-    #initialize settings
-    get_settings().set_logging_level(get_settings().get_logging_level())
+def initialize_logger(path=None):
+    _lunchinator_logger.get_singleton_logger(path)
 
 def convert_string(string):
     import traceback
@@ -80,15 +83,18 @@ def getLogLineTime(logLine):
     try:
         formattedDate = ("%s,%06d" % (dateParts[0], int(dateParts[1]) * 1000))
         return datetime.strptime(formattedDate, "%Y-%m-%d %H:%M:%S,%f")
-    except Exception as e:
-        print e
+    except ValueError:
+        return None
+    except:
+        log_exception()
         return None
 
 def setLoggingLevel(newLevel):
     # ensure logger is initialized
     _get_logger()
     _lunchinator_logger.streamHandler.setLevel(newLevel)
-    _lunchinator_logger.logfileHandler.setLevel(newLevel)
+    if _lunchinator_logger.logfileHandler:
+        _lunchinator_logger.logfileHandler.setLevel(newLevel)
     
 def _generate_string(*s):
     return u" ".join(x if type(x) in (str, unicode) else str(x) for x in s)
@@ -111,6 +117,10 @@ def log_info(*s):
 def log_debug(*s):
     _get_logger().debug(_generate_string(*s))
 
+from lunchinator.notification_center import NotificationCenter
+def get_notification_center():
+    return NotificationCenter.getSingletonInstance()
+
 import lunch_settings
 
 def get_settings():
@@ -126,3 +136,26 @@ import lunch_server
 
 def get_server():
     return lunch_server.lunch_server.get_singleton_server()
+
+def get_peers():
+    return get_server().getLunchPeers()
+
+def get_plugin_manager():
+    if get_settings().get_plugins_enabled():
+        from yapsy.PluginManager import PluginManagerSingleton
+        return PluginManagerSingleton.get()
+    else:
+        log_exception("Cannnot load plugin manager: plugins are disabled")   
+    
+def get_db_connection(name=""):
+    """returns tuple (connection_handle, connection_type) of the given connection"""
+    
+    if not get_settings().get_plugins_enabled():
+        log_error("Plugins are disabled, cannot get DB connections.")
+        return None, None
+    
+    pluginInfo = get_plugin_manager().getPluginByName("Database Settings", "general")
+    if pluginInfo and pluginInfo.plugin_object.is_activated:
+        return pluginInfo.plugin_object.getDBConnection(name)
+    log_exception("getDBConnection: DB Connections plugin not yet loaded")
+    return None, None

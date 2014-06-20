@@ -70,14 +70,15 @@ data_files = [('share/lunchinator/sounds', ['sounds/sonar.wav']),
               ('share/lunchinator/images', ['images/webcam.jpg',
                                             'images/mini_breakfast.png',
                                             'images/lunchinator.png',
-                                            'images/lunchinatorred.png']),
+                                            'images/lunchinatorred.png',
+                                            'images/lunchinatorgreen.png']),
               ('share/lunchinator', ['lunchinator_pub_0x17F57DC2.asc', 'version']),
               ('share/icons/hicolor/scalable/apps', ['images/lunchinator.svg']),
-              ('share/applications', ['installer/lunchinator.desktop'])]
+              ('share/applications', ['lunchinator.desktop'])]
 # ensure icons are installed only on ubuntu
 if os.getenv("__isubuntu") or (not os.getenv("__notubuntu") and platform.dist()[0] == "Ubuntu"):
-    data_files.append(('share/icons/ubuntu-mono-dark/status/24', ['images/white/lunchinator.svg', 'images/lunchinatorred.svg']))
-    data_files.append(('share/icons/ubuntu-mono-light/status/24', ['images/black/lunchinator.svg', 'images/lunchinatorred.svg']))
+    data_files.append(('share/icons/ubuntu-mono-dark/status/24', ['images/white/lunchinator.svg', 'images/lunchinatorred.svg', 'images/lunchinatorgreen.svg']))
+    data_files.append(('share/icons/ubuntu-mono-light/status/24', ['images/black/lunchinator.svg', 'images/lunchinatorred.svg', 'images/lunchinatorgreen.svg']))
 data_files.extend([("share/lunchinator/" + dp, [os.path.join(dp, fn) for fn in fns if not fn.endswith('.pyc')]) for dp, _, fns in os.walk('plugins')])
 data_files.extend([("share/lunchinator/" + dp, [os.path.join(dp, fn) for fn in fns]) for dp, _, fns in os.walk('bin')])
 
@@ -124,8 +125,13 @@ class my_install(install.install):
         outputs.extend(sorted(dirs))
         return outputs
 
+name = "lunchinator"
+branch = os.getenv("__lunchinator_branch")
+if branch and branch!="master":
+    name +="-"+branch
+
 setup(
-    name =          'lunchinator',
+    name =          name,
     version =       version,
     url =           'http://www.lunchinator.de',
     #download_url =  'http://path/tp/Lunchinator-%s.tar.gz' % version,

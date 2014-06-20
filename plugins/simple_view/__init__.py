@@ -11,9 +11,9 @@ class simple_view(iface_gui_plugin):
         
     def deactivate(self):
         if self.w != None:
-            self.w.finish()
+            self.w.finish()           
         iface_gui_plugin.deactivate(self)
-    
+        
     def create_widget(self, parent):
         from simple_view.simpleViewWidget import SimpleViewWidget
         

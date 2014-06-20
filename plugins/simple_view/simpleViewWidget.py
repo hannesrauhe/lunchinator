@@ -1,16 +1,16 @@
-#@author: Cornelius Ratsch, Hannes Rauhe
-#@summary: This plugin is supposed to be the only one necessary for the core functionality of the lunchinator
+# @author: Cornelius Ratsch, Hannes Rauhe
+# @summary: This plugin is supposed to be the only one necessary for the core functionality of the lunchinator
 
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, \
                         QLineEdit, QMenu, QInputDialog
 from PyQt4.QtCore import QTimer, Qt
-from lunchinator import get_server, log_info
-from time import mktime,time
+from lunchinator import get_server, get_peers, log_info, get_notification_center
+from time import localtime, time, strftime, mktime
 from lunchinator.lunch_button import LunchButton
             
 class SimpleViewWidget(QWidget):   
-    #http://www.colourlovers.com/palette/1930/cheer_up_emo_kid
-    colors = ["C44D58","C7F464","4ECDC4","556270","FF6B6B"]
+    # http://www.colourlovers.com/palette/1930/cheer_up_emo_kid
+    colors = ["C44D58", "C7F464", "4ECDC4", "556270", "FF6B6B"]
     
     def __init__(self, parent):
         super(SimpleViewWidget, self).__init__(parent)
@@ -39,51 +39,57 @@ class SimpleViewWidget(QWidget):
         layout.addLayout(sendLayout)
         layout.addWidget(self.msgview)
         
+        
+        get_notification_center().connectMemberAppended(self.updateWidgets)
+        get_notification_center().connectMemberUpdated(self.updateWidgets)
+        get_notification_center().connectMemberRemoved(self.updateWidgets)
+        get_notification_center().connectMessagePrepended(self.updateWidgets)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.updateWidgets)
-        self.timer.start(1000)
+        self.timer.start(60000)
         
-    def getMemberColor(self,addr):
-        if not self.colorMap.has_key(addr):
-            self.colorMap[addr] = self.colors[self.colorCounter]
-            self.colorCounter = (self.colorCounter+1) % len(self.colors)
+    def showEvent(self, showEvent):
+        self.updateWidgets()
         
-        return self.colorMap[addr]
+    def getMemberColor(self, peerID):
+        if not self.colorMap.has_key(peerID):
+            self.colorMap[peerID] = self.colors[self.colorCounter]
+            self.colorCounter = (self.colorCounter + 1) % len(self.colors)
+        
+        return self.colorMap[peerID]
             
     def updateWidgets(self):
         if not self.isVisible():
-            return True
+            return True        
         
-        get_server().lockMembers()
-        try:
-            members = get_server().get_members()
-            readyMembers = []
-            notReadyMembers = []
-            for m in members:
-                if not get_server().is_peer_readyness_known(m):
-                    continue
-                if get_server().is_peer_ready(m):
-                    readyMembers.append(get_server().memberName(m))
-                else:
-                    notReadyMembers.append(get_server().memberName(m))
-            memText = "%d people online<br />"%len(members)
-        finally:
-            get_server().releaseMembers()
-            
+        members = get_peers().getMembers()
+        memText = "%d group members online<br />" % len(members)
         memToolTip = ""
-        memToolTip += "<span style='color:green'>%s</span><br />"%", ".join(readyMembers) if len(readyMembers) else ""
-        memToolTip += "<span style='color:red'>%s</span>"%", ".join(notReadyMembers) if len(notReadyMembers) else ""
+
+        peers = get_server().getLunchPeers()
+        readyMembers = peers.getReadyMembers()
+        notReadyMembers = peers.getMembers() - readyMembers
         
-        memText += "<span style='color:green'>%d ready for lunch</span>"%len(readyMembers) if len(readyMembers) else "no one ready for lunch"
+        # don't display members with unknown status as ready
+        readyMembers = [pID for pID in readyMembers if peers.isPeerReadinessKnown(pID=pID)]
+        
+        readyText = ", ".join([peers.getPeerName(pID=x) for x in readyMembers])
+        notReadyText = ", ".join([peers.getPeerName(pID=x) for x in notReadyMembers])
+        memToolTip += "<span style='color:green'>%s</span><br />" % readyText if len(readyMembers) else ""
+        memToolTip += "<span style='color:red'>%s</span>" % notReadyText if len(notReadyMembers) else ""
+        
+        memText += "<span style='color:green'>%d ready for lunch</span>" % len(readyMembers) if len(readyMembers) else "no one ready for lunch"
         self.memberView.setText(memText)
         self.memberView.setToolTip(memToolTip)
         
-        msgTexts=""
-        for timest,addr,msg in get_server().getMessages(time()-(180*60)):
-            member = get_server().memberName(addr)
-            color = self.getMemberColor(addr)
-            msgTexts+="<span style='color:#%s'><b>%s</b> \
-                        <i>[%d sec]</i>: %s</span><br />\n"%(color,member,time()-mktime(timest),msg)
+        msgTexts = ""
+        with get_server().get_messages():
+            messages = get_server().get_messages().getAll(time() - (180 * 60))
+        for timest, peerID, msg in messages:
+            member = get_peers().getPeerName(pID=peerID)
+            color = self.getMemberColor(peerID)
+            msgTexts += "<span style='color:#%s'><b>%s</b> \
+                        <i>[%s]</i>: %s</span><br />\n" % (color, member,strftime("%H:%M",timest), msg)
                         
         self.msgview.setHtml(msgTexts)
         
@@ -93,8 +99,8 @@ class SimpleViewWidget(QWidget):
         return windowMenu
     
     def addMemberByIP(self):
-        hostn, button = QInputDialog.getText(None, "Manually add a member", "In rare cases the lunchinator might not be available to find another user.\n"+
-                             "You can enter an IP/hostname here to explicitly look there. Make sure that the Lunchinator is running on\n" +
+        hostn, button = QInputDialog.getText(None, "Manually add a member", "In rare cases the lunchinator might not be available to find another user.\n" + 
+                             "You can enter an IP/hostname here to explicitly look there. Make sure that the Lunchinator is running on\n" + 
                              "the other machine and that you are in the same group.")
         if button and len(hostn):
             get_server().call_request_info([str(hostn)])
@@ -102,6 +108,10 @@ class SimpleViewWidget(QWidget):
     def finish(self):
         try:
             self.timer.timeout.disconnect()
+            get_notification_center().disconnectMemberAppended(self.updateWidgets)
+            get_notification_center().disconnectMemberUpdated(self.updateWidgets)
+            get_notification_center().disconnectMemberRemoved(self.updateWidgets)
+            get_notification_center().disconnectMessagePrepended(self.updateWidgets) 
         except:
             log_info("Simple View: was not able to disconnect timer")
         

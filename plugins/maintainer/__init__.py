@@ -1,8 +1,6 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import log_debug, log_info, log_critical, log_error, get_settings, get_server,\
-    log_exception
-import os, time
-import subprocess    
+from lunchinator import get_settings
+import os
 
 class maintainer(iface_gui_plugin):
     def __init__(self):
@@ -22,25 +20,10 @@ class maintainer(iface_gui_plugin):
         iface_gui_plugin.create_widget(self, parent)
         self.w = maintainer_gui(parent)
         
-        get_server().controller.memberAppendedSignal.connect(self.w.info_table_model.externalRowAppended)
-        get_server().controller.memberUpdatedSignal.connect(self.w.info_table_model.externalRowUpdated)
-        get_server().controller.memberRemovedSignal.connect(self.w.info_table_model.externalRowRemoved)
-        
-        get_server().controller.memberAppendedSignal.connect(self.w.update_dropdown_members)
-        get_server().controller.memberUpdatedSignal.connect(self.w.update_dropdown_members)
-        get_server().controller.memberRemovedSignal.connect(self.w.update_dropdown_members)
-        
         return self.w
     
     def destroy_widget(self):
         if self.w != None:
-            get_server().controller.memberAppendedSignal.disconnect(self.w.info_table_model.externalRowAppended)
-            get_server().controller.memberUpdatedSignal.disconnect(self.w.info_table_model.externalRowUpdated)
-            get_server().controller.memberRemovedSignal.disconnect(self.w.info_table_model.externalRowRemoved)
-            
-            get_server().controller.memberAppendedSignal.disconnect(self.w.update_dropdown_members)
-            get_server().controller.memberUpdatedSignal.disconnect(self.w.update_dropdown_members)
-            get_server().controller.memberRemovedSignal.disconnect(self.w.update_dropdown_members)
             self.w.destroy_widget()
         iface_gui_plugin.destroy_widget(self)
             

@@ -1,11 +1,14 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import log_exception, get_settings, get_server
+from lunchinator import log_exception, get_settings, get_server,\
+    get_notification_center, log_debug
 import urllib2,sys
+from datetime import datetime, timedelta
     
 class messages_table(iface_gui_plugin):
     def __init__(self):
         super(messages_table, self).__init__()
         self.messagesTable = None
+        self._dailyTrigger = None
         
     def activate(self):
         iface_gui_plugin.activate(self)
@@ -13,50 +16,62 @@ class messages_table(iface_gui_plugin):
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
     
-    def updateSendersInMessagesTable(self):
-        self.messagesProxyModel.setDynamicSortFilter(False)
-        self.messagesModel.updateSenders()
-        self.messagesProxyModel.setDynamicSortFilter(True)
-        
     def sendMessageClicked(self, text):
         if get_server().controller != None:
             get_server().controller.sendMessageClicked(None, text)
         
     def destroy_widget(self):
+        if self._dailyTrigger != None:
+            self._dailyTrigger.timeout.disconnect(self._updateTimes)
+            self._dailyTrigger.stop()
+            self._dailyTrigger.deleteLater()
+            
+        get_notification_center().disconnectMessagePrepended(self.messagesModel.messagePrepended)
+        get_notification_center().disconnectPeerAppended(self.messagesModel.updateSenders)
+        get_notification_center().disconnectPeerUpdated(self.messagesModel.updateSenders)
+        get_notification_center().disconnectPeerRemoved(self.messagesModel.updateSenders)
+        
+        self.messagesModel = None
+        self.messagesTable = None
+        
         iface_gui_plugin.destroy_widget(self)
         
-        get_server().controller.messagePrependedSignal.disconnect(self.messagesModel.externalRowPrepended)
-        get_server().controller.memberAppendedSignal.disconnect(self.updateSendersInMessagesTable)
-        get_server().controller.memberUpdatedSignal.disconnect(self.updateSendersInMessagesTable)
-        get_server().controller.memberRemovedSignal.disconnect(self.updateSendersInMessagesTable)
-        self.messagesModel = None
-        self.messagesProxyModel = None
-        self.messagesTable = None
+    def _updateDailyTrigger(self):
+        now = datetime.now()
+        midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        delta = midnight - now
+        self._dailyTrigger.start((delta.seconds + 1) * 1000 + delta.microseconds / 1000)
+        
+    def _updateTimes(self):
+        log_debug("It's a new day, update the message times.")
+        self.messagesModel.updateTimes()
+        self._updateDailyTrigger()
         
     def create_widget(self, parent):
         from PyQt4.QtGui import QSortFilterProxyModel
-        from PyQt4.QtCore import Qt
+        from PyQt4.QtCore import Qt, QTimer
         from lunchinator.table_widget import TableWidget
-        from lunchinator.table_models import MessagesTableModel
+        from messages_table.messages_table_model import MessagesTableModel
         
-        self.messagesTable = TableWidget(parent, "Send Message", self.sendMessageClicked, placeholderText="Enter a message")
+        self.messagesTable = TableWidget(parent, "Send Message", self.sendMessageClicked, placeholderText="Enter a message", sortingEnabled=False)
         
         # initialize messages table
-        self.messagesModel = MessagesTableModel(get_server())
-        self.messagesProxyModel = QSortFilterProxyModel(self.messagesTable)
-        self.messagesProxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
-        self.messagesProxyModel.setSortRole(MessagesTableModel.SORT_ROLE)
-        self.messagesProxyModel.setDynamicSortFilter(True)
-        self.messagesProxyModel.setSourceModel(self.messagesModel)
-        self.messagesTable.setModel(self.messagesProxyModel)
+        self.messagesModel = MessagesTableModel(parent)
+        self.messagesTable.setModel(self.messagesModel)
+        self.messagesTable.setColumnWidth(0, 120)
+        self.messagesTable.setColumnWidth(1, 90)
         
-        get_server().controller.messagePrependedSignal.connect(self.messagesModel.externalRowPrepended)
-        get_server().controller.memberAppendedSignal.connect(self.updateSendersInMessagesTable)
-        get_server().controller.memberUpdatedSignal.connect(self.updateSendersInMessagesTable)
-        get_server().controller.memberRemovedSignal.connect(self.updateSendersInMessagesTable)
+        get_notification_center().connectMessagePrepended(self.messagesModel.messagePrepended)
+        get_notification_center().connectPeerAppended(self.messagesModel.updateSenders)
+        get_notification_center().connectPeerUpdated(self.messagesModel.updateSenders)
+        get_notification_center().connectPeerRemoved(self.messagesModel.updateSenders)
+        
+        self._dailyTrigger = QTimer(parent)
+        self._dailyTrigger.timeout.connect(self._updateTimes)
+        self._dailyTrigger.setSingleShot(True)
+        self._updateDailyTrigger()
         
         return self.messagesTable
     
     def add_menu(self,menu):
         pass
-

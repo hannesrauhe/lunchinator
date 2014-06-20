@@ -12,10 +12,12 @@ echo "Base: '$ICON_BASE'"
 # install icons for mono-dark (yes, the 'light' icon is for the dark theme)
 cp ../images/white/${ICON_BASE}.svg /usr/share/icons/ubuntu-mono-dark/status/24/lunchinator.svg
 cp ../images/red/${ICON_BASE}.svg /usr/share/icons/ubuntu-mono-dark/status/24/lunchinatorred.svg
+cp ../images/green/${ICON_BASE}.svg /usr/share/icons/ubuntu-mono-dark/status/24/lunchinatorgreen.svg
 
 # install icons for mono-light
 cp ../images/black/${ICON_BASE}.svg /usr/share/icons/ubuntu-mono-light/status/24/lunchinator.svg
 cp ../images/red/${ICON_BASE}.svg /usr/share/icons/ubuntu-mono-light/status/24/lunchinatorred.svg
+cp ../images/green/${ICON_BASE}.svg /usr/share/icons/ubuntu-mono-light/status/24/lunchinatorgreen.svg
 
 # update icon caches
 gtk-update-icon-cache /usr/share/icons/ubuntu-mono-light

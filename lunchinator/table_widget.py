@@ -6,7 +6,7 @@ from lunchinator.history_line_edit import HistoryLineEdit, HistoryTextEdit
 class TableWidget(QWidget):
     PREFERRED_WIDTH = 400
     
-    def __init__(self, parent, buttonText, triggeredEvent, sortedColumn = None, ascending = True, placeholderText = "", useTextEdit = False):
+    def __init__(self, parent, buttonText, triggeredEvent, sortedColumn=None, ascending=True, placeholderText="", useTextEdit=False, sortingEnabled=True):
         super(TableWidget, self).__init__(parent)
         
         self.externalEvent = triggeredEvent
@@ -16,10 +16,11 @@ class TableWidget(QWidget):
         tableBottomLayout = QHBoxLayout()
         
         self.table = QTreeView(self)
-        self.table.setSortingEnabled(True)
+        self.table.setSortingEnabled(sortingEnabled)
         self.table.setHeaderHidden(False)
         self.table.setAlternatingRowColors(True)
         self.table.setIndentation(0)
+        self.table.setUniformRowHeights(True)
         if sortedColumn != None:
             self.table.sortByColumn(sortedColumn, Qt.AscendingOrder if ascending else Qt.DescendingOrder)
         
@@ -53,6 +54,9 @@ class TableWidget(QWidget):
         
     def setModel(self, model):
         self.table.setModel(model)
+        
+    def setColumnWidth(self, column, width):
+        self.table.setColumnWidth(column, width)
         
         
 if __name__ == '__main__':

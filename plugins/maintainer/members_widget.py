@@ -3,10 +3,38 @@ from PyQt4.QtCore import Qt, QVariant, pyqtSlot, QTimer, QStringList, QThread
 from lunchinator.history_line_edit import HistoryLineEdit
 from functools import partial
 from lunchinator import get_server, get_settings, convert_string, log_warning,\
-    log_exception, log_debug, getLogLineTime
+    log_exception, log_debug, getLogLineTime, get_peers, get_notification_center
 import os, sip, codecs, copy, shutil, contextlib, tarfile
 from datetime import datetime
 from lunchinator.lunch_datathread_qt import DataReceiverThread
+from lunchinator.table_models import TableModelBase
+
+class DropdownModel(TableModelBase):
+    _NAME_KEY = u'name'
+    _ID_KEY = u'ID'
+    
+    def __init__(self, dataSource):
+        columns = [(u"Name", self._updateNameItem)]
+        super(DropdownModel, self).__init__(dataSource, columns)
+        
+        # Called before server is running, no need to lock here
+        for peerID in self.dataSource:
+            infoDict = dataSource.getPeerInfo(pID=peerID)
+            self.appendContentRow(peerID, infoDict)
+            
+    def _updateNameItem(self, _ip, infoDict, item):
+        if infoDict == None:
+            import traceback
+            traceback.print_stack()
+        peerID = infoDict[self._ID_KEY] if self._ID_KEY in infoDict else u""
+        m_name = infoDict[self._NAME_KEY] if self._NAME_KEY in infoDict else u""
+        
+        if peerID == m_name:
+            name = peerID
+        else:
+            name = "%s (%s)" % (m_name.strip(), peerID.strip())
+        
+        item.setText(name)
 
 class MembersWidget(QWidget):
     def __init__(self, parent):
@@ -16,8 +44,7 @@ class MembersWidget(QWidget):
         layout.setSpacing(0)
         
         self.dropdown_members_dict = {}
-        self.dropdown_members_model = QStandardItemModel()
-        self.dropdown_members_model.appendRow(QStandardItem(""))
+        self.dropdown_members_model = DropdownModel(get_peers())
         self.dropdown_members = QComboBox(self)
         self.dropdown_members.setModel(self.dropdown_members_model)
         
@@ -87,7 +114,6 @@ class MembersWidget(QWidget):
         
         layout.addWidget(logSplitter, 1)
         
-        self.update_dropdown_members()
         self.memberSelectionChanged()
         self.log_tree_view.selectionModel().selectionChanged.connect(self.displaySelectedLogfile)
         self.dropdown_members.currentIndexChanged.connect(self.memberSelectionChanged)
@@ -95,6 +121,15 @@ class MembersWidget(QWidget):
         self.requestLogsButton.clicked.connect(self.requestLogClicked)
         self.sendMessageButton.clicked.connect(partial(self.sendMessageToMember, messageInput))
         messageInput.returnPressed.connect(partial(self.sendMessageToMember, messageInput))
+        
+        get_notification_center().connectPeerAppended(self.dropdown_members_model.externalRowAppended)
+        get_notification_center().connectPeerUpdated(self.dropdown_members_model.externalRowUpdated)
+        get_notification_center().connectPeerRemoved(self.dropdown_members_model.externalRowRemoved)
+        
+    def destroy_widget(self):
+        get_notification_center().disconnectPeerAppended(self.dropdown_members_model.externalRowAppended)
+        get_notification_center().disconnectPeerUpdated(self.dropdown_members_model.externalRowUpdated)
+        get_notification_center().disconnectPeerRemoved(self.dropdown_members_model.externalRowRemoved)
         
     def listLogfiles(self, basePath, sort = None):
         if sort is None:
@@ -240,18 +275,18 @@ class MembersWidget(QWidget):
     
     @pyqtSlot(QThread)
     def cb_log_transfer_error(self, _thread):
-        if not self.visible:
+        if not self.isVisible():
             return False
         self.log_area.setText("Error while getting log")
         self.requestFinished()
         
     def get_selected_log_member(self):
         member = str(self.dropdown_members.currentText())
-        if member == None or len(member) == 0:
+        if not member:
             return None
         
         if "(" in member:
-            # member contains name, extract IP
+            # member contains name, extract ID
             member = member[member.rfind("(")+1:member.rfind(")")]
             
         return member
@@ -261,7 +296,7 @@ class MembersWidget(QWidget):
             member = self.get_selected_log_member()
         if member != None:
             log_debug("Requesting log %d from %s" % (logNum, member))
-            get_server().call("HELO_REQUEST_LOGFILE %s %d"%(DataReceiverThread.getOpenPort(category="log%s"%member), logNum), member)
+            get_server().call("HELO_REQUEST_LOGFILE %s %d"%(DataReceiverThread.getOpenPort(category="log%s"%member), logNum), set([member]))
         else:
             self.log_area.setText("No Member selected!")
             
@@ -275,41 +310,8 @@ class MembersWidget(QWidget):
     def request_update(self):
         member = self.get_selected_log_member()
         if member != None:
-            get_server().call("HELO_UPDATE from GUI",member)
+            get_server().call("HELO_UPDATE from GUI", set([member]))
     
-    def get_dropdown_member_text(self, m_ip, m_name):
-        if m_ip == m_name:
-            return m_ip
-        else:
-            return "%s (%s)" % (m_name.strip(), m_ip.strip())
-    
-    def update_dropdown_members(self):
-        self.updateMemberInformation()
-        if self.dropdown_members_model == None:
-            return
-        
-        members = set(get_server().get_members())
-        for m_ip in members:
-            m_name = get_server().memberName(m_ip)
-            if not m_ip in self.dropdown_members_dict:
-                # is new ip, append to the end
-                self.dropdown_members_dict[m_ip] = (self.dropdown_members_model.rowCount(), m_name)
-                self.dropdown_members_model.appendRow(QStandardItem(self.get_dropdown_member_text(m_ip, m_name)))
-            else:
-                #is already present, check if new information is available
-                info = self.dropdown_members_dict[m_ip]
-                if m_name != info[1]:
-                    #name has changed
-                    anItem = self.dropdown_members_model.item(info[0], column=0)
-                    anItem.setText(self.get_dropdown_member_text(m_ip, m_name))
-                    self.dropdown_members_dict[m_ip] = (info[0], m_name)
-                    
-        removedMembers = set(self.dropdown_members_dict.keys()) - members
-        for removedMember in removedMembers:
-            info = self.dropdown_members_dict[removedMember]
-            self.dropdown_members_model.removeRow(info[0])
-            del self.dropdown_members_dict[removedMember]
-                
     def listLogFilesForMember(self, member):
         logDir = "%s/logs/%s" % (get_settings().get_main_config_dir(), member)
         if not os.path.exists(logDir):
@@ -448,7 +450,7 @@ class MembersWidget(QWidget):
     def sendMessageToMember(self, lineEdit):
         selectedMember = self.get_selected_log_member()
         if selectedMember != None:
-            get_server().call(convert_string(lineEdit.text()),client=selectedMember)
+            get_server().call(convert_string(lineEdit.text()),set([selectedMember]))
             lineEdit.clear()
         
     def updateMemberInformation(self):
@@ -459,13 +461,7 @@ class MembersWidget(QWidget):
             self.memberInformationTable.setHeaderLabel("No member selected.")
             return
 
-        get_server().lockMembers()
-        memberInformation = None
-        try:
-            if self.get_selected_log_member() in get_server().get_peer_info():
-                memberInformation = copy.deepcopy(get_server().get_peer_info()[self.get_selected_log_member()])
-        finally:
-            get_server().releaseMembers()
+        memberInformation = get_peers().getPeerInfo(pID=self.get_selected_log_member())
             
         if memberInformation == None:
             self.memberInformationTable.setColumnCount(0)

@@ -7,9 +7,12 @@ import signal
 from functools import partial
 from optparse import OptionParser
 from lunchinator import log_info, log_error, get_settings,\
-    get_server, log_exception, initialize_logger
+    get_server, log_exception, initialize_logger, MAIN_CONFIG_DIR
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
 from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS, restart
+import os
+from lunchinator import setLoggingLevel
+import logging
     
 def parse_args():
     usage = "usage: %prog [options]"
@@ -34,8 +37,12 @@ def parse_args():
                       help="Send call to this specific member.")
     optionParser.add_option("--stop", default=False, dest="stop", action="store_true",
                       help="Stop local Lunch server.")
+    optionParser.add_option("--no-broadcast", default=False, dest="noBroadcast", action="store_true",
+                      help="Disable broadcasting if you are alone.")
     optionParser.add_option("--stopCode", default=False, dest="exitWithStopCode", action="store_true",
                       help="Exits immediately with the stop exit code.")
+    optionParser.add_option("-v", "--verbose", default=False, dest="verbose", action="store_true",
+                      help="Enable DEBUG output (override setting).")
     return optionParser.parse_args()
 
 def trace(frame, event, _):
@@ -46,8 +53,8 @@ def sendMessage(msg, cli):
     if msg == None:
         msg = "lunch"
     
-    get_server().set_plugins_enabled(False)
-    recv_nr=get_server().perform_call(msg,client=cli)
+    get_settings().set_plugins_enabled(False)
+    recv_nr=get_server().perform_call(msg,peerIDs=[],peerIPs=[cli])
     print "sent to",recv_nr,"clients"
     
 def handleInterrupt(lanschi, _signal, _frame):
@@ -98,7 +105,7 @@ def checkDependencies(noPlugins, gui = False):
             if result == EXIT_CODE_UPDATE:
                 # need to restart
                 restart()
-                return
+                return False
             
             try:
                 import yapsy
@@ -121,27 +128,35 @@ def checkDependencies(noPlugins, gui = False):
             return False
 
 def startLunchinator():
-    initialize_logger()
-    
     (options, _args) = parse_args()
+    
+    if options.verbose:
+        get_settings().set_verbose(True)
+        setLoggingLevel(logging.DEBUG)
     usePlugins = options.noPlugins
     if options.exitWithStopCode:
         sys.exit(EXIT_CODE_STOP)
     elif options.lunchCall or options.message != None:
+        initialize_logger()
+        get_settings().set_plugins_enabled(False)
+        get_server().set_has_gui(False)
         sendMessage(options.message, options.client)
     elif options.stop:
-        msg = "local"
-        get_server().set_plugins_enabled(False)
-        get_server().call("HELO_STOP "+msg,client="127.0.0.1")
+        initialize_logger()
+        get_settings().set_plugins_enabled(False)
+        get_server().set_has_gui(False)
+        get_server().stop_server(stop_any=True)
         print "Sent stop command to local lunchinator"
     elif options.cli:
+        initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))
         usePlugins = checkDependencies(usePlugins)
             
         retCode = 1
         try:
             from lunchinator import lunch_cli
-            get_server().set_plugins_enabled(usePlugins)
+            get_settings().set_plugins_enabled(usePlugins)
             get_server().set_has_gui(False)
+            get_server().set_disable_broadcast(options.noBroadcast)
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
         except:
@@ -149,14 +164,18 @@ def startLunchinator():
         finally:
             sys.exit(retCode)
     elif options.noGui:
+        initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))
         usePlugins = checkDependencies(usePlugins)
         
     #    sys.settrace(trace)
-        get_server().set_plugins_enabled(usePlugins)
+        get_settings().set_plugins_enabled(usePlugins)
         get_server().set_has_gui(False)
+        get_server().set_disable_broadcast(options.noBroadcast)
+        get_server().initialize()
         get_server().start_server()
         sys.exit(get_server().exitCode)
-    else:    
+    else:
+        initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))    
         log_info("We are on",platform.system(),platform.release(),platform.version())
         try:
             from PyQt4.QtCore import QThread
@@ -170,9 +189,13 @@ def startLunchinator():
         app = QApplication(sys.argv)
         usePlugins = checkDependencies(usePlugins, gui=True)
 
-        get_server().set_plugins_enabled(usePlugins)
+        get_settings().set_plugins_enabled(usePlugins)
+        get_server().set_disable_broadcast(options.noBroadcast)
         app.setQuitOnLastWindowClosed(False)
         lanschi = LunchinatorGuiController()
+        if lanschi.isShuttingDown():
+            # seems lanschi would prefer to not start up
+            sys.exit(0)
         if options.showWindow:
             lanschi.openWindowClicked()
         

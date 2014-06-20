@@ -1,11 +1,6 @@
-from PyQt4.QtCore import Qt, QVariant, QSize, pyqtSlot, QStringList, QMutex, QString, QTimer, QModelIndex
-from PyQt4.QtGui import QStandardItemModel, QStandardItem, QColor
-import time
-from functools import partial
-from datetime import datetime
-from lunchinator import convert_string, get_settings, log_debug
-from lunch_settings import lunch_settings
-from lunchinator.utilities import getTimeDifference
+from PyQt4.QtCore import Qt, QVariant, QSize, QStringList, QString
+from PyQt4.QtGui import QStandardItemModel, QStandardItem
+from lunchinator import convert_string
 
 class TableModelBase(QStandardItemModel):
     KEY_ROLE = Qt.UserRole + 1
@@ -51,12 +46,20 @@ class TableModelBase(QStandardItemModel):
         if item.data(self.SORT_ROLE) == None:
             item.setData(item.data(Qt.DisplayRole), self.SORT_ROLE)
 
+    def _updateToolTips(self, row, key, data):
+        toolTipText = self._getRowToolTip(key, data)
+        if toolTipText:
+            toolTip = QVariant(toolTipText)
+            for item in row:
+                item.setData(toolTip, Qt.ToolTipRole)
+            
     def createRow(self, key, data):
         row = []
         for column in range(self.columnCount()):
             row.append(self.createItem(key, data, column))
+        self._updateToolTips(row, key, data)
         return row
-
+    
     def insertContentRow(self, key, data, index):
         self.keys.insert(index, key)
         self.insertRow(index, self.createRow(key, data))
@@ -69,14 +72,24 @@ class TableModelBase(QStandardItemModel):
         self.keys.insert(0, key)
         self.insertRow(0, self.createRow(key, data))
 
+    def _dataForKey(self, _key):
+        """Override to support updateColumn"""
+        return None
+    
     def updateColumn(self, column):
         for row, key in enumerate(self.keys):
-            self.updateItem(key, None, row, column)
+            self.updateItem(key, self._dataForKey(key), row, column)
             
     def updateRow(self, key, data, row):
         for column in range(self.columnCount()):
             self.updateItem(key, data, row, column)
-         
+        self._updateToolTips((self.item(row, colIndex) for colIndex in xrange(self.columnCount())), key, data)
+            
+    def updateTable(self):
+        """Updates all rows in the table."""
+        for row, key in enumerate(self.keys):
+            self.updateRow(key, self._dataForKey(key), row)
+            
     @classmethod   
     def convertDict(cls, aDict):
         newDict = {}
@@ -101,6 +114,17 @@ class TableModelBase(QStandardItemModel):
                     return self.convertDict(data)
         return data
                     
+    """ --------- IMPLEMENT IN SUBCLASS ----------- """
+    def _getRowToolTip(self, _key, _data):
+        """Returns the tool tip to display on the whole row.
+        
+        Use this method if the model does not add tool tips to specific
+        items. This method will be called once for each row, on creation
+        and on each update. If an item already has tool tip data, it
+        won't be overwritten.
+        """
+        return None
+    
     """ ----------------- SLOTS ------------------- """
             
     def externalRowInserted(self, key, data, index):
@@ -136,203 +160,3 @@ class TableModelBase(QStandardItemModel):
             index = self.keys.index(key)
             del self.keys[index]
             self.removeRow(index)
-
-class MembersTableModel(TableModelBase):
-    LUNCH_TIME_TIMER_ROLE = TableModelBase.SORT_ROLE + 1
-    
-    def __init__(self, dataSource):
-        columns = [("IP", self._updateIpItem),
-                   ("Name", self._updateNameItem),
-                   ("LunchTime", self._updateLunchTimeItem),
-                   ("LastSeen", self._updateLastSeenItem)]
-        if get_settings().get_advanced_gui_enabled():
-            columns.append(("SendTo", self._updateSendToItem))
-        super(MembersTableModel, self).__init__(dataSource, columns)
-        
-        self.ipColIndex = 0
-        self.nameColIndex = 1
-        self.lunchTimeColIndex = 2
-        self.lastSeenColIndex = 3
-        self.sendToColIndex = 4
-        
-        self.nameKey= u'name'
-        self.lunchBeginKey = u"next_lunch_begin"
-        self.lunchEndKey = u"next_lunch_end"
-        
-        # Called before server is running, no need to lock here
-        infoDicts = self.dataSource.get_peer_info()
-        for ip in self.dataSource.get_members():
-            infoDict = None
-            if ip in infoDicts:
-                infoDict = infoDicts[ip]
-            self.appendContentRow(ip, infoDict)
-            
-        self.itemChanged.connect(self.itemChangedSlot)
-
-    def _updateIpItem(self, ip, _, item):
-        item.setData(QVariant(ip), Qt.DisplayRole)
-
-    def _updateNameItem(self, ip, infoDict, item):
-        if self.nameKey in infoDict:
-            item.setText(infoDict[self.nameKey])
-        else:
-            item.setText(ip)
-        
-        
-    def removeRow(self, row, parent = QModelIndex()):
-        # ensure no timer is active after a row has been removed
-        item = self.item(row, self.lunchTimeColIndex)
-        timer = item.data(self.LUNCH_TIME_TIMER_ROLE)
-        if timer != None:
-            timer.stop()
-            timer.deleteLater()
-        return TableModelBase.removeRow(self, row, parent)
-        
-    def _updateLunchTimeItem(self, ip, infoDict, item):
-        oldTimer = item.data(self.LUNCH_TIME_TIMER_ROLE)
-        if oldTimer != None:
-            oldTimer.stop()
-            oldTimer.deleteLater()
-        if self.lunchBeginKey in infoDict and self.lunchEndKey in infoDict:
-            item.setText(infoDict[self.lunchBeginKey]+"-"+infoDict[self.lunchEndKey])
-            try:
-                beginTime = datetime.strptime(infoDict[self.lunchBeginKey], lunch_settings.LUNCH_TIME_FORMAT)
-                beginTime = beginTime.replace(year=2000)
-                item.setData(QVariant(time.mktime(beginTime.timetuple())), self.SORT_ROLE)
-                
-                timeDifference = getTimeDifference(infoDict[self.lunchBeginKey],infoDict[self.lunchEndKey])
-                if timeDifference != None:
-                    if timeDifference > 0:
-                        item.setData(QColor(0, 255, 0), Qt.DecorationRole)
-                    else:
-                        item.setData(QColor(255, 0, 0), Qt.DecorationRole)
-                    
-                    if timeDifference != 0:
-                        timer = QTimer(item.model())
-                        timer.timeout.connect(partial(self._updateLunchTimeItem, ip, infoDict, item))
-                        timer.setSingleShot(True)
-                        timer.start(abs(timeDifference))
-            except ValueError:
-                log_debug("Ignoring illegal lunch time:", infoDict[self.lunchBeginKey])
-        else:
-            item.setData(QVariant(-1), self.SORT_ROLE)
-        
-    def _updateLastSeenItem(self, ip, _, item):
-        intValue = -1
-        if ip in self.dataSource.get_member_timeout():
-            intValue = int(time.time()-self.dataSource.get_member_timeout()[ip])
-        item.setData(QVariant(intValue), Qt.DisplayRole)
-    
-    def _updateSendToItem(self, ip, _, item):
-        checkstate = Qt.Unchecked if ip in self.dataSource.dontSendTo else Qt.Checked
-        item.setCheckState(checkstate)
-        item.setCheckable(True)
-        
-    """ --------------------- SLOTS ---------------------- """
-    
-    @pyqtSlot()
-    def updateTimeouts(self):
-        self.updateColumn(self.lastSeenColIndex)
-
-    def itemChangedSlot(self, item):
-        row = item.index().row()
-        column = item.index().column()
-        if column == self.sendToColIndex:
-            ip = self.keys[row]
-            sendTo = item.checkState() == Qt.Checked
-            if sendTo and ip in self.dataSource.dontSendTo:
-                self.dataSource.dontSendTo.remove(ip)
-            elif not sendTo and ip not in self.dataSource.dontSendTo:
-                self.dataSource.dontSendTo.add(ip)
-
-class ExtendedMembersModel(TableModelBase):
-    def __init__(self, dataSource):
-        super(ExtendedMembersModel, self).__init__(dataSource, None)
-        self.headerNames = []
-        self.mutex = QMutex()
-        self.updateModel(self.dataSource.get_peer_info())
-    
-    """ may be called concurrently """
-    @pyqtSlot(dict)
-    def updateModel(self, member_info, update = False, prepend = False):
-        table_headers = set()
-        table_headers.add(u"ip") 
-        for infodict in member_info.itervalues():
-            for k in infodict:
-                if not k in table_headers:
-                    table_headers.add(convert_string(k))
-        
-        # update columns labels
-        for aHeaderName in table_headers:
-            if not aHeaderName in self.headerNames:
-                self.setHorizontalHeaderItem(len(self.headerNames), QStandardItem(aHeaderName))
-                self.headerNames.append(aHeaderName)
-
-        for ip in member_info:
-            if update:
-                if ip in self.keys:
-                    index = self.keys.index(ip)
-                    self.updateRow(ip, member_info[ip], index)
-            elif prepend:
-                self.prependContentRow(ip, member_info[ip])
-            else:
-                self.appendContentRow(ip, member_info[ip])
-    
-    def callItemInitializer(self, column, key, data, item):
-        headerName = self.headerNames[column]
-        text = ""
-        if headerName == "ip":
-            text = key
-        elif headerName in data:
-            text = data[headerName]
-        item.setData(QVariant(text), Qt.DisplayRole)
-        
-    def externalRowAppended(self, key, data):
-        key = convert_string(key)
-        data = self._checkDict(data)
-        self.updateModel({key: data})
-        
-    def externalRowPrepended(self, key, data):
-        key = convert_string(key)
-        data = self._checkDict(data)
-        self.updateModel({key: data}, prepend=True)
-    
-    def externalRowUpdated(self, key, data):
-        key = convert_string(key)
-        data = self._checkDict(data)
-        self.updateModel({key: data}, update=True)
-
-class MessagesTableModel(TableModelBase):
-    def __init__(self, dataSource):
-        columns = [("Time", self._updateTimeItem),
-                   ("Sender", self._updateSenderItem),
-                   ("Message", self._updateMessageItem)]
-        super(MessagesTableModel, self).__init__(dataSource, columns)
-        
-        self.setSortRole(self.SORT_ROLE)
-        # called before server is running, no need to lock here
-        for aMsg in self.dataSource.getMessages():
-            self.appendContentRow(aMsg[0], [aMsg[1], aMsg[2]])
-            
-    def _updateTimeItem(self, mTime, _, item):
-        item.setData(QVariant(time.strftime("%d.%m.%Y %H:%M:%S", mTime)), Qt.DisplayRole)
-        item.setData(QVariant(time.mktime(mTime)), self.SORT_ROLE)
-    
-    def _updateSenderItem(self, _, m, item):
-        data = QVariant(self.dataSource.memberName(convert_string(m[0])))
-        item.setData(data, Qt.DisplayRole)
-    
-    def _updateMessageItem(self, _, m, item):
-        data = QVariant(m[1])
-        item.setData(data, Qt.DisplayRole)
-    
-    """ --------------------- SLOTS ---------------------- """
-    
-    @pyqtSlot()
-    def updateSenders(self):
-        self.dataSource.lockMembers()
-        try:
-            for row, aMsg in enumerate(self.dataSource.getMessages()):
-                self.updateItem(aMsg[0], [aMsg[1], aMsg[2]], row, 1)
-        finally:
-            self.dataSource.releaseMembers()

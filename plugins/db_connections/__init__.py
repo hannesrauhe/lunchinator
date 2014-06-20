@@ -1,15 +1,17 @@
 from lunchinator.iface_plugins import iface_general_plugin
-from lunchinator import get_server, get_settings, log_error, log_debug, log_warning
-from threading import Lock
+from lunchinator import get_plugin_manager, get_settings, log_error, log_debug, \
+    log_warning, log_exception, get_notification_center
+from lunchinator.logging_mutex import loggingMutex
+import logging
 
 class db_connections(iface_general_plugin):
     STANDARD_PLUGIN = "SQLite Connection"
     
     def __init__(self):
         super(db_connections, self).__init__()
-        self.plugin_manager = get_server().plugin_manager
+        self.plugin_manager = get_plugin_manager()
         
-        self.conn_properties_lock = Lock()
+        self.conn_properties_lock = loggingMutex("db_conn_properties", logging=get_settings().get_verbose())
         self.open_connections = {}
         self.conn_properties = {}
         self.conn_plugins = {} #will be filled later (init plugin obejcts)        
@@ -39,8 +41,9 @@ class db_connections(iface_general_plugin):
                     if p and p.plugin_object.is_activated:
                         self.conn_plugins[conn_name] = p.plugin_object
                     else:
-                        raise Exception("DB Connection %s requires plugin of type \
+                        log_error("DB Connection %s requires plugin of type \
                         %s which is not available"%(conn_name,plugin_type))
+                        continue
                     p_options = p.plugin_object.options
                     for k,v in p_options.items():
                         '''this takes care of the option-type'''
@@ -49,6 +52,7 @@ class db_connections(iface_general_plugin):
                                                               k)
                     p_options["plugin_type"]=plugin_type
                     self.conn_properties[conn_name] = p_options.copy()
+                get_notification_center().emitDBConnReady()
             except:
                 raise
             finally:
@@ -68,23 +72,27 @@ class db_connections(iface_general_plugin):
         return ob,prop
     
     def deactivate(self):
-        for conn in self.open_connections.values():
-            conn.close()   
+        for name,conn in self.open_connections.iteritems():
+            try:
+                conn.close()
+            except:
+                log_exception("While deactivating: Could not close connection %s", name)   
         iface_general_plugin.deactivate(self)
     
-    def getDBConnection(self,name=""):
+    def getDBConnection(self,name=""):        
+        """returns tuple (connection_handle, connection_type) of the given connection"""
         if len(name)==0:
             name = get_settings().get_default_db_connection()
         
         if name not in get_settings().get_available_db_connections():
-            return None
+            return None, None
         
+        ob, props = self.getProperties(name)
         if name not in self.open_connections:
-            ob, props = self.getProperties(name)
             log_debug("DB Connections: opening connection %s of type %s"%(name,props["plugin_type"]))
             self.open_connections[name] = ob.create_connection(props)
         
-        return self.open_connections[name]
+        return self.open_connections[name], props["plugin_type"]
     
     def create_options_widget(self, parent):
         from db_connections.DbConnOptions import DbConnOptions
@@ -97,7 +105,7 @@ class db_connections(iface_general_plugin):
 
         return self.conn_options_widget
     
-    def save_options_widget_data(self):
+    def save_options_widget_data(self, **kwargs):
         new_props = self.conn_options_widget.get_connection_properties()
         self.config_file = get_settings().get_config_file()
         '''@todo Delete connections here'''
@@ -126,10 +134,10 @@ class db_connections(iface_general_plugin):
                 self.conn_properties[conn_name] = props
                 
                 if conn_name in self.open_connections:
-                    '''@todo: handle plugins that use this connection (not sure if 
-                    necessary, will be re-opened automatically)'''
                     conn = self.open_connections.pop(conn_name)
                     conn.close()
+                    get_notification_center().emitDBSettingChanged(conn_name)
+                    get_notification_center().emitRestartRequired("DB Settings were changed - you should restart")
                 
         get_settings().set_available_db_connections(self.conn_properties.keys())
         self.conn_properties_lock.release()

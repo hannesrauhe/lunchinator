@@ -5,7 +5,7 @@
 #no guarantees that you reach everyone in the peer group
 
 import sys
-from lunchinator import get_server
+from lunchinator import get_server, get_settings
 
 if __name__ == "__main__":
     msg = "lunch"
@@ -17,7 +17,7 @@ if __name__ == "__main__":
         print cli,":",
     print msg
     
-    get_server().set_plugins_enabled(False)
+    get_settings().set_plugins_enabled(False)
     recv_nr=get_server().perform_call(msg,client=cli)
     print "sent to",recv_nr,"clients"
     

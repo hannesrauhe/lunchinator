@@ -1,12 +1,12 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import log_exception, get_settings, get_server
-import urllib2,sys
+from lunchinator import get_server, get_notification_center, get_peers,\
+    convert_string
+from lunchinator.utilities import msecUntilNextMinute
     
 class members_table(iface_gui_plugin):
     def __init__(self):
         super(members_table, self).__init__()
         self.membersTable = None
-        self.timeoutTimer = None
     
     def activate(self):
         iface_gui_plugin.activate(self)
@@ -14,56 +14,106 @@ class members_table(iface_gui_plugin):
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
         
-    def updateTimeoutsInMembersTables(self):
-        self.membersProxyModel.setDynamicSortFilter(False)
-        self.membersModel.updateTimeouts()
-        self.membersProxyModel.setDynamicSortFilter(True)    
+    def get_displayed_name(self):
+        return "Peers"
         
     def addHostClicked(self, text):
         if get_server().controller != None:
             get_server().controller.addHostClicked(text)        
     
-    def destroy_widget(self):
-        iface_gui_plugin.destroy_widget(self)
-        
-        self.timeoutTimer.timeout.disconnect(self.updateTimeoutsInMembersTables)
-        self.timeoutTimer.stop()
-        get_server().controller.memberAppendedSignal.disconnect(self.membersModel.externalRowAppended)
-        get_server().controller.memberUpdatedSignal.disconnect(self.membersModel.externalRowUpdated)
-        get_server().controller.memberRemovedSignal.disconnect(self.membersModel.externalRowRemoved)
-        self.membersTable = None
-        self.membersModel = None
-        self.membersProxyModel = None
-        self.timeoutTimer = None
-    
     def create_widget(self, parent):
         from PyQt4.QtGui import QSortFilterProxyModel
         from PyQt4.QtCore import QTimer, Qt
-        from lunchinator.table_models import MembersTableModel
+        from members_table.members_table_model import MembersTableModel
         from lunchinator.table_widget import TableWidget
         
-        self.membersTable = TableWidget(parent, "Add Host", self.addHostClicked, sortedColumn=2, placeholderText="Enter hostname")
+        class NameSortProxyModel(QSortFilterProxyModel):
+            def lessThan(self, left, right):
+                # compare by lunch time
+                ldata = self.sourceModel().data(left, MembersTableModel.SORT_ROLE)
+                rdata = self.sourceModel().data(right, MembersTableModel.SORT_ROLE)
+                if ldata != rdata:
+                    return super(NameSortProxyModel, self).lessThan(left, right)
+                
+                # compare by name, case sensitive
+                lindex = self.sourceModel().index(left.row(), MembersTableModel.NAME_COL_INDEX)
+                rindex = self.sourceModel().index(right.row(), MembersTableModel.NAME_COL_INDEX)
+                
+                res = super(NameSortProxyModel, self).lessThan(lindex, rindex)
+                if res or super(NameSortProxyModel, self).lessThan(rindex, lindex):
+                    return res
+                
+                # compare by name, byte order
+                ls = convert_string(self.sourceModel().data(lindex, MembersTableModel.SORT_ROLE).toString())
+                rs = convert_string(self.sourceModel().data(rindex, MembersTableModel.SORT_ROLE).toString())
+                if ls != rs:
+                    return ls < rs
+                
+                # compare by peer ID 
+                return self.sourceModel().keys[left.row()] < self.sourceModel().keys[right.row()]
+        
+        self.membersTable = TableWidget(parent, "Add Host", self.addHostClicked, sortedColumn=MembersTableModel.LUNCH_TIME_COL_INDEX, placeholderText="Enter hostname")
         
         # initialize members table
-        self.membersModel = MembersTableModel(get_server())
-        self.membersProxyModel = QSortFilterProxyModel(self.membersTable)
+        self.membersModel = MembersTableModel(get_peers())
+        self.membersProxyModel = NameSortProxyModel(self.membersTable)
         self.membersProxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
         self.membersProxyModel.setSortRole(MembersTableModel.SORT_ROLE)
         self.membersProxyModel.setDynamicSortFilter(True)
         self.membersProxyModel.setSourceModel(self.membersModel)
         self.membersTable.setModel(self.membersProxyModel)
         
-        self.timeoutTimer = QTimer(self.membersModel)
-        self.timeoutTimer.setInterval(1000)
-        self.timeoutTimer.timeout.connect(self.updateTimeoutsInMembersTables)
-        self.timeoutTimer.start(1000)  
+        self.membersTable.setColumnWidth(MembersTableModel.NAME_COL_INDEX, 150)
+        self.membersTable.setColumnWidth(MembersTableModel.GROUP_COL_INDEX, 150)
         
-        get_server().controller.memberAppendedSignal.connect(self.membersModel.externalRowAppended)
-        get_server().controller.memberUpdatedSignal.connect(self.membersModel.externalRowUpdated)
-        get_server().controller.memberRemovedSignal.connect(self.membersModel.externalRowRemoved)
+        get_notification_center().connectPeerAppended(self.membersModel.externalRowAppended)
+        get_notification_center().connectPeerUpdated(self.membersModel.externalRowUpdated)
+        get_notification_center().connectPeerRemoved(self.membersModel.externalRowRemoved)
+        
+        get_notification_center().connectMemberAppended(self._updatePeer)
+        get_notification_center().connectMemberRemoved(self._updatePeer)
+        
+        self._lunchTimeColumnTimer = QTimer(self.membersModel)
+        self._lunchTimeColumnTimer.timeout.connect(self._startSyncedTimer)
+        self._lunchTimeColumnTimer.start(msecUntilNextMinute())
         
         return self.membersTable
+
+    def _updatePeer(self, peerID, infoDict=None):
+        peerID = convert_string(peerID)
+        if infoDict == None:
+            infoDict = get_peers().getPeerInfo(pID=peerID)
+        
+        if infoDict == None:
+            #this happens when a peer that is also a member is removed 
+            #-> the peer is not there anymore when the member removed signal arrives
+            return
+        
+        self.membersModel.externalRowUpdated(peerID, infoDict)
     
+    def _startSyncedTimer(self):
+        self.membersModel.updateLunchTimeColumn()
+        self._lunchTimeColumnTimer.timeout.disconnect(self._startSyncedTimer)
+        self._lunchTimeColumnTimer.timeout.connect(self.membersModel.updateLunchTimeColumn)
+        self._lunchTimeColumnTimer.start(60000)
+
+    def destroy_widget(self):
+        iface_gui_plugin.destroy_widget(self)
+        
+        get_notification_center().disconnectPeerAppended(self.membersModel.externalRowAppended)
+        get_notification_center().disconnectPeerUpdated(self.membersModel.externalRowUpdated)
+        get_notification_center().disconnectPeerRemoved(self.membersModel.externalRowRemoved)
+
+        get_notification_center().disconnectMemberAppended(self._updatePeer)
+        get_notification_center().disconnectMemberRemoved(self._updatePeer)
+        
+        self._lunchTimeColumnTimer.stop()
+        self._lunchTimeColumnTimer.deleteLater()
+
+        self.membersTable = None
+        self.membersModel = None
+        self.membersProxyModel = None
+        
     def add_menu(self,menu):
         pass
 
