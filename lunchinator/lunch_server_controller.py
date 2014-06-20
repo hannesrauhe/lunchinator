@@ -150,7 +150,10 @@ class LunchServerController(object):
         if get_settings().get_plugins_enabled():
             for pluginInfo in get_plugin_manager().getAllPlugins():
                 if pluginInfo.plugin_object.is_activated:
-                    pluginInfo.plugin_object.deactivate()
+                    try:
+                        get_plugin_manager().deactivatePluginByName(pluginInfo.name, pluginInfo.category)
+                    except:
+                        log_exception("An error occured while deactivating %s"%pluginInfo.name)
         get_notification_center().disconnectPluginActivated(self._checkSendInfoDict)
         get_notification_center().disconnectPluginDeactivated(self._checkSendInfoDict)
         get_notification_center().finish()
