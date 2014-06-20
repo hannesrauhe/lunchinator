@@ -30,7 +30,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             # user clicked on "Install GPG"
             return self._installGPG()
         
-        self._setStatus("Checking for Update...")
+        self._setStatus("Checking %s for Update..."%self._urlBase)
         
         if self._getCheckURLBase() == None:
             self._setStatus("Auto Update does not work on your OS yet.", True)

@@ -30,4 +30,3 @@ class db_SQLite(iface_db_plugin):
             raise
         
         return newconn
-            
