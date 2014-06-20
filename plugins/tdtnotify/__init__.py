@@ -66,7 +66,6 @@ class tdtnotify(iface_called_plugin):
     ############# On background thread ###############
     
     def check(self, restart=True):
-        print "check"
         with self.lock:
             success, http_result = self.download()
             if success:
