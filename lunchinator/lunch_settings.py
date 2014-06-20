@@ -145,6 +145,7 @@ class lunch_settings(object):
         self._available_db_connections = u"Standard"  # list separated by ;; (like yapsy)
         self._proxy = u""
         self._warn_if_members_not_ready = True
+        self._notification_if_everybody_ready = False
                 
         #also in config, but hidden
         self._ID = u""
@@ -453,11 +454,18 @@ class lunch_settings(object):
         tdd = getTimeDelta(self.get_default_lunch_end())
         
         return max(tdn, tdd)
+    
     def get_warn_if_members_not_ready(self):
         return self._warn_if_members_not_ready
     @gui_setting(u"Warn if members are not ready for lunch")
     def set_warn_if_members_not_ready(self, new_value):
         self._warn_if_members_not_ready = new_value
+        
+    def get_notification_if_everybody_ready(self):
+        return self._notification_if_everybody_ready
+    @gui_setting(u"Notification if everybody is ready for lunch")
+    def set_notification_if_everybody_ready(self, new_value):
+        self._notification_if_everybody_ready = new_value
     
     def get_alarm_begin_time(self):
         return self._alarm_begin_time

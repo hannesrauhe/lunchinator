@@ -277,7 +277,7 @@ def getTimeDifference(begin, end):
 
 def msecUntilNextMinute():
     now = datetime.now()
-    nextMin = now.replace(second=0, microsecond=0) + timedelta(minutes=1, seconds=1)
+    nextMin = now.replace(second=0, microsecond=0) + timedelta(minutes=1, milliseconds=100)
     td = nextMin - now
     return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
     

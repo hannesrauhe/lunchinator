@@ -13,7 +13,7 @@ from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
 from lunchinator.utilities import getPlatform, PLATFORM_MAC,\
-    getValidQtParent, restart, displayNotification
+    getValidQtParent, restart, displayNotification, msecUntilNextMinute
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 from lunchinator.notification_center_qt import NotificationCenterQt
 from lunchinator.notification_center import NotificationCenter
@@ -387,8 +387,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         get_notification_center().connectMemberUpdated(self._updateMemberStatus)
         get_notification_center().connectMemberRemoved(self._updateMemberStatus)
         self.memberStatusUpdateTimer = QTimer(self)
-        self.memberStatusUpdateTimer.timeout.connect(self._updateMemberStatus)
-        self.memberStatusUpdateTimer.start(60000)
+        self.memberStatusUpdateTimer.timeout.connect(self._startSyncedTimer)
+        self.memberStatusUpdateTimer.start(msecUntilNextMinute())
         
         anAction = menu.addAction('Call for lunch')
         anAction.triggered.connect(partial(self.sendMessageClicked, u'lunch', None))
@@ -438,6 +438,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         return menu
     
+    def _startSyncedTimer(self):
+        self._updateMemberStatus()
+        self.memberStatusUpdateTimer.timeout.disconnect(self._startSyncedTimer)
+        self.memberStatusUpdateTimer.timeout.connect(self._updateMemberStatus)
+        self.memberStatusUpdateTimer.start(60000)
+    
     def _updateMemberStatus(self):
         peers = get_server().getLunchPeers()
         readyMembers = peers.getReadyMembers()
@@ -468,6 +474,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
             status = u"%s ready, %s not ready for lunch." % (ready, notReady)
         if everybodyReady and not self._highlightPeersReady:
             self._highlightPeersReady = True
+            if get_settings().get_notification_if_everybody_ready():
+                displayNotification("Lunch Time", "Everybody is ready for lunch now", get_settings().get_resource("images", "lunchinator.png"))
             self._highlightIcon()
         elif not everybodyReady and self._highlightPeersReady:
             self._highlightPeersReady = False
