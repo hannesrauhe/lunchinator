@@ -51,8 +51,12 @@ class ChatWidget(QWidget):
         self._otherID = otherID
         
         self._otherName = otherName
+        
         self._ownIcon = QIcon(ownPicFile)
+        self._ownIconPath = ownPicFile
+        
         self._otherIcon = QIcon(otherPicFile)
+        self._otherIconPath = otherPicFile
         try:
             from PyQt4.QtGui import QCommonStyle, QStyle
             style = QCommonStyle()
@@ -151,13 +155,21 @@ class ChatWidget(QWidget):
         
     def getOwnIcon(self):
         return self._ownIcon    
-    def setOwnIcon(self, icon):
-        self._ownIcon = icon
+    
+    def getOwnIconPath(self):
+        return self._ownIconPath
+    def setOwnIconPath(self, iconPath):
+        self._ownIconPath = iconPath
+        self._ownIcon = QIcon(iconPath)
 
     def getOtherIcon(self):
         return self._otherIcon        
-    def setOtherIcon(self, icon):
-        self._otherIcon = icon
+    
+    def getOtherIconPath(self):
+        return self._otherIconPath
+    def setOtherIconPath(self, iconPath):
+        self._otherIconPath = iconPath
+        self._otherIcon = QIcon(iconPath)
         
     def getOtherName(self):
         return self._otherName

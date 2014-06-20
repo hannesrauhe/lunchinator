@@ -202,7 +202,7 @@ class private_messages(iface_gui_plugin):
             doc.setHtml(msgHTML)
             displayNotification(chatWindow.getChatWidget().getOtherName(),
                                 convert_string(doc.toPlainText()),
-                                chatWindow.getChatWidget().getOtherIcon())
+                                chatWindow.getChatWidget().getOtherIconPath())
         
         if u"id" in msgDict and msgDict[u"id"] != None:
             self._sendAnswer(otherID, msgDict)
