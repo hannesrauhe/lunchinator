@@ -58,12 +58,10 @@ version, version_info = compute_version()
 long_description = \
 '''A tool to call your colleagues for lunch.
 
-Support
-=======
+The lunchinator is a chat tool that can be used to send messages to everyone in the lunch group at once.
+Messages are delivered directly (not relayed via server): no internet connection is needed, hence the tool is especially suited for corporate networks.
 
-You may report bugs on the `bug tracker`_.
-
-.. _`bug tracker`: http://github.com/hannesrauhe/lunchinator/issues
+You may report bugs on the http://github.com/hannesrauhe/lunchinator/issues
 '''
 
 data_files = [('share/lunchinator/sounds', ['sounds/sonar.wav']),
@@ -141,7 +139,7 @@ setup(
     author_email =  'info@lunchinator.de',
     maintainer =     os.getenv('DEBFULLNAME'),
     maintainer_email = os.getenv('DEBEMAIL'),
-    license =       'BSD License',
+    license =       'GPLv3',
     packages =      ['lunchinator', 'lunchinator.cli'],
     scripts =       ['bin/lunchinator'],
     data_files =    data_files,
