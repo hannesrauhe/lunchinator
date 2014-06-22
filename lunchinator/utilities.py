@@ -2,8 +2,7 @@ import subprocess, sys, os, contextlib, json, shutil, socket
 from datetime import datetime, timedelta
 from lunchinator import log_exception, log_warning, log_debug, \
     get_settings, log_error
-from time import mktime
-import time
+import locale
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -145,6 +144,11 @@ def getGPG(secret=False):
         return None, None
     
     ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
+    
+    if not locale.getpreferredencoding():
+        # Fix for GnuPG on Mac
+        # TODO will this work on systems without English locale?
+        os.putenv("LANG", "en_US.UTF-8")
     
     try:
         gpg = None
