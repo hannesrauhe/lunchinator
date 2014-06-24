@@ -110,7 +110,7 @@ class ChatWidget(QWidget):
         if peerID == self._otherID:
             self._setOffline(u"PM_v" not in peerInfo)
     
-    def _peerRemoved(self, peerID, _peerInfo):
+    def _peerRemoved(self, peerID):
         if peerID == self._otherID:
             self._setOffline(True)
         
