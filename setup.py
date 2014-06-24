@@ -140,7 +140,7 @@ setup(
     maintainer =     os.getenv('DEBFULLNAME'),
     maintainer_email = os.getenv('DEBEMAIL'),
     license =       'GPLv3',
-    packages =      ['lunchinator', 'lunchinator.cli'],
+    packages =      ['lunchinator', 'lunchinator.cli', 'lunchinator.peer_actions'],
     scripts =       ['bin/lunchinator'],
     data_files =    data_files,
     cmdclass =      {'install': my_install},
