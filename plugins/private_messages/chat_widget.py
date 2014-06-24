@@ -90,7 +90,7 @@ class ChatWidget(QWidget):
         get_notification_center().connectPeerRemoved(self._peerRemoved)
         
         if get_peers():
-            self._setOffline(get_peers().isPeerID(self._otherID))
+            self._setOffline(not get_peers().isPeerID(pID=self._otherID))
         else:
             self._setOffline(True)
         
@@ -191,7 +191,7 @@ class ChatWidget(QWidget):
         return self._model.messageDelivered(msgID)
         
     def canClose(self):
-        return self.entry.isEnabled()
+        return not self._delivering
         
     def getOwnIcon(self):
         return self._ownIcon    
