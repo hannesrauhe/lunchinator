@@ -1,5 +1,6 @@
 import subprocess, sys, os, contextlib, json, shutil, socket
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta 
+from time import mktime, time, strftime
 from lunchinator import log_exception, log_warning, log_debug, \
     get_settings, log_error
 import locale
@@ -431,9 +432,9 @@ def formatTime(mTime):
     """Returns a human readable time representation given a struct_time"""
     dt = datetime.fromtimestamp(mktime(mTime))
     if dt.date() == datetime.today().date():
-        return time.strftime("Today %H:%M", mTime)
+        return strftime("Today %H:%M", mTime)
     elif dt.date() == (datetime.today() - timedelta(days=1)).date():
-        return time.strftime("Yesterday %H:%M", mTime)
+        return strftime("Yesterday %H:%M", mTime)
     elif dt.date().year == datetime.today().date().year:
-        return time.strftime("%b %d, %H:%M", mTime)
-    return time.strftime("%b %d %Y, %H:%M", mTime)
+        return strftime("%b %d, %H:%M", mTime)
+    return strftime("%b %d %Y, %H:%M", mTime)
