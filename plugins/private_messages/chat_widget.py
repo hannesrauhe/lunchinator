@@ -95,6 +95,9 @@ class ChatWidget(QWidget):
             self._setOffline(True)
         
     def _setOffline(self, offline):
+        if self._offline == offline:
+            return
+        
         self._offline = offline
         if offline:
             title = self._otherName + " (Offline)"
@@ -117,9 +120,11 @@ class ChatWidget(QWidget):
     def _checkEntryState(self):
         self.entry.setEnabled(not self._offline and not self._delivering)
         if self._offline:
-            self.entry.setText("Partner is offline")
+            self.entry.setText(u"Partner is offline")
         elif self._delivering:
-            self.entry.setText("Delivering...")
+            self.entry.setText(u"Delivering...")
+        else:
+            self.entry.setText(u"")
         
     def nextInFocusChain(self):
         return self.entry
