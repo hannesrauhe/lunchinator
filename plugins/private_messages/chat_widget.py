@@ -2,13 +2,14 @@ from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
     QFrame, QIcon, QHBoxLayout,\
     QLabel, QPixmap, QTextCharFormat, QTextCursor
 from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp
+
 from lunchinator import convert_string, get_settings, get_notification_center,\
     get_peers
 from lunchinator.history_line_edit import HistoryTextEdit
 from private_messages.chat_messages_view import ChatMessagesView
-from xml.etree import ElementTree
 from private_messages.chat_messages_model import ChatMessagesModel
-from cmath import rect
+
+from xml.etree import ElementTree
 from StringIO import StringIO
 
 class ChatWidget(QWidget):
@@ -173,6 +174,9 @@ class ChatWidget(QWidget):
                 return
         self.table.scrollTo(lastIndex)
         
+    def addTimeRow(self, rtime):
+        self._model.addTimeRow(rtime)
+        
     def addOwnMessage(self, msgID, msg, messageState=None, toolTip=None, scroll=True):
         self._model.addOwnMessage(msgID, msg, messageState, toolTip)
         self.entry.clear()
@@ -268,6 +272,7 @@ class ChatWidget(QWidget):
         return QSize(self.PREFERRED_WIDTH, sizeHint.height())
         
 if __name__ == '__main__':
+    from time import time
     from lunchinator.iface_plugins import iface_gui_plugin
     
     def createTable(window):
@@ -277,15 +282,19 @@ if __name__ == '__main__':
         tw.addOwnMessage(0, "foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten", ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED)
         tw.addOtherMessage("<a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a>")
         tw.addOtherMessage("foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh")
+        tw.addTimeRow(time())
         tw.addOtherMessage("foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh")
         tw.addOtherMessage("foo")
         tw.addOtherMessage("foo")
+        tw.addTimeRow(time())
         tw.addOtherMessage("<a href=\"mailto:info@lunchinator.de\">Lunchinator Mail</a>")
         tw.addOwnMessage(1, "bar", ChatMessagesModel.MESSAGE_STATE_ERROR)
         tw.addOwnMessage(2, "foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh")
         tw.addOtherMessage("foo")
         tw.addOtherMessage("foo")
         tw.addOwnMessage(3, "bar")
+        tw.addTimeRow(time())
+        
         return tw
         
     iface_gui_plugin.run_standalone(createTable)

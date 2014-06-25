@@ -31,6 +31,15 @@ class ChatMessagesModel(QStandardItemModel):
                         self._createMessageItem(msg, False),
                         self._createEmptyItem()])
         
+    def addTimeRow(self, rtime):
+        self.appendRow([self._createTimeItem(rtime), self._createTimeItem(rtime), self._createTimeItem(rtime)])
+        
+    def _createTimeItem(self, rtime):
+        item = QStandardItem()
+        item.setEditable(False)
+        item.setData(QVariant(rtime), Qt.DisplayRole)
+        return item
+        
     def _createIconItem(self, icon):
         item = QStandardItem()
         item.setEditable(False)

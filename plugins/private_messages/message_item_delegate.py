@@ -1,13 +1,15 @@
 from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QTextDocument,\
     QStyle, QAbstractTextDocumentLayout, QPalette,\
     QBrush, QColor, QLinearGradient, QPainter,\
-    QTextEdit, QFrame, QSizePolicy, QIcon
+    QTextEdit, QFrame, QSizePolicy, QIcon, QFont
 from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
-    QRectF, QSizeF, pyqtSignal, QModelIndex
+    QRectF, QSizeF, pyqtSignal, QModelIndex, QMetaType
 import webbrowser
 from PyQt4.Qt import QWidget
 from private_messages.chat_messages_model import ChatMessagesModel
 from lunchinator import log_warning
+from lunchinator.utilities import formatTime
+from time import localtime
 
 class ItemEditor(QTextEdit):
     def __init__(self, document, textSize, parent):
@@ -64,6 +66,8 @@ class MessageItemDelegate(QStyledItemDelegate):
         otherGradient.setColorAt(1, QColor(200, 200, 200))
         self._otherBrush = QBrush(otherGradient)
         self._otherPenColor = QColor(153, 153, 153)
+        
+        self._timeFont = QFont("default", 12, QFont.Bold)
         
         self.closeEditor.connect(self.editorClosing)
         
@@ -144,9 +148,31 @@ class MessageItemDelegate(QStyledItemDelegate):
         textPos += QPoint(xOffset, yOffset)
         return QRect(textPos, QSize(documentWidth, height))
     
+    def _paintTime(self, painter, option, modelIndex):
+        if modelIndex.column() != 1:
+            return
+        # total rect for us to paint in
+        textRect = option.rect
+        
+        rtime, _ok = modelIndex.data(Qt.DisplayRole).toDouble()
+        timeString = formatTime(localtime(rtime))
+        
+        painter.save()
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.translate(textRect.topLeft())
+        painter.setFont(self._timeFont)
+        textWidth = painter.fontMetrics().width(timeString)
+        painter.drawText((textRect.size().width() - textWidth) / 2, 13, timeString)
+        painter.restore()
+    
     def paint(self, painter, option1, modelIndex):
         option = QStyleOptionViewItemV4(option1)
         self.initStyleOption(option, modelIndex)
+        
+        if modelIndex.data(Qt.DisplayRole).type() == QMetaType.Double:
+            # this is a time item
+            self._paintTime(painter, option, modelIndex)
+            return
         
         text = QString(option.text)
         if not text:
@@ -259,15 +285,18 @@ class MessageItemDelegate(QStyledItemDelegate):
         return False
 
     def sizeHint(self, option1, index):
+        # option.rect is a zero rect
+        width = self.parent().columnWidth(index.column())
+        
+        if index.data(Qt.DisplayRole).type() == QMetaType.Double:
+            return QSize(width, 18)
+        
         option = QStyleOptionViewItemV4(option1)
         self.initStyleOption(option, index)
         
         if not option.text:
             iconSize = option.icon.actualSize(QSize(32, 32))
             return QSize(32, max(32, iconSize.height() + 4))
-        
-        # option.rect is a zero rect
-        width = self.parent().columnWidth(index.column())
         
         doc = QTextDocument()
         doc.setHtml(option.text)
