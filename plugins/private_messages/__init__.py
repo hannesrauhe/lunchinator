@@ -292,7 +292,7 @@ class private_messages(iface_gui_plugin):
             otherAvatar = get_settings().get_resource("images", "lunchinator.png")
         
         myName = get_settings().get_user_name()
-        myAvatar = get_settings().get_avatar_file()
+        myAvatar = os.path.join(get_settings().get_avatar_dir(), get_settings().get_avatar_file())
         if not os.path.exists(myAvatar):
             myAvatar = get_settings().get_resource("images", "me.png")
         
