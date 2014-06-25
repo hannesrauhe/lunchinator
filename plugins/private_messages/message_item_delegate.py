@@ -263,7 +263,8 @@ class MessageItemDelegate(QStyledItemDelegate):
         self.initStyleOption(option, index)
         
         if not option.text:
-            return super(MessageItemDelegate, self).sizeHint(option, index)
+            iconSize = option.icon.actualSize(QSize(32, 32))
+            return QSize(32, max(32, iconSize.height() + 4))
         
         # option.rect is a zero rect
         width = self.parent().columnWidth(index.column())
