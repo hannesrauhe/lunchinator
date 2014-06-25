@@ -162,8 +162,7 @@ class private_messages(iface_gui_plugin):
         if otherID in self._openChats:
             from private_messages.chat_widget import ChatWidget
             chatWindow = self._openChats[otherID]
-            # TODO add message time to model
-            chatWindow.getChatWidget().addOwnMessage(msgID, msgHTML, status, errorMsg)
+            chatWindow.getChatWidget().addOwnMessage(msgID, msgHTML, msgTime, status, errorMsg)
         
         try:
             self._getStorage().addOwnMessage(msgID, otherID, msgTime, status, msgHTML)
@@ -194,8 +193,7 @@ class private_messages(iface_gui_plugin):
         chatWindow = self.openChat(otherID, forceForeground=False)
         msgTime = time()
         
-        # TODO add message time to model
-        chatWindow.getChatWidget().addOtherMessage(msgHTML)
+        chatWindow.getChatWidget().addOtherMessage(msgHTML, msgTime)
         if not chatWindow.isActiveWindow():
             from PyQt4.QtGui import QTextDocument
             doc = QTextDocument()
@@ -266,9 +264,9 @@ class private_messages(iface_gui_plugin):
             # partner, ID, own, time, status, text
             ownMessage = row[2] != 0
             if ownMessage:
-                newWindow.getChatWidget().addOwnMessage(row[1], row[5], row[4], scroll=False)
+                newWindow.getChatWidget().addOwnMessage(row[1], row[5], row[3], row[4], scroll=False)
             else:
-                newWindow.getChatWidget().addOtherMessage(row[5], scroll=False)
+                newWindow.getChatWidget().addOtherMessage(row[5], row[3], scroll=False)
         newWindow.getChatWidget().scrollToEnd()
         return self._activateChat(newWindow)
         

@@ -44,6 +44,7 @@ class ChatWidget(QWidget):
     
     _URI_MATCHER=QRegExp(_URI_REGEX)
     _MAIL_MATCHER=QRegExp(_MAIL_REGEX)
+    _TIME_ROW_INTERVAL = 60*60 # once an hour
     
     sendMessage = pyqtSignal(unicode, unicode) # peer ID, message HTML
         
@@ -52,6 +53,7 @@ class ChatWidget(QWidget):
         
         self._offline = False
         self._delivering = False
+        self._lastTimeRow = 0
         
         self._otherID = otherID
         
@@ -177,8 +179,14 @@ class ChatWidget(QWidget):
     def addTimeRow(self, rtime):
         self._model.addTimeRow(rtime)
         
-    def addOwnMessage(self, msgID, msg, messageState=None, toolTip=None, scroll=True):
-        self._model.addOwnMessage(msgID, msg, messageState, toolTip)
+    def _checkTime(self, msgTime):
+        if msgTime - self._lastTimeRow > self._TIME_ROW_INTERVAL:
+            self.addTimeRow(msgTime)
+            self._lastTimeRow = msgTime
+        
+    def addOwnMessage(self, msgID, msg, msgTime, messageState=None, toolTip=None, scroll=True):
+        self._checkTime(msgTime)
+        self._model.addOwnMessage(msgID, msg, msgTime, messageState, toolTip)
         self.entry.clear()
         self._delivering = False
         self._checkEntryState()
@@ -186,8 +194,9 @@ class ChatWidget(QWidget):
         if scroll:
             self.scrollToEnd()
         
-    def addOtherMessage(self, msg, scroll=True):
-        self._model.addOtherMessage(msg)
+    def addOtherMessage(self, msg, msgTime, scroll=True):
+        self._checkTime(msgTime)
+        self._model.addOtherMessage(msg, msgTime)
         if scroll:
             self.scrollToEnd(force=False)
         
@@ -279,20 +288,38 @@ if __name__ == '__main__':
         ownIcon = get_settings().get_resource("images", "me.png")
         otherIcon = get_settings().get_resource("images", "lunchinator.png")
         tw = ChatWidget(window, "Me", "Other Guy", ownIcon, otherIcon, "ID")
-        tw.addOwnMessage(0, "foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten", ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED)
-        tw.addOtherMessage("<a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a>")
-        tw.addOtherMessage("foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh")
+        tw.addOwnMessage(0,
+                         "foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten",
+                         time(),
+                         ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED)
+        tw.addOtherMessage("<a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a>",
+                           time())
+        tw.addOtherMessage("foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh",
+                           time())
         tw.addTimeRow(time())
-        tw.addOtherMessage("foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh")
-        tw.addOtherMessage("foo")
-        tw.addOtherMessage("foo")
+        tw.addOtherMessage("foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh",
+                           time())
+        tw.addOtherMessage("foo",
+                           time())
+        tw.addOtherMessage("foo",
+                           time())
         tw.addTimeRow(time())
-        tw.addOtherMessage("<a href=\"mailto:info@lunchinator.de\">Lunchinator Mail</a>")
-        tw.addOwnMessage(1, "bar", ChatMessagesModel.MESSAGE_STATE_ERROR)
-        tw.addOwnMessage(2, "foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh")
-        tw.addOtherMessage("foo")
-        tw.addOtherMessage("foo")
-        tw.addOwnMessage(3, "bar")
+        tw.addOtherMessage("<a href=\"mailto:info@lunchinator.de\">Lunchinator Mail</a>",
+                           time())
+        tw.addOwnMessage(1,
+                         "bar",
+                         time(),
+                         ChatMessagesModel.MESSAGE_STATE_ERROR)
+        tw.addOwnMessage(2,
+                         "foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh",
+                         time())
+        tw.addOtherMessage("foo",
+                           time())
+        tw.addOtherMessage("foo",
+                           time())
+        tw.addOwnMessage(3,
+                         "bar",
+                         time())
         tw.addTimeRow(time())
         
         return tw
