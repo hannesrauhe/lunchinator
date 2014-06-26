@@ -9,6 +9,7 @@ class ChatMessagesModel(QStandardItemModel):
     STATUS_ICON_ROLE = Qt.UserRole + 1
     OWN_MESSAGE_ROLE = STATUS_ICON_ROLE + 1
     MESSAGE_STATE_ROLE = OWN_MESSAGE_ROLE + 1
+    MESSAGE_TIME_ROLE = MESSAGE_STATE_ROLE + 1
     
     OTHER_ICON_COLUMN = 0
     MESSAGE_COLUMN = 1
@@ -20,16 +21,25 @@ class ChatMessagesModel(QStandardItemModel):
         self.setColumnCount(3)
         self._idToRow = {}
 
-    def addOwnMessage(self, msgID, msg, messageState=None, toolTip=None):
+    def addOwnMessage(self, msgID, msg, msgTime, messageState=None, toolTip=None):
         self._idToRow[msgID] = self.rowCount()
         self.appendRow([self._createEmptyItem(),
-                        self._createMessageItem(msg, True, messageState, toolTip),
+                        self._createMessageItem(msg, msgTime, True, messageState, toolTip),
                         self._createIconItem(self._delegate.getOwnIcon())])
         
-    def addOtherMessage(self, msg):
+    def addOtherMessage(self, msg, msgTime):
         self.appendRow([self._createIconItem(self._delegate.getOtherIcon()),
-                        self._createMessageItem(msg, False),
+                        self._createMessageItem(msg, msgTime, False),
                         self._createEmptyItem()])
+        
+    def addTimeRow(self, rtime):
+        self.appendRow([self._createTimeItem(rtime), self._createTimeItem(rtime), self._createTimeItem(rtime)])
+        
+    def _createTimeItem(self, rtime):
+        item = QStandardItem()
+        item.setEditable(False)
+        item.setData(QVariant(rtime), Qt.DisplayRole)
+        return item
         
     def _createIconItem(self, icon):
         item = QStandardItem()
@@ -38,7 +48,7 @@ class ChatMessagesModel(QStandardItemModel):
         item.setData(QSize(32, 32), Qt.SizeHintRole)
         return item
         
-    def _createMessageItem(self, msg, ownMessage, messageState=None, toolTip=None):
+    def _createMessageItem(self, msg, ownMessage, messageTime, messageState=None, toolTip=None):
         item = QStandardItem()
         item.setEditable(True)
         item.setData(msg, Qt.DisplayRole)
@@ -47,6 +57,7 @@ class ChatMessagesModel(QStandardItemModel):
             messageState = self.MESSAGE_STATE_OK
             
         item.setData(QVariant(messageState), self.MESSAGE_STATE_ROLE)
+        item.setData(QVariant(messageTime), self.MESSAGE_TIME_ROLE)
         
         if messageState == self.MESSAGE_STATE_NOT_DELIVERED:
             item.setData(QVariant(self._delegate.getWarnIcon()), ChatMessagesModel.STATUS_ICON_ROLE)
