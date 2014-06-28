@@ -86,11 +86,11 @@ class LunchServerController(object):
         # TODO really get open port
         return get_settings().get_tcp_port()
     
-    def receiveFile(self, ip, fileSize, fileName, tcp_port):
+    def receiveFile(self, ip, fileSize, fileName, tcp_port, successFunc=None, errorFunc=None):
         if tcp_port == 0:
             tcp_port = get_settings().get_tcp_port()
         log_info("Receiving file of size %d on port %d"%(fileSize,tcp_port))
-        dr = DataReceiverThread(ip,fileSize,fileName,get_settings().get_tcp_port())
+        dr = DataReceiverThread(ip, fileSize, fileName, get_settings().get_tcp_port(), successFunc, errorFunc)
         dr.start()
     
     def sendFile(self, ip, fileOrData, otherTCPPort, isData = False):

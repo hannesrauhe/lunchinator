@@ -1,7 +1,7 @@
 import os, codecs, socket
 from copy import deepcopy
 from time import time
-from lunchinator import get_settings, log_warning, log_exception, log_debug, log_info, get_notification_center,\
+from lunchinator import get_settings, log_exception, log_debug, log_info, get_notification_center,\
     log_error
 from lunchinator.utilities import getTimeDifference
 from lunchinator.logging_mutex import loggingMutex
@@ -429,6 +429,12 @@ class LunchPeers(object):
                     log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
                 else:
                     log_debug("%s sent info - without new info" % ip)
+                    
+                if u"avatar" in old_info and u"avatar" in self._peer_info[ip] and \
+                   old_info[u"avatar"] != self._peer_info[ip][u"avatar"] and \
+                   not self.getAvatarOutdated(pIP=ip, lock=False):
+                    # avatar changed but we already have the picture
+                    get_notification_center().emitAvatarChanged(newPID, self._peer_info[ip][u"avatar"])
             
             own_group = get_settings().get_group()
             

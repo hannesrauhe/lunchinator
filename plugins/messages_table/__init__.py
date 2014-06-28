@@ -27,14 +27,18 @@ class messages_table(iface_gui_plugin):
             self._dailyTrigger.deleteLater()
             
         get_notification_center().disconnectMessagePrepended(self.messagesModel.messagePrepended)
-        get_notification_center().disconnectPeerAppended(self.messagesModel.updateSenders)
-        get_notification_center().disconnectPeerUpdated(self.messagesModel.updateSenders)
-        get_notification_center().disconnectPeerRemoved(self.messagesModel.updateSenders)
+        #get_notification_center().disconnectPeerAppended(self.messagesModel.updateSenders)
+        #get_notification_center().disconnectPeerUpdated(self.messagesModel.updateSenders)
+        #get_notification_center().disconnectPeerRemoved(self.messagesModel.updateSenders)
+        get_notification_center().disconnectDisplayedPeerNameChanged(self._displayedPeerNameChanged)
         
         self.messagesModel = None
         self.messagesTable = None
         
         iface_gui_plugin.destroy_widget(self)
+        
+    def _displayedPeerNameChanged(self, _pid, _newName, _infoDict):
+        self.messagesModel.updateSenders()
         
     def _updateDailyTrigger(self):
         now = datetime.now()
@@ -62,9 +66,10 @@ class messages_table(iface_gui_plugin):
         self.messagesTable.setColumnWidth(1, 90)
         
         get_notification_center().connectMessagePrepended(self.messagesModel.messagePrepended)
-        get_notification_center().connectPeerAppended(self.messagesModel.updateSenders)
-        get_notification_center().connectPeerUpdated(self.messagesModel.updateSenders)
-        get_notification_center().connectPeerRemoved(self.messagesModel.updateSenders)
+        #get_notification_center().connectPeerAppended(self.messagesModel.updateSenders)
+        #get_notification_center().connectPeerUpdated(self.messagesModel.updateSenders)
+        #get_notification_center().connectPeerRemoved(self.messagesModel.updateSenders)
+        get_notification_center().connectDisplayedPeerNameChanged(self.messagesModel.updateSenders)
         
         self._dailyTrigger = QTimer(parent)
         self._dailyTrigger.timeout.connect(self._updateTimes)

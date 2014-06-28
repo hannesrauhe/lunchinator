@@ -6,10 +6,11 @@ from time import strftime, localtime, time
 from cStringIO import StringIO
 
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
-    convert_string
+    convert_string, get_notification_center
 from lunchinator.logging_mutex import loggingMutex
 from collections import deque
 from threading import Timer
+from functools import partial
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -546,7 +547,15 @@ class lunch_server(object):
                 log_error("%s tried to send his avatar, but I don't know where to safe it" % (ip))
             
             if len(file_name):
-                self.controller.receiveFile(ip, file_size, file_name, tcp_port)
+                pID = self._peers.getPeerID(pIP=ip)
+                log_info("Receiving avatar from peer ID", pID, "IP", ip)
+                self.controller.receiveFile(ip,
+                                            file_size,
+                                            file_name,
+                                            tcp_port,
+                                            successFunc=partial(get_notification_center().emitAvatarChanged,
+                                                                pID,
+                                                                info[u"avatar"]))
             
         elif cmd == "HELO_REQUEST_AVATAR":
             # someone wants my pic 

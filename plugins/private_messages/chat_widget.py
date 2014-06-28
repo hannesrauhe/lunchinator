@@ -11,6 +11,7 @@ from private_messages.chat_messages_model import ChatMessagesModel
 
 from xml.etree import ElementTree
 from StringIO import StringIO
+import os
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -58,12 +59,8 @@ class ChatWidget(QWidget):
         self._otherID = otherID
         
         self._otherName = otherName
+        self._ownName = ownName
         
-        self._ownIcon = QIcon(ownPicFile)
-        self._ownIconPath = ownPicFile
-        
-        self._otherIcon = QIcon(otherPicFile)
-        self._otherIconPath = otherPicFile
         try:
             from PyQt4.QtGui import QCommonStyle, QStyle
             style = QCommonStyle()
@@ -80,17 +77,25 @@ class ChatWidget(QWidget):
         mainLayout = QVBoxLayout(self)
         mainLayout.setSpacing(0)
         
-        self._addTopLayout(ownName, mainLayout)
+        self._addTopLayout(mainLayout)
         mainLayout.addWidget(self.table)
         mainLayout.addWidget(self.entry)
         
+        # initialize GUI
+        self._updateOtherName()
+        self._updateOwnName()
+        self.setOwnIconPath(ownPicFile)
+        self.setOtherIconPath(otherPicFile)
+                
         # TODO option to change behavior
         self.entry.returnPressed.connect(self.eventTriggered)
         
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
         
         get_notification_center().connectPeerAppended(self._peerAppended)
+        get_notification_center().connectAvatarChanged(self._avatarChanged)
         get_notification_center().connectPeerRemoved(self._peerRemoved)
+        get_notification_center().connectDisplayedPeerNameChanged(self._displayedPeerNameChanged)
         
         if get_peers():
             self._setOffline(not get_peers().isPeerID(pID=self._otherID))
@@ -102,23 +107,51 @@ class ChatWidget(QWidget):
             return
         
         self._offline = offline
-        if offline:
+        self._updateOtherName()
+        
+    def _updateOtherName(self):
+        if self._offline:
             title = self._otherName + " (Offline)"
         else:
             title = self._otherName
             
-        self._otherPicLabel.setEnabled(not offline)
+        self._otherPicLabel.setEnabled(not self._offline)
         self._otherNameLabel.setText(title)
         self.parent().setWindowTitle(title)
         self._checkEntryState()
         
+    def _updateOwnName(self):
+        self._ownNameLabel.setText(self._ownName)
+        
     def _peerAppended(self, peerID, peerInfo):
+        peerID = convert_string(peerID)
         if peerID == self._otherID:
             self._setOffline(u"PM_v" not in peerInfo)
     
     def _peerRemoved(self, peerID):
+        peerID = convert_string(peerID)
         if peerID == self._otherID:
             self._setOffline(True)
+            
+    def _avatarChanged(self, peerID, newFile):
+        peerID = convert_string(peerID)
+        newFile = convert_string(newFile)
+        
+        if peerID == self._otherID:
+            self.setOtherIconPath(os.path.join(get_settings().get_avatar_dir(), newFile))
+        elif peerID == get_settings().get_ID():
+            self.setOwnIconPath(os.path.join(get_settings().get_avatar_dir(), newFile))
+            
+    def _displayedPeerNameChanged(self, pID, newName, _infoDict):
+        pID = convert_string(pID)
+        newName = convert_string(newName)
+        
+        if pID == self._otherID:
+            self._otherName = newName
+            self._updateOtherName()
+        elif pID == get_settings().get_ID():
+            self._ownName = newName
+            self._updateOwnName()
         
     def _checkEntryState(self):
         self.entry.setEnabled(not self._offline and not self._delivering)
@@ -138,22 +171,20 @@ class ChatWidget(QWidget):
     def focusInEvent(self, _event):
         self.entry.setFocus(Qt.OtherFocusReason)
         
-    def _addTopLayout(self, ownName, mainLayout):
+    def _addTopLayout(self, mainLayout):
         topWidget = QWidget(self)
         topLayout = QHBoxLayout(topWidget)
         topLayout.setContentsMargins(0, 0, 0, 0)
         
-        self._otherNameLabel = QLabel(self._otherName, topWidget)
+        self._otherNameLabel = QLabel(topWidget)
         self._otherPicLabel = QLabel(topWidget)
-        self._otherPicLabel.setPixmap(QPixmap(self._otherIconPath).scaled(24,24, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         topLayout.addWidget(self._otherPicLabel, 0, Qt.AlignLeft)
         topLayout.addWidget(self._otherNameLabel, 1, Qt.AlignLeft)
         
-        ownNameLabel = QLabel(ownName, topWidget)
-        ownPicLabel = QLabel(topWidget)
-        ownPicLabel.setPixmap(QPixmap(self._ownIconPath).scaled(24,24, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        topLayout.addWidget(ownNameLabel, 1, Qt.AlignRight)
-        topLayout.addWidget(ownPicLabel, 0, Qt.AlignRight)
+        self._ownNameLabel = QLabel(topWidget)
+        self._ownPicLabel = QLabel(topWidget)
+        topLayout.addWidget(self._ownNameLabel, 1, Qt.AlignRight)
+        topLayout.addWidget(self._ownPicLabel, 0, Qt.AlignRight)
         
         mainLayout.addWidget(topWidget)
         separator = QFrame(self)
@@ -219,6 +250,8 @@ class ChatWidget(QWidget):
     def setOwnIconPath(self, iconPath):
         self._ownIconPath = iconPath
         self._ownIcon = QIcon(iconPath)
+        self._ownPicLabel.setPixmap(QPixmap(self._ownIconPath).scaled(24,24, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        self._model.setOwnIcon(self._ownIcon)
 
     def getOtherIcon(self):
         return self._otherIcon        
@@ -228,6 +261,8 @@ class ChatWidget(QWidget):
     def setOtherIconPath(self, iconPath):
         self._otherIconPath = iconPath
         self._otherIcon = QIcon(iconPath)
+        self._otherPicLabel.setPixmap(QPixmap(self._otherIconPath).scaled(24,24, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        self._model.setOtherIcon(self._otherIcon)
         
     def getOtherName(self):
         return self._otherName

@@ -1,8 +1,6 @@
 from PyQt4.QtCore import QAbstractItemModel, Qt, QModelIndex, QVariant, QSize
 from lunchinator import get_server, get_peers
 import time
-from time import mktime
-from datetime import datetime, timedelta
 from lunchinator.utilities import formatTime
 
 class MessagesTableModel(QAbstractItemModel):

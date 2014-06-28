@@ -31,7 +31,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _initDone = pyqtSignal()
     _performCall = pyqtSignal(unicode, set, set)
     _sendFile = pyqtSignal(unicode, bytearray, int, bool)
-    _receiveFile = pyqtSignal(unicode, int, unicode, int)
+    _receiveFile = pyqtSignal(unicode, int, unicode, int, object, object)
     _processEvent = pyqtSignal(unicode, unicode, unicode, float, bool, bool)
     _processMessage = pyqtSignal(unicode, unicode, float, bool, bool)
     _updateRequested = pyqtSignal()
@@ -241,8 +241,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         assert senderIP != None
         return DataReceiverThread.getOpenPort(category="avatar%s" % senderIP)
     
-    def receiveFile(self, ip, fileSize, fileName, tcp_port):
-        self._receiveFile.emit(ip, fileSize, fileName, tcp_port)
+    def receiveFile(self, ip, fileSize, fileName, tcp_port, successFunc=None, errorFunc=None):
+        self._receiveFile.emit(ip, fileSize, fileName, tcp_port, successFunc, errorFunc)
     
     def sendFile(self, ip, fileOrData, otherTCPPort, isData=False):
         if not isData and type(fileOrData) == unicode:
@@ -645,11 +645,15 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def errorOnTransfer(self, _thread):
         log_error("Error receiving file")
     
-    @pyqtSlot(unicode, int, unicode, int)
-    def receiveFileSlot(self, addr, file_size, file_name, tcp_port):
+    @pyqtSlot(unicode, int, unicode, int, object, object)
+    def receiveFileSlot(self, addr, file_size, file_name, tcp_port, successFunc, errorFunc):
         addr = convert_string(addr)
         file_name = convert_string(file_name)
         dr = DataReceiverThread(self, addr, file_size, file_name, tcp_port, category="avatar%s" % addr)
+        if successFunc:
+            dr.successfullyTransferred.connect(lambda _thread, _path : successFunc())
+        if errorFunc:
+            dr.errorOnTransfer.connect(lambda _thread : errorFunc())
         dr.successfullyTransferred.connect(self.successfullyReceivedFile)
         dr.errorOnTransfer.connect(self.errorOnTransfer)
         dr.finished.connect(dr.deleteLater)
