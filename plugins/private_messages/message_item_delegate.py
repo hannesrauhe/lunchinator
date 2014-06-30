@@ -35,6 +35,23 @@ class ItemEditor(QTextEdit):
         
     def sizeHint(self):
         return self._textSize
+    
+class EditorWidget(QWidget):
+    def __init__(self, parent):
+        super(EditorWidget, self).__init__(parent)
+        self.setFocusPolicy(Qt.NoFocus)
+        self._itemEditor = None
+    
+    def focusInEvent(self, event):
+        if self._itemEditor != None:
+            event.ignore()
+            self._itemEditor.setFocus(event.reason())
+        else:
+            # should not happen
+            event.accept()
+        
+    def setItemEditor(self, itemEditor):
+        self._itemEditor = itemEditor
             
 class MessageItemDelegate(QStyledItemDelegate):
     def __init__(self, parentView):
@@ -99,8 +116,9 @@ class MessageItemDelegate(QStyledItemDelegate):
         
         messageRect = self._getMessageRect(option, doc, modelIndex, relativeToItem=True)
     
-        editorWidget = QWidget(parent)
+        editorWidget = EditorWidget(parent)
         editor = ItemEditor(doc, QSize(doc.idealWidth(), doc.size().height()), editorWidget)
+        editorWidget.setItemEditor(editor)
 
         pos = messageRect.topLeft()
         editor.move(pos)
