@@ -157,12 +157,13 @@ class private_messages(iface_gui_plugin):
         
         return self._openChat(myName, otherName, myAvatar, otherAvatar, pID)
 
-    def _delayedDelivery(self, otherID, msgID):
+    def _delayedDelivery(self, otherID, msgID, error, errorMessage):
         otherID = convert_string(otherID)
+        errorMessage = convert_string(errorMessage)
         
         if otherID in self._openChats:
             chatWindow = self._openChats[otherID]
-            chatWindow.getChatWidget().delayedDelivery(msgID)
+            chatWindow.getChatWidget().delayedDelivery(msgID, error, errorMessage)
 
     def _displayMessage(self, otherID, msgHTML, msgTime, msgDict):
         try:

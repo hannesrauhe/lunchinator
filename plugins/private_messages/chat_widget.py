@@ -45,7 +45,7 @@ class ChatWidget(QWidget):
     
     _URI_MATCHER=QRegExp(_URI_REGEX)
     _MAIL_MATCHER=QRegExp(_MAIL_REGEX)
-    _TIME_ROW_INTERVAL = 60*60 # once an hour
+    _TIME_ROW_INTERVAL = 10*60 # once every 10 minutes
     
     sendMessage = pyqtSignal(unicode, unicode) # peer ID, message HTML
         
@@ -212,16 +212,18 @@ class ChatWidget(QWidget):
                 return
         self.table.scrollTo(lastIndex)
         
-    def addTimeRow(self, rtime):
+    def addTimeRow(self, rtime, scroll=True):
         self._model.addTimeRow(rtime)
+        if scroll:
+            self.scrollToEnd(force=False)
         
-    def _checkTime(self, msgTime):
+    def _checkTime(self, msgTime, scroll):
         if msgTime - self._lastTimeRow > self._TIME_ROW_INTERVAL:
-            self.addTimeRow(msgTime)
+            self.addTimeRow(msgTime, scroll)
             self._lastTimeRow = msgTime
         
     def addOwnMessage(self, msgID, msg, msgTime, messageState=None, toolTip=None, scroll=True):
-        self._checkTime(msgTime)
+        self._checkTime(msgTime, scroll)
         self._model.addOwnMessage(msgID, msg, msgTime, messageState, toolTip)
         self.entry.clear()
         self._delivering = False
@@ -231,13 +233,13 @@ class ChatWidget(QWidget):
             self.scrollToEnd()
         
     def addOtherMessage(self, msg, msgTime, scroll=True):
-        self._checkTime(msgTime)
+        self._checkTime(msgTime, scroll)
         self._model.addOtherMessage(msg, msgTime)
         if scroll:
             self.scrollToEnd(force=False)
         
-    def delayedDelivery(self, msgID):
-        return self._model.messageDelivered(msgID)
+    def delayedDelivery(self, msgID, error, errorMessage):
+        return self._model.messageDelivered(msgID, error, errorMessage)
         
     def canClose(self):
         return not self._delivering

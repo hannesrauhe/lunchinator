@@ -86,16 +86,16 @@ class ChatMessagesModel(QStandardItemModel):
         item.setEditable(False)
         return item
     
-    def messageDelivered(self, msgID):
+    def messageDelivered(self, msgID, error, errorMessage):
         """Used for delayed deliveries"""
         if msgID in self._idToRow:
             row = self._idToRow[msgID]
             item = self.item(row, self.MESSAGE_COLUMN)
             state, _ = item.data(self.MESSAGE_STATE_ROLE).toInt()
             if state == self.MESSAGE_STATE_NOT_DELIVERED:
-                item.setData(QVariant(self.MESSAGE_STATE_OK), self.MESSAGE_STATE_ROLE)
-                item.setData(QVariant(), Qt.ToolTipRole)
-                item.setData(QVariant(), self.STATUS_ICON_ROLE)
+                item.setData(QVariant(self.MESSAGE_STATE_ERROR if error else self.MESSAGE_STATE_OK), self.MESSAGE_STATE_ROLE)
+                item.setData(QVariant(errorMessage) if errorMessage else QVariant(), Qt.ToolTipRole)
+                item.setData(QVariant(QVariant(self._delegate.getErrorIcon()) if error else QVariant()), self.STATUS_ICON_ROLE)
                 return True
         return False
         

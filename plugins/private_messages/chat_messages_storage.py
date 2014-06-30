@@ -24,7 +24,7 @@ class ChatMessagesStorage(object):
             select 1
             from private_messages p2
             where p1.partner = p2.partner and
-                  p2.status is null and
+                  p2.status = 0 and
                   p2.m_id > p1.m_id
         )
     """
@@ -71,8 +71,8 @@ class ChatMessagesStorage(object):
                          ChatMessagesModel.MESSAGE_STATE_OK,
                          msg)
         
-    def getMessageState(self, msgID):
-        rows = self._db.query("SELECT STATUS FROM PRIVATE_MESSAGES WHERE M_ID = ? AND IS_OWN_MESSAGE = ?", msgID, True)
+    def getMessageState(self, otherID, msgID):
+        rows = self._db.query("SELECT STATUS FROM PRIVATE_MESSAGES WHERE M_ID = ? AND PARTNER = ? AND IS_OWN_MESSAGE = ?", msgID, otherID, True)
         if len(rows) == 0:
             return None
         
