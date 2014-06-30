@@ -2,7 +2,7 @@ from PyQt4.QtGui import QStandardItemModel, QStandardItem
 from PyQt4.QtCore import Qt, QVariant, QSize
 
 class ChatMessagesModel(QStandardItemModel):
-    MESSAGE_STATE_OK = None
+    MESSAGE_STATE_OK = 0
     MESSAGE_STATE_NOT_DELIVERED = 1
     MESSAGE_STATE_ERROR = 2
     
@@ -56,7 +56,7 @@ class ChatMessagesModel(QStandardItemModel):
         item.setData(QSize(32, 32), Qt.SizeHintRole)
         return item
         
-    def _createMessageItem(self, msg, ownMessage, messageTime, messageState=None, toolTip=None):
+    def _createMessageItem(self, msg, messageTime, ownMessage, messageState=None, toolTip=None):
         item = QStandardItem()
         item.setEditable(True)
         item.setData(msg, Qt.DisplayRole)

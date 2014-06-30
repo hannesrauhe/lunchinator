@@ -14,7 +14,20 @@ class ChatMessagesStorage(object):
                                      STATUS INTEGER,
                                      MESSAGE TEXT,
                                      PRIMARY KEY(PARTNER, M_ID, IS_OWN_MESSAGE)
-                                    )"""
+                                    )
+    """
+                                    
+    _RECENT_UNDELIVERED_MESSAGES_SQL = """
+        select *
+        from private_messages p1
+        where p1.status = 1 and not exists (
+            select 1
+            from private_messages p2
+            where p1.partner = p2.partner and
+                  p2.status is null and
+                  p2.m_id > p1.m_id
+        )
+    """
     
     def __init__(self):
         self._lock = loggingMutex("chat messages storage", logging=get_settings().get_verbose())
@@ -74,6 +87,10 @@ class ChatMessagesStorage(object):
             return 0
         return rows[0][0] + 1
       
+    def containsMessage(self, partner, msgID):
+        rows = self._db.query("SELECT 1 FROM PRIVATE_MESSAGES WHERE PARTNER = ? AND M_ID = ?", partner, msgID)
+        return len(rows) > 0
+      
     def deleteMessagesForPartner(self, partner):
         if not partner:
             raise Exception("No partner provided")
@@ -83,3 +100,12 @@ class ChatMessagesStorage(object):
     def getPreviousMessages(self, partner, numMessages):
         return self._db.query("SELECT * FROM PRIVATE_MESSAGES WHERE PARTNER = ? ORDER BY TIME DESC LIMIT ?", partner, numMessages)
         
+    def getRecentUndeliveredMessages(self):
+        """Returns recent undelivered (outgoing) messages to all partners.
+        
+        For each partner, returns the most recent messages that have
+        not been delivered, if there does not exist a newer message that
+        has been delivered.
+        """
+        return self._db.query(self._RECENT_UNDELIVERED_MESSAGES_SQL)
+    

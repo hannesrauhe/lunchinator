@@ -1,15 +1,14 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import log_exception, get_settings, get_server,\
-    get_notification_center, log_debug, get_peers, log_error, convert_string,\
-    log_info, log_warning
-import urllib2, sys, os, json
-from datetime import datetime, timedelta
+from lunchinator import log_exception, convert_string, log_error, get_peers,\
+    get_settings
+from lunchinator.peer_actions import PeerAction
+from private_messages.chat_history_view import ChatHistoryWidget
+from private_messages.chat_messages_handler import ChatMessagesHandler
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
     displayNotification
-from time import time
-from lunchinator.peer_actions import PeerAction
-from private_messages.chat_messages_storage import ChatMessagesStorage
-from private_messages.chat_history_view import ChatHistoryWidget
+import os
+from lunchinator.logging_mutex import loggingMutex
+import sys
     
 class _OpenChatAction(PeerAction):
     def getName(self):
@@ -35,27 +34,31 @@ class private_messages(iface_gui_plugin):
         
     def activate(self):
         iface_gui_plugin.activate(self)
-        self._ackTimeout = self.hidden_options[u"ack_timeout"]
         self._peerActions = [_OpenChatAction()]
-        self._waitingForAck = {} # message ID : (otherID, time, message)
-        self._nextMessageID = None
+        
+        self._lock = loggingMutex("Private Messages", logging=get_settings().get_verbose())
         self._storage = None
+        
+        self._messagesHandler = ChatMessagesHandler(self, self.hidden_options[u"ack_timeout"])
+        self._messagesHandler.delayedDelivery.connect(self._delayedDelivery)
+        self._messagesHandler.displayOwnMessage.connect(self._displayOwnMessage)
+        self._messagesHandler.newMessage.connect(self._displayMessage)
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
+        self._messagesHandler.deleteLater()
+        self._messagesHandler = None
+        self._storage = None
+        self._lock = None
     
     def create_widget(self, parent):
-        from PyQt4.QtCore import QTimer
-        self._cleanupTimer = QTimer(parent)
-        self._cleanupTimer.timeout.connect(self._cleanup)
-        self._cleanupTimer.start(2000)
-        
         self._openChats = {} # mapping peer ID -> ChatDockWidget
         
         w = ChatHistoryWidget(parent)
         return w
     
     def destroy_widget(self):
+        self._cleanupThread.stop()
         iface_gui_plugin.destroy_widget(self)
         
     def extendsInfoDict(self):
@@ -67,182 +70,36 @@ class private_messages(iface_gui_plugin):
     def get_peer_actions(self):
         return self._peerActions
         
-    def _getStorage(self):
-        if self._storage == None:
-            self._storage = ChatMessagesStorage()
-            self._nextMessageID = self._storage.getNextMessageID()
-        return self._storage
-        
-    def _getNextMessageID(self):
-        if self._nextMessageID == None:
-            self._getStorage()
-        return self._nextMessageID
-        
-    def _cleanup(self):
-        curTime = time()
-        for msgID, tup in dict(self._waitingForAck).iteritems():
-            otherID, msgTime, msgHTML = tup
-            if curTime - msgTime > self._ackTimeout:
-                self._deliveryTimedOut(otherID, msgID, msgHTML)
-                del self._waitingForAck[msgID]
-    
-    def _deliveryTimedOut(self, otherID, msgID, msgHTML):
-        from private_messages.chat_messages_model import ChatMessagesModel
-        self._displayOwnMessage(otherID, msgID, msgHTML, ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED)
-        
-    def _checkDelayedAck(self, otherID, msgID):
-        from private_messages.chat_messages_model import ChatMessagesModel
-        currentState = self._getStorage().getMessageState(msgID)
-        if currentState == ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED:
-            try:
-                self._getStorage().updateMessageState(msgID, ChatMessagesModel.MESSAGE_STATE_OK)
-            except:
-                log_exception("Error updating message state")
-            
-            if otherID in self._openChats:
-                from private_messages.chat_widget import ChatWidget
-                chatWindow = self._openChats[otherID]
-                chatWindow.getChatWidget().delayedDelivery(msgID)
-            
-            return True
-        return False
-        
-    def _openChatWithMyself(self):
-        myID = get_settings().get_ID()
-        self.openChat(myID)
-    
     def process_event(self, cmd, value, _ip, peerInfo):
         if cmd.startswith(u"HELO_PM_ACK"):
             peerID = peerInfo[u"ID"]
-            self._processAck(peerID, value)
+            self._messagesHandler.processAck(peerID, value)
         elif cmd.startswith(u"HELO_PM_ERROR"):
             peerID = peerInfo[u"ID"]
-            self._processAck(peerID, value, error=True)
+            self._messagesHandler.processAck(peerID, value, error=True)
         elif cmd.startswith(u"HELO_PM"):
             peerID = peerInfo[u"ID"]
-            self._processMessage(peerID, value)
+            self._messagesHandler.processMessage(peerID, value)
     
-    def _processAck(self, ackPeerID, valueJSON, error=False):
-        try:
-            answerDict = json.loads(valueJSON)
-        except:
-            log_error("Error reading ACK message:", valueJSON)
-            return
+    def getStorage(self):
+        if self._storage == None:
+            with self._lock:
+                if self._storage == None:
+                    from private_messages.chat_messages_storage import ChatMessagesStorage
+                    self._storage = ChatMessagesStorage()
+        return self._storage
+    
+    def _displayOwnMessage(self, otherID, msgID, msgHTML, msgTime, status, errorMsg):
+        otherID = convert_string(otherID)
+        msgHTML = convert_string(msgHTML)
+        errorMsg = convert_string(errorMsg)
+        if not errorMsg:
+            errorMsg = None
         
-        if not u"id" in answerDict:
-            log_error("No message ID in ACK message:", valueJSON)
-            return
-        
-        msgID = answerDict[u"id"]
-        if not msgID in self._waitingForAck:
-            if self._checkDelayedAck(ackPeerID, msgID):
-                log_debug("Delayed delivery of message", msgID, "to", ackPeerID)
-                return
-            log_warning("Received ACK for message ID '%s' that I was not waiting for." % msgID)
-            return
-        
-        otherID, _time, msgHTML = self._waitingForAck.pop(msgID)
-        if otherID != ackPeerID:
-            log_warning("Received ACK from different peer ID than the message was sent to ('%s' != '%s')" % (otherID, ackPeerID))
-            return
-        
-        errorMsg = None
-        if error:
-            if u"err" in answerDict:
-                errorMsg = answerDict[u"err"]
-                log_warning("Message '%s' could not be processed by '%s': %s" % (msgID, otherID, errorMsg))
-            else:
-                log_warning("Message '%s' could not be processed by '%s'" % (msgID, otherID))
-                
-        from private_messages.chat_messages_model import ChatMessagesModel
-        self._displayOwnMessage(otherID, msgID, msgHTML, ChatMessagesModel.MESSAGE_STATE_ERROR if error else ChatMessagesModel.MESSAGE_STATE_OK, errorMsg)
-        
-    def _displayOwnMessage(self, otherID, msgID, msgHTML, status, errorMsg=None):
-        msgTime = time()
         if otherID in self._openChats:
             from private_messages.chat_widget import ChatWidget
             chatWindow = self._openChats[otherID]
             chatWindow.getChatWidget().addOwnMessage(msgID, msgHTML, msgTime, status, errorMsg)
-        
-        try:
-            self._getStorage().addOwnMessage(msgID, otherID, msgTime, status, msgHTML)
-        except:
-            log_exception("Error storing own message")
-    
-    def _processMessage(self, otherID, msgDictJSON):
-        try:
-            msgDict = json.loads(msgDictJSON)
-        except:
-            self._sendAnswer(otherID, {}, "Error loading message: %s" % msgDictJSON)
-            return
-        
-        if not u"data" in msgDict:
-            self._sendAnswer(otherID, msgDict, u"Message does not contain data:%s" % msgDict)
-            return
-        
-        if u"format" in msgDict:
-            if msgDict[u"format"] == u"html":
-                msgHTML = msgDict[u"data"]
-            else:
-                self._sendAnswer(otherID, msgDict, u"Unknown message format: %s" % msgDict[u"format"])
-                return
-        else:
-            log_info("Message without format. Assuming plain text or HTML.")
-            msgHTML = msgDict[u"data"]
-        
-        chatWindow = self.openChat(otherID, forceForeground=False)
-        msgTime = time()
-        
-        chatWindow.getChatWidget().addOtherMessage(msgHTML, msgTime)
-        if not chatWindow.isActiveWindow():
-            from PyQt4.QtGui import QTextDocument
-            doc = QTextDocument()
-            doc.setHtml(msgHTML)
-            displayNotification(chatWindow.getChatWidget().getOtherName(),
-                                convert_string(doc.toPlainText()),
-                                chatWindow.getChatWidget().getOtherIconPath())
-        
-        if u"id" in msgDict and msgDict[u"id"] != None:
-            self._sendAnswer(otherID, msgDict)
-            try:
-                self._getStorage().addOtherMessage(msgDict[u"id"], otherID, msgTime, msgHTML)
-            except:
-                log_exception("Error storing partner message")
-        else:
-            log_warning("Message has no ID, cannot store or send answer.")
-        
-    def _sendAnswer(self, otherID, msgDict, errorMsg=None):
-        if u"id" not in msgDict:
-            if errorMsg:
-                log_error(errorMsg)
-            log_debug("Message has no ID, cannot send answer.")
-            return
-        
-        answerDict = {u"id": msgDict[u"id"]}
-        if not errorMsg:
-            get_server().call("HELO_PM_ACK " + json.dumps(answerDict), peerIDs=[otherID])
-        else:
-            answerDict[u"err"] = errorMsg 
-            log_error(errorMsg)
-            get_server().call("HELO_PM_ERROR " + json.dumps(answerDict), peerIDs=[otherID])  
-    
-    def _sendMessage(self, otherID, msgHTML):
-        otherID = convert_string(otherID)
-        msgHTML = convert_string(msgHTML)
-        
-        msgDict = {u"id": self._getNextMessageID(),
-                   u"format": u"html",
-                   u"data": msgHTML}
-        
-        try:
-            msgDictJSON = json.dumps(msgDict)
-        except:
-            log_exception("Error serializing private message:", msgDict)
-            return
-        
-        get_server().call("HELO_PM " + msgDictJSON, peerIDs=[otherID])
-        self._waitingForAck[self._getNextMessageID()] = (otherID, time(), msgHTML)
-        self._nextMessageID += 1
     
     def _activateChat(self, chatWindow, forceForeground=True):
         chatWindow.show()
@@ -256,10 +113,10 @@ class private_messages(iface_gui_plugin):
         from private_messages.chat_window import ChatWindow
         newWindow = ChatWindow(None, myName, otherName, myAvatar, otherAvatar, otherID)
         newWindow.windowClosing.connect(self._chatClosed)
-        newWindow.getChatWidget().sendMessage.connect(self._sendMessage)
+        newWindow.getChatWidget().sendMessage.connect(self._messagesHandler.sendMessage)
         self._openChats[otherID] = newWindow
         
-        prevMessages = self._getStorage().getPreviousMessages(otherID, self.get_option(u"prev_messages"))
+        prevMessages = self.getStorage().getPreviousMessages(otherID, self.get_option(u"prev_messages"))
         for row in reversed(prevMessages):
             # partner, ID, own, time, status, text
             ownMessage = row[2] != 0
@@ -280,6 +137,8 @@ class private_messages(iface_gui_plugin):
             log_error("Closed chat window was not maintained:", pID)
         
     def openChat(self, pID, forceForeground=False):
+        pID = convert_string(pID)
+        
         if pID in self._openChats:
             return self._activateChat(self._openChats[pID], forceForeground)
         
@@ -297,6 +156,31 @@ class private_messages(iface_gui_plugin):
             myAvatar = get_settings().get_resource("images", "me.png")
         
         return self._openChat(myName, otherName, myAvatar, otherAvatar, pID)
+
+    def _delayedDelivery(self, otherID, msgID):
+        otherID = convert_string(otherID)
+        
+        if otherID in self._openChats:
+            chatWindow = self._openChats[otherID]
+            chatWindow.getChatWidget().delayedDelivery(msgID)
+
+    def _displayMessage(self, otherID, msgHTML, msgTime, msgDict):
+        try:
+            chatWindow = self.openChat(otherID, False)
+            chatWindow.getChatWidget().addOtherMessage(msgHTML, msgTime)
+            self._messagesHandler.receivedSuccessfully(otherID, msgHTML, msgTime, msgDict)
+        except:
+            excType, excValue, _tb = sys.exc_info()
+            errorMsg = u"Error processing message (%s: %s)" % (unicode(excType.__name__), unicode(excValue))
+            self._messagesHandler.errorReceivingMessage(otherID, msgDict, errorMsg)
+        
+        if not chatWindow.isActiveWindow():
+            from PyQt4.QtGui import QTextDocument
+            doc = QTextDocument()
+            doc.setHtml(msgHTML)
+            displayNotification(chatWindow.getChatWidget().getOtherName(),
+                                convert_string(doc.toPlainText()),
+                                chatWindow.getChatWidget().getOtherIconPath())
 
 if __name__ == '__main__':
     pm = private_messages()
