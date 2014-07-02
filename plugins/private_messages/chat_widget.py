@@ -1,17 +1,20 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
     QFrame, QIcon, QHBoxLayout,\
-    QLabel, QPixmap, QTextCharFormat, QTextCursor
+    QLabel, QPixmap, QTextCharFormat, QTextCursor, QToolButton, QMenu
 from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp
 
 from lunchinator import convert_string, get_settings, get_notification_center,\
     get_peers
 from lunchinator.history_line_edit import HistoryTextEdit
+from lunchinator.peer_actions.peer_action_utils import showPeerActionsPopup,\
+    initializePeerActionsMenu
 from private_messages.chat_messages_view import ChatMessagesView
 from private_messages.chat_messages_model import ChatMessagesModel
 
 from xml.etree import ElementTree
 from StringIO import StringIO
 import os
+from functools import partial
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -171,17 +174,31 @@ class ChatWidget(QWidget):
     def focusInEvent(self, _event):
         self.entry.setFocus(Qt.OtherFocusReason)
         
+    def _filterPeerAction(self, pluginName, action):
+        return pluginName != u"hannesrauhe.lunchinator.private_messages" or action.getName() != "Open Chat"
+        
     def _addTopLayout(self, mainLayout):
         topWidget = QWidget(self)
         topLayout = QHBoxLayout(topWidget)
         topLayout.setContentsMargins(0, 0, 0, 0)
         
-        self._otherNameLabel = QLabel(topWidget)
+        self._otherNameLabel = QToolButton(topWidget)
+        self._otherNameLabel.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self._otherNameLabel.setStyleSheet("QToolButton { text-align: left; font-size: 13pt; border: none; margin-left: -5px; padding-right:5px; padding-bottom: -2px;}")
+        self._otherNameLabel.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._otherNameLabel.customContextMenuRequested.connect(partial(showPeerActionsPopup, self._otherID, self._filterPeerAction, self._otherNameLabel))
+        self._otherNameLabel.setPopupMode(QToolButton.InstantPopup)
+        menu = QMenu(self._otherNameLabel)
+        menu.aboutToShow.connect(partial(initializePeerActionsMenu, menu, self._otherID, self._filterPeerAction))
+        self._otherNameLabel.setMenu(menu)
+        
         self._otherPicLabel = QLabel(topWidget)
         topLayout.addWidget(self._otherPicLabel, 0, Qt.AlignLeft)
         topLayout.addWidget(self._otherNameLabel, 1, Qt.AlignLeft)
         
-        self._ownNameLabel = QLabel(topWidget)
+        self._ownNameLabel = QToolButton(topWidget)
+        self._ownNameLabel.setStyleSheet("QToolButton { text-align: left; font-size: 13pt; border: none; margin-right: -5px;}")
+        self._ownNameLabel.setToolButtonStyle(Qt.ToolButtonTextOnly)
         self._ownPicLabel = QLabel(topWidget)
         topLayout.addWidget(self._ownNameLabel, 1, Qt.AlignRight)
         topLayout.addWidget(self._ownPicLabel, 0, Qt.AlignRight)

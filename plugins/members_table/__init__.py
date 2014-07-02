@@ -3,6 +3,7 @@ from lunchinator import get_server, get_notification_center, get_peers,\
     convert_string, get_peer_actions
 from lunchinator.utilities import msecUntilNextMinute
 from functools import partial
+from lunchinator.peer_actions import peer_action_utils
     
 class members_table(iface_gui_plugin):
     def __init__(self):
@@ -106,23 +107,7 @@ class members_table(iface_gui_plugin):
         index = self.membersProxyModel.mapToSource(index)
         if index != None:
             peerID = self.membersModel.keyAtIndex(index)
-            if peerID:
-                peerInfo = get_peers().getPeerInfo(pID=peerID)
-                actionsDict = get_peer_actions().getPeerActions(peerID, peerInfo)
-                if actionsDict:
-                    popupMenu = QMenu(self.membersTable.getTable())
-                    for pluginName, actions in actionsDict.iteritems():
-                        displayedName = actions[0].getPluginObject().get_displayed_name()
-                        if not displayedName:
-                            displayedName = pluginName
-                        header = popupMenu.addAction(displayedName)
-                        header.setEnabled(False)
-                        
-                        for action in actions:
-                            popupMenu.addAction(action.getName(), partial(action.performAction, peerID, peerInfo))
-                            
-                    popupMenu.exec_(QCursor.pos())
-                    popupMenu.deleteLater()
+            peer_action_utils.showPeerActionsPopup(peerID, lambda _pluginName, _action : True, self.membersTable.getTable())
 
     def destroy_widget(self):
         iface_gui_plugin.destroy_widget(self)

@@ -72,26 +72,30 @@ class PeerActions(object):
                     if action.appliesToPeer(peerID, peerInfo):
                         yield (pluginName, action)
             
-    def _getPeerActions(self, peerID=None, peerInfo=None, ignoreApplies=False):
+    def _getPeerActions(self, peerID=None, peerInfo=None, ignoreApplies=False, filterFunc=None):
         result = {}
         with self._lock:
             for pluginName, actions in self._peerActions.iteritems():
                 newActions = []
                 for action in actions:
                     if ignoreApplies or action.appliesToPeer(peerID, peerInfo):
-                        newActions.append(action)
+                        if filterFunc == None or filterFunc(pluginName, action):
+                            newActions.append(action)
                 if newActions:
                     result[pluginName] = newActions
                     
         return result
             
-    def getPeerActions(self, peerID, peerInfo):
+    def getPeerActions(self, peerID, peerInfo, filterFunc=None):
         """Returns a dictionary of peer actions for the given peer.
         
         The dictionary contains plugin names as keys and a list of the
         plugin's peer actions as values.
+        
+        filterFunc - Function that takes (plugin name, peer action) and
+        returns True if the action should be added to the result. 
         """
-        return self._getPeerActions(peerID, peerInfo)
+        return self._getPeerActions(peerID, peerInfo, filterFunc=filterFunc)
     
     def getAllPeerActions(self):
         """Returns a dictionary of all peer actions.
