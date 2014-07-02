@@ -147,13 +147,9 @@ class private_messages(iface_gui_plugin):
             log_error("Could not get info of chat partner", pID)
             return
         otherAvatar = get_peers().getPeerAvatarFile(pID=pID)
-        if not otherAvatar:
-            otherAvatar = get_settings().get_resource("images", "lunchinator.png")
         
         myName = get_settings().get_user_name()
-        myAvatar = os.path.join(get_settings().get_avatar_dir(), get_settings().get_avatar_file())
-        if not os.path.exists(myAvatar):
-            myAvatar = get_settings().get_resource("images", "me.png")
+        myAvatar = get_peers().getPeerAvatarFile(pID=get_settings().get_ID())
         
         return self._openChat(myName, otherName, myAvatar, otherAvatar, pID)
 

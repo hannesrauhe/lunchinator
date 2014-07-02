@@ -141,9 +141,9 @@ class ChatWidget(QWidget):
         newFile = convert_string(newFile)
         
         if peerID == self._otherID:
-            self.setOtherIconPath(os.path.join(get_settings().get_avatar_dir(), newFile))
+            self.setOtherIconPath(get_peers().getPeerAvatarFile(pID=peerID))
         elif peerID == get_settings().get_ID():
-            self.setOwnIconPath(os.path.join(get_settings().get_avatar_dir(), newFile))
+            self.setOwnIconPath(get_peers().getPeerAvatarFile(pID=peerID))
             
     def _displayedPeerNameChanged(self, pID, newName, _infoDict):
         pID = convert_string(pID)
@@ -267,6 +267,8 @@ class ChatWidget(QWidget):
     def getOwnIconPath(self):
         return self._ownIconPath
     def setOwnIconPath(self, iconPath):
+        if not iconPath:
+            iconPath = get_settings().get_resource("images", "me.png")
         self._ownIconPath = iconPath
         self._ownIcon = QIcon(iconPath)
         self._ownPicLabel.setPixmap(QPixmap(self._ownIconPath).scaled(24,24, Qt.KeepAspectRatio, Qt.SmoothTransformation))
@@ -278,6 +280,8 @@ class ChatWidget(QWidget):
     def getOtherIconPath(self):
         return self._otherIconPath
     def setOtherIconPath(self, iconPath):
+        if not iconPath:
+            iconPath = get_settings().get_resource("images", "lunchinator.png")
         self._otherIconPath = iconPath
         self._otherIcon = QIcon(iconPath)
         self._otherPicLabel.setPixmap(QPixmap(self._otherIconPath).scaled(24,24, Qt.KeepAspectRatio, Qt.SmoothTransformation))
