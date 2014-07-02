@@ -73,16 +73,23 @@ class PeerNames(object):
             self._peerNameCache[peerID] = (peerName, customName)
     
     def setCustomName(self, peerID, customName, infoDict=None):
-        with self._lock:
-            self._checkCache(peerID)
-            peerName, oldCustomName = self._peerNameCache[peerID]
-            if peerName == None:
-                log_error("Trying to specify custom name for unknown peer")
-                return
-            self._peerNameCache[peerID] = (peerName, customName)
+        """Called from lunch_peers, no locking"""
+        self._checkCache(peerID)
+        peerName, oldCustomName = self._peerNameCache[peerID]
+        if peerName == None:
+            log_error("Trying to specify custom name for unknown peer")
+            return
+        self._peerNameCache[peerID] = (peerName, customName)
+            
         if oldCustomName != customName:
             self._db.execute("UPDATE CORE_PEER_NAMES SET CUSTOM_NAME = ? WHERE PEER_ID = ?", customName, peerID)
             get_notification_center().emitDisplayedPeerNameChanged(peerID, self.getDisplayedPeerName(peerID), infoDict)
+    
+    def hasCustomName(self, peerID):
+        """called from lunch_peers, no locking"""
+        self._checkCache(peerID)
+        _peerName, customName = self._peerNameCache[peerID]
+        return customName != None
     
     def getDisplayedPeerName(self, peerID):
         """Returns the displayed peer name for a given peer ID.

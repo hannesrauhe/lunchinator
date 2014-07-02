@@ -262,7 +262,15 @@ class LunchPeers(object):
             return self._peerNames.getDisplayedPeerName(peerID)
         else:
             return self.getRealPeerName(pID=peerID, lock=False)
-    
+        
+    @peerGetter(needsID=True)
+    def hasCustomPeerName(self, peerID):
+        """Returns True if the peer has a custom peer name."""
+        if self._peerNames == None:
+            return False
+        
+        return self._peerNames.hasCustomName(peerID)
+        
     @peerGetter()    
     def getPeerID(self, ip):
         """Returns the ID of a peer that was sent from the given IP"""
@@ -362,6 +370,17 @@ class LunchPeers(object):
     def getPeerInfoDict(self):
         """Returns all data stored in the peerInfo dict -> all data on all peers"""
         return deepcopy(self._peer_info)
+    
+    ############# Setters #################
+    
+    def setCustomPeerName(self, peerID, customName):
+        if self.isMe(pID=peerID):
+            # special case: it doesn't make sense to use the custom name for myself
+            get_settings().set_user_name(customName)
+        else:
+            with self._lock:
+                infoDict = self.getPeerInfo(pID=peerID, lock=False)
+                self._peerNames.setCustomName(peerID, customName, infoDict)
     
     ############# Methods for initialization and update ################
     

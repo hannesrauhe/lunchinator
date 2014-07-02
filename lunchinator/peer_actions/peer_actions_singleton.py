@@ -1,9 +1,11 @@
 from lunchinator import get_settings, get_notification_center,\
     get_plugin_manager, convert_string
 from lunchinator.logging_mutex import loggingMutex
+from lunchinator.peer_actions.standard_peer_actions import getStandardPeerActions
 
 class PeerActions(object):
     _instance = None
+    STANDARD_PEER_ACTIONS_KEY = u"__standard__"
     
     @classmethod
     def get(cls):
@@ -20,6 +22,8 @@ class PeerActions(object):
     def initialize(self):
         """Called from lunch server controller"""
         with self._lock:
+            self._peerActions[self.STANDARD_PEER_ACTIONS_KEY] = getStandardPeerActions()
+            
             for pi in get_plugin_manager().getAllPlugins():
                 if pi.plugin_object.is_activated:
                     self._addActionsForPlugin(pi)

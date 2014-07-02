@@ -77,6 +77,8 @@ class members_table(iface_gui_plugin):
         get_notification_center().connectMemberAppended(self._updatePeer)
         get_notification_center().connectMemberRemoved(self._updatePeer)
         
+        get_notification_center().connectDisplayedPeerNameChanged(self._updatePeer)
+        
         self._lunchTimeColumnTimer = QTimer(self.membersModel)
         self._lunchTimeColumnTimer.timeout.connect(self._startSyncedTimer)
         self._lunchTimeColumnTimer.start(msecUntilNextMinute())
@@ -118,6 +120,8 @@ class members_table(iface_gui_plugin):
 
         get_notification_center().disconnectMemberAppended(self._updatePeer)
         get_notification_center().disconnectMemberRemoved(self._updatePeer)
+        
+        get_notification_center().disconnectDisplayedPeerNameChanged(self._updatePeer)
         
         self._lunchTimeColumnTimer.stop()
         self._lunchTimeColumnTimer.deleteLater()

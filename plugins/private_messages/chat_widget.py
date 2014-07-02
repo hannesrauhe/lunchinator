@@ -152,7 +152,7 @@ class ChatWidget(QWidget):
         if pID == self._otherID:
             self._otherName = newName
             self._updateOtherName()
-        elif pID == get_settings().get_ID():
+        if pID == get_settings().get_ID():
             self._ownName = newName
             self._updateOwnName()
         

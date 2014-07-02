@@ -48,11 +48,8 @@ class MembersTableModel(TableModelBase):
         else:
             item.setData(self._blackBrush, Qt.ForegroundRole)
 
-    def _updateNameItem(self, peerID, infoDict, item):
-        if self._NAME_KEY in infoDict:
-            item.setText(infoDict[self._NAME_KEY])
-        else:
-            item.setText(peerID)
+    def _updateNameItem(self, peerID, _infoDict, item):
+        item.setText(get_peers().getDisplayedPeerName(pID=peerID))
         self._grayOutIfNoMember(item, peerID)
         
     def removeRow(self, row, parent=QModelIndex()):
