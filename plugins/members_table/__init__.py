@@ -77,13 +77,16 @@ class members_table(iface_gui_plugin):
         get_notification_center().connectMemberAppended(self._updatePeer)
         get_notification_center().connectMemberRemoved(self._updatePeer)
         
-        get_notification_center().connectDisplayedPeerNameChanged(self._updatePeer)
+        get_notification_center().connectDisplayedPeerNameChanged(self._displayedNameChanged)
         
         self._lunchTimeColumnTimer = QTimer(self.membersModel)
         self._lunchTimeColumnTimer.timeout.connect(self._startSyncedTimer)
         self._lunchTimeColumnTimer.start(msecUntilNextMinute())
         
         return self.membersTable
+    
+    def _displayedNameChanged(self, peerID, _newName, infoDict):
+        self._updatePeer(peerID, infoDict)
 
     def _updatePeer(self, peerID, infoDict=None):
         peerID = convert_string(peerID)
