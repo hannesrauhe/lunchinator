@@ -1,8 +1,8 @@
 from private_messages.chat_messages_model import ChatMessagesModel
 
-from lunchinator import get_settings, log_exception, log_error, log_debug,\
-    log_warning, log_info, convert_string, get_server, get_peers
-from lunchinator.logging_mutex import loggingMutex
+from lunchinator import log_exception, log_error, log_debug,\
+    log_warning, log_info, convert_string, get_server, get_peers,\
+    get_notification_center
 
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QTimer
 from time import time
@@ -40,6 +40,8 @@ class ChatMessagesHandler(QThread):
         self._receivedSuccessfully.connect(self._receivedSuccessfullySlot)
         self._errorReceivingMessage.connect(self._errorReceivingMessageSlot)
         
+        get_notification_center().connectPeerAppended(self._peerAppended)
+        
     def _getStorage(self):
         return self._delegate.getStorage()
         
@@ -52,12 +54,18 @@ class ChatMessagesHandler(QThread):
         finally:
             self._nextMessageID += 1
         
-    def _resendUndeliveredMessages(self, curTime):    
-        for msgTuple in self._getStorage().getRecentUndeliveredMessages():
-            msgTime = msgTuple[3]
-            timeout = int(curTime - msgTime)
-            if timeout > self._STOP_RESEND_TIME:
-                continue
+    @pyqtSlot(unicode, dict)
+    def _peerAppended(self, peerID, _infoDict):
+        peerID = convert_string(peerID)
+        self._resendUndeliveredMessages(curTime=None, partner=peerID, force=True)
+        
+    def _resendUndeliveredMessages(self, curTime, partner=None, force=False):    
+        for msgTuple in self._getStorage().getRecentUndeliveredMessages(partner):
+            if not force:
+                msgTime = msgTuple[3]
+                timeout = int(curTime - msgTime)
+                if timeout > self._STOP_RESEND_TIME:
+                    continue
                 
             msgID = msgTuple[1]
             if msgID in self._waitingForAck:

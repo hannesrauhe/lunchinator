@@ -46,6 +46,7 @@ class private_messages(iface_gui_plugin):
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
+        self._messagesHandler.quit()
         self._messagesHandler.deleteLater()
         self._messagesHandler = None
         self._storage = None
