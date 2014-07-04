@@ -61,8 +61,8 @@ class ChatMessagesHandler(QThread):
         
     def _resendUndeliveredMessages(self, curTime, partner=None, force=False):    
         for msgTuple in self._getStorage().getRecentUndeliveredMessages(partner):
+            msgTime = msgTuple[3]
             if not force:
-                msgTime = msgTuple[3]
                 timeout = int(curTime - msgTime)
                 if timeout > self._STOP_RESEND_TIME:
                     continue
@@ -78,7 +78,7 @@ class ChatMessagesHandler(QThread):
                 log_debug("Resending undelivered message %d to peer '%s'" % (msgID, otherID))
                 # partner is online, resend message
                 msgHTML = msgTuple[5]
-                self.sendMessage(otherID, msgHTML, msgID)
+                self.sendMessage(otherID, msgHTML, msgID, msgTime)
     
     @pyqtSlot()
     def cleanup(self):
