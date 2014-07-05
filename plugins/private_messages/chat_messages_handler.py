@@ -42,6 +42,10 @@ class ChatMessagesHandler(QThread):
         
         get_notification_center().connectPeerAppended(self._peerAppended)
         
+    def quit(self):
+        self._cleanupTimer.stop()
+        return super(ChatMessagesHandler, self).quit()
+        
     def _getStorage(self):
         return self._delegate.getStorage()
         
