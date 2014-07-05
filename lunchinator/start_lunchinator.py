@@ -175,6 +175,8 @@ def startLunchinator():
         get_server().start_server()
         sys.exit(get_server().exitCode)
     else:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        
         initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))    
         log_info("We are on",platform.system(),platform.release(),platform.version())
         try:
