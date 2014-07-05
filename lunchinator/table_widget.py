@@ -13,7 +13,8 @@ class TableWidget(QWidget):
         
         # create HBox in VBox for each table
         # Create message table
-        tableBottomLayout = QHBoxLayout()
+        bottomWidget = QWidget(self)
+        tableBottomLayout = QHBoxLayout(bottomWidget)
         tableBottomLayout.setContentsMargins(10, 0, 10, 0)
         
         self.table = QTreeView(self)
@@ -35,9 +36,10 @@ class TableWidget(QWidget):
         tableBottomLayout.addWidget(button, 0, Qt.AlignBottom)
         
         tableLayout = QVBoxLayout(self)
+        tableLayout.setSpacing(5)
         tableLayout.setContentsMargins(0, 0, 0, 0)
         tableLayout.addWidget(self.table)
-        tableLayout.addLayout(tableBottomLayout)
+        tableLayout.addWidget(bottomWidget)
         
         self.entry.returnPressed.connect(self.eventTriggered)
         button.clicked.connect(self.eventTriggered)
