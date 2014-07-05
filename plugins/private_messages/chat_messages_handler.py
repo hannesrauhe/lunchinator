@@ -42,14 +42,15 @@ class ChatMessagesHandler(QThread):
         self._errorReceivingMessage.connect(self._errorReceivingMessageSlot)
         
         get_notification_center().connectPeerAppended(self._peerAppended)
-        self._lock = loggingMutex("Chat Messages Handler", qMutex=True, logging=get_settings().get_verbose())
+        
+    _quit = pyqtSignal()
+    def deactivate(self):
+        # have to call quit on handler thread
+        self._quit.connect(self.quit)
+        self._quit.emit()
         
     def quit(self):
-        self._lock.lock()
-        try:
-            self._cleanupTimer.stop()
-        finally:
-            self._lock.unlock()
+        self._cleanupTimer.stop()
         return super(ChatMessagesHandler, self).quit()
         
     def _getStorage(self):
@@ -92,27 +93,23 @@ class ChatMessagesHandler(QThread):
     
     @pyqtSlot()
     def cleanup(self):
-        self._lock.lock()
-        try:
-            curTime = time()
-            
-            self._resendUndeliveredMessages(curTime)
-            
-            waitingForAck = dict(self._waitingForAck)
-            
-            removedIDs = []
-            for msgID, tup in waitingForAck.iteritems():
-                otherID, msgTime, msgHTML, isResend = tup
-                if curTime - msgTime > self._ackTimeout:
-                    if not isResend:
-                        self._deliveryTimedOut(otherID, msgID, msgHTML, msgTime)
-                    removedIDs.append(msgID)
-            
-            if len(removedIDs) > 0:
-                for msgID in removedIDs:
-                    self._waitingForAck.pop(msgID)
-        finally:
-            self._lock.unlock()
+        curTime = time()
+        
+        self._resendUndeliveredMessages(curTime)
+        
+        waitingForAck = dict(self._waitingForAck)
+        
+        removedIDs = []
+        for msgID, tup in waitingForAck.iteritems():
+            otherID, msgTime, msgHTML, isResend = tup
+            if curTime - msgTime > self._ackTimeout:
+                if not isResend:
+                    self._deliveryTimedOut(otherID, msgID, msgHTML, msgTime)
+                removedIDs.append(msgID)
+        
+        if len(removedIDs) > 0:
+            for msgID in removedIDs:
+                self._waitingForAck.pop(msgID)
     
     def _deliveryTimedOut(self, otherID, msgID, msgHTML, msgTime):
         self._addOwnMessage(otherID, msgID, msgHTML, msgTime, ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED, u"")
