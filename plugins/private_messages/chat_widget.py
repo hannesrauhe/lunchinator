@@ -129,7 +129,7 @@ class ChatWidget(QWidget):
     def _peerUpdated(self, peerID, peerInfo):
         peerID = convert_string(peerID)
         if peerID == self._otherID:
-            self._setOffline(u"PM_v" not in peerInfo)
+            self._setOffline(u"PM_v" not in peerInfo or peerInfo[u"PM_v"] == None)
     
     def _peerRemoved(self, peerID):
         peerID = convert_string(peerID)
