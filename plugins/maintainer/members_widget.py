@@ -125,11 +125,13 @@ class MembersWidget(QWidget):
         get_notification_center().connectPeerAppended(self.dropdown_members_model.externalRowAppended)
         get_notification_center().connectPeerUpdated(self.dropdown_members_model.externalRowUpdated)
         get_notification_center().connectPeerRemoved(self.dropdown_members_model.externalRowRemoved)
+        get_notification_center().connectPeerUpdated(self.updateMemberInformation)
         
     def destroy_widget(self):
         get_notification_center().disconnectPeerAppended(self.dropdown_members_model.externalRowAppended)
         get_notification_center().disconnectPeerUpdated(self.dropdown_members_model.externalRowUpdated)
         get_notification_center().disconnectPeerRemoved(self.dropdown_members_model.externalRowRemoved)
+        get_notification_center().disconnectPeerUpdated(self.updateMemberInformation)
         
     def listLogfiles(self, basePath, sort = None):
         if sort is None:
@@ -453,7 +455,11 @@ class MembersWidget(QWidget):
             get_server().call(convert_string(lineEdit.text()),set([selectedMember]))
             lineEdit.clear()
         
-    def updateMemberInformation(self):
+    def updateMemberInformation(self, peerID=None, peerInfo=None):
+        if peerID != None and peerID != self.get_selected_log_member():
+            # only update if selected member updated
+            return
+        
         self.memberInformationTable.clear()
         
         if self.get_selected_log_member() == None:
@@ -461,18 +467,19 @@ class MembersWidget(QWidget):
             self.memberInformationTable.setHeaderLabel("No member selected.")
             return
 
-        memberInformation = get_peers().getPeerInfo(pID=self.get_selected_log_member())
+        if peerInfo == None:
+            peerInfo = get_peers().getPeerInfo(pID=self.get_selected_log_member())
             
-        if memberInformation == None:
+        if peerInfo == None:
             self.memberInformationTable.setColumnCount(0)
             self.memberInformationTable.setHeaderLabel("No member information available.")
             return
         
-        self.memberInformationTable.setColumnCount(len(memberInformation))
-        headers = sorted(memberInformation.keys())
+        self.memberInformationTable.setColumnCount(len(peerInfo))
+        headers = sorted(peerInfo.keys())
         self.memberInformationTable.setHeaderLabels(QStringList(headers))
         item = QTreeWidgetItem(self.memberInformationTable)
         for col, header in enumerate(headers):
-            item.setData(col, Qt.DisplayRole, QVariant(memberInformation[header]))
+            item.setData(col, Qt.DisplayRole, QVariant(peerInfo[header]))
         for col in range(self.memberInformationTable.columnCount()):
             self.memberInformationTable.resizeColumnToContents(col)
