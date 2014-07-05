@@ -51,6 +51,8 @@ class private_messages(iface_gui_plugin):
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
+        for chatWindow in self._openChats.values():
+            chatWindow.close()
         self._messagesHandler.deactivate()
         self._messagesThread.quit()
         self._messagesThread.wait()
@@ -66,10 +68,6 @@ class private_messages(iface_gui_plugin):
         w = ChatHistoryWidget(parent)
         return w
     
-    def destroy_widget(self):
-        self._cleanupThread.stop()
-        iface_gui_plugin.destroy_widget(self)
-        
     def extendsInfoDict(self):
         return True
         
