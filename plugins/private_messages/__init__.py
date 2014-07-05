@@ -39,7 +39,12 @@ class private_messages(iface_gui_plugin):
         self._lock = loggingMutex("Private Messages", logging=get_settings().get_verbose())
         self._storage = None
         
+        from PyQt4.QtCore import QThread
+        self._messagesThread = QThread()
         self._messagesHandler = ChatMessagesHandler(self, self.hidden_options[u"ack_timeout"])
+        self._messagesHandler.moveToThread(self._messagesThread)
+        self._messagesThread.start()
+        
         self._messagesHandler.delayedDelivery.connect(self._delayedDelivery)
         self._messagesHandler.displayOwnMessage.connect(self._displayOwnMessage)
         self._messagesHandler.newMessage.connect(self._displayMessage)
@@ -47,9 +52,11 @@ class private_messages(iface_gui_plugin):
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
         self._messagesHandler.deactivate()
-        self._messagesHandler.wait()
-        self._messagesHandler.deleteLater()
+        self._messagesThread.quit()
+        self._messagesThread.wait()
+        self._messagesThread.deleteLater()
         self._messagesHandler = None
+        self._messagesThread = None
         self._storage = None
         self._lock = None
     

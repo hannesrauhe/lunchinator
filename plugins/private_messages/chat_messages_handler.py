@@ -4,12 +4,12 @@ from lunchinator import log_exception, log_error, log_debug,\
     log_warning, log_info, convert_string, get_server, get_peers,\
     get_notification_center, get_settings
 
-from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QTimer
+from PyQt4.QtCore import pyqtSignal, pyqtSlot, QTimer, QObject
 from time import time
 import json
 from lunchinator.logging_mutex import loggingMutex
         
-class ChatMessagesHandler(QThread):
+class ChatMessagesHandler(QObject):
     _STOP_RESEND_TIME = 60 # seconds until resending is stopped
     
     # other ID, message ID, HTML, time, state, error message
@@ -32,6 +32,7 @@ class ChatMessagesHandler(QThread):
         self._ackTimeout = ackTimeout
         self._waitingForAck = {} # message ID : (otherID, time, message, isResend)
         self._nextMessageID = None
+        
         self._cleanupTimer = QTimer(self)
         self._cleanupTimer.timeout.connect(self.cleanup)
         self._cleanupTimer.start(2000)
@@ -43,15 +44,8 @@ class ChatMessagesHandler(QThread):
         
         get_notification_center().connectPeerAppended(self._peerAppended)
         
-    _quit = pyqtSignal()
     def deactivate(self):
-        # have to call quit on handler thread
-        self._quit.connect(self.quit)
-        self._quit.emit()
-        
-    def quit(self):
         self._cleanupTimer.stop()
-        return super(ChatMessagesHandler, self).quit()
         
     def _getStorage(self):
         return self._delegate.getStorage()
