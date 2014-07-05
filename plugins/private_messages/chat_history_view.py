@@ -1,11 +1,12 @@
 from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView,\
-    QSplitter, QTextDocument
+    QSplitter, QTextDocument, QStandardItemModel, QSortFilterProxyModel,\
+    QLineEdit, QVBoxLayout
 from lunchinator import get_db_connection, get_peers, log_warning,\
     convert_string
 from lunchinator.table_models import TableModelBase
 from lunchinator.utilities import formatTime
 from time import localtime
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QVariant
 
 class HistoryPeersModel(TableModelBase):
     _NAME_KEY = u'name'
@@ -22,33 +23,33 @@ class HistoryPeersModel(TableModelBase):
             m_name = pID
         item.setText(m_name)
         
-class ChatHistoryModel(TableModelBase):
-    def __init__(self, dataSource, partnerName, rows):
-        columns = [(u"Sender", self._updateSenderItem),
-                   (u"Time", self._updateTimeItem),
-                   (u"Message", self._updateMessageItem)]
-        self._partnerName = partnerName
-        super(ChatHistoryModel, self).__init__(dataSource, columns)
+class ChatHistoryModel(QStandardItemModel):
+    def __init__(self, partnerID, rows):
+        super(ChatHistoryModel, self).__init__()
+
+        self.setHorizontalHeaderLabels([u"Sender", u"Send Time", u"Text"])
         
-        self._doc = QTextDocument(self)
-        
-        # M_ID, IS_OWN_MESSAGE, TIME, MESSAGE
-        for row in rows:
-            self.appendContentRow(row[0], row)
+        self.insertRows(0, len(rows));
+    
+        partnerName = get_peers().getDisplayedPeerName(pID=partnerID)
+        doc = QTextDocument()
+        for i, row in enumerate(rows):
+            # sender
+            index = self.index(i, 0);
+            if row[1]: # is own message
+                self.setData(index, QVariant(u"You"))
+            else:
+                self.setData(index, partnerName)
+                
+            # time
+            index = self.index(i, 1)
+            mTime = localtime(row[2])
+            self.setData(index, QVariant(formatTime(mTime)))
             
-    def _updateSenderItem(self, _msgID, row, item):
-        if row[1]: # is own message
-            item.setText(u"You")
-        else:
-            item.setText(self._partnerName)
-            
-    def _updateTimeItem(self, _msgID, row, item):
-        mTime = localtime(row[2])
-        item.setText(formatTime(mTime))
-            
-    def _updateMessageItem(self, _msgID, row, item):
-        self._doc.setHtml(row[3])
-        item.setText(self._doc.toPlainText())
+            # message
+            index = self.index(i, 2)
+            doc.setHtml(row[3])
+            self.setData(index, QVariant(doc.toPlainText()));  
         
 class ChatHistoryWidget(QWidget):
     def __init__(self, parent):
@@ -61,15 +62,15 @@ class ChatHistoryWidget(QWidget):
         
         self._initPeerList()
         self._initHistoryTable()
+        self._initSortFilterModel()
         
-        split = QSplitter(Qt.Horizontal, self)
-        split.addWidget(self._peerList)
-        split.addWidget(self._historyTable)
-        split.setStretchFactor(0, 0)
-        split.setStretchFactor(1, 1)
+        topWidget = self._initTopWidget()
+        mainWidget = self._initMainWidget()
       
-        layout = QHBoxLayout(self)
-        layout.addWidget(split)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(topWidget, 0)
+        layout.addWidget(mainWidget, 1)
         
     def _updatePeers(self):
         rows = self._db.query("select distinct PARTNER from PRIVATE_MESSAGES")
@@ -107,10 +108,35 @@ class ChatHistoryWidget(QWidget):
         self._historyTable.setHeaderHidden(False)
         self._historyTable.setItemsExpandable(False)
         self._historyTable.setIndentation(0)
+        
+    def _initMainWidget(self):
+        split = QSplitter(Qt.Horizontal, self)
+        split.addWidget(self._peerList)
+        split.addWidget(self._historyTable)
+        split.setStretchFactor(0, 0)
+        split.setStretchFactor(1, 1)
+        return split
+    
+    def _initTopWidget(self):
+        topWidget = QWidget(self)
+        self._searchField = QLineEdit(topWidget)
+        if hasattr(self._searchField, "setPlaceholderText"):
+            self._searchField.setPlaceholderText("Filter Messages")
+        self._searchField.textChanged.connect(self._sortFilterModel.setFilterRegExp)
+            
+        layout = QHBoxLayout(topWidget)
+        layout.setContentsMargins(0, 10, 10, 0)
+        layout.addWidget(self._searchField, 0, Qt.AlignRight)
+        return topWidget
+      
+    def _initSortFilterModel(self):
+        self._sortFilterModel = QSortFilterProxyModel(self)
+        self._sortFilterModel.setFilterKeyColumn(2)
+        self._sortFilterModel.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self._historyTable.setModel(self._sortFilterModel)
 
     def _createHistoryModel(self, partnerID):
         rows = self._db.query("select M_ID, IS_OWN_MESSAGE, TIME, MESSAGE from PRIVATE_MESSAGES where PARTNER = ?", partnerID)
-        historyModel = ChatHistoryModel(None, get_peers().getDisplayedPeerName(pID=partnerID), rows)
-        self._historyTable.setModel(historyModel)
-            
+        historyModel = ChatHistoryModel(partnerID, rows)
         
+        self._sortFilterModel.setSourceModel(historyModel)
