@@ -14,6 +14,7 @@ class TableWidget(QWidget):
         # create HBox in VBox for each table
         # Create message table
         tableBottomLayout = QHBoxLayout()
+        tableBottomLayout.setContentsMargins(10, 0, 10, 0)
         
         self.table = QTreeView(self)
         self.table.setSortingEnabled(sortingEnabled)
@@ -34,6 +35,7 @@ class TableWidget(QWidget):
         tableBottomLayout.addWidget(button, 0, Qt.AlignBottom)
         
         tableLayout = QVBoxLayout(self)
+        tableLayout.setContentsMargins(0, 0, 0, 0)
         tableLayout.addWidget(self.table)
         tableLayout.addLayout(tableBottomLayout)
         
