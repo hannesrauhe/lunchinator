@@ -2,11 +2,12 @@ from private_messages.chat_messages_model import ChatMessagesModel
 
 from lunchinator import log_exception, log_error, log_debug,\
     log_warning, log_info, convert_string, get_server, get_peers,\
-    get_notification_center
+    get_notification_center, get_settings
 
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QTimer
 from time import time
 import json
+from lunchinator.logging_mutex import loggingMutex
         
 class ChatMessagesHandler(QThread):
     _STOP_RESEND_TIME = 60 # seconds until resending is stopped
@@ -41,9 +42,14 @@ class ChatMessagesHandler(QThread):
         self._errorReceivingMessage.connect(self._errorReceivingMessageSlot)
         
         get_notification_center().connectPeerAppended(self._peerAppended)
+        self._lock = loggingMutex("Chat Messages Handler", qMutex=True, logging=get_settings().get_verbose())
         
     def quit(self):
-        self._cleanupTimer.stop()
+        self._lock.lock()
+        try:
+            self._cleanupTimer.stop()
+        finally:
+            self._lock.unlock()
         return super(ChatMessagesHandler, self).quit()
         
     def _getStorage(self):
@@ -86,23 +92,27 @@ class ChatMessagesHandler(QThread):
     
     @pyqtSlot()
     def cleanup(self):
-        curTime = time()
-        
-        self._resendUndeliveredMessages(curTime)
-        
-        waitingForAck = dict(self._waitingForAck)
-        
-        removedIDs = []
-        for msgID, tup in waitingForAck.iteritems():
-            otherID, msgTime, msgHTML, isResend = tup
-            if curTime - msgTime > self._ackTimeout:
-                if not isResend:
-                    self._deliveryTimedOut(otherID, msgID, msgHTML, msgTime)
-                removedIDs.append(msgID)
-        
-        if len(removedIDs) > 0:
-            for msgID in removedIDs:
-                self._waitingForAck.pop(msgID)
+        self._lock.lock()
+        try:
+            curTime = time()
+            
+            self._resendUndeliveredMessages(curTime)
+            
+            waitingForAck = dict(self._waitingForAck)
+            
+            removedIDs = []
+            for msgID, tup in waitingForAck.iteritems():
+                otherID, msgTime, msgHTML, isResend = tup
+                if curTime - msgTime > self._ackTimeout:
+                    if not isResend:
+                        self._deliveryTimedOut(otherID, msgID, msgHTML, msgTime)
+                    removedIDs.append(msgID)
+            
+            if len(removedIDs) > 0:
+                for msgID in removedIDs:
+                    self._waitingForAck.pop(msgID)
+        finally:
+            self._lock.unlock()
     
     def _deliveryTimedOut(self, otherID, msgID, msgHTML, msgTime):
         self._addOwnMessage(otherID, msgID, msgHTML, msgTime, ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED, u"")
