@@ -13,7 +13,6 @@ from private_messages.chat_messages_model import ChatMessagesModel
 
 from xml.etree import ElementTree
 from StringIO import StringIO
-import os
 from functools import partial
 
 class ChatWidget(QWidget):
@@ -95,9 +94,10 @@ class ChatWidget(QWidget):
         
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
         
-        get_notification_center().connectPeerAppended(self._peerAppended)
-        get_notification_center().connectAvatarChanged(self._avatarChanged)
+        get_notification_center().connectPeerAppended(self._peerUpdated)
+        get_notification_center().connectPeerUpdated(self._peerUpdated)
         get_notification_center().connectPeerRemoved(self._peerRemoved)
+        get_notification_center().connectAvatarChanged(self._avatarChanged)
         get_notification_center().connectDisplayedPeerNameChanged(self._displayedPeerNameChanged)
         
         if get_peers():
@@ -126,7 +126,7 @@ class ChatWidget(QWidget):
     def _updateOwnName(self):
         self._ownNameLabel.setText(self._ownName)
         
-    def _peerAppended(self, peerID, peerInfo):
+    def _peerUpdated(self, peerID, peerInfo):
         peerID = convert_string(peerID)
         if peerID == self._otherID:
             self._setOffline(u"PM_v" not in peerInfo)
