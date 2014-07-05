@@ -65,7 +65,7 @@ class private_messages(iface_gui_plugin):
     def create_widget(self, parent):
         self._openChats = {} # mapping peer ID -> ChatDockWidget
         
-        w = ChatHistoryWidget(parent)
+        w = ChatHistoryWidget(self, parent)
         return w
     
     def extendsInfoDict(self):

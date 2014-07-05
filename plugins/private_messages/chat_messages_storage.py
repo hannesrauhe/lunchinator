@@ -6,6 +6,13 @@ class ChatMessagesStorage(object):
     _DB_VERSION_INITIAL = 0
     _DB_VERSION_CURRENT = _DB_VERSION_INITIAL
     
+    MSG_PARTNER_COL = 0
+    MSG_ID_COL = 1
+    MSG_IS_OWN_MESSAGE_COL = 2
+    MSG_TIME_COL = 3
+    MSG_STATUS_COL = 4
+    MSG_TEXT_COL = 5
+    
     _MESSAGES_TABLE_STATEMENT = """
        CREATE TABLE PRIVATE_MESSAGES(PARTNER TEXT NOT NULL,
                                      M_ID INTEGER NOT NULL,
@@ -111,6 +118,12 @@ class ChatMessagesStorage(object):
         
     def getPreviousMessages(self, partner, numMessages):
         return self._db.query("SELECT * FROM PRIVATE_MESSAGES WHERE PARTNER = ? ORDER BY TIME DESC LIMIT ?", partner, numMessages)
+    
+    def getMessages(self, partner):
+        return self._db.query("SELECT * FROM PRIVATE_MESSAGES WHERE PARTNER = ? ORDER BY TIME DESC", partner)
+        
+    def getPartners(self):
+        return self._db.query("SELECT DISTINCT PARTNER FROM PRIVATE_MESSAGES ORDER BY PARTNER ASC")
         
     def getRecentUndeliveredMessages(self, partner=None):
         """Returns recent undelivered (outgoing) messages to all partners.
@@ -126,3 +139,5 @@ class ChatMessagesStorage(object):
         else:
             return self._db.query(self._RECENT_UNDELIVERED_MESSAGES_FOR_PARTNER_SQL, partner)
     
+    def clearHistory(self, partner):
+        self._db.execute("DELETE FROM PRIVATE_MESSAGES WHERE PARTNER = ?", partner)

@@ -93,6 +93,15 @@ class TableModelBase(QStandardItemModel):
         for row, key in enumerate(self.keys):
             self.updateRow(key, self._dataForKey(key), row)
             
+    def removeAllRows(self):
+        for key in list(self.keys):
+            self.externalRowRemoved(key)
+            
+    def removeMissingKeys(self, newKeys):
+        """Removes rows with keys not in the given collection"""
+        for key in set(self.keys) - set(newKeys):
+            self.externalRowRemoved(key)
+            
     @classmethod   
     def convertDict(cls, aDict):
         newDict = {}
