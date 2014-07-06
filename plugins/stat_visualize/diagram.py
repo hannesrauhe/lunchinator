@@ -2,6 +2,7 @@ import sys, random, time, math
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QGridLayout, QLabel, QPushButton, QWidget, QSpinBox, QLineEdit
+from lunchinator import log_exception
 
 class statTimelineTab(QtGui.QWidget):
     def __init__(self, parent, connPlugin):
@@ -31,7 +32,10 @@ class statTimelineWidget(QtGui.QWidget):
     def paintEvent(self, e):
         qp = QtGui.QPainter()
         qp.begin(self)
-        self.drawPoints(qp)
+        try:
+            self.drawPoints(qp)
+        except:
+            log_exception("Error painting")
         qp.end()
         
     def drawPoints(self, qp):      
@@ -40,8 +44,13 @@ class statTimelineWidget(QtGui.QWidget):
         
         maxTime = time.time()
         minTime = int(maxTime - size.width() * self.scale)
-        tmp = self.connPlugin.query("SELECT mtype, count(*) FROM statistics_messages " + \
-                                    "WHERE rtime between %d and %d GROUP BY mtype" % (minTime, maxTime))
+        try:
+            tmp = self.connPlugin.query("SELECT mtype, count(*) FROM statistics_messages " + \
+                                        "WHERE rtime between %d and %d GROUP BY mtype" % (minTime, maxTime))
+        except:
+            # database error, probably table does not exist
+            tmp = []
+        
         numYAreas = len(tmp)
         if 0 == numYAreas:
             return
@@ -141,10 +150,14 @@ class statSwarmWidget(QtGui.QWidget):
         maxTime = time.time()
         minTime = maxTime - self.period*60*60
         
-        tmp = self.connPlugin.query("SELECT sender, count(*) FROM statistics_messages " + \
-                                    "WHERE rtime between ? and ? "+ \
-                                    "AND mType LIKE ?"
-                                    "GROUP BY sender", minTime, maxTime, str(self.mtype))
+        try:
+            tmp = self.connPlugin.query("SELECT sender, count(*) FROM statistics_messages " + \
+                                        "WHERE rtime between ? and ? "+ \
+                                        "AND mType LIKE ?"
+                                        "GROUP BY sender", minTime, maxTime, str(self.mtype))
+        except:
+            # database error, probably table does not exist
+            tmp = []
         self.query_unbuffer = time.time()+5
         self.numPeers = len(tmp)
         if 0 == self.numPeers :
