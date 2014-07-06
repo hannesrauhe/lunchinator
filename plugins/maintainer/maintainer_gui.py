@@ -9,7 +9,6 @@ class ExtendedMembersModel(TableModelBase):
     def __init__(self, dataSource):
         super(ExtendedMembersModel, self).__init__(dataSource, None)
         self.headerNames = []
-        self.lowerHeaderNames = []
         for peerID in self.dataSource:
             self.updateModel(peerID, self.dataSource.getPeerInfo(peerID))
     
@@ -35,7 +34,8 @@ class ExtendedMembersModel(TableModelBase):
     @pyqtSlot(dict)
     def updateModel(self, peerID, infoDict, update=False, prepend=False):
         # update columns labels
-        newHeaderNames = sorted(infoDict.keys(), cmp=self._headerCmp)
+        
+        newHeaderNames = sorted(set(self.headerNames).union(infoDict.keys()), cmp=self._headerCmp)
         if newHeaderNames != self.headerNames:
             self.headerNames = newHeaderNames
             for i, headerName in enumerate(newHeaderNames):
@@ -54,9 +54,7 @@ class ExtendedMembersModel(TableModelBase):
     def callItemInitializer(self, column, key, data, item):
         headerName = self.headerNames[column]
         text = ""
-        if headerName == "ip":
-            text = key
-        elif headerName in data:
+        if headerName in data:
             text = data[headerName]
         item.setData(QVariant(text), Qt.DisplayRole)
         
