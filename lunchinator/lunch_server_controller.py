@@ -76,7 +76,7 @@ class LunchServerController(object):
         if not get_settings().get_plugins_enabled():
             return
         for pluginInfo in get_plugin_manager().getAllPlugins():
-            if pluginInfo.plugin_object.extendsInfoDict():
+            if pluginInfo.plugin_object.is_activated and pluginInfo.plugin_object.extendsInfoDict():
                 try:
                     pluginInfo.plugin_object.extendInfoDict(infoDict)
                 except:

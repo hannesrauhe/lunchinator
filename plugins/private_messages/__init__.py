@@ -18,7 +18,7 @@ class _OpenChatAction(PeerAction):
         self.getPluginObject().openChat(peerID)
         
     def appliesToPeer(self, _peerID, peerInfo):
-        return u"PM_v" in peerInfo and peerInfo[u"PM_v"] != None
+        return u"PM_v" in peerInfo
     
 class private_messages(iface_gui_plugin):
     VERSION_INITIAL = 0
@@ -72,7 +72,7 @@ class private_messages(iface_gui_plugin):
         return True
         
     def extendInfoDict(self, infoDict):
-        infoDict[u"PM_v"] = self.VERSION_CURRENT if self.is_activated else None
+        infoDict[u"PM_v"] = self.VERSION_CURRENT
         
     def get_peer_actions(self):
         return self._peerActions
