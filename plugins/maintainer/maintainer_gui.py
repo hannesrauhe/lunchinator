@@ -9,23 +9,38 @@ class ExtendedMembersModel(TableModelBase):
     def __init__(self, dataSource):
         super(ExtendedMembersModel, self).__init__(dataSource, None)
         self.headerNames = []
+        self.lowerHeaderNames = []
         for peerID in self.dataSource:
             self.updateModel(peerID, self.dataSource.getPeerInfo(peerID))
     
+    def _headerCmp(self, x, y):
+        x = x.lower()
+        y = y.lower()
+        
+        if x == y:
+            return 0
+        
+        if x == u"name":
+            return -1
+        if y == u"name":
+            return 1
+        
+        if x == u"id":
+            return -1
+        if y == u"id":
+            return 1 
+        
+        return cmp(x, y)
+        
     @pyqtSlot(dict)
     def updateModel(self, peerID, infoDict, update=False, prepend=False):
-        table_headers = set()
-        table_headers.add(u"ip") 
-        for k in infoDict:
-            if not k in table_headers:
-                table_headers.add(convert_string(k))
-        
         # update columns labels
-        for aHeaderName in table_headers:
-            if not aHeaderName in self.headerNames:
-                self.setHorizontalHeaderItem(len(self.headerNames), QStandardItem(aHeaderName))
-                self.headerNames.append(aHeaderName)
-
+        newHeaderNames = sorted(infoDict.keys(), cmp=self._headerCmp)
+        if newHeaderNames != self.headerNames:
+            self.headerNames = newHeaderNames
+            for i, headerName in enumerate(newHeaderNames):
+                self.setHorizontalHeaderItem(i, QStandardItem(headerName))
+            
         if update:
             if peerID in self.keys:
                 index = self.keys.index(peerID)
