@@ -1,6 +1,7 @@
 import sys
 from lunchinator import log_exception, get_settings, convert_string, log_debug
-from PyQt4.QtGui import QImage, QPixmap, QStackedWidget, QIcon, QListView, QStandardItemModel, QStandardItem, QWidget, QHBoxLayout, QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy, QSortFilterProxyModel
+from PyQt4.QtGui import QImage, QPixmap, QStackedWidget, QIcon, QListView, QStandardItemModel, QStandardItem, QWidget, QHBoxLayout, QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy, QSortFilterProxyModel,\
+    QFrame
 from PyQt4.QtCore import QTimer, QSize, Qt, QVariant, QSettings, pyqtSlot, pyqtSignal, QModelIndex
 from lunchinator.resizing_image_label import ResizingWebImageLabel
 import tempfile
@@ -48,6 +49,7 @@ class RemotePicturesGui(QStackedWidget):
         self.categoryView.setIconSize(QSize(200,200));
         self.categoryView.setResizeMode(QListView.Adjust);
         self.categoryView.doubleClicked.connect(self._itemDoubleClicked)
+        self.categoryView.setFrameShape(QFrame.NoFrame)
 
         self.addWidget(self.categoryView)
         

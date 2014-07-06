@@ -1,6 +1,6 @@
 from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView,\
     QSplitter, QTextDocument, QStandardItemModel, QSortFilterProxyModel,\
-    QLineEdit, QVBoxLayout, QPushButton
+    QLineEdit, QVBoxLayout, QPushButton, QFrame
 from lunchinator import get_peers, log_warning,\
     convert_string
 from lunchinator.table_models import TableModelBase
@@ -83,6 +83,10 @@ class ChatHistoryWidget(QWidget):
         self._peerList.setModel(self._peerModel)
         self._peerList.setSelectionMode(QTreeView.SingleSelection)
         self._peerList.selectionModel().selectionChanged.connect(self._displayHistory)
+        
+        self._peerList.setObjectName(u"__peer_list")
+        self._peerList.setFrameShape(QFrame.StyledPanel)
+        self._peerList.setStyleSheet("QFrame#__peer_list{border-width: 1px; border-top-style: solid; border-right-style: solid; border-bottom-style: none; border-left-style: none; border-color:palette(mid)}");
 
     def _initHistoryTable(self):
         self._historyTable = QTreeView(self)
@@ -90,6 +94,10 @@ class ChatHistoryWidget(QWidget):
         self._historyTable.setHeaderHidden(False)
         self._historyTable.setItemsExpandable(False)
         self._historyTable.setIndentation(0)
+                
+        self._historyTable.setObjectName(u"__peer_list")
+        self._historyTable.setFrameShape(QFrame.StyledPanel)
+        self._historyTable.setStyleSheet("QFrame#__peer_list{border-width: 1px; border-top-style: solid; border-right-style: none; border-bottom-style: none; border-left-style: solid; border-color:palette(mid)}");
         
     def _initMainWidget(self):
         split = QSplitter(Qt.Horizontal, self)
