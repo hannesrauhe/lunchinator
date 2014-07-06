@@ -476,7 +476,7 @@ class MembersWidget(QWidget):
             return
         
         self.memberInformationTable.setColumnCount(len(peerInfo))
-        headers = sorted(peerInfo.keys())
+        headers = sorted(peerInfo.keys(), key=lambda s: s.lower())
         self.memberInformationTable.setHeaderLabels(QStringList(headers))
         item = QTreeWidgetItem(self.memberInformationTable)
         for col, header in enumerate(headers):
