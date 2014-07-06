@@ -441,19 +441,23 @@ class LunchPeers(object):
                     return
                     
                 old_info = deepcopy(existing_info)
-                self._peer_info[ip].update(newInfo)
+                existing_info.update(newInfo)
+                
+                removedKeys = set(old_info.keys()) - set(newInfo.keys())
+                for key in removedKeys:
+                    existing_info.pop(key)
                     
-                if old_info != self._peer_info[ip]:
-                    get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
-                    log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
+                if old_info != existing_info:
+                    get_notification_center().emitPeerUpdated(newPID, deepcopy(existing_info))
+                    log_debug("%s has new info: %s; \n update was %s" % (ip, existing_info, newInfo))
                 else:
                     log_debug("%s sent info - without new info" % ip)
                     
-                if u"avatar" in old_info and u"avatar" in self._peer_info[ip] and \
-                   old_info[u"avatar"] != self._peer_info[ip][u"avatar"] and \
+                if u"avatar" in old_info and u"avatar" in existing_info and \
+                   old_info[u"avatar"] != existing_info[u"avatar"] and \
                    not self.getAvatarOutdated(pIP=ip, lock=False):
                     # avatar changed but we already have the picture
-                    get_notification_center().emitAvatarChanged(newPID, self._peer_info[ip][u"avatar"])
+                    get_notification_center().emitAvatarChanged(newPID, deepcopy(existing_info[u"avatar"]))
             
             own_group = get_settings().get_group()
             
