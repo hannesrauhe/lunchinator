@@ -283,11 +283,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.notifyUpdates()
         
     def _updatesDisabled(self):
-        if self._repoUpdateStatusAction:
+        if self._repoUpdateStatusAction != None:
             self._repoUpdateStatusAction.setVisible(False)
-        if self._appUpdateStatusAction:
+        if self._appUpdateStatusAction != None:
             self._appUpdateStatusAction.setVisible(False)
-        if self._installUpdatesAction:
+        if self._installUpdatesAction != None:
             self._installUpdatesAction.setVisible(False)
         self._updateAvailable = False
         
@@ -304,7 +304,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         if self._restartReason:
             # now there are multiple reasons to restart
-            self._restartReason = "Some changes need a restart"
+            self._restartReason = u"Some changes need a restart"
         else:
             self._restartReason = reason
         if self._restartStatusAction != None:

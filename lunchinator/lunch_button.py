@@ -12,16 +12,16 @@ class LunchButton(QPushButton):
         self.setIconSize(QSize(64, 64))
         self.clicked.connect(self.callForLunch)
         self.sendMessageField = msgfield
-        if self.sendMessageField:
+        if self.sendMessageField != None:
             self.sendMessageField.returnPressed.connect(self.callForLunch)
         
     def callForLunch(self):
         optmsg = ""
-        if self.sendMessageField:
+        if self.sendMessageField != None:
             optmsg = convert_string(self.sendMessageField.text())
             self.sendMessageField.clear()
             
-        if len(optmsg):
+        if len(optmsg) > 0:
             get_server().call_all_members(optmsg)
         else:
             get_server().call_all_members(get_settings().get_lunch_trigger())

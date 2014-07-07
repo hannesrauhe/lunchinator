@@ -40,7 +40,7 @@ class plugin_repositories(iface_general_plugin):
         self._ui.addRepository.connect(self._addRepository)
         self._ui.checkForUpdates.connect(self._checkForUpdates)
         
-        if self._statusHolder:
+        if self._statusHolder != None:
             self._setStatus(self._statusHolder, self._progressHolder)
         
         return self._ui  
@@ -113,7 +113,7 @@ class plugin_repositories(iface_general_plugin):
         self._setStatus("Error: " + msg)
         
     def _setStatus(self, msg, progress=False):
-        if self._ui:
+        if self._ui != None:
             self._ui.setStatus(msg, progress)
         else:
             self._statusHolder = msg

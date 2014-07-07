@@ -111,7 +111,7 @@ class LunchServerController(object):
                 get_server().call_info()
     
     def _insertMessage(self,mtime, addr, msg):
-        if get_server().get_messages():
+        if get_server().get_messages() != None:
             get_server().get_messages().insert(mtime, addr, msg)
         
     def processMessage(self, msg, addr, eventTime, newPeer, fromQueue):

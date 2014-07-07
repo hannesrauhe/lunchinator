@@ -37,7 +37,7 @@ class DbConnOptions(QWidget):
         
         for p in self.available_types.values():
             w = p.create_db_options_widget(parent)
-            if not w:
+            if w == None:
                 w = QLabel("Plugin not activated", parent)
             self.conn_details.addWidget(w)   
             

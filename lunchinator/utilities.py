@@ -352,7 +352,7 @@ def stopWithCommands(args):
     except:
         log_exception("Error in stopWithCommands")
         return
-    if get_server().getController():
+    if get_server().getController() != None:
         get_server().getController().shutdown()
             
 def restartWithCommands(commands):
@@ -377,7 +377,7 @@ def restartWithCommands(commands):
     except:
         log_exception("Error in restartWithCommands")
         return
-    if get_server().getController():
+    if get_server().getController() != None:
         get_server().getController().shutdown()
     else:
         sys.exit(0)

@@ -100,7 +100,7 @@ class ChatWidget(QWidget):
         get_notification_center().connectAvatarChanged(self._avatarChanged)
         get_notification_center().connectDisplayedPeerNameChanged(self._displayedPeerNameChanged)
         
-        if get_peers():
+        if get_peers() != None:
             self._setOffline(not get_peers().isPeerID(pID=self._otherID))
         else:
             self._setOffline(True)

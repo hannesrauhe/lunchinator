@@ -57,7 +57,7 @@ class LunchinatorSettingsDialog(QDialog):
             w = QLabel("Error while including plugin", self.nb)
             log_exception("while including plugin %s in settings window" % pName)
             
-        if w:
+        if w != None:
             if pName == "General Settings":
                 iPos = 0
             else:

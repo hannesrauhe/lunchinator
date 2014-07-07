@@ -453,7 +453,7 @@ class iface_plugin(IPlugin):
                 return
             dbPlugin, plugin_type = get_db_connection(self.options["db_connection"])
             
-            if not dbPlugin:
+            if dbPlugin == None:
                 log_error("Plugin %s: DB  connection %s not available: Maybe DB Connections are not active yet?"
                           %(type(self),self.options["db_connection"]))
                 return False
@@ -517,7 +517,7 @@ class db_for_plugin_iface(object):
             log_exception("Problem while migrating dataset to new version")
     
     def is_open(self):
-        if self.dbConn:
+        if self.dbConn != None:
             return self.dbConn.isOpen()
         return False
     

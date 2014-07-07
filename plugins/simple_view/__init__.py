@@ -22,7 +22,7 @@ class simple_view(iface_gui_plugin):
         return self.w
         
     def create_menus(self, menuBar):
-        if self.w:
+        if self.w != None:
             menu = self.w.create_menu(menuBar)
             return [menu]
             

@@ -37,7 +37,7 @@ class AddRepoDialog(QDialog):
         
         browseButton = QPushButton(self)
         browseButton.setAutoDefault(False)
-        if style:
+        if style != None:
             browseIcon = style.standardIcon(QStyle.SP_DirOpenIcon)
         else:
             browseIcon = None
@@ -68,7 +68,7 @@ class AddRepoDialog(QDialog):
                 
         errorLayout = QHBoxLayout()
         errorLayout.setContentsMargins(0, 0, 0, 0)
-        if style:
+        if style != None:
             self._errorIcon = QLabel(self)
             self._errorIcon.setPixmap(style.standardIcon(QStyle.SP_MessageBoxWarning).pixmap(12,12))
             self._errorIcon.setAlignment(Qt.AlignTop)

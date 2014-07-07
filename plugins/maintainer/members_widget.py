@@ -283,7 +283,7 @@ class MembersWidget(QWidget):
         self.requestFinished()
         
     def get_selected_log_member(self):
-        member = str(self.dropdown_members.currentText())
+        member = convert_string(self.dropdown_members.currentText())
         if not member:
             return None
         
@@ -293,8 +293,8 @@ class MembersWidget(QWidget):
             
         return member
     
-    def request_log(self, member = None, logNum = 0):
-        if member is None:
+    def request_log(self, member=None, logNum=0):
+        if member == None:
             member = self.get_selected_log_member()
         if member != None:
             log_debug("Requesting log %d from %s" % (logNum, member))
@@ -402,7 +402,7 @@ class MembersWidget(QWidget):
                 else:
                     self.initializeLogItem(item, logFile)
                 
-                if oldItem is None:
+                if oldItem == None:
                     # else, the old item is being modified
                     self.log_tree_view.insertTopLevelItem(index, item)
                 self.log_tree_view.setSelectionMode(QTreeWidget.SingleSelection)
@@ -417,7 +417,7 @@ class MembersWidget(QWidget):
     
     def getSelectedLogContent(self):
         member = self.get_selected_log_member()
-        if member is None:
+        if member == None:
             return "No Log selected."
         selection = self.log_tree_view.selectedIndexes()
         if len(selection) is 0:

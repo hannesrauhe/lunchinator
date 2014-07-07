@@ -31,7 +31,7 @@ class tdtnotify(iface_called_plugin):
     def deactivate(self): 
         # if we are checking right now, finish checking first
         with self.lock:
-            if self.timer:
+            if self.timer != None:
                 self.timer.cancel()       
         iface_called_plugin.deactivate(self)
         

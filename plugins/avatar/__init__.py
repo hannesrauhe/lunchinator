@@ -61,7 +61,7 @@ class avatar(iface_general_plugin):
 #            selectedFile = convert_string(selectedFiles.first())
         
         selectedFile = QFileDialog.getOpenFileName(self.parentWindow(self.label), caption="Choose Avatar Picture:")
-        if selectedFile:
+        if selectedFile != None:
             selectedFile = convert_string(selectedFile)
             if not os.path.isdir(selectedFile) and fileFilter.filterAcceptsFile(selectedFile):
                 self.selectedFile = selectedFile

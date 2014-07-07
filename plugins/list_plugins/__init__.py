@@ -11,7 +11,7 @@ class list_plugins(iface_gui_plugin):
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
-        if self.w:
+        if self.w != None:
             self.w.finish()
             self.w = None
     

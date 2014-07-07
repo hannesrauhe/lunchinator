@@ -16,7 +16,7 @@ class rot13(iface_gui_plugin):
         
         w = rot13box(parent)
         with get_server().get_messages():
-            if len(get_server().get_messages()):
+            if len(get_server().get_messages()) > 0:
                 w.encodeText(get_server().get_messages().getLatest()[2])
             
         return w

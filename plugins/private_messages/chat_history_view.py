@@ -37,7 +37,7 @@ class ChatHistoryModel(QStandardItemModel):
         for i, row in enumerate(rows):
             # sender
             index = self.index(i, 0);
-            if row[ChatMessagesStorage.MSG_IS_OWN_MESSAGE_COL]:
+            if row[ChatMessagesStorage.MSG_IS_OWN_MESSAGE_COL] != 0:
                 self.setData(index, QVariant(u"You"))
             else:
                 self.setData(index, partnerName)

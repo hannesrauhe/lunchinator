@@ -38,7 +38,7 @@ class db_connections(iface_general_plugin):
                                                                              "plugin_type")
     
                     p = self.plugin_manager.getPluginByName(plugin_type, "db")
-                    if p and p.plugin_object.is_activated:
+                    if p != None and p.plugin_object.is_activated:
                         self.conn_plugins[conn_name] = p.plugin_object
                     else:
                         log_error("DB Connection %s requires plugin of type \

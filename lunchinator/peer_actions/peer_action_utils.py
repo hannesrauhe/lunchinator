@@ -24,7 +24,7 @@ def _fillPeerActionsMenu(popupMenu, peerID, filterFunc):
 
 def initializePeerActionsMenu(menu, peerID, filterFunc):
     menu.clear()
-    if not get_peers():
+    if get_peers() == None:
         log_warning("no lunch_peers instance available, cannot show peer actions")
         return menu
     
@@ -34,7 +34,7 @@ def initializePeerActionsMenu(menu, peerID, filterFunc):
 
 def showPeerActionsPopup(peerID, filterFunc, parent):
     from PyQt4.QtGui import QMenu, QCursor
-    if not get_peers():
+    if get_peers() == None:
         log_warning("no lunch_peers instance available, cannot show peer actions")
         return
     if peerID:

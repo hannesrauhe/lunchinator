@@ -38,7 +38,7 @@ def sendFile(receiver, path_or_data, tcp_port, sleep, is_data = False):
         else:
             log_exception("An error occured while trying to send file",path_or_data)   
          
-    if con:
+    if con != None:
         con.close()     
     
 def _receiveFile(con, file_path, size):
@@ -81,6 +81,6 @@ def receiveFile(sender, file_path, size, portOrSocket, success, error):
         log_exception("I caught something unexpected when trying to receive file",file_path, sys.exc_info()[0])
         error()
     
-    if con:    
+    if con != None:
         con.close()
     s.close()

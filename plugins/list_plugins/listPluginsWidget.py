@@ -71,7 +71,7 @@ class listPluginsWidget(QWidget):
         self.ui.pluginView.setCurrentRow(r)        
             
     def plugin_selected(self, current, old):
-        if not current:
+        if current == None:
             return
         p = self.p_info[str(current.toolTip())]
         self.ui.authorLabel.setText("Author: "+p["author"])

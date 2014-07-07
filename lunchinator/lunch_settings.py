@@ -317,7 +317,7 @@ class lunch_settings(object):
         return self._legacy_messages_file
     
     def get_version(self):
-        if not self._version:
+        if self._version == None:
             try:
                 version_file = self.get_resource("version")
                 with contextlib.closing(open(version_file, "r")) as vfh:

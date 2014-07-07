@@ -129,8 +129,8 @@ class private_messages(iface_gui_plugin):
         prevMessages = self.getStorage().getPreviousMessages(otherID, self.get_option(u"prev_messages"))
         for row in reversed(prevMessages):
             # partner, ID, own, time, status, text
-            ownMessage = row[2] != 0
-            if ownMessage:
+            isOwnMessage = row[ChatMessagesStorage.MSG_IS_OWN_MESSAGE_COL] != 0
+            if isOwnMessage:
                 newWindow.getChatWidget().addOwnMessage(row[ChatMessagesStorage.MSG_ID_COL],
                                                         row[ChatMessagesStorage.MSG_RECV_TIME_COL],
                                                         row[ChatMessagesStorage.MSG_TEXT_COL],

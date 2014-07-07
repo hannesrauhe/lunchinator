@@ -99,7 +99,7 @@ class NotificationCenter(object):
     def _emit(self, signal, *args, **kwargs):
         if not signal in self._callbacks:
             return
-        if self.eventloop:
+        if self.eventloop != None:
             for callback in self._callbacks[signal]:
                 self.eventloop.append(callback, *args, **kwargs)
         else:
