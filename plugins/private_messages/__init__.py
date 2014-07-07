@@ -53,8 +53,6 @@ class private_messages(iface_gui_plugin):
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
-        for chatWindow in self._openChats.values():
-            chatWindow.close()
         self._messagesHandler.deactivate()
         self._messagesThread.quit()
         self._messagesThread.wait()
@@ -66,9 +64,12 @@ class private_messages(iface_gui_plugin):
     
     def create_widget(self, parent):
         self._openChats = {} # mapping peer ID -> ChatDockWidget
-        
-        w = ChatHistoryWidget(self, parent)
-        return w
+        return ChatHistoryWidget(self, parent)
+    
+    def destroy_widget(self):
+        for chatWindow in self._openChats.values():
+            chatWindow.close()
+        iface_gui_plugin.destroy_widget(self)
     
     def extendsInfoDict(self):
         return True
