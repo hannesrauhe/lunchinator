@@ -2,6 +2,7 @@ from PyQt4.QtGui import QStandardItemModel, QStandardItem
 from PyQt4.QtCore import Qt, QVariant, QSize
 from lunchinator.utilities import formatTime
 from time import localtime
+from lunchinator import convert_string
 
 class ChatMessagesModel(QStandardItemModel):
     MESSAGE_STATE_OK = 0
@@ -12,6 +13,8 @@ class ChatMessagesModel(QStandardItemModel):
     OWN_MESSAGE_ROLE = STATUS_ICON_ROLE + 1
     MESSAGE_STATE_ROLE = OWN_MESSAGE_ROLE + 1
     MESSAGE_TIME_ROLE = MESSAGE_STATE_ROLE + 1
+    RECV_TIME_ROLE = MESSAGE_TIME_ROLE + 1
+    TOOL_TIP_MSG_ROLE = RECV_TIME_ROLE + 1
     
     OTHER_ICON_COLUMN = 0
     MESSAGE_COLUMN = 1
@@ -64,7 +67,7 @@ class ChatMessagesModel(QStandardItemModel):
         else:
             toolTip = u""
             
-        toolTip += u"Sent " + formatTime(localtime(messageTime))
+        toolTip += u"Sent: " + formatTime(localtime(messageTime))
         if recvTime != None:
             if isOwn:
                 toolTip += ",\nDelivered: " + formatTime(localtime(recvTime))
@@ -82,20 +85,20 @@ class ChatMessagesModel(QStandardItemModel):
             
         item.setData(QVariant(messageState), self.MESSAGE_STATE_ROLE)
         item.setData(QVariant(messageTime), self.MESSAGE_TIME_ROLE)
+        if recvTime != None:
+            item.setData(QVariant(recvTime), self.RECV_TIME_ROLE)
         
         if messageState == self.MESSAGE_STATE_NOT_DELIVERED:
             item.setData(QVariant(self._delegate.getWarnIcon()), ChatMessagesModel.STATUS_ICON_ROLE)
         elif messageState == self.MESSAGE_STATE_ERROR:
             item.setData(QVariant(self._delegate.getErrorIcon()), ChatMessagesModel.STATUS_ICON_ROLE)
         
-        toolTip = self._createToolTipText(ownMessage, toolTip, messageTime, recvTime)
-        
         if toolTip:
-            item.setData(QVariant(toolTip), Qt.ToolTipRole)
+            item.setData(QVariant(toolTip), self.TOOL_TIP_MSG_ROLE)
         elif messageState == self.MESSAGE_STATE_ERROR:
-            item.setData(QVariant(u"Unknown error, message could not be delivered."), Qt.ToolTipRole)
+            item.setData(QVariant(u"Unknown error, message could not be delivered."), self.TOOL_TIP_MSG_ROLE)
         elif messageState == self.MESSAGE_STATE_NOT_DELIVERED:
-            item.setData(QVariant(u"Message not delivered."), Qt.ToolTipRole)
+            item.setData(QVariant(u"Message not delivered."), self.TOOL_TIP_MSG_ROLE)
         item.setData(ownMessage, ChatMessagesModel.OWN_MESSAGE_ROLE)
         return item
     
@@ -104,17 +107,25 @@ class ChatMessagesModel(QStandardItemModel):
         item.setEditable(False)
         return item
     
+    def data(self, index, role=Qt.DisplayRole):
+        if role == Qt.ToolTipRole:
+            isOwn = index.data(self.OWN_MESSAGE_ROLE).toBool()
+            toolTip = convert_string(index.data(self.TOOL_TIP_MSG_ROLE).toString())
+            messageTime, _ = index.data(self.MESSAGE_TIME_ROLE).toDouble()
+            recvTime, _ = index.data(self.RECV_TIME_ROLE).toDouble()
+            return self._createToolTipText(isOwn, toolTip, messageTime, recvTime)
+        return QStandardItemModel.data(self, index, role)
+    
     def messageDelivered(self, msgID, recvTime, error, errorMessage):
         """Used for delayed deliveries"""
         if msgID in self._idToRow:
             row = self._idToRow[msgID]
             item = self.item(row, self.MESSAGE_COLUMN)
             state, _ = item.data(self.MESSAGE_STATE_ROLE).toInt()
-            messageTime, _ = item.data(self.MESSAGE_TIME_ROLE).toDouble()
             if state == self.MESSAGE_STATE_NOT_DELIVERED:
+                item.setData(QVariant(recvTime), self.RECV_TIME_ROLE)
                 item.setData(QVariant(self.MESSAGE_STATE_ERROR if error else self.MESSAGE_STATE_OK), self.MESSAGE_STATE_ROLE)
-                toolTip = self._createToolTipText(True, errorMessage, messageTime, recvTime)
-                item.setData(QVariant(toolTip), Qt.ToolTipRole)
+                item.setData(QVariant(errorMessage) if errorMessage else QVariant(), self.TOOL_TIP_MSG_ROLE)
                 item.setData(QVariant(QVariant(self._delegate.getErrorIcon()) if error else QVariant()), self.STATUS_ICON_ROLE)
                 return True
         return False
