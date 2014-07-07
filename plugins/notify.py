@@ -1,5 +1,6 @@
 from lunchinator.iface_plugins import iface_called_plugin
-from lunchinator import get_settings, log_error, log_debug, log_exception
+from lunchinator import get_settings, log_error, log_debug, log_exception,\
+    get_peers
 from lunchinator.utilities import displayNotification, getPlatform,\
     PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS
 import os, threading, subprocess, ctypes
@@ -130,13 +131,11 @@ class Notify(iface_called_plugin):
             # don't set the new value, keep old value
         return audio_file
     
-    def process_message(self,msg,addr,member_info):
-        name = " ["+addr+"]"
-        icon = self.options[u"icon_file"]
-        if member_info.has_key("avatar"):
-            icon = os.path.join(get_settings().get_avatar_dir(), member_info["avatar"])
-        if member_info.has_key("name"):
-            name = " [" + member_info["name"] + "]"
+    def process_message(self, msg, ip, _member_info):
+        name = u"[%s]" % get_peers().getDisplayedPeerName(pIP=ip)
+        icon = get_peers().getPeerAvatarFile(pIP=ip)
+        if not icon:
+            icon = self.options[u"icon_file"]
         
         displayNotification(name, msg, icon)
             

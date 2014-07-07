@@ -1,5 +1,6 @@
 from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import get_server, get_settings, log_exception, log_error
+from lunchinator import get_server, get_settings, log_exception, log_error,\
+    get_peers
 from lunchinator.utilities import displayNotification
 from PyQt4.QtGui import QTreeView, QWidget, QSortFilterProxyModel, QSizePolicy, QTableWidgetItem, QPushButton, QPalette, QColor
 from PyQt4.QtCore import Qt, QTime
@@ -26,7 +27,7 @@ class voter(iface_gui_plugin):
             vote = json.loads(value)
             if vote.has_key("time") and vote.has_key("place"):
                 self.add_vote(member_info[u"ID"], vote["place"], vote["time"])
-                displayNotification("New Vote", "%s voted"%member_info[u"name"])
+                displayNotification("New Vote", "%s voted" % get_peers().getDisplayedPeerName(pIP=ip))
             else:
                 log_error("Voter: Vote does not look valid: " + value)
         
