@@ -37,7 +37,7 @@ class voter(iface_gui_plugin):
             # member has already voted, revoke old vote
             old_vote = self.ip2vote[ip]
             self.vote_count[ old_vote ] -= 1
-            if self.w is None:
+            if self.w is not None:
                 self.w.update_table_row(old_vote[0],
                                    old_vote[1],
                                    self.vote_count[ old_vote])
@@ -47,13 +47,13 @@ class voter(iface_gui_plugin):
         self.ip2vote[ip] = (vote_place, vote_time)
         if self.vote_count.has_key(self.ip2vote[ip]):
             self.vote_count[ self.ip2vote[ip] ] += 1
-            if self.w is None:
+            if self.w is not None:
                 self.w.update_table_row(vote_place,
                                    vote_time,
                                    self.vote_count[ self.ip2vote[ip] ])
         else:
             self.vote_count[ self.ip2vote[ip] ] = 1  
-            if self.w is None:
+            if self.w is not None:
                 self.w.add_place_to_dropdown(vote_place)  
                 self.w.add_table_row(vote_place, vote_time)  
             
