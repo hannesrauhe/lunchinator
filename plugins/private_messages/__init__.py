@@ -9,6 +9,8 @@ from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
 import os
 from lunchinator.logging_mutex import loggingMutex
 import sys
+from private_messages.chat_messages_storage import ChatMessagesStorage
+from time import time
     
 class _OpenChatAction(PeerAction):
     def getName(self):
@@ -96,7 +98,7 @@ class private_messages(iface_gui_plugin):
                     self._storage = ChatMessagesStorage()
         return self._storage
     
-    def _displayOwnMessage(self, otherID, msgID, msgHTML, msgTime, status, errorMsg):
+    def _displayOwnMessage(self, otherID, msgID, recvTime, msgHTML, msgTime, status, errorMsg):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
         errorMsg = convert_string(errorMsg)
@@ -106,7 +108,7 @@ class private_messages(iface_gui_plugin):
         if otherID in self._openChats:
             from private_messages.chat_widget import ChatWidget
             chatWindow = self._openChats[otherID]
-            chatWindow.getChatWidget().addOwnMessage(msgID, msgHTML, msgTime, status, errorMsg)
+            chatWindow.getChatWidget().addOwnMessage(msgID, recvTime, msgHTML, msgTime, status, errorMsg)
     
     def _activateChat(self, chatWindow, forceForeground=True):
         chatWindow.show()
@@ -128,9 +130,17 @@ class private_messages(iface_gui_plugin):
             # partner, ID, own, time, status, text
             ownMessage = row[2] != 0
             if ownMessage:
-                newWindow.getChatWidget().addOwnMessage(row[1], row[5], row[3], row[4], scroll=False)
+                newWindow.getChatWidget().addOwnMessage(row[ChatMessagesStorage.MSG_ID_COL],
+                                                        row[ChatMessagesStorage.MSG_RECV_TIME_COL],
+                                                        row[ChatMessagesStorage.MSG_TEXT_COL],
+                                                        row[ChatMessagesStorage.MSG_TIME_COL],
+                                                        row[ChatMessagesStorage.MSG_STATUS_COL],
+                                                        scroll=False)
             else:
-                newWindow.getChatWidget().addOtherMessage(row[5], row[3], scroll=False)
+                newWindow.getChatWidget().addOtherMessage(row[ChatMessagesStorage.MSG_TEXT_COL],
+                                                          row[ChatMessagesStorage.MSG_TIME_COL],
+                                                          row[ChatMessagesStorage.MSG_RECV_TIME_COL],
+                                                          scroll=False)
         newWindow.getChatWidget().scrollToEnd()
         return self._activateChat(newWindow)
         
@@ -160,19 +170,20 @@ class private_messages(iface_gui_plugin):
         
         return self._openChat(myName, otherName, myAvatar, otherAvatar, pID)
 
-    def _delayedDelivery(self, otherID, msgID, error, errorMessage):
+    def _delayedDelivery(self, otherID, msgID, recvTime, error, errorMessage):
         otherID = convert_string(otherID)
         errorMessage = convert_string(errorMessage)
         
         if otherID in self._openChats:
             chatWindow = self._openChats[otherID]
-            chatWindow.getChatWidget().delayedDelivery(msgID, error, errorMessage)
+            chatWindow.getChatWidget().delayedDelivery(msgID, recvTime, error, errorMessage)
 
     def _displayMessage(self, otherID, msgHTML, msgTime, msgDict):
         try:
+            recvTime = time()
             chatWindow = self.openChat(otherID, False)
-            chatWindow.getChatWidget().addOtherMessage(msgHTML, msgTime)
-            self._messagesHandler.receivedSuccessfully(otherID, msgHTML, msgTime, msgDict)
+            chatWindow.getChatWidget().addOtherMessage(msgHTML, msgTime, recvTime)
+            self._messagesHandler.receivedSuccessfully(otherID, msgHTML, msgTime, msgDict, recvTime)
         except:
             excType, excValue, _tb = sys.exc_info()
             errorMsg = u"Error processing message (%s: %s)" % (unicode(excType.__name__), unicode(excValue))

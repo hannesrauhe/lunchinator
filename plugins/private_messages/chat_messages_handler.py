@@ -2,19 +2,18 @@ from private_messages.chat_messages_model import ChatMessagesModel
 
 from lunchinator import log_exception, log_error, log_debug,\
     log_warning, log_info, convert_string, get_server, get_peers,\
-    get_notification_center, get_settings
+    get_notification_center
 
 from PyQt4.QtCore import pyqtSignal, pyqtSlot, QTimer, QObject
 from time import time
 import json
-from lunchinator.logging_mutex import loggingMutex
         
 class ChatMessagesHandler(QObject):
     _STOP_RESEND_TIME = 60 # seconds until resending is stopped
     
-    # other ID, message ID, HTML, time, state, error message
-    displayOwnMessage = pyqtSignal(unicode, int, unicode, float, int, unicode)
-    # other ID, message ID, error, error message
+    # other ID, message ID, receive time, HTML, time, state, error message
+    displayOwnMessage = pyqtSignal(unicode, int, float, unicode, float, int, unicode)
+    # other ID, message ID, receive time, error, error message
     delayedDelivery = pyqtSignal(unicode, int, bool, unicode)
     # otherID, msgHTML, msgTime
     newMessage = pyqtSignal(unicode, unicode, float, dict)
@@ -22,7 +21,7 @@ class ChatMessagesHandler(QObject):
     # private signals
     _processAck = pyqtSignal(unicode, unicode, bool)
     _processMessage = pyqtSignal(unicode, unicode)
-    _receivedSuccessfully = pyqtSignal(unicode, unicode, float, dict)
+    _receivedSuccessfully = pyqtSignal(unicode, unicode, float, dict, float)
     _errorReceivingMessage = pyqtSignal(unicode, dict, unicode)
     
     def __init__(self, delegate, ackTimeout):
@@ -106,17 +105,18 @@ class ChatMessagesHandler(QObject):
                 self._waitingForAck.pop(msgID)
     
     def _deliveryTimedOut(self, otherID, msgID, msgHTML, msgTime):
-        self._addOwnMessage(otherID, msgID, msgHTML, msgTime, ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED, u"")
+        self._addOwnMessage(otherID, msgID, msgHTML, msgTime, ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED, u"", None)
         
-    def _checkDelayedAck(self, otherID, msgID, error, answerDict):
+    def _checkDelayedAck(self, otherID, msgID, error, answerDict, recvTime):
         currentState = self._getStorage().getMessageState(otherID, msgID)
         if currentState == ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED:
             try:
                 self._getStorage().updateMessageState(msgID, ChatMessagesModel.MESSAGE_STATE_ERROR if error else ChatMessagesModel.MESSAGE_STATE_OK)
+                self._getStorage().updateReceiveTime(otherID, msgID, recvTime)
             except:
                 log_exception("Error updating message state")
             
-            self.delayedDelivery.emit(otherID, msgID, error, self._getAnswerErrorMessage(error, answerDict, msgID, otherID))
+            self.delayedDelivery.emit(otherID, msgID, recvTime, error, self._getAnswerErrorMessage(error, answerDict, msgID, otherID))
             return True
         return False
      
@@ -160,20 +160,26 @@ class ChatMessagesHandler(QObject):
             log_warning("Received ACK from different peer ID than the message was sent to ('%s' != '%s')" % (otherID, ackPeerID))
             return
         
-        if isResend:
-            self._checkDelayedAck(otherID, msgID, error, answerDict)
+        if u"recvTime" in answerDict:
+            recvTime = answerDict[u"recvTime"]
         else:
+            recvTime = time()
+        if isResend:
+            self._checkDelayedAck(otherID, msgID, error, answerDict, recvTime)
+        else:
+            errorMsg = self._getAnswerErrorMessage(error, answerDict, msgID, otherID)
             self._addOwnMessage(otherID,
                                 msgID,
                                 msgHTML,
                                 msgTime,
                                 ChatMessagesModel.MESSAGE_STATE_ERROR if error else ChatMessagesModel.MESSAGE_STATE_OK,
-                                self._getAnswerErrorMessage(error, answerDict, msgID, otherID))
+                                errorMsg,
+                                recvTime)
         
-    def _addOwnMessage(self, otherID, msgID, msgHTML, msgTime, status, errorMsg):
-        self.displayOwnMessage.emit(otherID, msgID, msgHTML, msgTime, status, errorMsg)
+    def _addOwnMessage(self, otherID, msgID, msgHTML, msgTime, status, errorMsg, recvTime):
+        self.displayOwnMessage.emit(otherID, msgID, recvTime, msgHTML, msgTime, status, errorMsg)
         try:
-            self._getStorage().addOwnMessage(msgID, otherID, msgTime, status, msgHTML)
+            self._getStorage().addOwnMessage(msgID, otherID, msgTime, status, msgHTML, recvTime)
         except:
             log_exception("Error storing own message")
         
@@ -214,7 +220,7 @@ class ChatMessagesHandler(QObject):
         else:
             msgTime = time()
         
-        # check if we already know the message (our ACK might have been delivered)
+        # check if we already know the message (our ACK might not have been delivered)
         if not self._getStorage().containsMessage(otherID, msgDict[u"id"]):
             self.newMessage.emit(otherID, msgHTML, msgTime, msgDict)
         else:
@@ -222,17 +228,17 @@ class ChatMessagesHandler(QObject):
             # send ACK again
             self._sendAnswer(otherID, msgDict)
         
-    def receivedSuccessfully(self, otherID, msgHTML, msgTime, msgDict):
-        self._receivedSuccessfully.emit(otherID, msgHTML, msgTime, msgDict)
-    @pyqtSlot(unicode, unicode, float, dict)
-    def _receivedSuccessfullySlot(self, otherID, msgHTML, msgTime, msgDict):
+    def receivedSuccessfully(self, otherID, msgHTML, msgTime, msgDict, recvTime):
+        self._receivedSuccessfully.emit(otherID, msgHTML, msgTime, msgDict, recvTime)
+    @pyqtSlot(unicode, unicode, float, dict, float)
+    def _receivedSuccessfullySlot(self, otherID, msgHTML, msgTime, msgDict, recvTime):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
         try:
-            self._getStorage().addOtherMessage(msgDict[u"id"], otherID, msgTime, msgHTML)
+            self._getStorage().addOtherMessage(msgDict[u"id"], otherID, msgTime, msgHTML, recvTime)
         except:
             log_exception("Error storing partner message")
-        self._sendAnswer(otherID, msgDict)
+        self._sendAnswer(otherID, msgDict, recvTime=recvTime)
         
     def errorReceivingMessage(self, otherID, msgDict, errorMsg):
         self._errorReceivingMessage.emit(otherID, msgDict, errorMsg)
@@ -242,15 +248,25 @@ class ChatMessagesHandler(QObject):
         errorMsg = convert_string(errorMsg)
         self._sendAnswer(otherID, msgDict, errorMsg)
         
-    def _sendAnswer(self, otherID, msgDict, errorMsg=None):
+    def _sendAnswer(self, otherID, msgDict, errorMsg=None, recvTime=None):
         if u"id" not in msgDict:
             if errorMsg:
                 log_error(errorMsg)
             log_debug("Message has no ID, cannot send answer.")
             return
         
-        answerDict = {u"id": msgDict[u"id"]}
+        msgID = msgDict[u"id"]
+        answerDict = {u"id": msgID}
         if not errorMsg:
+            if recvTime == None:
+                # sending ACK again - get receive time from db
+                recvTime = self._delegate.getStorage().getReceiveTime(otherID, msgID)
+            if recvTime == None:
+                # should not happen
+                log_error("Could not determine receive time for msg", msgID, "from", otherID)
+                recvTime = time()
+            
+            answerDict[u"recvTime"] = recvTime
             get_server().call("HELO_PM_ACK " + json.dumps(answerDict), peerIDs=[otherID])
         else:
             answerDict[u"err"] = errorMsg 

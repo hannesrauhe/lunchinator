@@ -239,9 +239,9 @@ class ChatWidget(QWidget):
             self.addTimeRow(msgTime, scroll)
             self._lastTimeRow = msgTime
         
-    def addOwnMessage(self, msgID, msg, msgTime, messageState=None, toolTip=None, scroll=True):
+    def addOwnMessage(self, msgID, recvTime, msg, msgTime, messageState=None, toolTip=None, scroll=True):
         self._checkTime(msgTime, scroll)
-        self._model.addOwnMessage(msgID, msg, msgTime, messageState, toolTip)
+        self._model.addOwnMessage(msgID, recvTime, msg, msgTime, messageState, toolTip)
         self.entry.clear()
         self._delivering = False
         self._checkEntryState()
@@ -249,14 +249,14 @@ class ChatWidget(QWidget):
         if scroll:
             self.scrollToEnd()
         
-    def addOtherMessage(self, msg, msgTime, scroll=True):
+    def addOtherMessage(self, msg, msgTime, recvTime, scroll=True):
         self._checkTime(msgTime, scroll)
-        self._model.addOtherMessage(msg, msgTime)
+        self._model.addOtherMessage(msg, msgTime, recvTime)
         if scroll:
             self.scrollToEnd(force=False)
         
-    def delayedDelivery(self, msgID, error, errorMessage):
-        return self._model.messageDelivered(msgID, error, errorMessage)
+    def delayedDelivery(self, msgID, recvTime, error, errorMessage):
+        return self._model.messageDelivered(msgID, recvTime, error, errorMessage)
         
     def canClose(self):
         return not self._delivering

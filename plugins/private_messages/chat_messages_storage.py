@@ -4,7 +4,8 @@ from private_messages.chat_messages_model import ChatMessagesModel
 
 class ChatMessagesStorage(object):
     _DB_VERSION_INITIAL = 0
-    _DB_VERSION_CURRENT = _DB_VERSION_INITIAL
+    _DB_VERSION_RECEIVE_TIME = 1
+    _DB_VERSION_CURRENT = _DB_VERSION_RECEIVE_TIME
     
     MSG_PARTNER_COL = 0
     MSG_ID_COL = 1
@@ -12,6 +13,7 @@ class ChatMessagesStorage(object):
     MSG_TIME_COL = 3
     MSG_STATUS_COL = 4
     MSG_TEXT_COL = 5
+    MSG_RECV_TIME_COL = 6
     
     _MESSAGES_TABLE_STATEMENT = """
        CREATE TABLE PRIVATE_MESSAGES(PARTNER TEXT NOT NULL,
@@ -20,6 +22,7 @@ class ChatMessagesStorage(object):
                                      TIME REAL NOT NULL,
                                      STATUS INTEGER,
                                      MESSAGE TEXT,
+                                     RECV_TIME REAL,
                                      PRIMARY KEY(PARTNER, M_ID, IS_OWN_MESSAGE)
                                     )
     """
@@ -68,27 +71,45 @@ class ChatMessagesStorage(object):
             self._db.execute(self._MESSAGES_TABLE_STATEMENT)
             self._db.execute("CREATE INDEX PRIVATE_MESSAGE_TIME_INDEX on PRIVATE_MESSAGES(TIME)")
             self._db.execute("CREATE INDEX PRIVATE_MESSAGE_PARTNER_INDEX on PRIVATE_MESSAGES(PARTNER)")
+            
+        self._checkDBVersion()
 
     def _getDBVersion(self):
-        return self._db.query("SELECT VERSION FROM CORE_MESSAGE_VERSION")[0][0]
+        return self._db.query("SELECT VERSION FROM PRIVATE_MESSAGES_VERSION")[0][0]
     
-    def addOwnMessage(self, msgID, partner, msgTime, msgState, msg):
-        self._db.execute("INSERT INTO PRIVATE_MESSAGES VALUES(?, ?, ?, ?, ?, ?)",
+    def _updateDBVersion(self):
+        self._db.execute("UPDATE PRIVATE_MESSAGES_VERSION SET VERSION = ?", self._DB_VERSION_CURRENT)
+    
+    def _checkDBVersion(self):
+        dbVersion = self._getDBVersion()
+        if dbVersion == self._DB_VERSION_CURRENT:
+            return
+        
+        if dbVersion == self._DB_VERSION_INITIAL:
+            self._db.execute("ALTER TABLE PRIVATE_MESSAGES ADD COLUMN RECV_TIME REAL")
+            self._db.execute("UPDATE PRIVATE_MESSAGES SET RECV_TIME = TIME")
+        
+        self._updateDBVersion()    
+    
+    def addOwnMessage(self, msgID, partner, msgTime, msgState, msg, recvTime=None):
+        self._db.execute("INSERT INTO PRIVATE_MESSAGES VALUES(?, ?, ?, ?, ?, ?, ?)",
                          partner,
                          msgID,
                          True,
                          msgTime,
                          msgState,
-                         msg)
+                         msg,
+                         recvTime)
         
-    def addOtherMessage(self, msgID, partner, msgTime, msg):
-        self._db.execute("INSERT INTO PRIVATE_MESSAGES VALUES(?, ?, ?, ?, ?, ?)",
+    def addOtherMessage(self, msgID, partner, msgTime, msg, recvTime):
+        self._db.execute("INSERT INTO PRIVATE_MESSAGES VALUES(?, ?, ?, ?, ?, ?, ?)",
                          partner,
                          msgID,
                          False,
                          msgTime,
                          ChatMessagesModel.MESSAGE_STATE_OK,
-                         msg)
+                         msg,
+                         recvTime)
         
     def getMessageState(self, otherID, msgID):
         rows = self._db.query("SELECT STATUS FROM PRIVATE_MESSAGES WHERE M_ID = ? AND PARTNER = ? AND IS_OWN_MESSAGE = ?", msgID, otherID, True)
@@ -99,6 +120,15 @@ class ChatMessagesStorage(object):
 
     def updateMessageState(self, msgID, newState):
         self._db.execute("UPDATE PRIVATE_MESSAGES SET STATUS=? WHERE M_ID = ? AND IS_OWN_MESSAGE = ?", newState, msgID, True)
+        
+    def getReceiveTime(self, partner, msgID):
+        rows = self._db.query("SELECT RECV_TIME FROM PRIVATE_MESSAGES WHERE PARTNER = ? AND M_ID = ?", partner, msgID)
+        if len(rows) > 0:
+            return rows[0][0]
+        return None
+        
+    def updateReceiveTime(self, partner, msgID, recvTime):
+        self._db.execute("UPDATE PRIVATE_MESSAGES SET RECV_TIME=? WHERE PARTNER = ? AND M_ID = ?", recvTime, partner, msgID)
         
     def getNextMessageID(self):
         rows = self._db.query("SELECT MAX(M_ID) FROM PRIVATE_MESSAGES WHERE IS_OWN_MESSAGE = ?", True)

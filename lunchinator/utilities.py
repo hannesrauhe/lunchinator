@@ -48,7 +48,10 @@ def displayNotification(name, msg, icon=None):
                 call.extend(["-sender", _LUNCHINATOR_BUNDLE_IDENTIFIER])
                 
             log_debug(call)
-            subprocess.call(call, stdout=fh, stderr=fh)
+            try:
+                subprocess.call(call, stdout=fh, stderr=fh)
+            except:
+                log_exception("Error calling", call)
         elif myPlatform == PLATFORM_WINDOWS:
             from lunchinator import get_server
             if hasattr(get_server().controller, "statusicon"):
