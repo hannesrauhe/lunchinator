@@ -1,12 +1,14 @@
 from lunchinator import get_peers, get_peer_actions, log_warning
 from functools import partial
 from lunchinator.peer_actions.peer_actions_singleton import PeerActions
+from __builtin__ import hasattr
 
 def _fillPeerActionsMenu(popupMenu, peerID, filterFunc):
     peerInfo = get_peers().getPeerInfo(pID=peerID)
     actionsDict = get_peer_actions().getPeerActions(peerID, peerInfo, filterFunc)
     if actionsDict:
         actionKeys = sorted(actionsDict.keys())
+        first = True
         for actionKey in actionKeys:
             actions = actionsDict[actionKey]
             if actionKey == PeerActions.STANDARD_PEER_ACTIONS_KEY:
@@ -15,6 +17,11 @@ def _fillPeerActionsMenu(popupMenu, peerID, filterFunc):
                 displayedName = actions[0].getPluginObject().get_displayed_name()
                 if not displayedName:
                     displayedName = actionKey
+                    
+            if not first:
+                popupMenu.addSeparator()
+            else:
+                first = False
             header = popupMenu.addAction(displayedName)
             header.setEnabled(False)
             
