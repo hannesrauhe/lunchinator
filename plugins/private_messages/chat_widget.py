@@ -351,36 +351,36 @@ if __name__ == '__main__':
         ownIcon = get_settings().get_resource("images", "me.png")
         otherIcon = get_settings().get_resource("images", "lunchinator.png")
         tw = ChatWidget(window, "Me", "Other Guy", ownIcon, otherIcon, "ID")
-        tw.addOwnMessage(0,
+        tw.addOwnMessage(0, time(),
                          "foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten",
                          time(),
                          ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED)
         tw.addOtherMessage("<a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a>",
-                           time())
+                           time(), time())
         tw.addOtherMessage("foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh",
-                           time())
+                           time(), time())
         tw.addTimeRow(time())
         tw.addOtherMessage("foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh",
-                           time())
+                           time(), time())
         tw.addOtherMessage("foo",
-                           time())
+                           time(), time())
         tw.addOtherMessage("foo",
-                           time())
+                           time(), time())
         tw.addTimeRow(time())
         tw.addOtherMessage("<a href=\"mailto:info@lunchinator.de\">Lunchinator Mail</a>",
-                           time())
-        tw.addOwnMessage(1,
+                           time(), time())
+        tw.addOwnMessage(1, time(),
                          "bar",
                          time(),
                          ChatMessagesModel.MESSAGE_STATE_ERROR)
-        tw.addOwnMessage(2,
+        tw.addOwnMessage(2, time(),
                          "foo asdkfjh askjdfh kjash d asldfj alksdjf lkjsad fhasgdjwegr jhgasdkfjhg wjekrhg ajskhdgrkjwheg rkjhwg jkhewg r kawjhegr jkhwegr jkhweg fkjh wekjrh klahsdflkjah welkrh kasjdh fklahwe rklhaskdljfh lkajsehr lkjsahd rlkjhsd lkrjh sakldjhr lkajsh",
                          time())
         tw.addOtherMessage("foo",
-                           time())
+                           time(), time())
         tw.addOtherMessage("foo",
-                           time())
-        tw.addOwnMessage(3,
+                           time(), time())
+        tw.addOwnMessage(3, time(),
                          "bar",
                          time())
         tw.addTimeRow(time())
