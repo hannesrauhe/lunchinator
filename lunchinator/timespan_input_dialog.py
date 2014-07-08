@@ -104,9 +104,9 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = TimespanInputDialog(None, "Test", "This is a test.", "12:15", "12:45")
     
-    window.show()
-    window.activateWindow()
+    window.showNormal()
     window.raise_()
+    window.activateWindow()
     
     app.exec_()
 

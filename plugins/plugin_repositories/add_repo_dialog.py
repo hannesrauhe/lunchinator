@@ -163,9 +163,9 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = AddRepoDialog(None)
     
-    window.show()
-    window.activateWindow()
+    window.showNormal()
     window.raise_()
+    window.activateWindow()
     
     app.exec_()
 

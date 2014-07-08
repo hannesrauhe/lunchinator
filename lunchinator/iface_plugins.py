@@ -492,9 +492,9 @@ class iface_plugin(IPlugin):
         window.setWindowTitle("Layout Example")
         window.resize(300, 300)
         window.setCentralWidget(factory(window))
-        window.show()
-        window.activateWindow()
+        window.showNormal()
         window.raise_()
+        window.activateWindow()
         return window, app
     
     def _init_run_options_widget(self, parent):

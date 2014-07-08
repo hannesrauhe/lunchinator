@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import log_exception, convert_string, log_error, get_peers,\
-    get_settings
+    get_settings, get_server
 from lunchinator.peer_actions import PeerAction
 from private_messages.chat_history_view import ChatHistoryWidget
 from private_messages.chat_messages_handler import ChatMessagesHandler
@@ -112,11 +112,10 @@ class private_messages(iface_gui_plugin):
             chatWindow.getChatWidget().addOwnMessage(msgID, recvTime, msgHTML, msgTime, status, errorMsg)
     
     def _activateChat(self, chatWindow, forceForeground=True):
-        chatWindow.show()
+        chatWindow.showNormal()
         if forceForeground:
-            if getPlatform() == PLATFORM_MAC:
-                chatWindow.activateWindow()
             chatWindow.raise_()
+            chatWindow.activateWindow()
         return chatWindow
     
     def _openChat(self, myName, otherName, myAvatar, otherAvatar, otherID):
