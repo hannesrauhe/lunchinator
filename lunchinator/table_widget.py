@@ -3,6 +3,7 @@ from PyQt4.QtGui import QTreeView, QWidget, QVBoxLayout, QHBoxLayout, QPushButto
 from PyQt4.QtCore import Qt, QSize
 from lunchinator import convert_string
 from lunchinator.history_line_edit import HistoryLineEdit, HistoryTextEdit
+from lunchinator.utilities import getPlatform, PLATFORM_MAC
 
 class TableWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -18,7 +19,10 @@ class TableWidget(QWidget):
         # Create message table
         bottomWidget = QWidget(self)
         tableBottomLayout = QHBoxLayout(bottomWidget)
-        tableBottomLayout.setContentsMargins(10, 0, 10, 0)
+        if getPlatform() == PLATFORM_MAC:
+            tableBottomLayout.setContentsMargins(10, 0, 10, 0)
+        else:
+            tableBottomLayout.setContentsMargins(10, 0, 10, 5)
         
         self.table = QTreeView(self)
         self.table.setSortingEnabled(sortingEnabled)
@@ -29,7 +33,8 @@ class TableWidget(QWidget):
         self.table.setObjectName(self._TABLE_OBJ_NAME)
         
         self.table.setFrameShape(QFrame.StyledPanel)
-        self.table.setStyleSheet("QFrame#%s{border-width: 1px; border-top-style: none; border-right-style: none; border-bottom-style: solid; border-left-style: none; border-color:palette(mid)}" % self._TABLE_OBJ_NAME);
+        if getPlatform() == PLATFORM_MAC:
+            self.table.setStyleSheet("QFrame#%s{border-width: 1px; border-top-style: none; border-right-style: none; border-bottom-style: solid; border-left-style: none; border-color:palette(mid)}" % self._TABLE_OBJ_NAME);
         if sortedColumn != None:
             self.table.sortByColumn(sortedColumn, Qt.AscendingOrder if ascending else Qt.DescendingOrder)
         

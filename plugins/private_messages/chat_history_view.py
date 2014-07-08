@@ -4,7 +4,7 @@ from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView,\
 from lunchinator import get_peers, log_warning,\
     convert_string
 from lunchinator.table_models import TableModelBase
-from lunchinator.utilities import formatTime
+from lunchinator.utilities import formatTime, getPlatform, PLATFORM_MAC
 from time import localtime
 from PyQt4.QtCore import Qt, QVariant
 from private_messages.chat_messages_storage import ChatMessagesStorage
@@ -86,7 +86,8 @@ class ChatHistoryWidget(QWidget):
         
         self._peerList.setObjectName(u"__peer_list")
         self._peerList.setFrameShape(QFrame.StyledPanel)
-        self._peerList.setStyleSheet("QFrame#__peer_list{border-width: 1px; border-top-style: solid; border-right-style: solid; border-bottom-style: none; border-left-style: none; border-color:palette(mid)}");
+        if getPlatform() == PLATFORM_MAC:
+            self._peerList.setStyleSheet("QFrame#__peer_list{border-width: 1px; border-top-style: solid; border-right-style: solid; border-bottom-style: none; border-left-style: none; border-color:palette(mid)}");
 
     def _initHistoryTable(self):
         self._historyTable = QTreeView(self)
@@ -97,7 +98,8 @@ class ChatHistoryWidget(QWidget):
                 
         self._historyTable.setObjectName(u"__peer_list")
         self._historyTable.setFrameShape(QFrame.StyledPanel)
-        self._historyTable.setStyleSheet("QFrame#__peer_list{border-width: 1px; border-top-style: solid; border-right-style: none; border-bottom-style: none; border-left-style: solid; border-color:palette(mid)}");
+        if getPlatform() == PLATFORM_MAC:
+            self._historyTable.setStyleSheet("QFrame#__peer_list{border-width: 1px; border-top-style: solid; border-right-style: none; border-bottom-style: none; border-left-style: solid; border-color:palette(mid)}");
         
     def _initMainWidget(self):
         split = QSplitter(Qt.Horizontal, self)
