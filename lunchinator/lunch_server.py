@@ -258,7 +258,7 @@ class lunch_server(object):
                     log_warning("While calling: I do not know a peer with ID %s, ignoring " % pID)
     
         if 0 == len(target):            
-            log_error("Cannot send message, there is no peer given or none found")
+            log_error("Cannot send message (%s), there is no peer given or none found" % msg)
             
         if self.has_gui() and \
            get_settings().get_warn_if_members_not_ready() and \
