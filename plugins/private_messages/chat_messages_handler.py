@@ -303,3 +303,9 @@ class ChatMessagesHandler(QObject):
                                       time() if isResend else msgTime,
                                       msgHTML,
                                       isResend)
+
+    def sendTyping(self, otherID):
+        get_server().call("HELO_PM_TYPING 0", peerIDs=[otherID])
+        
+    def sendCleared(self, otherID):
+        get_server().call("HELO_PM_CLEARED 0", peerIDs=[otherID])

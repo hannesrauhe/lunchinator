@@ -1,7 +1,7 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
     QFrame, QIcon, QHBoxLayout,\
     QLabel, QPixmap, QTextCharFormat, QTextCursor, QToolButton, QMenu
-from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp
+from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp, QTimer
 
 from lunchinator import convert_string, get_settings, get_notification_center,\
     get_peers
@@ -14,6 +14,7 @@ from private_messages.chat_messages_model import ChatMessagesModel
 from xml.etree import ElementTree
 from StringIO import StringIO
 from functools import partial
+from time import time
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -50,6 +51,8 @@ class ChatWidget(QWidget):
     _TIME_ROW_INTERVAL = 10*60 # once every 10 minutes
     
     sendMessage = pyqtSignal(unicode, unicode) # peer ID, message HTML
+    typing = pyqtSignal()
+    cleared = pyqtSignal()
         
     def __init__(self, parent, ownName, otherName, ownPicFile, otherPicFile, otherID):
         super(ChatWidget, self).__init__(parent)
@@ -57,6 +60,16 @@ class ChatWidget(QWidget):
         self._offline = False
         self._delivering = False
         self._lastTimeRow = 0
+        self._textChanged = False
+        
+        self._typingTimer = QTimer(self)
+        self._typingTimer.timeout.connect(self._checkTyping)
+        self._typingTimer.start(1000)
+        self._entryWasEmpty = True
+        self._selfWasTyping = False
+        self._otherWasTyping = False
+        self._lastTimeSelfTyped = None
+        self._lastTimePartnerTyped = None
         
         self._otherID = otherID
         
@@ -75,12 +88,14 @@ class ChatWidget(QWidget):
         self._initMessageModel()
         self._initMessageTable()
         self._initTextEntry()
+        self._initStatusLabel()
         
         mainLayout = QVBoxLayout(self)
         mainLayout.setSpacing(0)
         
         self._addTopLayout(mainLayout)
         mainLayout.addWidget(self.table)
+        mainLayout.addWidget(self._statusLabel)
         mainLayout.addWidget(self.entry)
         
         # initialize GUI
@@ -213,12 +228,57 @@ class ChatWidget(QWidget):
         
     def _initTextEntry(self):
         self.entry = HistoryTextEdit(self, True)
+        self.entry.textChanged.connect(self._textChangedSlot)
+        
+    def _initStatusLabel(self):
+        self._statusLabel = QLabel(self)
+        self._statusLabel.setContentsMargins(0, 5, 0, 5)
+        self._statusLabel.setVisible(False)
         
     def _initMessageModel(self):
         self._model = ChatMessagesModel(self, self)
         
     def _initMessageTable(self):
         self.table = ChatMessagesView(self._model, self)
+        
+    def _textChangedSlot(self):
+        if self.entry.document().isEmpty():
+            self._textChanged = False
+            if not self._entryWasEmpty:
+                self._entryWasEmpty = True
+                self._selfWasTyping = False
+                self.cleared.emit()
+        elif not self._selfWasTyping:
+            self._entryWasEmpty = False
+            self.typing.emit()
+            self._selfWasTyping = True
+            self._lastTimeSelfTyped = time()
+        else:
+            self._textChanged = True
+            
+    def _checkTyping(self):
+        curTime = time()
+        if self._textChanged:
+            self.typing.emit()
+            # TODO do we really need thread safety here?
+            self._textChanged = False
+            self._lastTimeSelfTyped = curTime
+        elif self._selfWasTyping and curTime - self._lastTimeSelfTyped > 3:
+            self._selfWasTyping = False    
+            
+        if self._otherWasTyping and curTime - self._lastTimePartnerTyped > 3:
+            self.setStatus(self.getOtherName() + " paused typing.")
+            self._otherWasTyping = False
+            
+    def otherIsTyping(self):
+        if not self._otherWasTyping:
+            self._otherWasTyping = True
+            self.setStatus(self.getOtherName() + " is typing a message...")
+        self._lastTimePartnerTyped = time()
+        
+    def otherCleared(self):
+        self._otherWasTyping = False
+        self.setStatus(None)
        
     def scrollToEnd(self, force=True):
         lastIndex = self._model.getLastIndex()
@@ -260,6 +320,12 @@ class ChatWidget(QWidget):
         
     def canClose(self):
         return not self._delivering
+    
+    def finish(self):
+        if self._typingTimer is not None:
+            self._typingTimer.stop()
+            self._typingTimer.deleteLater()
+            self._typingTimer = None
         
     def getOwnIcon(self):
         return self._ownIcon    
@@ -295,6 +361,13 @@ class ChatWidget(QWidget):
     
     def getErrorIcon(self):
         return self._errIcon
+    
+    def setStatus(self, statusText):
+        if statusText:
+            self._statusLabel.setText(statusText)
+            self._statusLabel.setVisible(True)
+        else:
+            self._statusLabel.setVisible(False)
         
     def eventTriggered(self):
         self._detectHyperlinks()
@@ -384,6 +457,11 @@ if __name__ == '__main__':
                          "bar",
                          time())
         tw.addTimeRow(time())
+        
+        tw._setOffline(False)
+        
+        tw.typing.connect(tw.otherIsTyping)
+        tw.cleared.connect(tw.otherCleared)
         
         return tw
         

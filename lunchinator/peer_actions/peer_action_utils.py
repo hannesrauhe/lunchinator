@@ -1,7 +1,6 @@
 from lunchinator import get_peers, get_peer_actions, log_warning
 from functools import partial
 from lunchinator.peer_actions.peer_actions_singleton import PeerActions
-from __builtin__ import hasattr
 
 def _fillPeerActionsMenu(popupMenu, peerID, filterFunc):
     peerInfo = get_peers().getPeerInfo(pID=peerID)

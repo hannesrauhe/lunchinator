@@ -26,6 +26,7 @@ class ChatWindow(QMainWindow):
         else:
             self.windowClosing.emit(self._otherID)
             get_notification_center().disconnectDisplayedPeerNameChanged(self._displayedPeerNameChanged)
+            self.getChatWidget().finish()
             event.accept()
     
     def getChatWidget(self):

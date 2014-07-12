@@ -11,6 +11,7 @@ from lunchinator.logging_mutex import loggingMutex
 import sys
 from private_messages.chat_messages_storage import ChatMessagesStorage
 from time import time
+from functools import partial
     
 class _OpenChatAction(PeerAction):
     def getName(self):
@@ -81,14 +82,23 @@ class private_messages(iface_gui_plugin):
         return self._peerActions
         
     def process_event(self, cmd, value, _ip, peerInfo):
-        if cmd.startswith(u"HELO_PM_ACK"):
-            peerID = peerInfo[u"ID"]
+        if not cmd.startswith(u"HELO_PM"):
+            return
+        
+        peerID = peerInfo[u"ID"]
+        
+        subcmd = cmd[7:]
+        if subcmd == u"_ACK":
             self._messagesHandler.processAck(peerID, value)
-        elif cmd.startswith(u"HELO_PM_ERROR"):
-            peerID = peerInfo[u"ID"]
+        elif subcmd == u"_TYPING":
+            if peerID in self._openChats:
+                self._openChats[peerID].getChatWidget().otherIsTyping()
+        elif subcmd == u"_CLEARED":
+            if peerID in self._openChats:
+                self._openChats[peerID].getChatWidget().otherCleared()
+        elif subcmd == u"_ERROR":
             self._messagesHandler.processAck(peerID, value, error=True)
-        elif cmd.startswith(u"HELO_PM"):
-            peerID = peerInfo[u"ID"]
+        elif subcmd == u"":
             self._messagesHandler.processMessage(peerID, value)
     
     def getStorage(self):
@@ -123,6 +133,8 @@ class private_messages(iface_gui_plugin):
         newWindow = ChatWindow(None, myName, otherName, myAvatar, otherAvatar, otherID)
         newWindow.windowClosing.connect(self._chatClosed)
         newWindow.getChatWidget().sendMessage.connect(self._messagesHandler.sendMessage)
+        newWindow.getChatWidget().typing.connect(partial(self._messagesHandler.sendTyping, otherID))
+        newWindow.getChatWidget().cleared.connect(partial(self._messagesHandler.sendCleared, otherID))
         self._openChats[otherID] = newWindow
         
         prevMessages = self.getStorage().getPreviousMessages(otherID, self.get_option(u"prev_messages"))
