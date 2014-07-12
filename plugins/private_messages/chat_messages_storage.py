@@ -79,7 +79,8 @@ class ChatMessagesStorage(object):
             rows = self._db.query("SELECT MAX(M_ID) FROM PRIVATE_MESSAGES WHERE IS_OWN_MESSAGE = ?", True)
             if not rows or rows[0][0] == None:
                 nextID = 0
-            nextID = rows[0][0] + 1
+            else:
+                nextID = rows[0][0] + 1
             
             # insert initial next ID
             self._db.execute("INSERT INTO PRIVATE_MESSAGES_NEXTID VALUES(?)", nextID)
