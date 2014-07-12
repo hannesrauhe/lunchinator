@@ -61,6 +61,7 @@ class ChatWidget(QWidget):
         self._delivering = False
         self._lastTimeRow = 0
         self._textChanged = False
+        self._keepEntryText = False
         
         self._typingTimer = QTimer(self)
         self._typingTimer.timeout.connect(self._checkTyping)
@@ -174,11 +175,18 @@ class ChatWidget(QWidget):
     def _checkEntryState(self):
         self.entry.setEnabled(not self._offline and not self._delivering)
         if self._offline:
-            self.entry.setText(u"Partner is offline")
+            if self.entry.document().isEmpty():
+                self.entry.setText(u"Partner is offline")
+            else:
+                self._keepEntryText = True
         elif self._delivering:
             self.entry.setText(u"Delivering...")
-        else:
+        elif not self._keepEntryText:
             self.entry.setText(u"")
+            
+        if self._keepEntryText and not self._offline:
+            # reset if not offline any more
+            self._keepEntryText = False
         
     def nextInFocusChain(self):
         return self.entry
