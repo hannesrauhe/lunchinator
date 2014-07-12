@@ -2,7 +2,7 @@ from lunchinator.iface_plugins import iface_called_plugin
 from lunchinator import get_settings, log_error, log_debug, log_exception,\
     get_peers
 from lunchinator.utilities import displayNotification, getPlatform,\
-    PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS
+    PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS, which
 import os, threading, subprocess, ctypes
 
 class AttentionGetter(object):
@@ -56,7 +56,16 @@ def _drawAttentionLinux(audioFile, openTray):
     if openTray:
         _call(["eject", "-T", "/dev/cdrom"], "eject")
     
-    _call(["play", "-q", audioFile], "play sound")
+    playExe = which("paplay")
+    if playExe:
+        _call([playExe, audioFile], "play sound")
+    else:
+        # try SoX
+        playExe = which("play")
+        if playExe:
+            _call([playExe, "-q", audioFile], "play sound")
+        else:
+            log_error("No audio player found, cannot play sound.")
 
     if openTray:
         _call(["eject", "-T", "/dev/cdrom"], "close")
