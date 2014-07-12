@@ -66,11 +66,23 @@ class ChatMessagesStorage(object):
         if not self._db.existsTable("PRIVATE_MESSAGES_VERSION"):
             self._db.execute("CREATE TABLE PRIVATE_MESSAGES_VERSION(VERSION INTEGER)")
             self._db.execute("INSERT INTO PRIVATE_MESSAGES_VERSION(VERSION) VALUES(?)", self._DB_VERSION_CURRENT)
-                        
+        
         if not self._db.existsTable("PRIVATE_MESSAGES"):
             self._db.execute(self._MESSAGES_TABLE_STATEMENT)
             self._db.execute("CREATE INDEX PRIVATE_MESSAGE_TIME_INDEX on PRIVATE_MESSAGES(TIME)")
             self._db.execute("CREATE INDEX PRIVATE_MESSAGE_PARTNER_INDEX on PRIVATE_MESSAGES(PARTNER)")
+            
+        if not self._db.existsTable("PRIVATE_MESSAGES_NEXTID"):
+            self._db.execute("CREATE TABLE PRIVATE_MESSAGES_NEXTID(NEXTID INTEGER NOT NULL)")
+            
+            # obtain next message ID
+            rows = self._db.query("SELECT MAX(M_ID) FROM PRIVATE_MESSAGES WHERE IS_OWN_MESSAGE = ?", True)
+            if not rows or rows[0][0] == None:
+                nextID = 0
+            nextID = rows[0][0] + 1
+            
+            # insert initial next ID
+            self._db.execute("INSERT INTO PRIVATE_MESSAGES_NEXTID VALUES(?)", nextID)
             
         self._checkDBVersion()
 
@@ -100,6 +112,7 @@ class ChatMessagesStorage(object):
                          msgState,
                          msg,
                          recvTime)
+        self._db.execute("UPDATE PRIVATE_MESSAGES_NEXTID SET NEXTID=NEXTID+1")
         
     def addOtherMessage(self, msgID, partner, msgTime, msg, recvTime):
         self._db.execute("INSERT INTO PRIVATE_MESSAGES VALUES(?, ?, ?, ?, ?, ?, ?)",
@@ -131,10 +144,11 @@ class ChatMessagesStorage(object):
         self._db.execute("UPDATE PRIVATE_MESSAGES SET RECV_TIME=? WHERE PARTNER = ? AND M_ID = ?", recvTime, partner, msgID)
         
     def getNextMessageID(self):
-        rows = self._db.query("SELECT MAX(M_ID) FROM PRIVATE_MESSAGES WHERE IS_OWN_MESSAGE = ?", True)
+        rows = self._db.query("SELECT NEXTID FROM PRIVATE_MESSAGES_NEXTID")
         if not rows or rows[0][0] == None:
+            # should not happen
             return 0
-        return rows[0][0] + 1
+        return rows[0][0]
       
     def containsMessage(self, partner, msgID):
         rows = self._db.query("SELECT 1 FROM PRIVATE_MESSAGES WHERE PARTNER = ? AND M_ID = ?", partner, msgID)
