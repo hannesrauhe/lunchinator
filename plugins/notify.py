@@ -1,7 +1,8 @@
 from lunchinator.iface_plugins import iface_called_plugin
-from lunchinator import get_settings, log_error, log_debug, log_exception
+from lunchinator import get_settings, log_error, log_debug, log_exception,\
+    get_peers
 from lunchinator.utilities import displayNotification, getPlatform,\
-    PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS
+    PLATFORM_LINUX, PLATFORM_MAC, PLATFORM_WINDOWS, which
 import os, threading, subprocess, ctypes
 
 class AttentionGetter(object):
@@ -45,41 +46,38 @@ class AttentionGetter(object):
 def drawAttention(audioFile, openTray):
     AttentionGetter.getInstance().drawAttention(audioFile, openTray)
         
-def _drawAttentionLinux(audioFile, openTray):
-    if openTray:    
-        try:
-            subprocess.call(["eject", "-T", "/dev/cdrom"])
-        except:
-            log_exception("notify error: eject error (open)")
-    
+def _call(call, desc):
     try:
-        subprocess.call(["play", "-q", audioFile])    
+        subprocess.call(call)
     except:
-        log_exception("notify error: sound error")
+        log_exception("notify error (%s): Error calling" % desc, ' '.join(call))
+        
+def _drawAttentionLinux(audioFile, openTray):
+    if openTray:
+        _call(["eject", "-T", "/dev/cdrom"], "eject")
+    
+    playExe = which("paplay")
+    if playExe:
+        _call([playExe, audioFile], "play sound")
+    else:
+        # try SoX
+        playExe = which("play")
+        if playExe:
+            _call([playExe, "-q", audioFile], "play sound")
+        else:
+            log_error("No audio player found, cannot play sound.")
 
     if openTray:
-        try:
-            subprocess.call(["eject", "-T", "/dev/cdrom"])
-        except:
-            log_exception("notify error: eject error (close)")
+        _call(["eject", "-T", "/dev/cdrom"], "close")
         
 def _drawAttentionMac(audioFile, openTray):
-    if openTray:      
-        try:
-            subprocess.call(["drutil", "tray", "eject"])
-        except:
-            log_exception("notify error: eject error (open)")
-         
-    try:
-        subprocess.call(["afplay", audioFile])    
-    except:
-        log_exception("notify error: sound error")
+    if openTray:
+        _call(["drutil", "tray", "eject"], "eject")      
+
+    _call(["afplay", audioFile], "play sound")         
          
     if openTray:
-        try:
-            subprocess.call(["drutil", "tray", "close"])
-        except:
-            log_exception("notify error: eject error (close)")
+        _call(["drutil", "tray", "close"], "close")
 
 def _drawAttentionWindows(audioFile, openTray):
     if openTray:
