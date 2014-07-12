@@ -242,15 +242,15 @@ class ChatWidget(QWidget):
         self.table = ChatMessagesView(self._model, self)
         
     def _textChangedSlot(self):
-        if self.entry.document().isEmpty():
+        if not self.entry.isEnabled() or self.entry.document().isEmpty():
             self._textChanged = False
             if not self._entryWasEmpty:
                 self._entryWasEmpty = True
                 self._selfWasTyping = False
-                self.cleared.emit()
+                self._informCleared()
         elif not self._selfWasTyping:
             self._entryWasEmpty = False
-            self.typing.emit()
+            self._informTyping()
             self._selfWasTyping = True
             self._lastTimeSelfTyped = time()
         else:
@@ -259,7 +259,7 @@ class ChatWidget(QWidget):
     def _checkTyping(self):
         curTime = time()
         if self._textChanged:
-            self.typing.emit()
+            self._informTyping()
             # TODO do we really need thread safety here?
             self._textChanged = False
             self._lastTimeSelfTyped = curTime
@@ -269,6 +269,14 @@ class ChatWidget(QWidget):
         if self._otherWasTyping and curTime - self._lastTimePartnerTyped > 3:
             self.setStatus(self.getOtherName() + " paused typing.")
             self._otherWasTyping = False
+            
+    def _informTyping(self):
+        if not self._offline:
+            self.typing.emit()
+        
+    def _informCleared(self):
+        if not self._offline:
+            self.cleared.emit()
             
     def otherIsTyping(self):
         if not self._otherWasTyping:
