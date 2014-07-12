@@ -322,6 +322,12 @@ class ChatWidget(QWidget):
         return not self._delivering
     
     def finish(self):
+        get_notification_center().disconnectPeerAppended(self._peerUpdated)
+        get_notification_center().disconnectPeerUpdated(self._peerUpdated)
+        get_notification_center().disconnectPeerRemoved(self._peerRemoved)
+        get_notification_center().disconnectAvatarChanged(self._avatarChanged)
+        get_notification_center().disconnectDisplayedPeerNameChanged(self._displayedPeerNameChanged)
+        
         if self._typingTimer is not None:
             self._typingTimer.stop()
             self._typingTimer.deleteLater()
