@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from __future__ import with_statement
+fror __future__ import with_statement
 import os, platform
 from distutils.core import setup
 from distutils.command import install
@@ -70,8 +70,8 @@ data_files = [('share/lunchinator/sounds', ['sounds/sonar.wav']),
                                             'images/lunchinator.png',
                                             'images/lunchinatorred.png',
                                             'images/lunchinatorgreen.png',
-                                            'images/me.png'
-                                            'images/warning.png'
+                                            'images/me.png',
+                                            'images/warning.png',
                                             'images/error.png']),
               ('share/lunchinator', ['lunchinator_pub_0x17F57DC2.asc', 'version']),
               ('share/icons/hicolor/scalable/apps', ['images/lunchinator.svg']),
