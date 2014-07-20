@@ -1,14 +1,10 @@
-from PyQt4.QtGui import QWidget, QVBoxLayout, QLabel, QPushButton, \
-                        QTreeView, QHBoxLayout, QStandardItemModel, QColor,\
-    QStandardItem, QFrame, QSplitter, QToolBox, QScrollArea
-from PyQt4.QtCore import pyqtSignal, Qt, QVariant
-from lunchinator import get_settings, convert_string
-from lunchinator.utilities import getPlatform, PLATFORM_MAC
 from lunchinator.table_models import TableModelBase
 from lunchinator.peer_actions.peer_actions_singleton import PeerActions
 from privacy.multiple_categories_view import MultipleCategoriesView
 from privacy.single_category_view import SingleCategoryView
-    
+from PyQt4.QtGui import QWidget, QVBoxLayout, QTreeView, QFrame, QSplitter
+from PyQt4.QtCore import Qt
+
 class PeerActionsModel(TableModelBase):
     ACTION_ROLE = TableModelBase.SORT_ROLE + 1
     
@@ -76,15 +72,25 @@ class PrivacyGUI(QWidget):
         split.setStretchFactor(1, 1)
         return split
     
+    def hideEvent(self, event):
+        self._clearSettingsWidget()
+        return QWidget.hideEvent(self, event)
+    
+    def showEvent(self, event):
+        self._displaySettings(self._actionList.selectionModel().selection())
+        return QWidget.showEvent(self, event)
+    
     def _clearSettingsWidget(self):
         layout = self._settingsWidget.layout()
         
         child = layout.takeAt(0)
         while child != None:
+            child.widget().finish()
             child.widget().deleteLater()
             child = layout.takeAt(0)
-    
-    def _displaySettings(self, newSelection, _oldSelection):
+            
+    def _displaySettings(self, newSelection, _oldSelection=None):
+        self._clearSettingsWidget()
         if len(newSelection.indexes()) > 0:
             index = iter(newSelection.indexes()).next()
             action = index.data(PeerActionsModel.ACTION_ROLE).toPyObject()
@@ -93,5 +99,3 @@ class PrivacyGUI(QWidget):
                 self._settingsWidget.layout().addWidget(MultipleCategoriesView(action, self._settingsWidget))
             else:
                 self._settingsWidget.layout().addWidget(SingleCategoryView(action, self._settingsWidget))
-        else:
-            self._clearSettingsWidget()

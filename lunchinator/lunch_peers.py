@@ -365,7 +365,13 @@ class LunchPeers(object):
     
     def getPeers(self):
         """returns the IDs of all peers"""
-        return self._idToIp.keys()
+        with self._lock:
+            return list(self._idToIp.keys())
+    
+    def getAllKnownPeerIDs(self):
+        """Returns the IDs of all peers ever known."""
+        with self._lock:
+            return self._peerNames.getAllPeerIDs()
     
     def getPeerInfoDict(self):
         """Returns all data stored in the peerInfo dict -> all data on all peers"""

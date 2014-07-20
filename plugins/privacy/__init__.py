@@ -1,5 +1,6 @@
 from lunchinator.iface_plugins import iface_general_plugin
 from privacy.privacy_gui import PrivacyGUI
+from privacy.privacy_settings import PrivacySettings
 
 class privacy(iface_general_plugin):
     def __init__(self):
@@ -7,9 +8,11 @@ class privacy(iface_general_plugin):
         self._ui = None
         self._modified = False
         self.force_activation = True
+        self.hidden_options = {u"json" : u"{}"}
         
     def activate(self):
         iface_general_plugin.activate(self)
+        PrivacySettings.initialize(self.hidden_options[u"json"])
         
     def deactivate(self):
         iface_general_plugin.deactivate(self)
@@ -22,12 +25,11 @@ class privacy(iface_general_plugin):
         return u"Privacy"
     
     def discard_changes(self):
-        # TODO
-        pass
+        PrivacySettings.get().discard()
         
     def save_options_widget_data(self, **_kwargs):
-        # TODO
-        pass
+        PrivacySettings.get().save()
+        self.set_hidden_option(u"json", PrivacySettings.get().getJSON(), convert=False)
     
 if __name__ == '__main__':
     from lunchinator.peer_actions import PeerAction, PeerActions
@@ -43,6 +45,11 @@ if __name__ == '__main__':
         def getPrivacyCategories(self):
             return (u"Category 1", u"Category 2")
     
-    PeerActions.get()._peerActions["Test Plugin"] = [TestAction()]
     w = privacy()
+    testAction = TestAction()
+    testAction._pluginObject = w
+    testAction._pluginName = "Test Plugin"
+    PeerActions.get()._peerActions["Test Plugin"] = [testAction]
     w.run_options_widget()
+    PrivacySettings.get().save()
+    print PrivacySettings.get()._settings

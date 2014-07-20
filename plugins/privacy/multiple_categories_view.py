@@ -2,14 +2,15 @@ from PyQt4.QtGui import QWidget, QComboBox, QHBoxLayout, QLabel, QToolBox,\
     QScrollArea, QFrame, QVBoxLayout
 from PyQt4.QtCore import Qt
 from privacy.single_category_view import SingleCategoryView
-from privacy.settings_model import SettingsModel
+from privacy.privacy_settings import PrivacySettings
 
 class MultipleCategoriesView(QWidget):
     def __init__(self, action, parent):
         super(MultipleCategoriesView, self).__init__(parent)
 
         self._action = action
-        self._mode = 0
+        self._mode = PrivacySettings.get().getPolicy(self._action, None)
+        self._currentSingleViews = []
         
         topView = self._initTopView()
         self._initSettingsWidget()
@@ -18,6 +19,10 @@ class MultipleCategoriesView(QWidget):
         mainLayout.setContentsMargins(0, 0, 0, 0)
         mainLayout.addWidget(topView)
         mainLayout.addWidget(self._settingsWidget, 1)
+        self._modeChanged(self._mode, False)
+        
+    def finish(self):
+        self._clearCurrentView()
 
     def _initTopView(self):
         topWidget = QWidget(self)
@@ -28,6 +33,7 @@ class MultipleCategoriesView(QWidget):
         self._modeCombo.addItem(u"from everybody, except")
         self._modeCombo.addItem(u"from everybody")
         self._modeCombo.addItem(u"depending on category")
+        self._modeCombo.setCurrentIndex(self._mode)
         self._modeCombo.currentIndexChanged.connect(self._modeChanged)
         
         topLayout = QHBoxLayout(topWidget)
@@ -41,6 +47,10 @@ class MultipleCategoriesView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
     
     def _clearCurrentView(self):
+        for view in self._currentSingleViews:
+            view.finish()
+        self._currentSingleViews = []
+        
         layout = self._settingsWidget.layout()
         
         child = layout.takeAt(0)
@@ -54,7 +64,9 @@ class MultipleCategoriesView(QWidget):
         toolBox = QToolBox(self)
         
         for category in self._action.getPrivacyCategories():
-            toolBox.addItem(SingleCategoryView(self._action, toolBox, category), category)
+            singleView = SingleCategoryView(self._action, toolBox, category)
+            self._currentSingleViews.append(singleView)
+            toolBox.addItem(singleView, category)
         
         w = QScrollArea(self)
         w.setWidgetResizable(True)
@@ -65,24 +77,24 @@ class MultipleCategoriesView(QWidget):
     def _createSingleView(self, mode):
         self._clearCurrentView()
         w = SingleCategoryView(self._action, self, mode=mode)
+        self._currentSingleViews.append(w)
         self._settingsWidget.layout().addWidget(w)
         
-    def _currentView(self):
-        return self._settingsWidget.layout().itemAt(0).widget()
-                
-    def _modeChanged(self, newMode):
-        if newMode in (SettingsModel.MODE_EVERYBODY_EX, SettingsModel.MODE_NOBODY_EX):
+    def _modeChanged(self, newMode, notify=True):
+        if newMode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
             # single mode
-            if self._mode not in (SettingsModel.MODE_EVERYBODY_EX, SettingsModel.MODE_NOBODY_EX):
+            if len(self._currentSingleViews) == 0 or self._mode not in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
                 # only reset if not already in single mode
                 self._createSingleView(newMode)
             else:
                 # only change mode
-                self._currentView().setMode(newMode)
-        elif newMode == SettingsModel.MODE_BY_CATEGORY:
+                self._currentSingleViews[0].setMode(newMode)
+        elif newMode == PrivacySettings.POLICY_BY_CATEGORY:
             self._createCategoryView()
         else:
             self._clearCurrentView()
         
         self._mode = newMode
+        if notify:
+            PrivacySettings.get().setPolicy(self._action, None, self._mode)
     

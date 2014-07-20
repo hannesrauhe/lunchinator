@@ -498,12 +498,13 @@ class iface_plugin(IPlugin):
         return window, app
     
     def _init_run_options_widget(self, parent):
+        self.hasConfigOption = lambda _ : False
         self.activate()
         return self.create_options_widget(parent)
     
     def run_options_widget(self):
         _window, app = iface_general_plugin.prepare_application(self._init_run_options_widget)
-        sys.exit(app.exec_())
+        return app.exec_()
                     
 class db_for_plugin_iface(object):
     """to support different DBMS within a plugin, a class inherited from this one is needed"""

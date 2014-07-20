@@ -12,17 +12,8 @@ import sys
 from private_messages.chat_messages_storage import ChatMessagesStorage
 from time import time
 from functools import partial
-    
-class _OpenChatAction(PeerAction):
-    def getName(self):
-        return "Open Chat"
-    
-    def performAction(self, peerID, _peerInfo):
-        self.getPluginObject().openChat(peerID)
-        
-    def appliesToPeer(self, _peerID, peerInfo):
-        return u"PM_v" in peerInfo
-    
+from privacy.privacy_settings import PrivacySettings
+
 class _SendMessageAction(PeerAction):
     def getName(self):
         return "Send Message"
@@ -32,6 +23,23 @@ class _SendMessageAction(PeerAction):
     
     def getMessagePrefix(self):
         return "PM"
+    
+    def getDefaultPrivacyPolicy(self):
+        return PrivacySettings.POLICY_EVERYBODY_EX
+    
+class _OpenChatAction(PeerAction):
+    def __init__(self, sendMessageAction):
+        self._sendMessageAction = sendMessageAction
+    
+    def getName(self):
+        return "Open Chat"
+    
+    def performAction(self, peerID, _peerInfo):
+        self.getPluginObject().openChat(peerID)
+        
+    def appliesToPeer(self, peerID, peerInfo):
+        # this action has no privacy settings, use the ones from send message
+        return u"PM_v" in peerInfo and not self._sendMessageAction.getPeerState(peerID) == PrivacySettings.STATE_BLOCKED
     
 class private_messages(iface_gui_plugin):
     VERSION_INITIAL = 0
@@ -47,7 +55,8 @@ class private_messages(iface_gui_plugin):
         
     def activate(self):
         iface_gui_plugin.activate(self)
-        self._peerActions = [_OpenChatAction(), _SendMessageAction()]
+        sendMessageAction = _SendMessageAction()
+        self._peerActions = [_OpenChatAction(sendMessageAction), sendMessageAction]
         
         self._lock = loggingMutex("Private Messages", logging=get_settings().get_verbose())
         self._storage = None
@@ -63,7 +72,6 @@ class private_messages(iface_gui_plugin):
         self._messagesHandler.newMessage.connect(self._displayMessage)
         
     def deactivate(self):
-        iface_gui_plugin.deactivate(self)
         self._messagesHandler.deactivate()
         self._messagesThread.quit()
         self._messagesThread.wait()
@@ -72,6 +80,7 @@ class private_messages(iface_gui_plugin):
         self._messagesThread = None
         self._storage = None
         self._lock = None
+        iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
         self._openChats = {} # mapping peer ID -> ChatDockWidget

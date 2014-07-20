@@ -251,6 +251,16 @@ class NotificationCenter(object):
         pass
     
     @_connectFunc
+    def connectPeerNameAdded(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPeerNameAdded(self, callback):
+        pass
+    @_emitFunc
+    def emitPeerNameAdded(self, peerID, peerName):
+        pass
+    
+    @_connectFunc
     def connectAvatarChanged(self, callback):
         pass
     @_disconnectFunc

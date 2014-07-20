@@ -46,6 +46,7 @@ class PeerNames(object):
         if oldName == None:
             # need to insert
             self._db.execute("INSERT INTO CORE_PEER_NAMES VALUES(?, ?, NULL)", peerID, newName)
+            get_notification_center().emitPeerNameAdded(peerID, newName)
         elif oldName != newName:
             # need to update
             self._db.execute("UPDATE CORE_PEER_NAMES SET PEER_NAME = ? WHERE PEER_ID = ?", newName, peerID)
@@ -112,9 +113,18 @@ class PeerNames(object):
         """Iterates over peer IDs with a given name.
         
         The name can either be a real name or a custom name.
-        This method does not block, use get_peers.getPeerIDsByName instead.
+        This method does not block, use get_peers().getPeerIDsByName instead.
         """
         for peerID, aTuple in self._peerNameCache.iteritems():
             peerName, customName = aTuple
             if peerName == searchedName or customName == searchedName:
                 yield peerID
+                
+    def getAllPeerIDs(self):
+        """Returns IDs of all peers ever known.
+        
+        This method does not block, use get_peers().getAllKnownPeerIDs()
+        instead."""
+        
+        return [row[0] for row in self._db.query("SELECT DISTINCT PEER_ID FROM CORE_PEER_NAMES")]
+        
