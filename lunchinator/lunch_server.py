@@ -5,6 +5,7 @@ import socket, sys, os, json, contextlib, tarfile, platform, random, errno
 from time import strftime, localtime, time
 from cStringIO import StringIO
 
+from lunchinator.lunch_socket import lunch_socket, split_call
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string, get_notification_center
 from lunchinator.logging_mutex import loggingMutex
@@ -147,10 +148,9 @@ class lunch_server(object):
         
         is_in_broadcast_mode = False
         
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s = lunch_socket()
         try: 
-            s.bind(("", 50000)) 
-            s.settimeout(5.0)
+            s.bind()
             self.running = True
             self._cleanupLock = loggingMutex("cleanup", logging=get_settings().get_verbose())
             self._startCleanupTimer()
@@ -163,15 +163,7 @@ class lunch_server(object):
             
             while self.running:
                 try:
-                    data, addr = s.recvfrom(1024)
-                    ip = unicode(addr[0])
-                    
-                    log_debug(u"Incoming event from %s: %s" % (ip, convert_string(data)))
-                    try:
-                        data = data.decode('utf-8')
-                    except:
-                        log_error("Received illegal data from %s, maybe wrong encoding" % ip)
-                        continue                 
+                    data, ip = s.recv()            
                      
                     # check for local address: only stop command allowed, else ignore
                     if ip.startswith("127."):
@@ -191,8 +183,9 @@ class lunch_server(object):
                         self.call_request_info([ip])
                     
                     self._handle_event(data, ip, time(), isNewPeer, False)
-                except socket.timeout:
-                    
+                except split_call:
+                    pass
+                except socket.timeout:                    
                     if len(self._peers) > 1:                     
                         if is_in_broadcast_mode:
                             is_in_broadcast_mode = False
@@ -203,9 +196,6 @@ class lunch_server(object):
                                 is_in_broadcast_mode = True
                                 log_warning("seems like you are alone - broadcasting for others")
                             self._broadcast()
-                except socket.error as e:
-                    if e.errno != errno.EINTR:
-                        raise
         except socket.error as e:
             # socket error messages may contain special characters, which leads to crashes on old python versions
             log_error(u"stopping lunchinator because of socket error:", convert_string(str(e)))
@@ -290,17 +280,14 @@ class lunch_server(object):
                     print "WARNING: %s" % warn
 
         i = 0
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
+        s = lunch_socket()
         try:      
             for ip in target:
                 try:
-                    log_debug("Sending", msg, "to", ip.strip())
-                    s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
+                    s.sendto(msg, ip.strip())
                     i += 1
                 except:
-                    # only warning message; happens sometimes if the host is not reachable
-                    log_warning("Message %s could not be delivered to %s: %s" % (s, ip, str(sys.exc_info()[0])))
-                    continue
+                    pass
         finally:
             s.close() 
         return i
