@@ -23,6 +23,16 @@ class _OpenChatAction(PeerAction):
     def appliesToPeer(self, _peerID, peerInfo):
         return u"PM_v" in peerInfo
     
+class _SendMessageAction(PeerAction):
+    def getName(self):
+        return "Send Message"
+    
+    def appliesToPeer(self, _peerID, _peerInfo):
+        return False
+    
+    def getMessagePrefix(self):
+        return "PM"
+    
 class private_messages(iface_gui_plugin):
     VERSION_INITIAL = 0
     VERSION_CURRENT = VERSION_INITIAL
@@ -37,7 +47,7 @@ class private_messages(iface_gui_plugin):
         
     def activate(self):
         iface_gui_plugin.activate(self)
-        self._peerActions = [_OpenChatAction()]
+        self._peerActions = [_OpenChatAction(), _SendMessageAction()]
         
         self._lock = loggingMutex("Private Messages", logging=get_settings().get_verbose())
         self._storage = None
