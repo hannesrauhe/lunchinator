@@ -1,5 +1,6 @@
 import json
-from lunchinator import log_exception, get_settings, log_warning, log_error
+from lunchinator import log_exception, get_settings, log_warning, log_error,\
+    get_notification_center
 from lunchinator.logging_mutex import loggingMutex
 
 def _setter(func):
@@ -21,6 +22,8 @@ def _setter(func):
             # apply to stored settings
             settings = self._initModification(action, category, actionDictSource=self._settings)
             func(self, action, category, settingsDict=settings, *args, **kwargs)
+            
+            get_notification_center().emitPrivacySettingsChanged(action.getPluginName(), action.getName())
         else:
             # only add to modification dict
             settings = self._initModification(action, category, actionDictSource=self._modifications)
@@ -91,6 +94,7 @@ class PrivacySettings(object):
                         # don't store category information if not necessary
                         actionDict.pop(u"cat", None)
                     self._setPeerActionSettings(pluginName, actionName, actionDict)
+                    get_notification_center().emitPrivacySettingsChanged(pluginName, actionName)
                 
     def discard(self):
         """Discards all modifications since the last save"""

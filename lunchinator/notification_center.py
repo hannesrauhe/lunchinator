@@ -373,6 +373,17 @@ class NotificationCenter(object):
     @_emitFunc
     def emitPeerActionsChanged(self):
         pass
+    
+    """Emitted whenever a peer action is added or removed."""    
+    @_connectFunc
+    def connectPrivacySettingsChanged(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPrivacySettingsChanged(self, callback):
+        pass
+    @_emitFunc
+    def emitPrivacySettingsChanged(self, pluginName, actionName):
+        pass
 
 if __name__ == '__main__':
     def _testCallback(a, b, c):

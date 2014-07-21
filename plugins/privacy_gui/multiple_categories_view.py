@@ -3,6 +3,7 @@ from PyQt4.QtGui import QWidget, QComboBox, QHBoxLayout, QLabel, QToolBox,\
 from PyQt4.QtCore import Qt
 from privacy_gui.single_category_view import SingleCategoryView
 from lunchinator.privacy.privacy_settings import PrivacySettings
+from lunchinator import get_notification_center
 
 class MultipleCategoriesView(QWidget):
     def __init__(self, action, parent):
@@ -21,7 +22,10 @@ class MultipleCategoriesView(QWidget):
         mainLayout.addWidget(self._settingsWidget, 1)
         self._modeChanged(self._mode, False)
         
+        get_notification_center().connectPrivacySettingsChanged(self._privacySettingsChanged)
+        
     def finish(self):
+        get_notification_center().disconnectPrivacySettingsChanged(self._privacySettingsChanged)
         self._clearCurrentView()
 
     def _initTopView(self):
@@ -101,3 +105,8 @@ class MultipleCategoriesView(QWidget):
         if notify:
             PrivacySettings.get().setPolicy(self._action, None, self._mode, applyImmediately=False)
     
+    def _privacySettingsChanged(self, pluginName, actionName):
+        if pluginName != self._action.getPluginName() or actionName != self._action.getName():
+            return
+        newMode = PrivacySettings.get().getPolicy(self._action, self._category)
+        self._modeChanged(newMode, notify=False)
