@@ -1,6 +1,6 @@
 [Core]
 Name = hannesrauhe.lunchinator.privacy_settings
-Module = privacy
+Module = privacy_gui
 
 [Documentation]
 Author = Cornelius Ratsch

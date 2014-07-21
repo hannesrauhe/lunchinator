@@ -1,5 +1,5 @@
 from lunchinator.iface_plugins import iface_general_plugin
-from privacy.privacy_gui import PrivacyGUI
+from privacy_gui.gui import PrivacyGUI
 from lunchinator.privacy import PrivacySettings
 
 class privacy(iface_general_plugin):

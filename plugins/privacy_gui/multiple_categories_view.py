@@ -1,7 +1,7 @@
 from PyQt4.QtGui import QWidget, QComboBox, QHBoxLayout, QLabel, QToolBox,\
     QScrollArea, QFrame, QVBoxLayout
 from PyQt4.QtCore import Qt
-from privacy.single_category_view import SingleCategoryView
+from privacy_gui.single_category_view import SingleCategoryView
 from lunchinator.privacy.privacy_settings import PrivacySettings
 
 class MultipleCategoriesView(QWidget):

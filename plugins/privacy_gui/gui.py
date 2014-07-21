@@ -1,7 +1,7 @@
 from lunchinator.table_models import TableModelBase
 from lunchinator.peer_actions.peer_actions_singleton import PeerActions
-from privacy.multiple_categories_view import MultipleCategoriesView
-from privacy.single_category_view import SingleCategoryView
+from privacy_gui.multiple_categories_view import MultipleCategoriesView
+from privacy_gui.single_category_view import SingleCategoryView
 from PyQt4.QtGui import QWidget, QVBoxLayout, QTreeView, QFrame, QSplitter
 from PyQt4.QtCore import Qt
 
