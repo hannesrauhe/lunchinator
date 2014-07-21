@@ -12,7 +12,7 @@ import sys
 from private_messages.chat_messages_storage import ChatMessagesStorage
 from time import time
 from functools import partial
-from privacy.privacy_settings import PrivacySettings
+from lunchinator.privacy.privacy_settings import PrivacySettings
 
 class _SendMessageAction(PeerAction):
     def getName(self):

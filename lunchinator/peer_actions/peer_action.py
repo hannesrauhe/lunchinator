@@ -39,7 +39,7 @@ class PeerAction(object):
     
     def getDefaultPrivacyPolicy(self):
         """Returns the default privacy mode, see PrivacySettings."""
-        from privacy.privacy_settings import PrivacySettings
+        from lunchinator.privacy import PrivacySettings
         return PrivacySettings.POLICY_NOBODY_EX
     
     def getDefaultCategoryPrivacyPolicy(self):
@@ -49,7 +49,7 @@ class PeerAction(object):
         a list), this method specifies the default privacy policy for each
         category.
         """
-        from privacy.privacy_settings import PrivacySettings
+        from lunchinator.privacy import PrivacySettings
         return PrivacySettings.POLICY_NOBODY_EX
     
     ########## DON'T OVERRIDE ##########    
@@ -67,26 +67,26 @@ class PeerAction(object):
         
     def getPrivacyPolicy(self, category=None):
         """Convenience method to get the privacy policy"""
-        from privacy.privacy_settings import PrivacySettings
+        from lunchinator.privacy import PrivacySettings
         return PrivacySettings.get().getPolicy(self, category)
         
     def getAskForConfirmation(self, category=None):
         """Convenience method to get the 'ask for confirmation' state"""
-        from privacy.privacy_settings import PrivacySettings
+        from lunchinator.privacy import PrivacySettings
         return PrivacySettings.get().getAskForConfirmation(self, category)
     
     def getChecked(self, category=None):
         """Convenience method to get the checked peer IDs"""
-        from privacy.privacy_settings import PrivacySettings
+        from lunchinator.privacy import PrivacySettings
         return PrivacySettings.get().getChecked(self, category)
     
     def getUnchecked(self, category=None):
         """Convenience method to get the unchecked peer IDs"""
-        from privacy.privacy_settings import PrivacySettings
+        from lunchinator.privacy import PrivacySettings
         return PrivacySettings.get().getUnchecked(self, category)
     
     def getPeerState(self, peerID, category=None):
         """Convenience method to get the peer's privacy state"""
-        from privacy.privacy_settings import PrivacySettings
+        from lunchinator.privacy import PrivacySettings
         return PrivacySettings.get().getPeerState(peerID, self, category)
         

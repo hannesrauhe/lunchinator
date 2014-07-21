@@ -4,7 +4,7 @@ from lunchinator.table_models import TableModelBase
 from lunchinator import get_peers, log_warning, get_notification_center,\
     convert_string
 from PyQt4.QtCore import Qt
-from privacy.privacy_settings import PrivacySettings
+from lunchinator.privacy.privacy_settings import PrivacySettings
 
 class PeerModel(TableModelBase):
     def __init__(self, checked, unchecked):

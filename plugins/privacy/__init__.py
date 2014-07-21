@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import iface_general_plugin
 from privacy.privacy_gui import PrivacyGUI
-from privacy.privacy_settings import PrivacySettings
+from lunchinator.privacy import PrivacySettings
 
 class privacy(iface_general_plugin):
     def __init__(self):
@@ -16,7 +16,7 @@ class privacy(iface_general_plugin):
         
     def deactivate(self):
         iface_general_plugin.deactivate(self)
-        
+
     def create_options_widget(self, parent):
         self._ui = PrivacyGUI(parent)
         return self._ui  
