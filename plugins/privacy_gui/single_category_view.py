@@ -105,7 +105,11 @@ class SingleCategoryView(QWidget):
         capsuleWidget = QWidget()
         capsuleLayout = QVBoxLayout(capsuleWidget)
         
-        self._peerModel = PeerModel(PrivacySettings.get().getExceptions(self._action, self._category, mode, useModified=True),
+        if mode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
+            exceptions = PrivacySettings.get().getExceptions(self._action, self._category, mode, useModified=True)
+        else:
+            exceptions = {}
+        self._peerModel = PeerModel(exceptions,
                                     mode == PrivacySettings.POLICY_PEER_EXCEPTION)
         self._peerModel.itemChanged.connect(self._peerDataChanged)
         

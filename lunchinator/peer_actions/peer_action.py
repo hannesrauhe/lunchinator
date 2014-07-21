@@ -9,6 +9,10 @@ class PeerAction(object):
         return None
     
     ########## OPTIONAL ###########
+    def getDisplayedName(self, _peerID):
+        """Can be used to change the displayed name depending on the context."""
+        return self.getName()
+    
     def performAction(self, peerID, peerInfo):
         """Called when the action is performed on some peer."""
         pass
@@ -93,3 +97,7 @@ class PeerAction(object):
         from lunchinator.privacy import PrivacySettings
         return PrivacySettings.get().getPeerState(peerID, self, category)
         
+    def getExceptions(self, policy, category=None):
+        """Convenience method to get the exception dict"""
+        from lunchinator.privacy import PrivacySettings
+        return PrivacySettings.get().getExceptions(self, category, policy)

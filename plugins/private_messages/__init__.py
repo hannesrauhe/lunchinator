@@ -41,6 +41,52 @@ class _OpenChatAction(PeerAction):
         # this action has no privacy settings, use the ones from send message
         return u"PM_v" in peerInfo and not self._sendMessageAction.getPeerState(peerID) == PrivacySettings.STATE_BLOCKED
     
+class _BlockAction(PeerAction):
+    def __init__(self, sendMessageAction):
+        self._sendMessageAction = sendMessageAction
+    
+    def getName(self):
+        return "Block"
+    
+    def getDisplayedName(self, peerID):
+        policy = self._sendMessageAction.getPrivacyPolicy()
+        exceptions = self._sendMessageAction.getExceptions(policy)
+        
+        if policy == PrivacySettings.POLICY_NOBODY_EX:
+            blocked = True
+            if peerID in exceptions and exceptions[peerID] == 1:
+                blocked = False
+            if blocked:
+                return "Add to whitelist"
+            else:
+                return "Remove from whitelist (block)"
+        else:
+            free = True
+            if peerID in exceptions and exceptions[peerID] == 1:
+                free = False
+            if free:
+                return "Block"
+            else:
+                return "Unblock"
+    
+    def performAction(self, peerID, _peerInfo):
+        policy = self._sendMessageAction.getPrivacyPolicy()
+        if policy not in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
+            log_error("Illegal policy for block action:", policy)
+            return
+        
+        exceptions = self._sendMessageAction.getExceptions(policy)
+        
+        newVal = 1
+        if peerID in exceptions and exceptions[peerID] == 1:
+            newVal = 0
+            
+        PrivacySettings.get().addException(self._sendMessageAction, None, policy, peerID, newVal)
+        
+    def appliesToPeer(self, _peerID, _peerInfo):
+        policy = self._sendMessageAction.getPrivacyPolicy()
+        return policy in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX)
+    
 class private_messages(iface_gui_plugin):
     VERSION_INITIAL = 0
     VERSION_CURRENT = VERSION_INITIAL
@@ -56,7 +102,7 @@ class private_messages(iface_gui_plugin):
     def activate(self):
         iface_gui_plugin.activate(self)
         sendMessageAction = _SendMessageAction()
-        self._peerActions = [_OpenChatAction(sendMessageAction), sendMessageAction]
+        self._peerActions = [_OpenChatAction(sendMessageAction), _BlockAction(sendMessageAction), sendMessageAction]
         
         self._lock = loggingMutex("Private Messages", logging=get_settings().get_verbose())
         self._storage = None

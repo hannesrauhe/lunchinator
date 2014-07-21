@@ -25,7 +25,7 @@ def _fillPeerActionsMenu(popupMenu, peerID, filterFunc):
             header.setEnabled(False)
             
             for action in actions:
-                popupMenu.addAction(action.getName(), partial(action.performAction, peerID, peerInfo))
+                popupMenu.addAction(action.getDisplayedName(peerID), partial(action.performAction, peerID, peerInfo))
     return popupMenu
 
 def initializePeerActionsMenu(menu, peerID, filterFunc):
