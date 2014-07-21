@@ -75,16 +75,6 @@ class PeerAction(object):
         from lunchinator.privacy import PrivacySettings
         return PrivacySettings.get().getAskForConfirmation(self, category)
     
-    def getChecked(self, category=None):
-        """Convenience method to get the checked peer IDs"""
-        from lunchinator.privacy import PrivacySettings
-        return PrivacySettings.get().getChecked(self, category)
-    
-    def getUnchecked(self, category=None):
-        """Convenience method to get the unchecked peer IDs"""
-        from lunchinator.privacy import PrivacySettings
-        return PrivacySettings.get().getUnchecked(self, category)
-    
     def getPeerState(self, peerID, category=None):
         """Convenience method to get the peer's privacy state"""
         from lunchinator.privacy import PrivacySettings

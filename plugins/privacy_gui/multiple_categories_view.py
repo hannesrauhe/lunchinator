@@ -9,7 +9,7 @@ class MultipleCategoriesView(QWidget):
         super(MultipleCategoriesView, self).__init__(parent)
 
         self._action = action
-        self._mode = PrivacySettings.get().getPolicy(self._action, None)
+        self._mode = PrivacySettings.get().getPolicy(self._action, None, useModified=True)
         self._currentSingleViews = []
         
         topView = self._initTopView()
@@ -62,11 +62,14 @@ class MultipleCategoriesView(QWidget):
         self._clearCurrentView()
         
         toolBox = QToolBox(self)
-        
         for category in self._action.getPrivacyCategories():
             singleView = SingleCategoryView(self._action, toolBox, category)
             self._currentSingleViews.append(singleView)
             toolBox.addItem(singleView, category)
+        
+        peerExceptions = SingleCategoryView(self._action, toolBox, category=None, mode=PrivacySettings.POLICY_PEER_EXCEPTION)
+        self._currentSingleViews.append(peerExceptions)
+        toolBox.addItem(peerExceptions, "Exceptions")
         
         w = QScrollArea(self)
         w.setWidgetResizable(True)

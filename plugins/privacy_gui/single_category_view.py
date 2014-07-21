@@ -7,17 +7,27 @@ from PyQt4.QtCore import Qt
 from lunchinator.privacy.privacy_settings import PrivacySettings
 
 class PeerModel(TableModelBase):
-    def __init__(self, checked, unchecked):
+    def __init__(self, data):
         columns = [(u"Peer Name", self._updateNameItem)]
         super(PeerModel, self).__init__(None, columns)
         
-        self._checked = checked if type(checked) is set else set(checked)
-        self._unchecked = unchecked if type(unchecked) is set else set(unchecked)
+        if data is None:
+            raise ValueError("data cannot be None")
+        self._data = data
         
         if get_peers() is not None:
             peers = get_peers().getAllKnownPeerIDs()
             for pID in peers:
                 self.appendContentRow(pID, get_peers().getPeerInfo(pID=pID))
+        
+    def setExceptionData(self, data):
+        if data is None:
+            raise ValueError("data cannot be None")
+        self._data = data
+        self.updateColumn(0)
+    
+    def _dataForKey(self, _key):
+        return None
         
     def peerNameAdded(self, pID, _name):
         self.appendContentRow(pID, None)
@@ -32,7 +42,11 @@ class PeerModel(TableModelBase):
             m_name = pID
         item.setText(m_name)
         item.setCheckable(True)
-        item.setCheckState(Qt.Unchecked if pID in self._unchecked else Qt.Checked if pID in self._checked else Qt.PartiallyChecked)
+        if pID in self._data:
+            checkState = Qt.Checked if self._data[pID] == 1 else Qt.Unchecked
+        else:
+            checkState = Qt.PartiallyChecked
+        item.setCheckState(checkState)
         
 class SingleCategoryView(QWidget):
     def __init__(self, action, parent, category=None, mode=None):
@@ -44,10 +58,10 @@ class SingleCategoryView(QWidget):
         if mode is not None:
             topWidget = None
         else:
-            mode = PrivacySettings.get().getPolicy(self._action, self._category)
+            mode = PrivacySettings.get().getPolicy(self._action, self._category, useModified=True)
             topWidget = self._initTopView(mode)
             
-        centralWidget = self._initPeerList()
+        centralWidget = self._initPeerList(mode)
         bottomWidget = self._initBottomWidget()
         
         mainLayout = QVBoxLayout(self)
@@ -81,13 +95,11 @@ class SingleCategoryView(QWidget):
         topLayout.addWidget(self._modeCombo, 1, Qt.AlignLeft)
         return topWidget
         
-    def _initPeerList(self):
+    def _initPeerList(self, mode):
         capsuleWidget = QWidget()
         capsuleLayout = QVBoxLayout(capsuleWidget)
         
-        self._peerModel = PeerModel(PrivacySettings.get().getChecked(self._action, self._category),
-                              PrivacySettings.get().getUnchecked(self._action, self._category))
-        
+        self._peerModel = PeerModel(PrivacySettings.get().getExceptions(self._action, self._category, mode, useModified=True))
         self._peerModel.itemChanged.connect(self._peerDataChanged)
         
         self._peerList = QTreeView(self)
@@ -107,21 +119,30 @@ class SingleCategoryView(QWidget):
     
     def _initBottomWidget(self):
         self._askForConfirmationBox = QCheckBox(u"Ask if state is unknown", self)
-        self._askForConfirmationBox.setCheckState(Qt.Checked if PrivacySettings.get().getAskForConfirmation(self._action, self._category) else Qt.Unchecked)
+        self._askForConfirmationBox.setCheckState(Qt.Checked if PrivacySettings.get().getAskForConfirmation(self._action, self._category, useModified=True) else Qt.Unchecked)
         self._askForConfirmationBox.stateChanged.connect(self._askForConfirmationChanged)
         return self._askForConfirmationBox
     
     def _peerDataChanged(self, item):
         PrivacySettings.get().addException(self._action,
                                            self._category,
+                                           self._mode,
                                            convert_string(item.data(PeerModel.KEY_ROLE).toString()),
-                                           item.checkState() == Qt.Checked)
+                                           1 if item.checkState() == Qt.Checked else 0 if item.checkState() == Qt.Unchecked else -1)
     
     def _askForConfirmationChanged(self, newState):
         PrivacySettings.get().setAskForConfirmation(self._action, self._category, newState == Qt.Checked)
         
     def _modeChanged(self, newMode, notify=True):
-        self._peerList.setVisible(newMode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX))
+        if newMode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
+            if notify:
+                # no change notifications, we are just resetting the model
+                self._peerModel.itemChanged.disconnect(self._peerDataChanged)
+                self._peerModel.setExceptionData(PrivacySettings.get().getExceptions(self._action, self._category, newMode, useModified=True))
+                self._peerModel.itemChanged.connect(self._peerDataChanged)
+            self._peerList.setVisible(True)
+        else:
+            self._peerList.setVisible(False)
         self._askForConfirmationBox.setVisible(newMode == PrivacySettings.POLICY_NOBODY_EX)
         self._mode = newMode
         if notify:

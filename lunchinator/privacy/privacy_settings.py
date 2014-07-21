@@ -1,5 +1,5 @@
 import json
-from lunchinator import log_exception, get_settings
+from lunchinator import log_exception, get_settings, log_warning, log_error
 from lunchinator.logging_mutex import loggingMutex
 class PrivacySettings(object):
     """Nobody is allowed"""
@@ -12,6 +12,8 @@ class PrivacySettings(object):
     POLICY_EVERYBODY = 3
     """Privacy settings per category"""
     POLICY_BY_CATEGORY = 4
+    """Special policy for peer exceptions for all categories"""
+    POLICY_PEER_EXCEPTION = 5
     
     """The peer is blocked by the current settings"""
     STATE_BLOCKED = 0
@@ -71,35 +73,51 @@ class PrivacySettings(object):
     
     ######################### GETTER ########################
     
-    def _getSettings(self, action, category):
-        pluginName = action.getPluginName()
-        if pluginName in self._settings:
-            pluginDict = self._settings[pluginName]
-            actionName = action.getName()
+    def _getActionDict(self, pluginName, actionName, source):
+        if pluginName in source:
+            pluginDict = source[pluginName]
             if actionName in pluginDict:
-                actionDict = pluginDict[actionName]
-                if category is None:
-                    return actionDict
-                else:
-                    if u"cat" in actionDict:
-                        categories = actionDict[u"cat"]
-                        if category in categories:
-                            catDict = categories[category]
-                            return catDict
+                return pluginDict[actionName]
         return None
     
-    def _getValue(self, action, category, key, default):
-        settings = self._getSettings(action, category)
+    def _getSettings(self, action, category, useModified=False):
+        pluginName = action.getPluginName()
+        actionName = action.getName()
+        
+        actionDict = None
+        if useModified:
+            # try to use modified action dict
+            actionDict = self._getActionDict(pluginName, actionName, self._modifications)
+        
+        if actionDict is None:
+            # use action dict from unmodified settings
+            actionDict = self._getActionDict(pluginName, actionName, self._settings)
+            if actionDict is None:
+                # there are no settings
+                return None
+        
+        if category is None:
+            return actionDict
+        else:
+            if u"cat" in actionDict:
+                categories = actionDict[u"cat"]
+                if category in categories:
+                    catDict = categories[category]
+                    return catDict
+        return None
+    
+    def _getValue(self, action, category, key, default, useModified=False):
+        settings = self._getSettings(action, category, useModified)
         if settings is not None and key in settings:
             return settings[key]
         return default
     
-    def getAskForConfirmation(self, action, category):
+    def getAskForConfirmation(self, action, category, useModified=False):
         """Returns True if the 'ask for confirmation' checkbox is set"""
         with self._lock:
-            return self._getValue(action, category, u"ask", True)
+            return self._getValue(action, category, u"ask", True, useModified)
     
-    def getPolicy(self, action, category):
+    def getPolicy(self, action, category, useModified=False):
         """Get the privacy policy for a peer action.
         
         Can be POLICY_NOBODY, POLICY_NOBODY_EX, POLICY_EVERYBODY_EX,
@@ -109,18 +127,50 @@ class PrivacySettings(object):
         else:
             default = action.getDefaultCategoryPrivacyPolicy()
         with self._lock:
-            return self._getValue(action, category, u"pol", default)
+            return self._getValue(action, category, u"pol", default, useModified)
     
-    def getChecked(self, action, category):
-        """Get the checked peer IDs"""
-        with self._lock:
-            return self._getValue(action, category, u"chk", [])
-    
-    def getUnchecked(self, action, category):
-        """Get the explicitly unchecked peer IDs"""
-        with self._lock:
-            return self._getValue(action, category, u"uch", [])
+    def getWhitelist(self, action, category, useModified=False):
+        """Returns the whitelist dictionary.
         
+        The dictionary has the form {peerID : state}, where state is
+        1 for whitelisted peers and 0 for explicitly not whitelisted
+        peers.
+        """
+        with self._lock:
+            return dict(self._getValue(action, category, u"wht", {}, useModified))
+        
+    def getBlacklist(self, action, category, useModified=False):
+        """Returns the blacklist dictionary.
+        
+        The dictionary has the form {peerID : state}, where state is
+        1 for blacklisted peers and 0 for explicitly not blacklisted
+        peers.
+        """
+        with self._lock:
+            return dict(self._getValue(action, category, u"blk", {}, useModified))
+        
+    def getPeerExceptions(self, action, useModified=False):
+        """Returns the peer exception dictionary.
+        
+        The dictionary has the form {peerID : state}, where state is
+        1 for peers that should be STATE_FREE by default and 0 for peers
+        that should be STATE_BLOCKED by default.
+        """
+        with self._lock:
+            return dict(self._getValue(action, None, u"exc", {}, useModified))
+        
+    def getExceptions(self, action, category, policy, useModified=False):
+        """Returns the exception dictionary for a given policy."""
+        if policy == self.POLICY_EVERYBODY_EX:
+            return self.getBlacklist(action, category, useModified)
+        if policy == self.POLICY_NOBODY_EX:
+            return self.getWhitelist(action, category, useModified)
+        if policy == self.POLICY_PEER_EXCEPTION:
+            if category is not None:
+                log_warning("peer exceptions do not exist for individual categories.")
+            return self.getPeerExceptions(action, useModified)
+        log_error("There are no exceptions for policy", policy)
+                
     def getPeerState(self, peerID, action, category):
         """Return the privacy state of a peer for a given action.
         
@@ -145,24 +195,53 @@ class PrivacySettings(object):
             return self.STATE_BLOCKED
         
         if policy == self.POLICY_EVERYBODY_EX:
-            if u"chk" in settings and peerID in settings[u"chk"]:
+            if u"blk" in settings and peerID in settings[u"blk"]:
+                state = settings[u"blk"][peerID]
+            else:
+                state = None
+            
+            if state == 1:
                 return self.STATE_BLOCKED
-            return self.STATE_FREE
+            if state == 0:
+                return self.STATE_FREE
         
         if policy == self.POLICY_NOBODY_EX:
-            if u"chk" in settings and peerID in settings[u"chk"]:
-                return self.STATE_FREE
-            if u"ask" in settings:
-                ask = settings[u"ask"]
+            if u"wht" in settings and peerID in settings[u"wht"]:
+                state = settings[u"wht"][peerID]
             else:
-                ask = True
+                state = None
             
-            if not ask:
+            if state == 1:
+                return self.STATE_FREE
+            if state == 0:
                 return self.STATE_BLOCKED
-            else:
-                if u"uch" in settings and peerID in settings[u"uch"]:
+            
+        if policy in (self.POLICY_EVERYBODY_EX, self.POLICY_NOBODY_EX):
+            # unknown state, special handling here: look up global exception list
+            with self._lock:
+                actionSettings = dict(self._getSettings(action, None))
+            
+            if u"exc" in actionSettings and peerID in actionSettings[u"exc"]:
+                state = actionSettings[u"exc"]
+                if state == 0:
                     return self.STATE_BLOCKED
-                return self.STATE_CONFIRM
+                if state == 1:
+                    return self.STATE_FREE
+                
+            if policy == self.POLICY_NOBODY_EX:
+                # default is blocked, but confirmation might be activated
+                if u"ask" in settings:
+                    ask = settings[u"ask"]
+                else:
+                    ask = True
+                
+                if not ask:
+                    return self.STATE_BLOCKED
+                else:
+                    return self.STATE_CONFIRM
+            else:
+                # default is free
+                return self.STATE_FREE
                 
         return self.STATE_UNKNOWN
     
@@ -200,16 +279,27 @@ class PrivacySettings(object):
         settings = self._initModification(action, category)
         settings[u"pol"] = policy
         
-    def addException(self, action, category, peerID, checked):
+    def addException(self, action, category, policy, peerID, checkState):
         settings = self._initModification(action, category)
-        addKey = u"chk" if checked else u"uch" 
-        rmKey = u"uch" if checked else u"chk"
         
-        if addKey not in settings:
-            settings[addKey] = []
-        settings[addKey].append(peerID)
+        if policy == self.POLICY_NOBODY_EX:
+            key = u"wht"
+        elif policy == self.POLICY_EVERYBODY_EX:
+            key = u"blk"
+        elif policy == self.POLICY_PEER_EXCEPTION:
+            if category is not None:
+                log_warning("There are no peer exceptions for individual categories. Resetting to None")
+                settings = self._initModification(action, None)
+            key = u"exc"
             
-        if rmKey in settings:
-            if peerID in settings[rmKey]:
-                settings[rmKey].remove(peerID)
+        if key not in settings:
+            settings[key] = {}
+            
+        if checkState :
+            settings[key][peerID] = 1
+        elif checkState != -1:
+            settings[key][peerID] = 0
+        else:
+            # return to unknown state
+            settings[key].pop(peerID, None)
     
