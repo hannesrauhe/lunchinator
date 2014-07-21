@@ -104,8 +104,13 @@ class LunchServerController(object):
         if cmd.startswith(u"HELO"):
             prefix = cmd[5:]
             action = PeerActions.get().getPeerAction(prefix)
+            
             if action is not None:
-                if not PeerActions.get().shouldProcessMessage(action, value, get_peers().getPeerID(pIP=addr)):
+                if action.hasCategories():
+                    category = action.getCategoryFromMessage(value)
+                else:
+                    category = None
+                if not PeerActions.get().shouldProcessMessage(action, category, value, get_peers().getPeerID(pIP=addr)):
                     return
                 
         processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info), newPeer, fromQueue, action)

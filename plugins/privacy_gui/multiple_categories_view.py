@@ -66,6 +66,7 @@ class MultipleCategoriesView(QWidget):
         self._clearCurrentView()
         
         toolBox = QToolBox(self)
+        toolBox.setAutoFillBackground(False)
         for category in self._action.getPrivacyCategories():
             singleView = SingleCategoryView(self._action, toolBox, category)
             self._currentSingleViews.append(singleView)
@@ -76,6 +77,8 @@ class MultipleCategoriesView(QWidget):
         toolBox.addItem(peerExceptions, "Exceptions")
         
         w = QScrollArea(self)
+        w.setAutoFillBackground(False)
+        w.viewport().setAutoFillBackground(False)
         w.setWidgetResizable(True)
         w.setWidget(toolBox)
         w.setFrameShape(QFrame.NoFrame)
@@ -108,5 +111,5 @@ class MultipleCategoriesView(QWidget):
     def _privacySettingsChanged(self, pluginName, actionName):
         if pluginName != self._action.getPluginName() or actionName != self._action.getName():
             return
-        newMode = PrivacySettings.get().getPolicy(self._action, self._category)
+        newMode = PrivacySettings.get().getPolicy(self._action, None)
         self._modeChanged(newMode, notify=False)

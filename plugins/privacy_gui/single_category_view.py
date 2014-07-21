@@ -105,7 +105,7 @@ class SingleCategoryView(QWidget):
         capsuleWidget = QWidget()
         capsuleLayout = QVBoxLayout(capsuleWidget)
         
-        if mode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
+        if mode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX, PrivacySettings.POLICY_PEER_EXCEPTION):
             exceptions = PrivacySettings.get().getExceptions(self._action, self._category, mode, useModified=True)
         else:
             exceptions = {}
@@ -145,7 +145,7 @@ class SingleCategoryView(QWidget):
         PrivacySettings.get().setAskForConfirmation(self._action, self._category, newState == Qt.Checked, applyImmediately=False)
         
     def _modeChanged(self, newMode, notify=True, resetModel=True):
-        if newMode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
+        if newMode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX, PrivacySettings.POLICY_PEER_EXCEPTION):
             if resetModel:
                 # no change notifications, we are just resetting the model
                 self._peerModel.itemChanged.disconnect(self._peerDataChanged)

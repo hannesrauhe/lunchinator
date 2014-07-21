@@ -122,6 +122,9 @@ class RemotePicturesGui(QStackedWidget):
             if url == anUrl:
                 return True
         return False
+    
+    def getCategories(self):
+        return sorted(self.categoryPictures.keys(), key=lambda cat : cat.lower() if cat != RemotePicturesGui.UNCATEGORIZED else "")
         
     def _initializeHiddenWidget(self, w):
         self.categoryOpened.connect(w.showTemporarily)
@@ -275,6 +278,7 @@ class RemotePicturesGui(QStackedWidget):
             category = self.UNCATEGORIZED
         if not category in self.categoryPictures:
             self._addCategory(category, imageFile = imageFile)
+            self.rp.privacySettingsChanged()
         
         self.categoryPictures[category].append([url, description if description != None else u""])
         if self.currentIndex() == 1 and category == self.currentCategory:

@@ -1,6 +1,7 @@
 from lunchinator.iface_plugins import iface_general_plugin
 from privacy_gui.gui import PrivacyGUI
 from lunchinator.privacy import PrivacySettings
+from lunchinator import get_notification_center
 
 class privacy(iface_general_plugin):
     def __init__(self):
@@ -13,8 +14,10 @@ class privacy(iface_general_plugin):
     def activate(self):
         iface_general_plugin.activate(self)
         PrivacySettings.initialize(self.hidden_options[u"json"])
+        get_notification_center().connectPrivacySettingsChanged(self._settingsChanged)
         
     def deactivate(self):
+        get_notification_center().disconnectPrivacySettingsChanged(self._settingsChanged)
         iface_general_plugin.deactivate(self)
 
     def create_options_widget(self, parent):
@@ -27,9 +30,14 @@ class privacy(iface_general_plugin):
     def discard_changes(self):
         PrivacySettings.get().discard()
         
-    def save_options_widget_data(self, **_kwargs):
-        PrivacySettings.get().save()
+    def _settingsChanged(self, _=None, __=None):
         self.set_hidden_option(u"json", PrivacySettings.get().getJSON(), convert=False)
+        
+    def save_options_widget_data(self, **_kwargs):
+        get_notification_center().disconnectPrivacySettingsChanged(self._settingsChanged)
+        PrivacySettings.get().save()
+        get_notification_center().connectPrivacySettingsChanged(self._settingsChanged)
+        self._settingsChanged()
     
 if __name__ == '__main__':
     from lunchinator.peer_actions import PeerAction, PeerActions

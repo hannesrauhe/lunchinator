@@ -258,9 +258,9 @@ class PrivacySettings(object):
                     actionSettings = dict(actionSettings)
                 else:
                     actionSettings = {}
-            
+
             if u"exc" in actionSettings and peerID in actionSettings[u"exc"]:
-                state = actionSettings[u"exc"]
+                state = actionSettings[u"exc"][peerID]
                 if state == 0:
                     return self.STATE_BLOCKED
                 if state == 1:

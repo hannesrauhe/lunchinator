@@ -1,6 +1,6 @@
 from lunchinator.iface_plugins import iface_gui_plugin
 from lunchinator import log_exception, get_settings, log_error, convert_string,\
-    log_warning, get_server, log_debug, get_peers
+    log_warning, get_server, log_debug, get_peers, get_notification_center
 import urllib2,sys,tempfile,csv,contextlib,os,socket
 from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator.download_thread import DownloadThread
@@ -8,19 +8,46 @@ from StringIO import StringIO
 from functools import partial
 from tempfile import NamedTemporaryFile
 from urlparse import urlparse
+from lunchinator.peer_actions import PeerAction
+from lunchinator.privacy import PrivacySettings
+    
+class _RemotePictureAction(PeerAction):
+    def getName(self):
+        return "Send Remote Picture"
+    
+    def getMessagePrefix(self):
+        return "REMOTE_PIC"
+    
+    def hasCategories(self):
+        return True
+    
+    def getPrivacyCategories(self):
+        if self.getPluginObject().gui is not None:
+            return self.getPluginObject().gui.getCategories()
+        log_error("Remote Pictures GUI is None")
+        return []
+    
+    def getDefaultPrivacyPolicy(self):
+        return PrivacySettings.POLICY_BY_CATEGORY
+    
+    def getCategoryFromMessage(self, value):
+        with contextlib.closing(StringIO(value.encode('utf-8'))) as strIn:
+            reader = csv.reader(strIn, delimiter = ' ', quotechar = '"')
+            valueList = [aValue.decode('utf-8') for aValue in reader.next()]
+            if len(valueList) > 2:
+                return valueList[2]
+        from remote_pictures.remote_pictures_gui import RemotePicturesGui
+        return RemotePicturesGui.UNCATEGORIZED
     
 class remote_pictures(iface_gui_plugin):
     def __init__(self):
         super(remote_pictures, self).__init__()
-        self.options = [((u"trust_policy", u"Accept remote pictures from", (u"Local", u"Everybody", u"Nobody", u"Selected Members")),u"Selected Members"),
-                        ((u"ask_trust", u"Ask if an unknown member wants to send a picture"), True),
-                        ((u"trusted_peers", u"Selected Members:"),u""),
-                        ((u"untrusted_peers", u"Always reject pictures from:"),u""),
-                        ((u"min_opacity", u"Minimum opacity of controls:", self.minOpacityChanged),20),
+        self.options = [((u"min_opacity", u"Minimum opacity of controls:", self.minOpacityChanged),20),
                         ((u"max_opacity", u"Maximum opacity of controls:", self.maxOpacityChanged),80),
                         ((u"thumbnail_size", u"Thumbnail Size:", self.thumbnailSizeChanged),150),
                         ((u"smooth_scaling", u"Smooth scaling", self.smoothScalingChanged),False)]
         self.gui = None
+        self._rpAction = None
         
     def _handleOpacity(self, newValue, signal):
         if newValue < 0:
@@ -68,6 +95,10 @@ class remote_pictures(iface_gui_plugin):
 
     def process_message(self,msg,addr,member_info):
         pass
+    
+    def get_peer_actions(self):
+        self._rpAction = _RemotePictureAction()
+        return [self._rpAction]
     
     def errorDownloadingPicture(self, thread, url):
         log_error("Error downloading picture from url %s" % convert_string(url))
@@ -126,12 +157,6 @@ class remote_pictures(iface_gui_plugin):
                 for ip in get_peers().getPeerIPs(pID=peerID):
                     yield ip
             
-    def generateTrustedIPs(self):
-        return self._generateIPList(self.options['trusted_peers'])
-                
-    def generateUntrustedIPs(self):
-        return self._generateIPList(self.options['untrusted_peers'])
-            
     def _appendListOption(self, o, new_v):
         old_val = self.options[o]
         if len(old_val) > 0:
@@ -142,44 +167,11 @@ class remote_pictures(iface_gui_plugin):
         new_val = ";;".join(val_list)
         self.set_option(o, new_val, convert=False)
             
-    def process_event(self,cmd,value,ip,_info):
-        if cmd=="HELO_REMOTE_PIC":
-            peerID = get_peers().getPeerID(pIP=ip)
-            trustPolicy = self.options['trust_policy']
-            reject = True
-            if trustPolicy == u"Local":
-                if ip == u"127.0.0.1" or peerID == get_settings().get_ID():
-                    reject = False
-            elif trustPolicy == "Everybody":
-                reject = False
-            elif trustPolicy == "Selected Members":
-                if ip in self.generateTrustedIPs():
-                    reject = False
-                elif self.gui != None and self.options[u"ask_trust"] and ip not in self.generateUntrustedIPs():
-                    from PyQt4.QtGui import QMessageBox
-                    box = QMessageBox(QMessageBox.Question,
-                                      "Accept Picture",
-                                      "%s wants to send you a picture. Do you want to accept pictures from this member?" % get_peers().getDisplayedPeerName(pID=peerID),
-                                      QMessageBox.Yes | QMessageBox.YesToAll | QMessageBox.No | QMessageBox.NoToAll,
-                                      self.gui)
-                    box.setDefaultButton(QMessageBox.No)
-                    box.button(QMessageBox.NoToAll).setText(u"No, Never")
-                    box.button(QMessageBox.YesToAll).setText(u"Yes, Always")
-                    res = box.exec_()
-                    if res == QMessageBox.NoToAll:
-                        self._appendListOption(u"untrusted_peers", peerID)
-                    elif res == QMessageBox.YesToAll:
-                        self._appendListOption(u"trusted_peers", peerID)
-                        reject = False
-                    elif res == QMessageBox.Yes:
-                        reject = False
-                    
-            if reject:
-                log_debug("Rejecting remote picture from %s (%s)" % (ip, peerID))
-                return
-            else:
-                log_debug("Accepting remote picture from %s (%s)" % (ip, peerID))
+    def privacySettingsChanged(self):
+        get_notification_center().emitPrivacySettingsChanged(self._rpAction.getPluginName(), self._rpAction.getName())
             
+    def process_event(self,cmd,value,_ip,_info):
+        if cmd=="HELO_REMOTE_PIC":
             with contextlib.closing(StringIO(value.encode('utf-8'))) as strIn:
                 reader = csv.reader(strIn, delimiter = ' ', quotechar = '"')
                 valueList = [aValue.decode('utf-8') for aValue in reader.next()]
