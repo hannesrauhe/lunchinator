@@ -8,6 +8,7 @@ from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSende
 from lunchinator.utilities import processPluginCall, getTimeDifference
 from lunchinator.notification_center import NotificationCenter
 from time import localtime, strftime
+from lunchinator.peer_actions.peer_actions_singleton import PeerActions
 
 class LunchServerController(object):
     def __init__(self):
@@ -99,7 +100,15 @@ class LunchServerController(object):
     
     def processEvent(self, cmd, value, addr, _eventTime, newPeer, fromQueue):
         """ process any non-message event """
-        processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info), newPeer, fromQueue)
+        action = None
+        if cmd.startswith(u"HELO"):
+            prefix = cmd[5:]
+            action = PeerActions.get().getPeerAction(prefix)
+            if action is not None:
+                if not PeerActions.get().shouldProcessMessage(action, value, get_peers().getPeerID(pIP=addr)):
+                    return
+                
+        processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info), newPeer, fromQueue, action)
     
     def _checkSendInfoDict(self, pluginName, category):
         pluginName = convert_string(pluginName)

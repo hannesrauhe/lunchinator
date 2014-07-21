@@ -39,7 +39,6 @@ class PrivacyConfirmationDialog(QDialog):
         self.setMaximumHeight(size.height())
         
         self._setPolicy(0)
-        self._setScope(0)
         
     def _initPolicyWidget(self):
         policyWidget = QWidget(self)
@@ -89,7 +88,7 @@ class PrivacyConfirmationDialog(QDialog):
             b.clicked.connect(partial(self._setScope, self.SCOPE_EVERYONE))
             self._scopeGroup.addButton(b)
 
-        self._scopeGroup.buttons()[0].setChecked(True)        
+        self._scopeGroup.buttons()[0].click()        
         scopeLayout = QVBoxLayout(scopeWidget)
         scopeLayout.setContentsMargins(5, 0, 5, 0)
         for button in self._scopeGroup.buttons():
@@ -142,7 +141,7 @@ class PrivacyConfirmationDialog(QDialog):
         else:
             return QDialog.keyPressEvent(self, event)
         
-    def _storeDecision(self):
+    def _storeDecision(self, accepted):
         # store decision
         if self._category is None:
             if self._scope == self.SCOPE_PEER:
@@ -150,41 +149,41 @@ class PrivacyConfirmationDialog(QDialog):
                                                    None,
                                                    PrivacySettings.POLICY_NOBODY_EX,
                                                    self._peerID,
-                                                   1 if self.accepted() else 0)
+                                                   1 if accepted else 0)
             elif self._scope == self.SCOPE_EVERYONE:
                 PrivacySettings.get().setPolicy(self._action,
                                                 None,
-                                                PrivacySettings.POLICY_EVERYBODY if self.accepted() else PrivacySettings.POLICY_NOBODY)
+                                                PrivacySettings.POLICY_EVERYBODY if accepted else PrivacySettings.POLICY_NOBODY)
         else:
             if self._scope == self.SCOPE_PEER_CATEGORY:
                 PrivacySettings.get().addException(self._action,
                                                    self._category,
                                                    PrivacySettings.POLICY_NOBODY_EX,
                                                    self._peerID,
-                                                   1 if self.accepted() else 0)
+                                                   1 if accepted else 0)
             elif self._scope == self.SCOPE_PEER:
                 PrivacySettings.get().addException(self._action,
                                                    None,
                                                    PrivacySettings.POLICY_PEER_EXCEPTION,
                                                    self._peerID,
-                                                   1 if self.accepted() else 0)
+                                                   1 if accepted else 0)
             elif self._scope == self.SCOPE_EVERYONE_CATEGORY:
                 PrivacySettings.get().setPolicy(self._action,
                                                 self._category,
-                                                PrivacySettings.POLICY_EVERYBODY if self.accepted() else PrivacySettings.POLICY_NOBODY)
+                                                PrivacySettings.POLICY_EVERYBODY if accepted else PrivacySettings.POLICY_NOBODY)
             elif self._scope == self.SCOPE_EVERYONE:
                 PrivacySettings.get().setPolicy(self._action,
                                                 None,
-                                                PrivacySettings.POLICY_EVERYBODY if self.accepted() else PrivacySettings.POLICY_NOBODY)
+                                                PrivacySettings.POLICY_EVERYBODY if accepted else PrivacySettings.POLICY_NOBODY)
             
     def accept(self):
         if self._action is not None and self._policy == self.POLICY_FOREVER:
-            self._storeDecision()
+            self._storeDecision(True)
         return QDialog.accept(self)
     
     def reject(self):
         if self._action is not None and self._policy == self.POLICY_FOREVER:
-            self._storeDecision()
+            self._storeDecision(False)
         return QDialog.reject(self)
         
 if __name__ == '__main__':
@@ -192,13 +191,13 @@ if __name__ == '__main__':
     import sys
 
     app = QApplication(sys.argv)
-    window = TimespanInputDialog(None,
-                                 "Confirmation",
-                                 "Some guy wants to do something in some category, do you approve?",
-                                 "Some guy",
-                                 "guy'sID",
-                                 None,
-                                 "Weird")
+    window = PrivacyConfirmationDialog(None,
+                                       "Confirmation",
+                                       "Some guy wants to do something in some category, do you approve?",
+                                       "Some guy",
+                                       "guy'sID",
+                                       None,
+                                       "Weird")
     
     window.showNormal()
     window.raise_()

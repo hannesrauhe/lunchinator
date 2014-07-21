@@ -118,15 +118,13 @@ class PeerActions(object):
         plugin's peer actions as values.
         """
         return self._getPeerActions(ignoreApplies=True)
-
-    def isPeerAction(self, msgPrefix):
-        with self._lock:
-            return msgPrefix in self._msgPrefixes
         
-    def shouldProcessMessage(self, msgPrefix, msgData, peerID):
+    def getPeerAction(self, msgPrefix):
         with self._lock:
-            action = self._msgPrefixes[msgPrefix]
+            if msgPrefix in self._msgPrefixes:
+                return self._msgPrefixes[msgPrefix]
         
+    def shouldProcessMessage(self, action, msgData, peerID):
         state = action.getPeerState(peerID)
         if state == PrivacySettings.STATE_FREE:
             return True
@@ -146,6 +144,6 @@ class PeerActions(object):
                                                action,
                                                category)
             dialog.exec_()
-            return dialog.accepted()
+            return dialog.result() == PrivacyConfirmationDialog.Accepted
         return False
         

@@ -212,7 +212,11 @@ class PrivacySettings(object):
             defaultPolicy = action.getDefaultCategoryPrivacyPolicy()
         
         with self._lock:
-            settings = dict(self._getSettings(action, category))
+            settings = self._getSettings(action, category)
+            if settings is not None:
+                settings = dict(settings)
+            else:
+                settings = {}
         
         if settings is None or u"pol" not in settings:
             policy = defaultPolicy
@@ -249,7 +253,11 @@ class PrivacySettings(object):
         if policy in (self.POLICY_EVERYBODY_EX, self.POLICY_NOBODY_EX):
             # unknown state, special handling here: look up global exception list
             with self._lock:
-                actionSettings = dict(self._getSettings(action, None))
+                actionSettings = self._getSettings(action, None)
+                if actionSettings is not None:
+                    actionSettings = dict(actionSettings)
+                else:
+                    actionSettings = {}
             
             if u"exc" in actionSettings and peerID in actionSettings[u"exc"]:
                 state = actionSettings[u"exc"]
