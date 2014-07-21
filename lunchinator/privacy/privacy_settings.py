@@ -1,6 +1,32 @@
 import json
 from lunchinator import log_exception, get_settings, log_warning, log_error
 from lunchinator.logging_mutex import loggingMutex
+
+def _setter(func):
+    def newSetter(self, action, category, *args, **kwargs):
+        pluginName = action.getPluginName()
+        actionName = action.getName()
+        if "applyImmediately" in kwargs:
+            applyImmediately = kwargs["applyImmediately"]
+            del kwargs["applyImmediately"]
+        else:
+            applyImmediately = True
+        
+        if applyImmediately:
+            # check if modification is in progress
+            settings = self._getActionDict(pluginName, actionName, self._modifications)
+            if settings is not None:
+                # apply to modified
+                func(self, action, category, settingsDict=settings, *args, **kwargs)
+            # apply to stored settings
+            settings = self._initModification(action, category, actionDictSource=self._settings)
+            func(self, action, category, settingsDict=settings, *args, **kwargs)
+        else:
+            # only add to modification dict
+            settings = self._initModification(action, category, actionDictSource=self._modifications)
+            func(self, action, category, settingsDict=settings, *args, **kwargs)
+    return newSetter
+
 class PrivacySettings(object):
     """Nobody is allowed"""
     POLICY_NOBODY = 0
@@ -247,19 +273,21 @@ class PrivacySettings(object):
     
     ###################### MODIFICATION #####################
     
-    def _initModification(self, action, category):
-        pluginName = action.getPluginName()
-        if pluginName not in self._modifications:
-            self._modifications[pluginName] = {}
-        pluginDict = self._modifications[pluginName]
-            
-        actionName = action.getName()
-        if actionName not in pluginDict:
-            if pluginName in self._settings and actionName in self._settings[pluginName]:
-                pluginDict[actionName] = self._settings[pluginName][actionName]
-            else:
-                pluginDict[actionName] = {}
-        actionDict = pluginDict[actionName]
+    def _initModification(self, action, category, actionDict=None, actionDictSource=None):
+        if actionDict is None:
+            # get or create action dict
+            pluginName = action.getPluginName()
+            if pluginName not in actionDictSource:
+                actionDictSource[pluginName] = {}
+            pluginDict = actionDictSource[pluginName]
+                
+            actionName = action.getName()
+            if actionName not in pluginDict:
+                if pluginName in self._settings and actionName in self._settings[pluginName]:
+                    pluginDict[actionName] = self._settings[pluginName][actionName]
+                else:
+                    pluginDict[actionName] = {}
+            actionDict = pluginDict[actionName]
     
         if category is None:
             return actionDict
@@ -271,35 +299,34 @@ class PrivacySettings(object):
                 categories[category] = {}
             return categories[category]
     
-    def setAskForConfirmation(self, action, category, ask):
-        settings = self._initModification(action, category)
-        settings[u"ask"] = ask
+    @_setter
+    def setAskForConfirmation(self, _action, _category, ask, settingsDict=None):
+        settingsDict[u"ask"] = ask
     
-    def setPolicy(self, action, category, policy):
-        settings = self._initModification(action, category)
-        settings[u"pol"] = policy
-        
-    def addException(self, action, category, policy, peerID, checkState):
-        settings = self._initModification(action, category)
-        
+    @_setter
+    def setPolicy(self, _action, _category, policy, settingsDict=None):
+        settingsDict[u"pol"] = policy
+    
+    @_setter
+    def addException(self, _action, category, policy, peerID, checkState, settingsDict=None):
         if policy == self.POLICY_NOBODY_EX:
             key = u"wht"
         elif policy == self.POLICY_EVERYBODY_EX:
             key = u"blk"
         elif policy == self.POLICY_PEER_EXCEPTION:
             if category is not None:
-                log_warning("There are no peer exceptions for individual categories. Resetting to None")
-                settings = self._initModification(action, None)
+                log_error("There are no peer exceptions for individual categories. Resetting to None")
+                return
             key = u"exc"
             
-        if key not in settings:
-            settings[key] = {}
+        if key not in settingsDict:
+            settingsDict[key] = {}
             
         if checkState :
-            settings[key][peerID] = 1
+            settingsDict[key][peerID] = 1
         elif checkState != -1:
-            settings[key][peerID] = 0
+            settingsDict[key][peerID] = 0
         else:
             # return to unknown state
-            settings[key].pop(peerID, None)
+            settingsDict[key].pop(peerID, None)
     

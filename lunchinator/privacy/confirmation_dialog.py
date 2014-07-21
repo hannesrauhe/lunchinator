@@ -2,6 +2,7 @@ from PyQt4.QtGui import QDialog, QLabel, QVBoxLayout, QHBoxLayout,\
     QWidget, QPushButton, QButtonGroup, QRadioButton, QDialogButtonBox
 from PyQt4.Qt import Qt
 from functools import partial
+from lunchinator.privacy.privacy_settings import PrivacySettings
 
 class TimespanInputDialog(QDialog):
     POLICY_ONCE = 0
@@ -12,8 +13,12 @@ class TimespanInputDialog(QDialog):
     SCOPE_EVERYONE_CATEGORY = 2
     SCOPE_EVERYONE = 3
     
-    def __init__(self, parent, title, message, peerName, category=None):
+    def __init__(self, parent, title, message, peerName, peerID, action, category=None):
         super(TimespanInputDialog, self).__init__(parent)
+        
+        self._peerID = peerID
+        self._action = action
+        self._category = category
         
         layout = QVBoxLayout(self)
         
@@ -137,12 +142,63 @@ class TimespanInputDialog(QDialog):
         else:
             return QDialog.keyPressEvent(self, event)
         
+    def _storeDecision(self):
+        # store decision
+        if self._category is None:
+            if self._scope == self.SCOPE_PEER:
+                PrivacySettings.get().addException(self._action,
+                                                   None,
+                                                   PrivacySettings.POLICY_NOBODY_EX,
+                                                   self._peerID,
+                                                   1 if self.accepted() else 0)
+            elif self._scope == self.SCOPE_EVERYONE:
+                PrivacySettings.get().setPolicy(self._action,
+                                                None,
+                                                PrivacySettings.POLICY_EVERYBODY if self.accepted() else PrivacySettings.POLICY_NOBODY)
+        else:
+            if self._scope == self.SCOPE_PEER_CATEGORY:
+                PrivacySettings.get().addException(self._action,
+                                                   self._category,
+                                                   PrivacySettings.POLICY_NOBODY_EX,
+                                                   self._peerID,
+                                                   1 if self.accepted() else 0)
+            elif self._scope == self.SCOPE_PEER:
+                PrivacySettings.get().addException(self._action,
+                                                   None,
+                                                   PrivacySettings.POLICY_PEER_EXCEPTION,
+                                                   self._peerID,
+                                                   1 if self.accepted() else 0)
+            elif self._scope == self.SCOPE_EVERYONE_CATEGORY:
+                PrivacySettings.get().setPolicy(self._action,
+                                                self._category,
+                                                PrivacySettings.POLICY_EVERYBODY if self.accepted() else PrivacySettings.POLICY_NOBODY)
+            elif self._scope == self.SCOPE_EVERYONE:
+                PrivacySettings.get().setPolicy(self._action,
+                                                None,
+                                                PrivacySettings.POLICY_EVERYBODY if self.accepted() else PrivacySettings.POLICY_NOBODY)
+            
+    def accept(self):
+        if self._action is not None and self._policy == self.POLICY_FOREVER:
+            self._storeDecision()
+        return QDialog.accept(self)
+    
+    def reject(self):
+        if self._action is not None and self._policy == self.POLICY_FOREVER:
+            self._storeDecision()
+        return QDialog.reject(self)
+        
 if __name__ == '__main__':
     from PyQt4.QtGui import QApplication
     import sys
 
     app = QApplication(sys.argv)
-    window = TimespanInputDialog(None, "Test", "This is a test.", u"Some Dude", "Weird")
+    window = TimespanInputDialog(None,
+                                 "Confirmation",
+                                 "Some guy wants to do something in some category, do you approve?",
+                                 "Some guy",
+                                 "guy'sID",
+                                 None,
+                                 "Weird")
     
     window.showNormal()
     window.raise_()

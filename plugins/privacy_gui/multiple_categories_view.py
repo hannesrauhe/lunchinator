@@ -99,5 +99,5 @@ class MultipleCategoriesView(QWidget):
         
         self._mode = newMode
         if notify:
-            PrivacySettings.get().setPolicy(self._action, None, self._mode)
+            PrivacySettings.get().setPolicy(self._action, None, self._mode, applyImmediately=False)
     
