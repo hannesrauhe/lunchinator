@@ -113,6 +113,8 @@ class private_messages(iface_gui_plugin):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
         errorMsg = convert_string(errorMsg)
+        if recvTime == -1:
+            recvTime = None
         if not errorMsg:
             errorMsg = None
         

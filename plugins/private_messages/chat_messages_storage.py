@@ -151,8 +151,8 @@ class ChatMessagesStorage(object):
             return 0
         return rows[0][0]
       
-    def containsMessage(self, partner, msgID):
-        rows = self._db.query("SELECT 1 FROM PRIVATE_MESSAGES WHERE PARTNER = ? AND M_ID = ?", partner, msgID)
+    def containsMessage(self, partner, msgID, ownMessage):
+        rows = self._db.query("SELECT 1 FROM PRIVATE_MESSAGES WHERE PARTNER = ? AND M_ID = ? AND IS_OWN_MESSAGE=?", partner, msgID, ownMessage)
         return len(rows) > 0
       
     def deleteMessagesForPartner(self, partner):

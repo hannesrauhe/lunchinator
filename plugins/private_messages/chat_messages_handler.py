@@ -14,7 +14,7 @@ class ChatMessagesHandler(QObject):
     # other ID, message ID, receive time, HTML, time, state, error message
     displayOwnMessage = pyqtSignal(unicode, int, float, unicode, float, int, unicode)
     # other ID, message ID, receive time, error, error message
-    delayedDelivery = pyqtSignal(unicode, int, bool, unicode)
+    delayedDelivery = pyqtSignal(unicode, int, float, bool, unicode)
     # otherID, msgHTML, msgTime
     newMessage = pyqtSignal(unicode, unicode, float, dict)
     
@@ -105,7 +105,7 @@ class ChatMessagesHandler(QObject):
                 self._waitingForAck.pop(msgID)
     
     def _deliveryTimedOut(self, otherID, msgID, msgHTML, msgTime):
-        self._addOwnMessage(otherID, msgID, msgHTML, msgTime, ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED, u"", None)
+        self._addOwnMessage(otherID, msgID, msgHTML, msgTime, ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED, u"", -1)
         
     def _checkDelayedAck(self, otherID, msgID, error, answerDict, recvTime):
         currentState = self._getStorage().getMessageState(otherID, msgID)
@@ -147,9 +147,14 @@ class ChatMessagesHandler(QObject):
             log_error("No message ID in ACK message:", valueJSON)
             return
         
+        if u"recvTime" in answerDict:
+            recvTime = answerDict[u"recvTime"]
+        else:
+            recvTime = time()
+            
         msgID = answerDict[u"id"]
         if not msgID in self._waitingForAck:
-            if self._checkDelayedAck(ackPeerID, msgID, error, answerDict):
+            if self._checkDelayedAck(ackPeerID, msgID, error, answerDict, recvTime):
                 log_debug("Delayed delivery of message", msgID, "to", ackPeerID)
                 return
             log_debug("Received ACK for message ID '%s' that I was not waiting for." % msgID)
@@ -160,10 +165,6 @@ class ChatMessagesHandler(QObject):
             log_warning("Received ACK from different peer ID than the message was sent to ('%s' != '%s')" % (otherID, ackPeerID))
             return
         
-        if u"recvTime" in answerDict:
-            recvTime = answerDict[u"recvTime"]
-        else:
-            recvTime = time()
         if isResend:
             self._checkDelayedAck(otherID, msgID, error, answerDict, recvTime)
         else:
@@ -221,7 +222,7 @@ class ChatMessagesHandler(QObject):
             msgTime = time()
         
         # check if we already know the message (our ACK might not have been delivered)
-        if not self._getStorage().containsMessage(otherID, msgDict[u"id"]):
+        if not self._getStorage().containsMessage(otherID, msgDict[u"id"], ownMessage=False):
             self.newMessage.emit(otherID, msgHTML, msgTime, msgDict)
         else:
             log_debug("Received message from %s that I already know (id %d)" % (otherID, msgDict[u"id"]))
