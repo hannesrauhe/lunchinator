@@ -94,8 +94,7 @@ class PrivacyGUI(QWidget):
         if len(newSelection.indexes()) > 0:
             index = iter(newSelection.indexes()).next()
             action = index.data(PeerActionsModel.ACTION_ROLE).toPyObject()
-            categories = action.getPrivacyCategories()
-            if type(categories) in (tuple, list):
+            if action.hasCategories():
                 self._settingsWidget.layout().addWidget(MultipleCategoriesView(action, self._settingsWidget))
             else:
                 self._settingsWidget.layout().addWidget(SingleCategoryView(action, self._settingsWidget))

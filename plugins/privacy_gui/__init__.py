@@ -44,6 +44,12 @@ if __name__ == '__main__':
         
         def getPrivacyCategories(self):
             return (u"Category 1", u"Category 2")
+        
+        def hasCategories(self):
+            return True
+        
+        def getCategoryFromMessage(self, _msgData):
+            return u"Category 1"
     
     w = privacy()
     testAction = TestAction()

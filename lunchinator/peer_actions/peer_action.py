@@ -37,6 +37,19 @@ class PeerAction(object):
         """
         return None
     
+    def hasCategories(self):
+        """Must return True if getPrivacyCategories returns a list of categories."""
+        return False
+    
+    def getCategoryFromMessage(self, _msgData):
+        """Extracts and returns the category of a message.
+        
+        If getPrivacyCategories() returns a list, this method will be called
+        when a message with the message prefix of this peer action is
+        received.
+        """
+        return None
+    
     def getDefaultPrivacyPolicy(self):
         """Returns the default privacy mode, see PrivacySettings."""
         from lunchinator.privacy import PrivacySettings

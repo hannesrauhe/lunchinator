@@ -4,7 +4,7 @@ from PyQt4.Qt import Qt
 from functools import partial
 from lunchinator.privacy.privacy_settings import PrivacySettings
 
-class TimespanInputDialog(QDialog):
+class PrivacyConfirmationDialog(QDialog):
     POLICY_ONCE = 0
     POLICY_FOREVER = 1
     
@@ -14,7 +14,7 @@ class TimespanInputDialog(QDialog):
     SCOPE_EVERYONE = 3
     
     def __init__(self, parent, title, message, peerName, peerID, action, category=None):
-        super(TimespanInputDialog, self).__init__(parent)
+        super(PrivacyConfirmationDialog, self).__init__(parent)
         
         self._peerID = peerID
         self._action = action
