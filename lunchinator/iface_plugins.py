@@ -315,6 +315,10 @@ class iface_plugin(IPlugin):
         t.setRowStretch(row, 1)
         return optionsWidget
     
+    def destroy_options_widget(self):
+        """Called before the options widget is removed from its parent."""
+        pass
+    
     def extendsInfoDict(self):
         """Returns True if this plugin overrides extendInfoDict"""
         return False

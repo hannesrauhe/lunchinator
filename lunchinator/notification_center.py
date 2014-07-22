@@ -363,15 +363,32 @@ class NotificationCenter(object):
     def emitDBConnReady(self):
         pass
     
-    """Emitted whenever a peer action is added or removed."""    
+    """Emitted whenever a peer action is added.
+    
+    A dict of {added plugin's name : [peer action]} is provided.
+    """
     @_connectFunc
-    def connectPeerActionsChanged(self, callback):
+    def connectPeerActionsAdded(self, callback):
         pass
     @_disconnectFunc
-    def disconnectPeerActionsChanged(self, callback):
+    def disconnectPeerActionsAdded(self, callback):
         pass
     @_emitFunc
-    def emitPeerActionsChanged(self):
+    def emitPeerActionsAdded(self, removedActions):
+        pass
+    
+    """Emitted whenever a peer action is removed.
+    
+    A dict of {removed plugin's name : [peer action]} is provided.
+    """    
+    @_connectFunc
+    def connectPeerActionsRemoved(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPeerActionsRemoved(self, callback):
+        pass
+    @_emitFunc
+    def emitPeerActionsRemoved(self, addedActions):
         pass
     
     """Emitted whenever a peer action is added or removed."""    

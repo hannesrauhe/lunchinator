@@ -68,7 +68,12 @@ class LunchinatorSettingsDialog(QDialog):
             self.widget_names.insert(iPos, pName)
             self.nb.insertTab(iPos, w, pName)
             
-    def removePlugin(self, pName):
+    def removePlugin(self, po, pName):
+        try:
+            po.destroy_options_widget()
+        except:
+            log_exception("while removing plugin %s from settings window" % pName)
+            
         # search for position
         i = bisect_left(self.widget_names, pName, lo=1)
         if i != len(self.widget_names) and self.widget_names[i] == pName:

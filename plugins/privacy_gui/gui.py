@@ -4,6 +4,7 @@ from privacy_gui.multiple_categories_view import MultipleCategoriesView
 from privacy_gui.single_category_view import SingleCategoryView
 from PyQt4.QtGui import QWidget, QVBoxLayout, QTreeView, QFrame, QSplitter
 from PyQt4.QtCore import Qt, QVariant
+from lunchinator import get_notification_center
 
 class PeerActionsModel(TableModelBase):
     ACTION_ROLE = TableModelBase.SORT_ROLE + 1
@@ -12,11 +13,19 @@ class PeerActionsModel(TableModelBase):
         columns = [(u"Peer Action", self._updateNameItem)]
         super(PeerActionsModel, self).__init__(None, columns)
         
-        for pluginName, actions in PeerActions.get().getAllPeerActions().iteritems():
+        self.addPeerActions(PeerActions.get().getAllPeerActions())
+    
+    def addPeerActions(self, added):
+        for pluginName, actions in added.iteritems():
             for action in actions:
                 if action.getMessagePrefix():
                     self.appendContentRow(pluginName + action.getName(), action)
-            
+                    
+    def removePeerActions(self, removed):
+        for pluginName, actionNames in removed.iteritems():
+            for actionName in actionNames:
+                self.externalRowRemoved(pluginName + actionName)
+    
     def createItem(self, key, action, column):
         item = TableModelBase.createItem(self, key, action, column)
         item.setData(action, self.ACTION_ROLE)
@@ -46,6 +55,20 @@ class PrivacyGUI(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(mainWidget)
+        
+        get_notification_center().connectPeerActionsAdded(self._peerActionsAdded)
+        get_notification_center().connectPeerActionsRemoved(self._peerActionsRemoved)
+        
+    def finish(self):
+        get_notification_center().disconnectPeerActionsAdded(self._peerActionsAdded)
+        get_notification_center().disconnectPeerActionsRemoved(self._peerActionsRemoved)
+        self._clearSettingsWidget()
+        
+    def _peerActionsAdded(self, added):
+        self._actionModel.addPeerActions(added)
+    
+    def _peerActionsRemoved(self, removed):
+        self._actionModel.removePeerActions(removed)
         
     def _initActionList(self):  
         self._actionList = QTreeView(self)

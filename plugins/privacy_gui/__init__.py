@@ -24,6 +24,10 @@ class privacy(iface_general_plugin):
         self._ui = PrivacyGUI(parent)
         return self._ui  
     
+    def destroy_options_widget(self):
+        self._ui.finish()
+        iface_general_plugin.destroy_options_widget(self)
+    
     def get_displayed_name(self):
         return u"Privacy"
     

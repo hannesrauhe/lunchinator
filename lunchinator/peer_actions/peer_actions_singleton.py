@@ -31,8 +31,6 @@ class PeerActions(object):
             for pi in get_plugin_manager().getAllPlugins():
                 if pi.plugin_object.is_activated:
                     self._addActionsForPlugin(pi)
-                        
-        get_notification_center().emitPeerActionsChanged()
         
     def _addMessagePrefixes(self, actions):
         for action in actions:
@@ -46,14 +44,15 @@ class PeerActions(object):
                 peerAction.setParentPlugin(pi.name, pi.plugin_object)
             self._peerActions[pi.name] = peerActions
             self._addMessagePrefixes(peerActions)
-            return True
-        return False
+            return {pi.name : peerActions}
+        return None
         
     def _removeActionsForPlugin(self, pi):
         if pi.name in self._peerActions:
+            removed = {pi.name : [peerAction.getName() for peerAction in self._peerActions[pi.name]]}
             del self._peerActions[pi.name]
-            return True
-        return False
+            return removed
+        return None
         
     def _pluginActivated(self, pluginName, category):
         pluginName = convert_string(pluginName)
@@ -63,7 +62,7 @@ class PeerActions(object):
             with self._lock:
                 added = self._addActionsForPlugin(pi)
             if added:
-                get_notification_center().emitPeerActionsChanged()
+                get_notification_center().emitPeerActionsAdded(added)
                 
     def _pluginDeactivated(self, pluginName, category):
         pluginName = convert_string(pluginName)
@@ -73,7 +72,7 @@ class PeerActions(object):
             with self._lock:
                 removed = self._removeActionsForPlugin(pi)
             if removed:
-                get_notification_center().emitPeerActionsChanged()
+                get_notification_center().emitPeerActionsRemoved(removed)
         
     def iterPeerActions(self, peerID, peerInfo):
         """Iterates over peer actions for the given peer

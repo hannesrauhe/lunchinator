@@ -527,7 +527,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                 po.destroy_widget()
                 self.mainWindow.removePluginWidget(p_name)
             if self.settingsWindow != None:
-                self.settingsWindow.removePlugin(p_name)
+                self.settingsWindow.removePlugin(po, p_name)
     
     @pyqtSlot(unicode, QObject)
     def sendMessageClicked(self, message, text):

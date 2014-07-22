@@ -201,13 +201,21 @@ class NotificationCenterQt(QObject):
     def emitDBConnReady(self):
         self._signalDBConnReady.emit()
         
-    _signalPeerActionsChanged = pyqtSignal() 
-    def connectPeerActionsChanged(self, callback):
-        self._signalPeerActionsChanged.connect(callback, type=Qt.QueuedConnection)
-    def disconnectPeerActionsChanged(self, callback):
-        self._signalPeerActionsChanged.disconnect(callback)
-    def emitPeerActionsChanged(self):
-        self._signalPeerActionsChanged.emit()
+    _signalPeerActionsAdded = pyqtSignal(dict) # dict of {added plugin's name, [action]}
+    def connectPeerActionsAdded(self, callback):
+        self._signalPeerActionsAdded.connect(callback, type=Qt.QueuedConnection)
+    def disconnectPeerActionsAdded(self, callback):
+        self._signalPeerActionsAdded.disconnect(callback)
+    def emitPeerActionsAdded(self, added):
+        self._signalPeerActionsAdded.emit(added)
+        
+    _signalPeerActionsRemoved = pyqtSignal(dict) # dict of {removed plugin's name : [action name]}
+    def connectPeerActionsRemoved(self, callback):
+        self._signalPeerActionsRemoved.connect(callback, type=Qt.QueuedConnection)
+    def disconnectPeerActionsRemoved(self, callback):
+        self._signalPeerActionsRemoved.disconnect(callback)
+    def emitPeerActionsRemoved(self, removed):
+        self._signalPeerActionsRemoved.emit(removed)
         
     _signalPrivacySettingsChanged = pyqtSignal(unicode, unicode)
     def connectPrivacySettingsChanged(self, callback):
