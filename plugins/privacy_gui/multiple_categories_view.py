@@ -17,7 +17,6 @@ class MultipleCategoriesView(QWidget):
         self._initSettingsWidget()
         
         mainLayout = QVBoxLayout(self)
-        mainLayout.setContentsMargins(0, 0, 0, 0)
         mainLayout.addWidget(topView)
         mainLayout.addWidget(self._settingsWidget, 1)
         self._modeChanged(self._mode, False)
@@ -41,6 +40,7 @@ class MultipleCategoriesView(QWidget):
         self._modeCombo.currentIndexChanged.connect(self._modeChanged)
         
         topLayout = QHBoxLayout(topWidget)
+        topLayout.setContentsMargins(0, 0, 0, 0)
         topLayout.addWidget(QLabel(u"Accept"), 0)
         topLayout.addWidget(self._modeCombo, 1, Qt.AlignLeft)
         return topWidget
@@ -48,6 +48,7 @@ class MultipleCategoriesView(QWidget):
     def _initSettingsWidget(self):
         self._settingsWidget = QWidget(self)
         layout = QVBoxLayout(self._settingsWidget)
+        layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
     
     def _clearCurrentView(self):

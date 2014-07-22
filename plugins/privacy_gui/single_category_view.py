@@ -85,7 +85,9 @@ class SingleCategoryView(QWidget):
         bottomWidget = self._initBottomWidget()
         
         mainLayout = QVBoxLayout(self)
-        mainLayout.setContentsMargins(0, 0, 0, 0)
+        if topWidget is None:
+            # inside multiple categories view -> no margins
+            mainLayout.setContentsMargins(0, 0, 0, 0)
         if topWidget is not None:
             mainLayout.addWidget(topWidget)
         mainLayout.addWidget(centralWidget, 1)
@@ -113,6 +115,7 @@ class SingleCategoryView(QWidget):
         self._modeCombo.currentIndexChanged.connect(self._modeChanged)
         
         topLayout = QHBoxLayout(topWidget)
+        topLayout.setContentsMargins(0, 0, 0, 0)
         topLayout.addWidget(QLabel(u"Accept from"), 0)
         topLayout.addWidget(self._modeCombo, 1, Qt.AlignLeft)
         return topWidget
@@ -120,6 +123,7 @@ class SingleCategoryView(QWidget):
     def _initPeerList(self, mode):
         capsuleWidget = QWidget()
         capsuleLayout = QVBoxLayout(capsuleWidget)
+        capsuleLayout.setContentsMargins(10, 0, 10, 0)
         
         if mode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX, PrivacySettings.POLICY_PEER_EXCEPTION):
             exceptions = PrivacySettings.get().getExceptions(self._action, self._category, mode, useModified=True)
