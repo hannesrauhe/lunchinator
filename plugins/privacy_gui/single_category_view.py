@@ -71,6 +71,7 @@ class SingleCategoryView(QWidget):
         
         self._action = action
         self._category = category
+        self._resetting = False
         
         if mode is not None:
             topWidget = None
@@ -149,17 +150,20 @@ class SingleCategoryView(QWidget):
         return self._askForConfirmationBox
     
     def _peerDataChanged(self, item):
-        PrivacySettings.get().addException(self._action,
-                                           self._category,
-                                           self._mode,
-                                           convert_string(item.data(PeerModel.KEY_ROLE).toString()),
-                                           1 if item.checkState() == Qt.Checked else 0 if item.checkState() == Qt.Unchecked else -1,
-                                           applyImmediately=False)
+        if not self._resetting:
+            PrivacySettings.get().addException(self._action,
+                                               self._category,
+                                               self._mode,
+                                               convert_string(item.data(PeerModel.KEY_ROLE).toString()),
+                                               1 if item.checkState() == Qt.Checked else 0 if item.checkState() == Qt.Unchecked else -1,
+                                               applyImmediately=False)
     
     def _askForConfirmationChanged(self, newState):
-        PrivacySettings.get().setAskForConfirmation(self._action, self._category, newState == Qt.Checked, applyImmediately=False)
+        if not self._resetting:
+            PrivacySettings.get().setAskForConfirmation(self._action, self._category, newState == Qt.Checked, applyImmediately=False)
         
     def _modeChanged(self, newMode, notify=True, resetModel=True):
+        self._resetting = True
         if newMode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX, PrivacySettings.POLICY_PEER_EXCEPTION):
             if resetModel:
                 # no change notifications, we are just resetting the model
@@ -169,9 +173,13 @@ class SingleCategoryView(QWidget):
             self._peerList.setVisible(True)
         else:
             self._peerList.setVisible(False)
-        self._askForConfirmationBox.setCheckState(Qt.Checked if PrivacySettings.get().getAskForConfirmation(self._action, self._category, useModified=True) else Qt.Unchecked)
-        self._askForConfirmationBox.setVisible(newMode == PrivacySettings.POLICY_NOBODY_EX)
+        
+        if newMode == PrivacySettings.POLICY_NOBODY_EX:
+            self._askForConfirmationBox.setCheckState(Qt.Checked if PrivacySettings.get().getAskForConfirmation(self._action, self._category, useModified=True) else Qt.Unchecked)
+            self._askForConfirmationBox.setVisible(True)
         self._mode = newMode
+        
+        self._resetting = False
         if notify:
             PrivacySettings.get().setPolicy(self._action, self._category, self._mode, applyImmediately=False)
         
