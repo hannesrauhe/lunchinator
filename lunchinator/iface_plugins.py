@@ -481,9 +481,10 @@ class iface_plugin(IPlugin):
     @classmethod
     def prepare_application(cls, factory):
         from PyQt4.QtGui import QApplication, QMainWindow
-        from lunchinator import setLoggingLevel
+        from lunchinator import setLoggingLevel, get_settings
         from utilities import setValidQtParent
     
+        get_settings().set_verbose(True)
         setLoggingLevel(logging.DEBUG)    
         app = QApplication(sys.argv)
         window = QMainWindow()
