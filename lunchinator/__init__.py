@@ -116,6 +116,9 @@ def log_info(*s):
     
 def log_debug(*s):
     _get_logger().debug(_generate_string(*s))
+    
+def logs_debug():
+    return _get_logger().isEnabledFor(logging.DEBUG)
 
 from lunchinator.notification_center import NotificationCenter
 def get_notification_center():

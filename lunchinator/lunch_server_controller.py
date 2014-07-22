@@ -2,7 +2,7 @@
 import sys
 from lunchinator import get_server, get_settings, log_info, get_notification_center,\
     log_debug, get_peers, log_exception, get_plugin_manager, convert_string,\
-    get_peer_actions
+    get_peer_actions, logs_debug
     
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall, getTimeDifference
@@ -110,7 +110,17 @@ class LunchServerController(object):
                     category = action.getCategoryFromMessage(value)
                 else:
                     category = None
-                if not PeerActions.get().shouldProcessMessage(action, category, value, get_peers().getPeerID(pIP=addr)):
+                peerID = get_peers().getPeerID(pIP=addr)
+                
+                shouldProcess = PeerActions.get().shouldProcessMessage(action, category, value, peerID)
+                
+                if logs_debug():
+                    log_debug("Accept" if shouldProcess else "Reject",
+                              "peer action", action.getPluginName(), ":", action.getName(),
+                              "from peer", peerID,
+                              "" if category is None else "category " + category)
+                
+                if not shouldProcess:
                     return
                 
         processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info), newPeer, fromQueue, action)
