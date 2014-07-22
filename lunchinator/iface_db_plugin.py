@@ -34,8 +34,8 @@ class iface_db_plugin(iface_plugin):
     ''' Options are set differently from other plugins, since - again - multiple
     instances with different options are allowed. The DB Connections plugin handles the
     properties'''
-    def create_options_widget(self, parent):
-        return None  
+    def has_options_widget(self):
+        return False
       
     def save_options_widget_data(self, **_kwargs):
         pass

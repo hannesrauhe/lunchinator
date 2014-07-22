@@ -94,6 +94,9 @@ class db_connections(iface_general_plugin):
         
         return self.open_connections[name], props["plugin_type"]
     
+    def has_options_widget(self):
+        return True
+    
     def create_options_widget(self, parent):
         from db_connections.DbConnOptions import DbConnOptions
         

@@ -20,6 +20,9 @@ class privacy(iface_general_plugin):
         get_notification_center().disconnectPrivacySettingsChanged(self._settingsChanged)
         iface_general_plugin.deactivate(self)
 
+    def has_options_widget(self):
+        return True
+
     def create_options_widget(self, parent):
         self._ui = PrivacyGUI(parent)
         return self._ui  

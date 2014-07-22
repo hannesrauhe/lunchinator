@@ -48,6 +48,9 @@ class twitter_status(iface_called_plugin):
             msg = "Fill in your twitter account to allow remote lunch calls from it"
         if self.msg_label != None:
             self.msg_label.setText(msg)
+    
+    def has_options_widget(self):
+        return True
             
     def create_options_widget(self, parent):
         from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox

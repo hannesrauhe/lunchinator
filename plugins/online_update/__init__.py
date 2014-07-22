@@ -70,6 +70,9 @@ class online_update(iface_general_plugin):
         self._repoUpdateHandler.deactivate()
         iface_general_plugin.deactivate(self)
     
+    def has_options_widget(self):
+        return True
+    
     def create_options_widget(self, parent):
         ui = OnlineUpdateGUI(self._appUpdateHandler.getInstalledVersion(), parent)
         ui.setCanCheckForAppUpdate(self._appUpdateHandler.canCheckForUpdate())

@@ -4,6 +4,33 @@ from lunchinator import get_settings, get_plugin_manager, log_exception
 from lunchinator.ComboTabWidget import ComboTabWidget
 from bisect import bisect_left
 
+class _SettingsWidgetContainer(QWidget):
+    def __init__(self, pluginName, pluginObject, parent):
+        super(_SettingsWidgetContainer, self).__init__(parent)
+        self._pluginName = pluginName
+        self._pluginObject = pluginObject
+        self._showing = False
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+    def showContents(self):
+        if self._showing:
+            return
+        self._showing = True
+        
+        try:
+            w = self._pluginObject.create_options_widget(self)
+        except:
+            w = QLabel("Error while including plugin", self)
+            log_exception("while including plugin %s in settings window" % self._pluginName)
+            
+        self.layout().addWidget(w, 1)
+        
+    def showEvent(self, event):
+        self.showContents()
+        return QWidget.showEvent(self, event)
+
 class LunchinatorSettingsDialog(QDialog):
     closed = pyqtSignal()
     
@@ -36,6 +63,8 @@ class LunchinatorSettingsDialog(QDialog):
         # d.get_content_area().pack_start(nb, True, True, 0)
         if self.nb.count() > 0:
             self.nb.setCurrentIndex(0)
+            # show first widget
+            self.nb.widget(0).showContents()
             
         bottomLayout = QHBoxLayout()
         bottomLayout.addWidget(QWidget(self), 1)
@@ -51,22 +80,19 @@ class LunchinatorSettingsDialog(QDialog):
         contentLayout.addLayout(bottomLayout)
         
     def addPlugin(self, po, pName):
-        try:
-            w = po.create_options_widget(self.nb)
-        except:
-            w = QLabel("Error while including plugin", self.nb)
-            log_exception("while including plugin %s in settings window" % pName)
-            
-        if w != None:
-            if pName == "General Settings":
-                iPos = 0
-            else:
-                lo = 0
-                if len(self.widget_names) > 0 and self.widget_names[0] == "General Settings":
-                    lo = 1
-                iPos = bisect_left(self.widget_names, pName, lo=lo)
-            self.widget_names.insert(iPos, pName)
-            self.nb.insertTab(iPos, w, pName)
+        if not po.has_options_widget():
+            return
+        
+        w = _SettingsWidgetContainer(pName, po, self.nb)
+        if pName == "General Settings":
+            iPos = 0
+        else:
+            lo = 0
+            if len(self.widget_names) > 0 and self.widget_names[0] == "General Settings":
+                lo = 1
+            iPos = bisect_left(self.widget_names, pName, lo=lo)
+        self.widget_names.insert(iPos, pName)
+        self.nb.insertTab(iPos, w, pName)
             
     def removePlugin(self, po, pName):
         try:
@@ -85,7 +111,6 @@ class LunchinatorSettingsDialog(QDialog):
         if visible:
             size = self.size()
             self.setMinimumSize(size.width(), size.height())
-            self.setMaximumSize(2000, size.height())
         
     def savePressed(self):
         self.setResult(QDialog.Accepted)

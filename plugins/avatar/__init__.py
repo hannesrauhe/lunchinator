@@ -75,6 +75,9 @@ class avatar(iface_general_plugin):
         img_path = os.path.join(get_settings().get_avatar_dir(), get_settings().get_avatar_file())
         self._setImage(img_path, self.label)
         
+    def has_options_widget(self):
+        return True
+        
     def create_options_widget(self, parent):
         from PyQt4.QtGui import QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton
         from PyQt4.QtCore import Qt

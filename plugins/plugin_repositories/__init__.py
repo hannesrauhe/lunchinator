@@ -29,6 +29,9 @@ class plugin_repositories(iface_general_plugin):
         get_notification_center().disconnectUpToDateRepositoriesChanged(self._processUpdates)
         iface_general_plugin.deactivate(self)
         
+    def has_options_widget(self):
+        return True
+        
     def create_options_widget(self, parent):
         self._ui = PluginRepositoriesGUI(parent)
         

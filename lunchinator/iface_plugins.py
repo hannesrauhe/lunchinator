@@ -289,11 +289,13 @@ class iface_plugin(IPlugin):
         return new_v      
         
     """ Public interface """
+    def has_options_widget(self):
+        """Called from settings dialog. Override if you have a custom options widget."""
+        return self.has_options() and self.is_activated
+    
     def create_options_widget(self, parent):
         """Called from settings dialog. Override to create custom widgets."""
         from PyQt4.QtGui import QWidget, QGridLayout
-        if not self.has_options() or not self.is_activated:
-            return None
         optionsWidget = QWidget(parent)
         t = QGridLayout(optionsWidget)
         i = 0
