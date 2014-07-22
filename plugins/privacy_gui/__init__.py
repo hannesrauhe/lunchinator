@@ -47,6 +47,11 @@ if __name__ == '__main__':
         def getName(self):
             return "Test Action"
         
+        def getIcon(self):
+            from PyQt4.QtGui import QCommonStyle, QStyle
+            style = QCommonStyle()
+            return style.standardIcon(QStyle.SP_MessageBoxWarning)
+        
         def getMessagePrefix(self):
             return "TEST"
         

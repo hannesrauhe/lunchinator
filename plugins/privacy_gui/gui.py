@@ -3,7 +3,7 @@ from lunchinator.peer_actions.peer_actions_singleton import PeerActions
 from privacy_gui.multiple_categories_view import MultipleCategoriesView
 from privacy_gui.single_category_view import SingleCategoryView
 from PyQt4.QtGui import QWidget, QVBoxLayout, QTreeView, QFrame, QSplitter
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QVariant
 
 class PeerActionsModel(TableModelBase):
     ACTION_ROLE = TableModelBase.SORT_ROLE + 1
@@ -29,6 +29,9 @@ class PeerActionsModel(TableModelBase):
         if pluginName is None:
             pluginName = action.getPluginName()
         item.setText("%s: %s" % (pluginName, action.getName()))
+        icon = action.getIcon()
+        if icon is not None:
+            item.setData(QVariant(icon), Qt.DecorationRole)
 
 class PrivacyGUI(QWidget):
     def __init__(self, parent):

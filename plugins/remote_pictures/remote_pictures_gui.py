@@ -125,6 +125,9 @@ class RemotePicturesGui(QStackedWidget):
     
     def getCategories(self):
         return sorted(self.categoryPictures.keys(), key=lambda cat : cat.lower() if cat != RemotePicturesGui.UNCATEGORIZED else "")
+    
+    def getCategoryIcon(self, cat):
+        return self.categoryModel.getCategoryIcon(cat)
         
     def _initializeHiddenWidget(self, w):
         self.categoryOpened.connect(w.showTemporarily)
@@ -425,23 +428,31 @@ class CategoriesModel(QStandardItemModel):
     def __init__(self):
         super(CategoriesModel, self).__init__()
         self.setColumnCount(1)
+        self._categoryIcons = {}
         
     def _createThumbnail(self, imagePath, thumbnailSize):
         """Called asynchronously, hence, no QPixmaps here."""
         image = QImage(imagePath)
         return image.scaled(QSize(thumbnailSize, thumbnailSize), Qt.KeepAspectRatio, Qt.SmoothTransformation)
         
-    def _setThumbnail(self, item, image):
-        item.setData(QVariant(QIcon(QPixmap.fromImage(image))), Qt.DecorationRole)
+    def _setThumbnail(self, item, cat, image):
+        icon = QIcon(QPixmap.fromImage(image))
+        item.setData(QVariant(icon), Qt.DecorationRole)
+        self._categoryIcons[cat] = icon
         
-    def _initializeItem(self, item, imagePath, thumbnailSize):
-        AsyncCall(self, self._createThumbnail, partial(self._setThumbnail, item))(imagePath, thumbnailSize)
+    def _initializeItem(self, item, imagePath, thumbnailSize, cat):
+        AsyncCall(self, self._createThumbnail, partial(self._setThumbnail, item, cat))(imagePath, thumbnailSize)
+        
+    def getCategoryIcon(self, cat):
+        if cat in self._categoryIcons:
+            return self._categoryIcons[cat]
+        return None
         
     def addCategory(self, cat, firstImage, thumbnailSize):
         item = QStandardItem()
         item.setEditable(False)
         item.setData(QVariant(cat), Qt.DisplayRole)
-        self._initializeItem(item, firstImage, thumbnailSize)
+        self._initializeItem(item, firstImage, thumbnailSize, cat)
         item.setData(QVariant(firstImage), self.PATH_ROLE)
         item.setData(QVariant(cat if cat != RemotePicturesGui.UNCATEGORIZED else ""), self.SORT_ROLE)
         self.appendRow([item])
@@ -449,7 +460,8 @@ class CategoriesModel(QStandardItemModel):
     def thumbnailSizeChanged(self, thumbnailSize):
         for i in range(self.rowCount()):
             item = self.item(i)
-            self._initializeItem(item, item.data(self.PATH_ROLE).toString(), thumbnailSize)
+            cat = convert_string(item.data(Qt.DisplayRole).toString())
+            self._initializeItem(item, item.data(self.PATH_ROLE).toString(), thumbnailSize, cat)
 
 if __name__ == '__main__':
     class RemotePicturesWrapper(object):

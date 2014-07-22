@@ -25,7 +25,11 @@ def _fillPeerActionsMenu(popupMenu, peerID, filterFunc):
             header.setEnabled(False)
             
             for action in actions:
-                popupMenu.addAction(action.getDisplayedName(peerID), partial(action.performAction, peerID, peerInfo))
+                icon = action.getIcon()
+                if icon is not None:
+                    popupMenu.addAction(icon, action.getDisplayedName(peerID), partial(action.performAction, peerID, peerInfo))
+                else:
+                    popupMenu.addAction(action.getDisplayedName(peerID), partial(action.performAction, peerID, peerInfo))
     return popupMenu
 
 def initializePeerActionsMenu(menu, peerID, filterFunc):

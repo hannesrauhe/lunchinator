@@ -13,6 +13,10 @@ class PeerAction(object):
         """Can be used to change the displayed name depending on the context."""
         return self.getName()
     
+    def getIcon(self):
+        """Returns an icon representing this action."""
+        return None
+    
     def performAction(self, peerID, peerInfo):
         """Called when the action is performed on some peer."""
         pass
@@ -39,6 +43,10 @@ class PeerAction(object):
         privacy settings. This method is called each time the privacy
         settings panel for this peer action is refreshed.
         """
+        return None
+    
+    def getCategoryIcon(self, _category):
+        """Returns a QIcon for a given category name."""
         return None
     
     def hasCategories(self):

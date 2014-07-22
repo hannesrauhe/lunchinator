@@ -15,6 +15,10 @@ class _RemotePictureAction(PeerAction):
     def getName(self):
         return "Send Remote Picture"
     
+    def appliesToPeer(self, _peerID, _peerInfo):
+        # TODO have to implement performAction
+        return False
+    
     def getMessagePrefix(self):
         return "REMOTE_PIC"
     
@@ -26,6 +30,12 @@ class _RemotePictureAction(PeerAction):
             return self.getPluginObject().gui.getCategories()
         log_error("Remote Pictures GUI is None")
         return []
+    
+    def getCategoryIcon(self, category):
+        if self.getPluginObject().gui is not None:
+            return self.getPluginObject().gui.getCategoryIcon(category)
+        log_error("Remote Pictures GUI is None")
+        return None
     
     def getDefaultPrivacyPolicy(self):
         return PrivacySettings.POLICY_BY_CATEGORY

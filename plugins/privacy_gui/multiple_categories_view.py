@@ -70,11 +70,11 @@ class MultipleCategoriesView(QWidget):
         for category in self._action.getPrivacyCategories():
             singleView = SingleCategoryView(self._action, toolBox, category)
             self._currentSingleViews.append(singleView)
-            toolBox.addItem(singleView, category)
+            toolBox.addItem(singleView, self._action.getCategoryIcon(category), category)
         
         peerExceptions = SingleCategoryView(self._action, toolBox, category=None, mode=PrivacySettings.POLICY_PEER_EXCEPTION)
         self._currentSingleViews.append(peerExceptions)
-        toolBox.addItem(peerExceptions, "Exceptions")
+        toolBox.addItem(peerExceptions, "Special Peers")
         
         w = QScrollArea(self)
         w.setAutoFillBackground(False)
