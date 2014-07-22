@@ -177,6 +177,8 @@ class SingleCategoryView(QWidget):
         if newMode == PrivacySettings.POLICY_NOBODY_EX:
             self._askForConfirmationBox.setCheckState(Qt.Checked if PrivacySettings.get().getAskForConfirmation(self._action, self._category, useModified=True) else Qt.Unchecked)
             self._askForConfirmationBox.setVisible(True)
+        else:
+            self._askForConfirmationBox.setVisible(False)
         self._mode = newMode
         
         self._resetting = False
