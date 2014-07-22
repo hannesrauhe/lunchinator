@@ -63,7 +63,7 @@ class DownloadThread(QThread):
             
             try:
                 hdr = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
-                req = urllib2.Request(self.url, headers=hdr)
+                req = urllib2.Request(self.url.encode('utf-8'), headers=hdr)
                 if self._no_proxy:
                     proxy_handler = urllib2.ProxyHandler({})
                     opener = urllib2.build_opener(proxy_handler)                
