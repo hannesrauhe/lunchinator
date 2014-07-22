@@ -85,7 +85,7 @@ class PrivacySettings(object):
             
         pluginDict[actionName] = actionSettings
     
-    def save(self):
+    def save(self, notify=True):
         """Saves the current modifications"""
         with self._lock:
             for pluginName, pluginDict in self._modifications.iteritems():
@@ -94,7 +94,8 @@ class PrivacySettings(object):
                         # don't store category information if not necessary
                         actionDict.pop(u"cat", None)
                     self._setPeerActionSettings(pluginName, actionName, actionDict)
-                    get_notification_center().emitPrivacySettingsChanged(pluginName, actionName)
+                    if notify:
+                        get_notification_center().emitPrivacySettingsChanged(pluginName, actionName)
                 
     def discard(self):
         """Discards all modifications since the last save"""
@@ -334,9 +335,9 @@ class PrivacySettings(object):
         if key not in settingsDict:
             settingsDict[key] = {}
             
-        if checkState :
+        if checkState == 1:
             settingsDict[key][peerID] = 1
-        elif checkState != -1:
+        elif checkState == 0:
             settingsDict[key][peerID] = 0
         else:
             # return to unknown state

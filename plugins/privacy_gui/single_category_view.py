@@ -1,25 +1,27 @@
 from PyQt4.QtGui import QWidget, QHBoxLayout, QLabel, QComboBox, QTreeView,\
     QVBoxLayout, QFrame, QCheckBox
+from PyQt4.QtCore import Qt, QVariant
 from lunchinator.table_models import TableModelBase
 from lunchinator import get_peers, log_warning, get_notification_center,\
     convert_string
-from PyQt4.QtCore import Qt
 from lunchinator.privacy.privacy_settings import PrivacySettings
 
 class PeerModel(TableModelBase):
     def __init__(self, data, tristate):
         columns = [(u"Peer Name", self._updateNameItem)]
-        super(PeerModel, self).__init__(None, columns)
+        super(PeerModel, self).__init__(get_peers(), columns)
         
         if data is None:
             raise ValueError("data cannot be None")
         self._data = data
         self._tristate = tristate
         
-        if get_peers() is not None:
-            peers = get_peers().getAllKnownPeerIDs()
+        if self.dataSource is not None:
+            peers = self.dataSource.getAllKnownPeerIDs()
             for pID in peers:
-                self.appendContentRow(pID, get_peers().getPeerInfo(pID=pID))
+                self.appendContentRow(pID, None)
+        else:
+            self.appendContentRow("test", None)
         
     def setExceptionData(self, data):
         if data is None:
@@ -29,6 +31,15 @@ class PeerModel(TableModelBase):
     
     def _dataForKey(self, _key):
         return None
+    
+    def setData(self, index, value, role):
+        if self._tristate and role == Qt.CheckStateRole:
+            newState, _ = value.toInt()
+            if newState == Qt.Checked:
+                curState, _ = index.data(Qt.CheckStateRole).toInt()
+                if curState == Qt.Unchecked:
+                    value = QVariant(Qt.PartiallyChecked)
+        return TableModelBase.setData(self, index, value, role)
         
     def peerNameAdded(self, pID, _name):
         self.appendContentRow(pID, None)
@@ -37,8 +48,12 @@ class PeerModel(TableModelBase):
         self.externalRowUpdated(pID, None)
         
     def _updateNameItem(self, pID, _data, item):
-        m_name = get_peers().getDisplayedPeerName(pID=pID)
-        if m_name == None:
+        if self.dataSource is not None:
+            m_name = self.dataSource.getDisplayedPeerName(pID=pID)
+        else:
+            m_name = pID
+        
+        if m_name is None:
             log_warning("displayed peer name (%s) should not be None" % pID)
             m_name = pID
         item.setText(m_name)

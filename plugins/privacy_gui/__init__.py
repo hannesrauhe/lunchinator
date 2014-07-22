@@ -65,5 +65,5 @@ if __name__ == '__main__':
     testAction._pluginName = "Test Plugin"
     PeerActions.get()._peerActions["Test Plugin"] = [testAction]
     w.run_options_widget()
-    PrivacySettings.get().save()
+    PrivacySettings.get().save(notify=False) # don't notify, no deadlock
     print PrivacySettings.get()._settings
