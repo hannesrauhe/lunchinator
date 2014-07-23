@@ -1,5 +1,5 @@
 #!/usr/bin/python
-fror __future__ import with_statement
+from __future__ import with_statement
 import os, platform
 from distutils.core import setup
 from distutils.command import install
