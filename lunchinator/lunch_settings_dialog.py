@@ -30,6 +30,9 @@ class _SettingsWidgetContainer(QWidget):
     def showEvent(self, event):
         self.showContents()
         return QWidget.showEvent(self, event)
+    
+    def isLoaded(self):
+        return self._showing
 
 class LunchinatorSettingsDialog(QDialog):
     closed = pyqtSignal()
@@ -46,7 +49,7 @@ class LunchinatorSettingsDialog(QDialog):
         self.nb = ComboTabWidget(self)
         self.nb.setTabPosition(QTabWidget.North)
             
-        self.plugin_widgets = {}
+        self.widget_containers = {}
         self.widget_names = []
         try:
             if get_settings().get_plugins_enabled():
@@ -84,6 +87,7 @@ class LunchinatorSettingsDialog(QDialog):
             return
         
         w = _SettingsWidgetContainer(pName, po, self.nb)
+        self.widget_containers[pName] = w
         if pName == "General Settings":
             iPos = 0
         else:
@@ -100,6 +104,7 @@ class LunchinatorSettingsDialog(QDialog):
         except:
             log_exception("while removing plugin %s from settings window" % pName)
             
+        self.widget_containers.pop(pName, None)
         # search for position
         i = bisect_left(self.widget_names, pName, lo=1)
         if i != len(self.widget_names) and self.widget_names[i] == pName:
@@ -121,3 +126,8 @@ class LunchinatorSettingsDialog(QDialog):
         self.setResult(QDialog.Rejected)
         self.closed.emit()
         self.setVisible(False)
+
+    def isOptionsWidgetLoaded(self, pluginName):
+        if pluginName in self.widget_containers:
+            return self.widget_containers[pluginName].isLoaded()
+        return False
