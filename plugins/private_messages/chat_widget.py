@@ -172,17 +172,23 @@ class ChatWidget(QWidget):
             self._ownName = newName
             self._updateOwnName()
         
+    def _clearEntry(self):
+        self.entry.clear()
+        self.entry.setCurrentCharFormat(QTextCharFormat())
+        
     def _checkEntryState(self):
         self.entry.setEnabled(not self._offline and not self._delivering)
         if self._offline:
             if self.entry.document().isEmpty():
+                self._clearEntry()
                 self.entry.setText(u"Partner is offline")
             else:
                 self._keepEntryText = True
         elif self._delivering:
+            self._clearEntry()
             self.entry.setText(u"Delivering...")
         elif not self._keepEntryText:
-            self.entry.setText(u"")
+            self._clearEntry()
             
         if self._keepEntryText and not self._offline:
             # reset if not offline any more
@@ -484,6 +490,7 @@ if __name__ == '__main__':
         
         tw.typing.connect(tw.otherIsTyping)
         tw.cleared.connect(tw.otherCleared)
+        tw.sendMessage.connect(lambda pID, html : tw.addOwnMessage(0, time(), html, time()), type=Qt.QueuedConnection)
         
         return tw
         
