@@ -94,7 +94,8 @@ class private_messages(iface_gui_plugin):
     def __init__(self):
         super(private_messages, self).__init__()
         self.options = [((u"prev_messages", u"Number of previous messages to display"), 5)]
-        self.hidden_options = {u"ack_timeout" : 3} # seconds until message delivery is marked as timed out
+        self.hidden_options = {u"ack_timeout" : 3, # seconds until message delivery is marked as timed out
+                               u"next_msgid" : -1} # next free message ID. -1 = not initialized
         
     def get_displayed_name(self):
         return u"Chat"
@@ -109,7 +110,7 @@ class private_messages(iface_gui_plugin):
         
         from PyQt4.QtCore import QThread
         self._messagesThread = QThread()
-        self._messagesHandler = ChatMessagesHandler(self, self.hidden_options[u"ack_timeout"])
+        self._messagesHandler = ChatMessagesHandler(self, self.hidden_options[u"ack_timeout"], self.hidden_options[u"next_msgid"])
         self._messagesHandler.moveToThread(self._messagesThread)
         self._messagesThread.start()
         
@@ -118,6 +119,7 @@ class private_messages(iface_gui_plugin):
         self._messagesHandler.newMessage.connect(self._displayMessage)
         
     def deactivate(self):
+        self.set_hidden_option(u"next_msgid", self._messagesHandler.getNextMessageIDForStorage(), convert=False)
         self._messagesHandler.deactivate()
         self._messagesThread.quit()
         self._messagesThread.wait()
