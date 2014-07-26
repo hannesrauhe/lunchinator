@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_called_plugin
+from lunchinator.plugin import iface_called_plugin
 from lunchinator import get_server, log_info, log_warning, log_error, log_exception, log_debug
 
 import os, sys, time, pprint

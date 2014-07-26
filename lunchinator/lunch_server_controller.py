@@ -27,9 +27,7 @@ class LunchServerController(object):
     def initPlugins(self):
         if get_settings().get_plugins_enabled():
             from yapsy.PluginManager import PluginManagerSingleton
-            from iface_plugins import iface_called_plugin, iface_general_plugin, iface_gui_plugin
-            from iface_db_plugin import iface_db_plugin
-            from lunchinator.notification_plugin_manager import NotificationPluginManager
+            from lunchinator.plugin import NotificationPluginManager
             
             PluginManagerSingleton.setBehaviour([
                 NotificationPluginManager,
@@ -38,22 +36,12 @@ class LunchServerController(object):
             self.plugin_manager.app = self
             self.plugin_manager.setConfigParser(get_settings().get_config_file(), get_settings().write_config_to_hd)
             self.plugin_manager.setPluginPlaces(get_settings().get_plugin_dirs())
-            categoriesFilter = {
-               "general" : iface_general_plugin,
-               "called" : iface_called_plugin,
-               "gui" : iface_gui_plugin,
-               "db" : iface_db_plugin
-               }
-            self.plugin_manager.setCategoriesFilter(categoriesFilter) 
 
             try:
                 self.plugin_manager.collectPlugins()
             except:
                 log_exception("problem when loading plugins")
             
-            for p in self.plugin_manager.getAllPlugins():
-                if p.plugin_object.is_activation_forced() and not p.plugin_object.is_activated:
-                    self.plugin_manager.activatePluginByName(p.name, p.category, emit=False)
             get_peer_actions().initialize()
         else:
             log_info("lunchinator initialised without plugins")
@@ -175,12 +163,7 @@ class LunchServerController(object):
     def serverStopped(self, _exit_code):
         get_settings().write_config_to_hd()
         if get_settings().get_plugins_enabled():
-            for pluginInfo in get_plugin_manager().getAllPlugins():
-                if pluginInfo.plugin_object.is_activated:
-                    try:
-                        get_plugin_manager().deactivatePluginByName(pluginInfo.name, pluginInfo.category)
-                    except:
-                        log_exception("An error occured while deactivating %s"%pluginInfo.name)
+            get_plugin_manager().deactivatePlugins(get_plugin_manager().getAllPlugins(), save_state=False)
         get_notification_center().disconnectPluginActivated(self._checkSendInfoDict)
         get_notification_center().disconnectPluginDeactivated(self._checkSendInfoDict)
         get_notification_center().finish()

@@ -33,7 +33,7 @@ class iface_plugin(IPlugin):
         self._readOptionsFromFile()
         if len(self._supported_dbms)>0:
             get_notification_center().connectDBSettingChanged(self.connect_to_db)
-            get_notification_center().connectDBConnReady(self.connect_to_db)            
+            self.connect_to_db()
         return
 
     def deactivate(self):
@@ -42,9 +42,8 @@ class iface_plugin(IPlugin):
         """
         if len(self._supported_dbms)>0:
             get_notification_center().disconnectDBSettingChanged(self.connect_to_db)
-            get_notification_center().disconnectDBConnReady(self.connect_to_db)
-        IPlugin.deactivate(self)
         self.option_widgets = {}
+        IPlugin.deactivate(self)
     
     def _initOptions(self):
         if type(self.options) == list and self.option_names == None:
@@ -451,8 +450,7 @@ class iface_plugin(IPlugin):
         
     def connect_to_db(self, changedDBConn = None):
         """
-        this method should be called by a signal and not directly, 
-        should definitely not be called before all plugins are activated, especially not in activate of a plugin
+        connects to a database or changes the database connection type.
         """
         with self._specialized_db_connect_lock:
             if self._specialized_db_conn and changedDBConn and changedDBConn != self.options["db_connection"]:
@@ -566,15 +564,13 @@ class iface_gui_plugin(iface_plugin):
     def __init__(self):
         super(iface_gui_plugin, self).__init__()
         self.sortOrder = -1
-        self.visible = False
         
     def create_widget(self, _parent):
-        self.visible = True
         return None
     
     def destroy_widget(self):
         """Called when the widget is hidden / closed. Ensure that create_widget restores the state."""
-        self.visible = False
+        pass
     
     def create_menus(self, _menuBar):
         """Creates plugin specific menus and returns a list of QMenu objects"""

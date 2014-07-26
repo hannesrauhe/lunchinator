@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_general_plugin
+from lunchinator.plugin import iface_general_plugin
 from lunchinator import get_settings, get_notification_center, convert_string
 from lunchinator.lunch_settings import lunch_settings
     

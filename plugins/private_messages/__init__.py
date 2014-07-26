@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator.plugin import iface_gui_plugin
 from lunchinator import log_exception, convert_string, log_error, get_peers,\
     get_settings, get_server
 from lunchinator.peer_actions import PeerAction
@@ -170,7 +170,6 @@ class private_messages(iface_gui_plugin):
         if self._storage == None:
             with self._lock:
                 if self._storage == None:
-                    from private_messages.chat_messages_storage import ChatMessagesStorage
                     self._storage = ChatMessagesStorage()
         return self._storage
     

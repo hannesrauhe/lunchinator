@@ -75,7 +75,7 @@ def getValidQtParent():
     raise Exception("Could not find a valid QObject instance")
     
 def _processCallOnPlugin(pluginObject, pluginName, ip, call, newPeer, fromQueue, member_info):
-    from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
+    from lunchinator.plugin import iface_called_plugin, iface_gui_plugin
     
     # called also contains gui plugins
     if not (isinstance(pluginObject, iface_called_plugin) or \
@@ -427,7 +427,7 @@ def installPipDependencyWindows(package, notifyRestart=True):
                               lpParameters=params)
 
     procHandle = procInfo['hProcess']    
-    obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
+    _obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
     rc = win32process.GetExitCodeProcess(procHandle)
     log_debug("Process handle %s returned code %s" % (procHandle, rc))
 

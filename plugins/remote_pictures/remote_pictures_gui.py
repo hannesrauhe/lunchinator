@@ -470,5 +470,5 @@ if __name__ == '__main__':
                    u'thumbnail_size': 200,
                    u'smooth_scaling':True}
     
-    from lunchinator.iface_plugins import iface_gui_plugin
+    from lunchinator.plugin import iface_gui_plugin
     iface_gui_plugin.run_standalone(lambda window : RemotePicturesGui(window, RemotePicturesWrapper()))

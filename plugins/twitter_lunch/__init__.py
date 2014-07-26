@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_called_plugin
+from lunchinator.plugin import iface_called_plugin
 import subprocess, sys, ctypes, logging
 from lunchinator import get_server, log_exception, log_warning, get_settings, convert_string, log_error, log_info, log_debug
 import urllib2, tempfile, json, time, twitter, contextlib, csv

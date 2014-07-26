@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator.plugin import iface_gui_plugin
 from lunchinator import log_exception, get_settings, log_error, convert_string,\
     log_warning, get_server, log_debug, get_peers, get_notification_center
 import urllib2,sys,tempfile,csv,contextlib,os,socket
@@ -86,11 +86,6 @@ class remote_pictures(iface_gui_plugin):
         
     def smoothScalingChanged(self, _setting, newValue):
         self.gui.imageLabel.smooth_scaling = newValue
-    
-    def deactivate(self):
-        if self.visible:
-            self.destroy_widget()
-        iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
         from remote_pictures.remote_pictures_gui import RemotePicturesGui

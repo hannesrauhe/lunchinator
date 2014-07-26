@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator.plugin import iface_gui_plugin
 from lunchinator import log_exception, log_error, get_settings, get_server, get_db_connection
 
     

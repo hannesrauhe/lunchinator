@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_called_plugin
+from lunchinator.plugin import iface_called_plugin
 import subprocess, sys, ctypes, threading, time, urllib2, json
 from cStringIO import StringIO, OutputType
 from lunchinator import get_server, log_exception, log_warning, \

@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin, db_for_plugin_iface
+from lunchinator.plugin import iface_gui_plugin, db_for_plugin_iface
 from lunchinator import log_exception, log_error, get_settings, get_server, get_db_connection
 import urllib2,sys
 
@@ -22,7 +22,7 @@ class sql_interface(iface_gui_plugin):
         self.add_supported_dbms("SQLite Connection", sql_commands_sqlite)
     
     def activate(self):
-        iface_gui_plugin.activate(self)      
+        iface_gui_plugin.activate(self)
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)        

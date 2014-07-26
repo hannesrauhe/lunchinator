@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator.plugin import iface_gui_plugin
 from lunchinator import get_server, get_notification_center, get_peers,\
     convert_string, get_peer_actions
 from lunchinator.utilities import msecUntilNextMinute
@@ -124,7 +124,7 @@ class members_table(iface_gui_plugin):
         get_notification_center().disconnectMemberAppended(self._updatePeer)
         get_notification_center().disconnectMemberRemoved(self._updatePeer)
         
-        get_notification_center().disconnectDisplayedPeerNameChanged(self._updatePeer)
+        get_notification_center().disconnectDisplayedPeerNameChanged(self._displayedNameChanged)
         
         self._lunchTimeColumnTimer.stop()
         self._lunchTimeColumnTimer.deleteLater()

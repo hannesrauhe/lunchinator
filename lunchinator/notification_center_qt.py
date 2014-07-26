@@ -16,6 +16,15 @@ class NotificationCenterQt(QObject):
     def emitPluginActivated(self, pluginName, category):
         self._signalPluginActivated.emit(pluginName, category)
         
+    _signalPluginWillBeDeactivated = pyqtSignal(unicode, unicode)
+    def connectPluginWillBeDeactivated(self, callback):
+        # need direct connection here to ensure steps can be done before the plugin is actually deactivated.
+        self._signalPluginWillBeDeactivated.connect(callback, type=Qt.DirectConnection)
+    def disconnectPluginWillBeDeactivated(self, callback):
+        self._signalPluginWillBeDeactivated.disconnect(callback)
+    def emitPluginWillBeDeactivated(self, pluginName, category):
+        self._signalPluginWillBeDeactivated.emit(pluginName, category)
+        
     _signalPluginDeactivated = pyqtSignal(unicode, unicode)
     def connectPluginDeactivated(self, callback):
         self._signalPluginDeactivated.connect(callback, type=Qt.QueuedConnection)
@@ -192,14 +201,6 @@ class NotificationCenterQt(QObject):
         self._signalDBSettingChanged.disconnect(callback)
     def emitDBSettingChanged(self, dbConnName):
         self._signalDBSettingChanged.emit(dbConnName)
-       
-    _signalDBConnReady = pyqtSignal() 
-    def connectDBConnReady(self, callback):
-        self._signalDBConnReady.connect(callback, type=Qt.QueuedConnection)
-    def disconnectDBConnReady(self, callback):
-        self._signalDBConnReady.disconnect(callback)
-    def emitDBConnReady(self):
-        self._signalDBConnReady.emit()
         
     _signalPeerActionsAdded = pyqtSignal(dict) # dict of {added plugin's name, [action]}
     def connectPeerActionsAdded(self, callback):

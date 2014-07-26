@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_general_plugin
+from lunchinator.plugin import iface_general_plugin
 from privacy_gui.gui import PrivacyGUI
 from lunchinator.privacy import PrivacySettings
 from lunchinator import get_notification_center
@@ -48,7 +48,7 @@ class privacy(iface_general_plugin):
     
 if __name__ == '__main__':
     from lunchinator.peer_actions import PeerAction, PeerActions
-    from lunchinator.iface_plugins import iface_gui_plugin
+    from lunchinator.plugin import iface_gui_plugin
     
     class TestAction(PeerAction):
         def getName(self):

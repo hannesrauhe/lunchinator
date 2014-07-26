@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator.plugin import iface_gui_plugin
 from lunchinator import get_settings
 import os
 

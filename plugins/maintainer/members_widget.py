@@ -268,10 +268,6 @@ class MembersWidget(QWidget):
             else:
                 self.requestFinished()
         
-        #TODO: how to check if visible?
-#         if not self.visible:
-#             return False
-        
         if len(logsAdded) > 0 or len(logsRenamed) > 0:
             self.updateLogList(logsAdded, logsRenamed)
     

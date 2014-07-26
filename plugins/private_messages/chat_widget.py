@@ -446,7 +446,7 @@ class ChatWidget(QWidget):
         
 if __name__ == '__main__':
     from time import time
-    from lunchinator.iface_plugins import iface_gui_plugin
+    from lunchinator.plugin import iface_gui_plugin
     
     def createTable(window):
         ownIcon = get_settings().get_resource("images", "me.png")

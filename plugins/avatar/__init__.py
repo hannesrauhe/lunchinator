@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_general_plugin
+from lunchinator.plugin import iface_general_plugin
 from avatar.l_avatar import l_avatar
 import mimetypes
 from lunchinator import get_server, get_settings, log_error, convert_string, log_debug

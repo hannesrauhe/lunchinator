@@ -78,7 +78,7 @@ class TableWidget(QWidget):
         return self.table
         
 if __name__ == '__main__':
-    from lunchinator.iface_plugins import iface_gui_plugin
+    from lunchinator.plugin import iface_gui_plugin
     from PyQt4.QtGui import QStandardItemModel
     def table(window):
         tw = TableWidget(window, "Enter", foo, useTextEdit=False)

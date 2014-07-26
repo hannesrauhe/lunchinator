@@ -118,6 +118,17 @@ class NotificationCenter(object):
     def emitPluginActivated(self, pluginName, category):
         pass
     
+    """Called immediately before a plugin is deactivated."""    
+    @_connectFunc
+    def connectPluginWillBeDeactivated(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPluginWillBeDeactivated(self, callback):
+        pass
+    @_emitFunc
+    def emitPluginWillBeDeactivated(self, pluginName, category):
+        pass
+    
     """Called whenever a plugin was deactivated. The plugin is already deactivated when the signal is emitted."""    
     @_connectFunc
     def connectPluginDeactivated(self, callback):
@@ -350,17 +361,6 @@ class NotificationCenter(object):
         pass
     @_emitFunc
     def emitDBSettingChanged(self, dbConnName):
-        pass
-    
-    """Notifies Plugins when all database connections are ready"""    
-    @_connectFunc
-    def connectDBConnReady(self, callback):
-        pass
-    @_disconnectFunc
-    def disconnectDBConnReady(self, callback):
-        pass
-    @_emitFunc
-    def emitDBConnReady(self):
         pass
     
     """Emitted whenever a peer action is added.

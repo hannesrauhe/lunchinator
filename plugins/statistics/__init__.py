@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import *
+from lunchinator.plugin import iface_called_plugin, db_for_plugin_iface
 from lunchinator import get_server, log_debug,\
     get_settings, get_db_connection, log_warning, \
     get_notification_center, get_peers
@@ -26,25 +26,25 @@ class statistics(iface_called_plugin):
     def processes_events_immediately(self):
         return True    
     
-    def process_message(self,msg,addr,member_info):
+    def process_message(self,msg,addr,_member_info):
         if self.is_db_ready():
             self.specialized_db_conn().insert_call("msg", msg, addr)
         else:
             log_warning("Statistics: DB not ready -- cannot process message")
             
-    def process_lunch_call(self,msg,ip,member_info):
+    def process_lunch_call(self,msg,ip,_member_info):
         if self.is_db_ready():
             self.specialized_db_conn().insert_call("lunch", msg, ip)
         else:
             log_warning("Statistics: DB not ready -- cannot process lunch_call")
     
-    def process_event(self,cmd,value,ip,member_info):
+    def process_event(self,cmd,value,ip,_member_info):
         if self.is_db_ready():
             self.specialized_db_conn().insert_call(cmd, value, ip)
         else:
             log_warning("Statistics: DB not ready -- cannot process event")
             
-    def peer_update(self, peerID, peerInfo):        
+    def peer_update(self, _peerID, peerInfo):        
         if self.is_db_ready():
             self.specialized_db_conn().insert_members("ip", peerInfo["name"], \
                                  peerInfo["avatar"], peerInfo["next_lunch_begin"], peerInfo["next_lunch_end"])

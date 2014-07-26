@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_called_plugin
+from lunchinator.plugin import iface_called_plugin
 from lunchinator import get_settings, log_error, log_debug, log_exception,\
     get_peers
 from lunchinator.utilities import displayNotification, getPlatform,\
