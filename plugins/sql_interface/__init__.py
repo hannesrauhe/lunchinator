@@ -73,7 +73,9 @@ class sql_interface(iface_gui_plugin):
         from PyQt4.QtCore import Qt
         from lunchinator.table_widget import TableWidget
         self.resultTable = TableWidget(parent, "Execute", self.sendSqlClicked, useTextEdit=self.options['use_textedit'])
-        
+        hist = self.specialized_db_conn().get_last_commands()
+        if hist:
+            self.resultTable.addToHistory(hist)
         return self.resultTable
     
     def add_menu(self,menu):
@@ -86,3 +88,9 @@ class sql_commands_sqlite(db_for_plugin_iface):
 
     def insert_command(self, cmd):
         self.get_db_conn().execute("INSERT INTO SQL_INTERFACE_HISTORY(CMD) VALUES(?)",cmd)
+        
+    def get_last_commands(self, limit = 100):
+        tmp = self.get_db_conn().query("SELECT CMD FROM SQL_INTERFACE_HISTORY ORDER BY cmd_id DESC LIMIT ?", limit)
+        tmp.reverse()
+        res = [c[0] for c in tmp]
+        return res

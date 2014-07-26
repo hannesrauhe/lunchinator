@@ -17,7 +17,8 @@ class HistoryBase(object):
         return self.history[-index]
     
     def appendHistory(self, text):
-        self.history.append(text)
+        if len(self.history) == 0 or text != self.history[-1]:
+            self.history.append(text)
     
     def handleHistory(self, newIndex):
         if self.index == 0 or self.getText(self.index) != self.text():

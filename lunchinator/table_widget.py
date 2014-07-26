@@ -76,6 +76,10 @@ class TableWidget(QWidget):
         
     def getTable(self):
         return self.table
+    
+    def addToHistory(self, list):
+        for e in list:
+            self.entry.appendHistory(e)
         
 if __name__ == '__main__':
     from lunchinator.plugin import iface_gui_plugin
