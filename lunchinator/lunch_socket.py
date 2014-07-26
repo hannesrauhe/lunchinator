@@ -1,6 +1,6 @@
 """ lunch_socket+exceptions, extendedMessages(Incoming/Outgoing)"""
 
-import socket, errno, sys
+import socket, errno, sys, math
 from lunchinator import convert_string, log_debug, log_error, log_warning
 
 """ lunch_socket is the class to 
@@ -115,12 +115,11 @@ class split_call(Exception):
 """ Message classes """
     
 class extMessage(object):
-    def __init(self):
-        self._extMsgStr = u""
+    def __init__(self):
+        self._fragments = []
         self._plainMsg = u""
         self._encrypted = False
-        self._compressed = False
-        self._complete = False
+        self._compressedMsg = None
         self._signed = False
         self._splitID = ""
         
@@ -131,16 +130,10 @@ class extMessage(object):
         return self._encrypted
     
     def isCompressed(self):
-        return self._compressed
+        return self._compressedMsg != None
     
     def isComplete(self):
-        return self._complete
-    
-    def toString(self):
-        return self._extMsgStr.encode('utf-8')
-    
-    def toUnicode(self):
-        return self._extMsgStr
+        return len(self._fragments) and all(len(f) > 0 for f in self._fragments)
     
     def getPlainMessage(self):
         return self._plainMsg
@@ -148,15 +141,60 @@ class extMessage(object):
     def getSplitID(self):
         return self._splitID
     
-class extMessageIncoming(extMessage):
-    def __init__(self, incomingString):
-        super(extMessageIncoming, self).__init__()
-        self._extMsgStr = convert_string(incomingString)
+class extMessageIncoming(extMessage):        
+    def addFragment(self, f):
+        if self.isComplete():
+            raise Exception("All fragments for this message were received already")
+        
+        expectedFragments = ord(f[7])
+        if len(self._fragments)==0:
+            self._fragments = expectedFragments * [""]
+        if len(self._fragments) != expectedFragments:
+            raise Exception("The number of expected fragments changed for one message")      
+        
+        fragmentNum = ord(f[6])
+        if fragmentNum >= expectedFragments:
+            raise Exception("The fragment's number is out of range")
+        
+        self._fragments.insert(fragmentNum, f)
         
 """builds the extMessage from a plain message"""
 class extMessageOutgoing(extMessage):
     
     """ @param outgoingMessage as unicode object """
-    def __init__(self, outgoingMessage):
+    def __init__(self, outgoingMessage, fragment_size):
         super(extMessageOutgoing, self).__init__()
         self._plainMsg = outgoingMessage
+        self._fragment_size = fragment_size - len("HELOX xx")
+        if self._fragment_size < 1:
+            raise Exception("Fragment size %d to small to hold header"%fragment_size)
+        
+        if len(self._plainMsg) > self._fragment_size:
+            self.compress()
+            
+        if len(self._compressedMsg) > self._fragment_size:
+            self.split()
+        else:
+            self._fragments.append("HELOX "+ chr(0) + chr(0) + self._compressedMsg)
+        
+    def compress(self):
+        import zlib
+        if self.isCompressed():
+            return True
+
+        self._compressedMsg = zlib.compress(self._plainMsg)
+        print "Compression: %d -> %d"%(len(self._plainMsg), len(self._compressedMsg))
+        
+    def split(self):
+        msg_len = len(self._compressedMsg)
+        n = self._fragment_size
+        m = int(math.ceil(float(msg_len) / float(n)))
+        if m > 128:
+            raise Exception("Message to large to be send over lunch socket: %d byte"%msg_len)
+        self._fragments = ["HELOX " + chr(i/n) + chr(m) + \
+                           self._compressedMsg[i:i+n] for i in range(0, msg_len, n)]
+        print "Splitting %d Byte in %d segments of size %d"%(msg_len, m, n)
+    
+    def getFragments(self):
+        return self._fragments
+            
