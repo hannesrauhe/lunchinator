@@ -40,12 +40,14 @@ class lunch_socket(object):
             raise Exception("Cannot send. There is no open lunch socket")
         
         send_str = msg.encode('utf-8')
-        if not disable_extended and len(msg) > self.max_msg_length:
-            xmsg = extMessageOutgoing(msg)
-            send_str = xmsg.toString()        
-        
         log_debug("Sending", msg, "to", ip.strip())
-        self.s.sendto(send_str, (ip.strip(), self.port))
+        
+        if not disable_extended and len(msg) > self.max_msg_length:
+            xmsg = extMessageOutgoing(msg, self.max_msg_length)
+            for f in xmsg.getFragments():     
+                self.s.sendto(f, (ip.strip(), self.port))
+        else:
+            self.s.sendto(send_str, (ip.strip(), self.port))
 
     """ receives a message from a socket and returns the received data and the sender's 
     address
@@ -56,12 +58,10 @@ class lunch_socket(object):
         if not self.s:
             raise Exception("Cannot recv. There is no open lunch socket")
         
-        for attempts in range(0, 5):
+        for _ in range(0, 5):
             try:
                 data, addr = self.s.recvfrom(self.max_msg_length)                
                 ip = unicode(addr[0])
-                
-                log_debug(u"Incoming data from %s: %s" % (ip, convert_string(data))) 
                 
                 msg = u""
                 if data.startswith("HELOX"):
@@ -149,7 +149,7 @@ class extMessage(object):
         return self._fragments
     
     def getPlainMessage(self):
-        return self._plainMsg.decode('utf-8')
+        return self._plainMsg#.decode('utf-8')
     
     def getSplitID(self):
         return self._splitID
