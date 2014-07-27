@@ -35,22 +35,17 @@ class lunch_socket(object):
     @param ip IP or hostname of receiver
     @param disable_split automatic message splitting can be disabled by setting to True 
     """        
-    def send(self, msg, ip, disable_split=False):
+    def sendto(self, msg, ip, disable_extended=False):
         if not self.s:
             raise Exception("Cannot send. There is no open lunch socket")
         
         send_str = msg.encode('utf-8')
-        if not disable_split and len(msg) > self.max_msg_length:
+        if not disable_extended and len(msg) > self.max_msg_length:
             xmsg = extMessageOutgoing(msg)
             send_str = xmsg.toString()        
         
         log_debug("Sending", msg, "to", ip.strip())
-        try:
-            self.s.sendto(send_str, (ip.strip(), self.port))
-        except:
-            # only warning message; happens sometimes if the host is not reachable
-            log_warning("Message %s could not be delivered to %s: %s" % (msg, ip, str(sys.exc_info()[0])))
-            raise
+        self.s.sendto(send_str, (ip.strip(), self.port))
 
     """ receives a message from a socket and returns the received data and the sender's 
     address
