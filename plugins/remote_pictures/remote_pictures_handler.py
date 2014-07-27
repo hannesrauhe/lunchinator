@@ -203,9 +203,10 @@ class RemotePicturesHandler(QObject):
             
         # create temporary image file to display in notification
         url = convert_string(url)
+        thread.target.flush()
+        
         displayNotification(name, description, thread.target.name)
         
-        thread.target.flush()
         self._addPicture(thread.target,
                          thread.target.name if storeLocally else None,
                          url,
