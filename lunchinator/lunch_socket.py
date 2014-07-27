@@ -17,7 +17,8 @@ class lunch_socket(object):
             raise
         
         self.port = 50000
-        self.max_msg_length = 1024
+        self.max_msg_length = 512
+        self.incomplete_messages = {}
     
     """ sends a message to an IP on the configured port, 
     
@@ -71,7 +72,12 @@ class lunch_socket(object):
                 if data.startswith("HELOX"):
                     xmsg = extMessageIncoming(data)
                     if not xmsg.isComplete():
-                        raise split_call(xmsg.getSplitID())
+                        s = xmsg.getSplitID()
+                        if s in self.incomplete_messages:
+                            xmsg.merge(self.incomplete_messages[s])
+                        
+                        if not xmsg.isComplete():                            
+                            raise split_call(xmsg.getSplitID())
                     msg = xmsg.getPlainMessage()
                 else:                    
                     try:
@@ -123,6 +129,7 @@ class extMessage(object):
     b - 1 byte Number of expected fragments for this message
     hash - 4 byte hash to identify message
     c - 1 byte stating compression used"""
+    
     def __init__(self):
         self._fragments = []
         self._plainMsg = u""
@@ -130,12 +137,6 @@ class extMessage(object):
         self._compressedMsg = ""
         self._signed = False
         self._splitID = "0000"
-        
-    def hashPlainMessage(self):
-        """returns a 4-character string
-        TODO replace with real non-crypto hash function such as http://pypi.python.org/pypi/mmh3/2.0"""
-        hashstr = hashlib.md5(self._plainMsg).digest()[:4]
-        return hashstr
     
     def isSigned(self):
         return self._signed
@@ -149,36 +150,67 @@ class extMessage(object):
     def isComplete(self):
         return len(self._fragments) and all(len(f) > 0 for f in self._fragments)
     
+    def getFragments(self):
+        return self._fragments
+    
     def getPlainMessage(self):
-        return self._plainMsg
+        return self._plainMsg.decode('utf-8')
     
     def getSplitID(self):
         return self._splitID
+        
+    def hashPlainMessage(self):
+        """returns a 4-character string
+        TODO replace with real non-crypto hash function such as http://pypi.python.org/pypi/mmh3/2.0"""
+        hashstr = hashlib.md5(self._plainMsg).digest()[:4]
+        return hashstr
     
-class extMessageIncoming(extMessage):        
+class extMessageIncoming(extMessage):       
+    """ @param outgoingMessage as unicode object """
+    def __init__(self, incomingMessage):
+        super(extMessageIncoming, self).__init__()
+        f = incomingMessage
+        
+        if not f.startswith("HELOX"):
+            raise Exception("Malformed Message: Not an extended message fragment (no HELOX)")
+        
+        expectedFragments = ord(f[7])
+        self._fragments = expectedFragments * [""]
+        self._splitID = f[8:12]
+        
+        self._insertFragment(f)
+        self._finalize()
+        
     def addFragment(self, f):
         if self.isComplete():
             raise Exception("All fragments for this message were received already")
+        if not f.startswith("HELOX"):
+            raise Exception("Malformed Message: Not an extended message fragment (no HELOX)")
         
         expectedFragments = ord(f[7])
-        if len(self._fragments)==0:
-            '''first fragment that arrives: store ID and expected length'''
-            self._fragments = expectedFragments * [""]
-            self._splitID = f[8:12]
-        else:   
-            '''already have fragments: check ID and expected length''' 
-            if len(self._fragments) != expectedFragments:
-                raise Exception("Fragment does not belong to message: the number of expected fragments changed")
-            if self.getSplitID() != f[8:12]:
-                raise Exception("Fragment does not belong to message: the ID changed changed for one message")
+#         if len(self._fragments)==0:
+#             '''first fragment that arrives: store ID and expected length'''
+#             self._fragments = expectedFragments * [""]
+#             self._splitID = f[8:12]
+#         else:   
+        '''already have fragments: check ID and expected length''' 
+        if len(self._fragments) != expectedFragments:
+            raise Exception("Fragment does not belong to message: the number of expected fragments changed")
+        if self.getSplitID() != f[8:12]:
+            raise Exception("Fragment does not belong to message: the ID changed changed for one message")
         
+        self._insertFragment(f)
+        self._finalize()
+        
+    def _insertFragment(self, f):        
         fragmentNum = ord(f[6])
-        if fragmentNum >= expectedFragments:
+        if fragmentNum >= len(self._fragments):
             raise Exception("Malformed Message: The fragment's number is out of range")
         
         self._fragments[fragmentNum] = f
-                
-        if self.isComplete():
+    
+    def _finalize(self):            
+        if self.isComplete():        
             for e in self._fragments:
                 self._compressedMsg += e[12:]
             self.decompress()
@@ -194,10 +226,16 @@ class extMessageIncoming(extMessage):
             self._plainMsg = zlib.decompress(self._compressedMsg[1:])
         else:
             raise Exception("Unknown Compression identified by '%s'"%self._compressedMsg[0])
+        
+    def merge(self, other):
+        for f in other.getFragments():
+            if len(f):
+                self._insertFragment(f)
+        self._finalize()
+            
             
 """builds the extMessage from a plain message"""
-class extMessageOutgoing(extMessage):
-    
+class extMessageOutgoing(extMessage):    
     """ @param outgoingMessage as unicode object """
     def __init__(self, outgoingMessage, fragment_size):
         super(extMessageOutgoing, self).__init__()
@@ -233,7 +271,4 @@ class extMessageOutgoing(extMessage):
         self._fragments = ["HELOX " + chr(i/n) + chr(m) + self.getSplitID() + \
                            self._compressedMsg[i:i+n] for i in range(0, msg_len, n)]
         log_debug("Splitting %d Byte in %d segments of size %d"%(msg_len, m, n))
-    
-    def getFragments(self):
-        return self._fragments
             

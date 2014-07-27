@@ -30,9 +30,23 @@ class extMsgTest(unittest.TestCase):
 #         print "Using test string: "+self.test_str
 
         eMsgOut = extMessageOutgoing(self.test_str, self.split_size)
-        eMsgIn = extMessageIncoming()
-        for f in eMsgOut.getFragments():
+        eMsgIn = extMessageIncoming(eMsgOut.getFragments()[0])
+        for f in eMsgOut.getFragments()[1:]:
             eMsgIn.addFragment(f)
+        self.assertTrue(eMsgIn.isComplete())
+        self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
+        
+        self.assertRaises(Exception, eMsgIn.addFragment, "fdjaf")
+        
+    def testMerge(self):        
+        self.test_str = self.string_generator(2690).encode('utf-8')
+#         print "Using test string: "+self.test_str
+
+        eMsgOut = extMessageOutgoing(self.test_str, self.split_size)
+        eMsgIn = extMessageIncoming(eMsgOut.getFragments()[0])
+        for f in eMsgOut.getFragments()[1:]:
+            other = extMessageIncoming(f)
+            eMsgIn.merge(other)
         self.assertTrue(eMsgIn.isComplete())
         self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
         
@@ -46,11 +60,21 @@ class extMsgTest(unittest.TestCase):
     def testNoSplit(self):
         self.test_str = self.string_generator(self.split_size-1).encode('utf-8')
         eMsgOut = extMessageOutgoing(self.test_str, self.split_size)
-        eMsgIn = extMessageIncoming()
         frag = eMsgOut.getFragments()
         self.assertEqual(len(frag), 1, "Plain texts that would fit into one message do not\
                      fit into one extended message fragment anymore -> Header is too large")
-        eMsgIn.addFragment(frag[0])
+        
+        eMsgIn = extMessageIncoming(frag[0])
+        
+        self.assertTrue(eMsgIn.isComplete())
+        self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
+        
+    def testUnicode(self):
+        self.test_str = self.string_generator(self.split_size-100, string.printable).encode('utf-8')
+        eMsgOut = extMessageOutgoing(self.test_str, self.split_size)
+        frag = eMsgOut.getFragments()
+        
+        eMsgIn = extMessageIncoming(frag[0])
         
         self.assertTrue(eMsgIn.isComplete())
         self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
