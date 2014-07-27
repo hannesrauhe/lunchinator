@@ -550,6 +550,10 @@ class iface_called_plugin(iface_plugin):
         is unknown.
         """ 
         return False
+    
+    def processes_all_peer_actions(self):
+        """Override if plugin processes all (non-blocked) peer actions.""" 
+        return False
         
     def process_message(self, msg, ip, member_info):
         pass
@@ -594,6 +598,10 @@ class iface_gui_plugin(iface_plugin):
         not known yet. Note that member_info will be None if the peer
         is unknown.
         """ 
+        return False
+    
+    def processes_all_peer_actions(self):
+        """Override if plugin processes all (non-blocked) peer actions.""" 
         return False
     
     def process_message(self, msg, ip, member_info):

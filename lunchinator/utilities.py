@@ -98,10 +98,14 @@ def processPluginCall(ip, call, newPeer, fromQueue, action=None):
     member_info = get_peers().getPeerInfo(pIP=ip)
     
     # called also contains gui plugins
-    if action is None:
-        for pluginInfo in get_plugin_manager().getPluginsOfCategory("called")+get_plugin_manager().getPluginsOfCategory("gui"):
+    for pluginInfo in get_plugin_manager().getPluginsOfCategory("called")+get_plugin_manager().getPluginsOfCategory("gui"):
+        # if this is a peer action, only call special plugins
+        if action is None or (pluginInfo.plugin_object.processes_all_peer_actions() and \
+                              pluginInfo.name != action.getPluginName()):
             _processCallOnPlugin(pluginInfo.plugin_object, pluginInfo.name, ip, call, newPeer, fromQueue, member_info)
-    else:
+    
+    # perform peer action
+    if action is not None:
         _processCallOnPlugin(action.getPluginObject(), action.getPluginName(), ip, call, newPeer, fromQueue, member_info)
                 
 def which(program):

@@ -24,7 +24,10 @@ class statistics(iface_called_plugin):
         iface_called_plugin.deactivate(self)    
         
     def processes_events_immediately(self):
-        return True    
+        return True
+    
+    def processes_all_peer_actions(self):
+        return True
     
     def process_message(self,msg,addr,_member_info):
         if self.is_db_ready():
