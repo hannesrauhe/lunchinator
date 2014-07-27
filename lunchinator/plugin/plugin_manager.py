@@ -35,8 +35,9 @@ class NotificationPluginManager(ConfigurablePluginManager):
     def loadPlugins(self, callback=None):
         self._emitSignals = False
         
-        pluginInfos = []
         self._component.loadPlugins(callback)
+        
+        pluginsToLoad = set()
         # now load the plugins according to the recorded configuration
         if self.config_parser.has_section(self.CONFIG_SECTION_NAME):
             # browse all the categories
@@ -52,44 +53,44 @@ class NotificationPluginManager(ConfigurablePluginManager):
                     # activate all the plugins that should be
                     # activated
                     for plugin_name in plugin_list:
-                        pluginInfo = self.getPluginByName(plugin_name, category_name)
-                        pluginInfos.append(pluginInfo)
-        if pluginInfos:
-            self.activatePlugins(pluginInfos)
-        
-        self._emitSignals = True
-    
-    def activatePlugins(self, pluginInfos, save_state=True):
+                        if plugin_name:
+                            pluginsToLoad.add(plugin_name)
+            
         # first, load db plugins
         # second, load remaining force activated plugins
         # last, unload regular plugins (no database, no force activation)
         loadFirst = []
         loadSecond = []
-        loadThird = []
-        for pluginInfo in pluginInfos:
+        loadThird = []            
+        for pluginInfo in self.getAllPlugins():
             if pluginInfo is None or pluginInfo.plugin_object.is_activated:
                 continue
-            if pluginInfo.category == "db":
+            if pluginInfo.category == "db" and pluginInfo.plugin_object.force_activation:
                 loadFirst.append(pluginInfo)
             elif pluginInfo.plugin_object.force_activation:
                 loadSecond.append(pluginInfo)
-            else:
+            elif pluginInfo.name in pluginsToLoad:
                 loadThird.append(pluginInfo)
-        
+                    
         for piList in (loadFirst, loadSecond, loadThird):
             for pluginInfo in piList:
-                log_info("Activating plugin '%s' of type '%s'" % (pluginInfo.name, pluginInfo.category))
-                try:
-                    result = ConfigurablePluginManager.activatePluginByName(self, pluginInfo.name, category_name=pluginInfo.category, save_state=save_state)
-                    if self._emitSignals and result != None:
-                        get_notification_center().emitPluginActivated(pluginInfo.name, pluginInfo.category)
-                except:
-                    log_exception("Error activating plugin '%s' of type '%s'" % (pluginInfo.name, pluginInfo.category))
+                self.activatePlugin(pluginInfo=pluginInfo, save_state=False)
+        
+        self._emitSignals = True
+    
+    def activatePlugin(self, pluginInfo, save_state=True):
+        log_info("Activating plugin '%s' of type '%s'" % (pluginInfo.name, pluginInfo.category))
+        try:
+            result = ConfigurablePluginManager.activatePluginByName(self, pluginInfo.name, category_name=pluginInfo.category, save_state=save_state)
+            if self._emitSignals and result != None:
+                get_notification_center().emitPluginActivated(pluginInfo.name, pluginInfo.category)
+        except:
+            log_exception("Error activating plugin '%s' of type '%s'" % (pluginInfo.name, pluginInfo.category))
     
     def activatePluginByName(self, plugin_name, category_name="Default", save_state=True):
         pluginInfo = self.getPluginByName(plugin_name, category_name)
         if pluginInfo is not None:
-            self.activatePlugins([pluginInfo], save_state=save_state)
+            self.activatePlugin(pluginInfo=pluginInfo, save_state=save_state)
         else:
             log_error("Could not activate plugin", plugin_name, "of type", category_name, "(plugin not found)")
 

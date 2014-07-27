@@ -53,7 +53,7 @@ class CLIPluginHandling(LunchCLIModule):
                 elif pInfo.plugin_object.is_activated:
                     print "Plugin already loaded."
                 else:
-                    get_plugin_manager().activatePlugins([pInfo])
+                    get_plugin_manager().activatePlugin(pluginInfo=pInfo)
                     self.parent.addModule(pInfo.plugin_object)
             except:
                 log_exception("while loading plugin")
