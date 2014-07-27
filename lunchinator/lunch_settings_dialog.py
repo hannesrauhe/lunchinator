@@ -56,14 +56,9 @@ class LunchinatorSettingsDialog(QDialog):
             if get_settings().get_plugins_enabled():
                 for pluginInfo in get_plugin_manager().getAllPlugins():
                     if pluginInfo.plugin_object.is_activated:
-                        if pluginInfo.plugin_object.get_displayed_name():
-                            self.addPlugin(pluginInfo.plugin_object,
-                                           pluginInfo.plugin_object.get_displayed_name(),
-                                           pluginInfo.category)
-                        else:
-                            self.addPlugin(pluginInfo.plugin_object,
-                                           pluginInfo.name,
-                                           pluginInfo.category)
+                        self.addPlugin(pluginInfo.plugin_object,
+                                       pluginInfo.name,
+                                       pluginInfo.category)
         except:
             log_exception("while including plugins in settings window")
         
@@ -112,6 +107,11 @@ class LunchinatorSettingsDialog(QDialog):
         if not po.has_options_widget():
             return
         
+        if po.get_displayed_name():
+            displayedName = po.get_displayed_name()
+        else:
+            displayedName = pName
+            
         w = _SettingsWidgetContainer(pName, po, self.nb)
         self.widget_containers[pName] = w
         if pName == "General Settings":
@@ -122,7 +122,7 @@ class LunchinatorSettingsDialog(QDialog):
                 lo = 1
             iPos = bisect_left(self.widget_names, pName, lo=lo)
         self.widget_names.insert(iPos, pName)
-        self.nb.insertTab(iPos, w, pName)
+        self.nb.insertTab(iPos, w, displayedName)
             
     def removePlugin(self, po, pName, pCat):
         if not po.has_options_widget():
