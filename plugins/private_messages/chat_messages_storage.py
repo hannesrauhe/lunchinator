@@ -139,12 +139,6 @@ class ChatMessagesStorage(object):
     def updateReceiveTime(self, partner, msgID, recvTime):
         self._db.execute("UPDATE PRIVATE_MESSAGES SET RECV_TIME=? WHERE PARTNER = ? AND M_ID = ?", recvTime, partner, msgID)
       
-    def getMessageText(self, partner, msgID, ownMessage):
-        rows = self._db.query("SELECT MESSAGE FROM PRIVATE_MESSAGES WHERE PARTNER = ? AND M_ID = ? AND IS_OWN_MESSAGE=?", partner, msgID, ownMessage)
-        if len(rows) > 0:
-            return rows[0][0]
-        return None
-    
     def getMessage(self, partner, msgID, ownMessage):
         rows = self._db.query("SELECT * FROM PRIVATE_MESSAGES WHERE PARTNER = ? AND M_ID = ? AND IS_OWN_MESSAGE=?", partner, msgID, ownMessage)
         if len(rows) > 0:
@@ -158,10 +152,12 @@ class ChatMessagesStorage(object):
         except:
             return False
       
-    def containsMessage(self, partner, msgID, msgHTML, ownMessage):
-        dbHTML = self.getMessageText(partner, msgID, ownMessage)
-        if dbHTML is not None:
-            if dbHTML != msgHTML:
+    def containsMessage(self, partner, msgID, msgHTML, sendTime, ownMessage):
+        msgTuple = self.getMessage(partner, msgID, ownMessage)
+        if msgTuple is not None:
+            dbHTML = msgTuple[self.MSG_TEXT_COL]
+            dbSendTime = msgTuple[self.MSG_TIME_COL]
+            if (sendTime is not None and dbSendTime != sendTime) or dbHTML != msgHTML:
                 lastID = self.getLastReceivedMessageID(partner)
                 raise InconsistentIDError(lastID + 1)
             return True

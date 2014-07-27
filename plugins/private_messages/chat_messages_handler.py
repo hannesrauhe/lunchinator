@@ -263,12 +263,18 @@ class ChatMessagesHandler(QObject):
 
         if u"time" in msgDict:
             msgTime = msgDict[u"time"]
+            messageTimeUnknown = False
         else:
             msgTime = time()
+            messageTimeUnknown = True
         
         # check if we already know the message (our ACK might not have been delivered)
         try:
-            containsMessage = self._getStorage().containsMessage(otherID, msgDict[u"id"], msgHTML, ownMessage=False)
+            containsMessage = self._getStorage().containsMessage(otherID,
+                                                                 msgDict[u"id"],
+                                                                 msgHTML,
+                                                                 None if messageTimeUnknown else msgTime,
+                                                                 ownMessage=False)
             if not containsMessage:
                 self.newMessage.emit(otherID, msgHTML, msgTime, msgDict)
             else:
