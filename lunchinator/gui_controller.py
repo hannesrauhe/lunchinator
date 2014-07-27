@@ -262,7 +262,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
     """ process any message event, including lunch calls """
     def processMessage(self, msg, addr, eventTime, newPeer, fromQueue):
         self._processMessage.emit(msg, addr, eventTime, newPeer, fromQueue)
-                    
+    
+    def getMainGUI(self):
+        return self.mainWindow
     """ ----------------- CALLED ON MAIN THREAD -------------------"""
     
     def _updateRepoUpdateStatusAction(self):

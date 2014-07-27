@@ -123,20 +123,23 @@ class PeerActions(object):
             if msgPrefix in self._msgPrefixes:
                 return self._msgPrefixes[msgPrefix]
         
-    def shouldProcessMessage(self, action, category, msgData, peerID):
+    def shouldProcessMessage(self, action, category, peerID, mainGUI):
         state = action.getPeerState(peerID, category)
         if state == PrivacySettings.STATE_FREE:
             return True
         if state == PrivacySettings.STATE_BLOCKED:
             return False
         if state == PrivacySettings.STATE_CONFIRM:
+            if mainGUI is None:
+                # no gui -> no confirmation
+                return False
             peerName = get_peers().getDisplayedPeerName(peerID)
             
             if category is not None:
                 message = "%s wants to perform the following action: %s, in category %s" % (peerName, action.getName(), category)
             else:
                 message = "%s wants to perform the following action: %s" % (peerName, action.getName())
-            dialog = PrivacyConfirmationDialog(None,
+            dialog = PrivacyConfirmationDialog(mainGUI,
                                                "Confirmation",
                                                message,
                                                peerName,

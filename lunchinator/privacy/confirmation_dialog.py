@@ -16,6 +16,8 @@ class PrivacyConfirmationDialog(QDialog):
     def __init__(self, parent, title, message, peerName, peerID, action, category=None):
         super(PrivacyConfirmationDialog, self).__init__(parent)
         
+        self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+        
         self._peerID = peerID
         self._action = action
         self._category = category

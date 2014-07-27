@@ -100,7 +100,7 @@ class LunchServerController(object):
                     category = None
                 peerID = get_peers().getPeerID(pIP=addr)
                 
-                shouldProcess = PeerActions.get().shouldProcessMessage(action, category, value, peerID)
+                shouldProcess = PeerActions.get().shouldProcessMessage(action, category, peerID, self.getMainGUI())
                 
                 if logs_debug():
                     log_debug("Accept" if shouldProcess else "Reject",
@@ -112,6 +112,9 @@ class LunchServerController(object):
                     return
                 
         processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info), newPeer, fromQueue, action)
+    
+    def getMainGUI(self):
+        return None
     
     def _checkSendInfoDict(self, pluginName, category):
         pluginName = convert_string(pluginName)
