@@ -115,6 +115,7 @@ class private_messages(iface_gui_plugin):
         self._messagesThread.start()
         
         self._messagesHandler.delayedDelivery.connect(self._delayedDelivery)
+        self._messagesHandler.messageIDChanged.connect(self._messageIDChanged)
         self._messagesHandler.displayOwnMessage.connect(self._displayOwnMessage)
         self._messagesHandler.newMessage.connect(self._displayMessage)
         
@@ -257,6 +258,12 @@ class private_messages(iface_gui_plugin):
         if otherID in self._openChats:
             chatWindow = self._openChats[otherID]
             chatWindow.getChatWidget().delayedDelivery(msgID, recvTime, error, errorMessage)
+
+    def _messageIDChanged(self, otherID, oldID, newID):
+        otherID = convert_string(otherID)
+        if otherID in self._openChats:
+            chatWindow = self._openChats[otherID]
+            chatWindow.getChatWidget().messageIDChanged(oldID, newID)
 
     def _displayMessage(self, otherID, msgHTML, msgTime, msgDict):
         try:

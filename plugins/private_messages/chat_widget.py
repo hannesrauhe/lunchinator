@@ -340,6 +340,9 @@ class ChatWidget(QWidget):
     def delayedDelivery(self, msgID, recvTime, error, errorMessage):
         return self._model.messageDelivered(msgID, recvTime, error, errorMessage)
         
+    def messageIDChanged(self, oldID, newID):
+        self._model.messageIDChanged(oldID, newID)
+        
     def canClose(self):
         return not self._delivering
     

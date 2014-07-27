@@ -17,6 +17,8 @@ class ChatMessagesHandler(QObject):
     displayOwnMessage = pyqtSignal(unicode, int, float, unicode, float, int, unicode)
     # other ID, message ID, receive time, error, error message
     delayedDelivery = pyqtSignal(unicode, int, float, bool, unicode)
+    # other ID, old ID, new ID
+    messageIDChanged = pyqtSignal(unicode, int, int)
     # otherID, msgHTML, msgTime
     newMessage = pyqtSignal(unicode, unicode, float, dict)
     
@@ -33,10 +35,8 @@ class ChatMessagesHandler(QObject):
         self._ackTimeout = ackTimeout
         self._waitingForAck = {} # message ID : (otherID, time, message, isResend)
         
-        self._nextMessageID = nextMsgID
-        if self._nextMessageID == -1:
-            # happens only on first run
-            self._nextMessageID = self._getStorage().getLastSentMessageID() + 1
+        nextIDFromDB = self._getStorage().getLastSentMessageID() + 1
+        self._nextMessageID = max(nextMsgID, nextIDFromDB)
         
         self._cleanupTimer = QTimer(self)
         self._cleanupTimer.timeout.connect(self.cleanup)
@@ -112,7 +112,7 @@ class ChatMessagesHandler(QObject):
     def _deliveryTimedOut(self, otherID, msgID, msgHTML, msgTime):
         self._addOwnMessage(otherID, msgID, msgHTML, msgTime, ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED, u"", -1)
         
-    def _checkAndResendValidID(self, otherID, oldMsgID, answerDict, isNoResend=False):
+    def _checkAndResendValidID(self, otherID, oldMsgID, answerDict, isNoResend=False, msgHTML=None, recvTime=None):
         if u"validID" in answerDict:
             # seems my next message ID is invalid
             newValue = max(self._nextMessageID, answerDict[u"validID"])
@@ -120,20 +120,28 @@ class ChatMessagesHandler(QObject):
                 log_info("Adjusting incorrect next message ID. Was %d, set to %d" % (self._nextMessageID, newValue))
                 self._nextMessageID = newValue
                 
-            # need to resend message
-            msgTuple = self._getStorage().getMessage(otherID, oldMsgID, True)
-            if msgTuple is None:
-                log_error("Error trying to resend message", oldMsgID, "with a new ID (message not found)")
-                return False
-            newID = self._getNextMessageID()
-            if not self._getStorage().updateMessageID(otherID, oldMsgID, newID, True):
-                log_error("Error trying to resend message", oldMsgID, "with a new ID (could not update message ID)")
-                return False
+            if isNoResend:
+                # just send message again, no need to update storage
+                newID = self._getNextMessageID()
+            else:
+                # need to resend message
+                msgTuple = self._getStorage().getMessage(otherID, oldMsgID, True)
+                if msgTuple is None:
+                    log_error("Error trying to resend message", oldMsgID, "with a new ID (message not found)")
+                    return False
+                msgHTML = msgTuple[ChatMessagesStorage.MSG_TEXT_COL]
+                recvTime = msgTuple[ChatMessagesStorage.MSG_TIME_COL]
+                
+                newID = self._getNextMessageID()
+                if not self._getStorage().updateMessageID(otherID, oldMsgID, newID, True):
+                    log_error("Error trying to resend message", oldMsgID, "with a new ID (could not update message ID)")
+                    return False
+                self.messageIDChanged.emit(otherID, oldMsgID, newID)
                 
             self.sendMessage(otherID,
-                             msgTuple[ChatMessagesStorage.MSG_TEXT_COL],
+                             msgHTML,
                              newID,
-                             msgTuple[ChatMessagesStorage.MSG_TIME_COL],
+                             recvTime,
                              isNoResend)
             return True
         return False
@@ -203,7 +211,7 @@ class ChatMessagesHandler(QObject):
         if isResend:
             self._checkDelayedAck(otherID, msgID, error, answerDict, recvTime)
         else:
-            if error and self._checkAndResendValidID(otherID, msgID, answerDict, isNoResend=True):
+            if error and self._checkAndResendValidID(otherID, msgID, answerDict, isNoResend=True, msgHTML=msgHTML, recvTime=recvTime):
                 return
             errorMsg = self._getAnswerErrorMessage(error, answerDict, msgID, otherID)
             self._addOwnMessage(otherID,
@@ -268,8 +276,7 @@ class ChatMessagesHandler(QObject):
                 # send ACK again
                 self._sendAnswer(otherID, msgDict)
         except InconsistentIDError as e:
-            self._sendInvalidID(otherID, msgDict, u"Inconsistent ID", validID=e.validID)
-        
+            self._sendInvalidID(otherID, msgDict, validID=e.validID)
         
     def receivedSuccessfully(self, otherID, msgHTML, msgTime, msgDict, recvTime):
         self._receivedSuccessfully.emit(otherID, msgHTML, msgTime, msgDict, recvTime)
@@ -292,7 +299,7 @@ class ChatMessagesHandler(QObject):
         self._sendAnswer(otherID, msgDict, errorMsg)
         
     def _sendInvalidID(self, otherID, msgDict, validID):
-        self._sendAnswer(otherID, msgDict, validID)
+        self._sendAnswer(otherID, msgDict, validID=validID)
         
     def _sendAnswer(self, otherID, msgDict, errorMsg=None, recvTime=None, validID=None):
         if u"id" not in msgDict:
