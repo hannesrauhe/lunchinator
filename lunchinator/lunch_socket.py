@@ -115,6 +115,14 @@ class split_call(Exception):
 """ Message classes """
     
 class extMessage(object):
+    """Extended Messages start with HELOX (will be ignored by older lunchinators), 
+    are always compressed, and are split into fragments if necessary:
+    Message looks like this:
+    HELOX <a><b><hash><c><Compressed Message> where
+    a - 1 byte Number of the fragment
+    b - 1 byte Number of expected fragments for this message
+    hash - 4 byte hash to identify message
+    c - 1 byte stating compression used"""
     def __init__(self):
         self._fragments = []
         self._plainMsg = u""

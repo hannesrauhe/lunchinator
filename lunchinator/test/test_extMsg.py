@@ -44,10 +44,13 @@ class extMsgTest(unittest.TestCase):
         self.assertEqual(len(eMsgOut.hashPlainMessage()), 4)
         
     def testNoSplit(self):
-        self.test_str = self.string_generator(500).encode('utf-8')
+        self.test_str = self.string_generator(self.split_size-1).encode('utf-8')
         eMsgOut = extMessageOutgoing(self.test_str, self.split_size)
         eMsgIn = extMessageIncoming()
-        eMsgIn.addFragment(eMsgOut.getFragments()[0])
+        frag = eMsgOut.getFragments()
+        self.assertEqual(len(frag), 1, "Plain texts that would fit into one message do not\
+                     fit into one extended message fragment anymore -> Header is too large")
+        eMsgIn.addFragment(frag[0])
         
         self.assertTrue(eMsgIn.isComplete())
         self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
