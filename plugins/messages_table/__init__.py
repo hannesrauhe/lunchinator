@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator.plugin import iface_gui_plugin
 from lunchinator import log_exception, get_settings, get_server,\
     get_notification_center, log_debug
 import urllib2,sys
@@ -25,12 +25,9 @@ class messages_table(iface_gui_plugin):
             self._dailyTrigger.timeout.disconnect(self._updateTimes)
             self._dailyTrigger.stop()
             self._dailyTrigger.deleteLater()
-            
+                    
         get_notification_center().disconnectMessagePrepended(self.messagesModel.messagePrepended)
-        #get_notification_center().disconnectPeerAppended(self.messagesModel.updateSenders)
-        #get_notification_center().disconnectPeerUpdated(self.messagesModel.updateSenders)
-        #get_notification_center().disconnectPeerRemoved(self.messagesModel.updateSenders)
-        get_notification_center().disconnectDisplayedPeerNameChanged(self._displayedPeerNameChanged)
+        get_notification_center().disconnectDisplayedPeerNameChanged(self.messagesModel.updateSenders)
         
         self.messagesModel = None
         self.messagesTable = None
@@ -66,9 +63,6 @@ class messages_table(iface_gui_plugin):
         self.messagesTable.setColumnWidth(1, 90)
         
         get_notification_center().connectMessagePrepended(self.messagesModel.messagePrepended)
-        #get_notification_center().connectPeerAppended(self.messagesModel.updateSenders)
-        #get_notification_center().connectPeerUpdated(self.messagesModel.updateSenders)
-        #get_notification_center().connectPeerRemoved(self.messagesModel.updateSenders)
         get_notification_center().connectDisplayedPeerNameChanged(self.messagesModel.updateSenders)
         
         self._dailyTrigger = QTimer(parent)

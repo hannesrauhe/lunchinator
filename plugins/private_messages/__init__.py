@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator.plugin import iface_gui_plugin
 from lunchinator import log_exception, convert_string, log_error, get_peers,\
     get_settings, get_server
 from lunchinator.peer_actions import PeerAction
@@ -12,16 +12,80 @@ import sys
 from private_messages.chat_messages_storage import ChatMessagesStorage
 from time import time
 from functools import partial
+from lunchinator.privacy.privacy_settings import PrivacySettings
+
+class _SendMessageAction(PeerAction):
+    def getName(self):
+        return "Send Message"
+    
+    def appliesToPeer(self, _peerID, _peerInfo):
+        return False
+    
+    def getMessagePrefix(self):
+        return "PM"
+    
+    def getDefaultPrivacyPolicy(self):
+        return PrivacySettings.POLICY_EVERYBODY_EX
     
 class _OpenChatAction(PeerAction):
+    def __init__(self, sendMessageAction):
+        self._sendMessageAction = sendMessageAction
+    
     def getName(self):
         return "Open Chat"
     
     def performAction(self, peerID, _peerInfo):
         self.getPluginObject().openChat(peerID)
         
-    def appliesToPeer(self, _peerID, peerInfo):
-        return u"PM_v" in peerInfo
+    def appliesToPeer(self, peerID, peerInfo):
+        # this action has no privacy settings, use the ones from send message
+        return u"PM_v" in peerInfo and not self._sendMessageAction.getPeerState(peerID) == PrivacySettings.STATE_BLOCKED
+    
+class _BlockAction(PeerAction):
+    def __init__(self, sendMessageAction):
+        self._sendMessageAction = sendMessageAction
+    
+    def getName(self):
+        return "Block"
+    
+    def getDisplayedName(self, peerID):
+        policy = self._sendMessageAction.getPrivacyPolicy()
+        exceptions = self._sendMessageAction.getExceptions(policy)
+        
+        if policy == PrivacySettings.POLICY_NOBODY_EX:
+            blocked = True
+            if peerID in exceptions and exceptions[peerID] == 1:
+                blocked = False
+            if blocked:
+                return "Add to whitelist"
+            else:
+                return "Remove from whitelist (block)"
+        else:
+            free = True
+            if peerID in exceptions and exceptions[peerID] == 1:
+                free = False
+            if free:
+                return "Block"
+            else:
+                return "Unblock"
+    
+    def performAction(self, peerID, _peerInfo):
+        policy = self._sendMessageAction.getPrivacyPolicy()
+        if policy not in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
+            log_error("Illegal policy for block action:", policy)
+            return
+        
+        exceptions = self._sendMessageAction.getExceptions(policy)
+        
+        newVal = 1
+        if peerID in exceptions and exceptions[peerID] == 1:
+            newVal = 0
+            
+        PrivacySettings.get().addException(self._sendMessageAction, None, policy, peerID, newVal)
+        
+    def appliesToPeer(self, _peerID, _peerInfo):
+        policy = self._sendMessageAction.getPrivacyPolicy()
+        return policy in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX)
     
 class private_messages(iface_gui_plugin):
     VERSION_INITIAL = 0
@@ -30,30 +94,33 @@ class private_messages(iface_gui_plugin):
     def __init__(self):
         super(private_messages, self).__init__()
         self.options = [((u"prev_messages", u"Number of previous messages to display"), 5)]
-        self.hidden_options = {u"ack_timeout" : 3} # seconds until message delivery is marked as timed out
+        self.hidden_options = {u"ack_timeout" : 3, # seconds until message delivery is marked as timed out
+                               u"next_msgid" : -1} # next free message ID. -1 = not initialized
         
     def get_displayed_name(self):
         return u"Chat"
         
     def activate(self):
         iface_gui_plugin.activate(self)
-        self._peerActions = [_OpenChatAction()]
+        sendMessageAction = _SendMessageAction()
+        self._peerActions = [_OpenChatAction(sendMessageAction), _BlockAction(sendMessageAction), sendMessageAction]
         
         self._lock = loggingMutex("Private Messages", logging=get_settings().get_verbose())
         self._storage = None
         
         from PyQt4.QtCore import QThread
         self._messagesThread = QThread()
-        self._messagesHandler = ChatMessagesHandler(self, self.hidden_options[u"ack_timeout"])
+        self._messagesHandler = ChatMessagesHandler(self, self.hidden_options[u"ack_timeout"], self.hidden_options[u"next_msgid"])
         self._messagesHandler.moveToThread(self._messagesThread)
         self._messagesThread.start()
         
         self._messagesHandler.delayedDelivery.connect(self._delayedDelivery)
+        self._messagesHandler.messageIDChanged.connect(self._messageIDChanged)
         self._messagesHandler.displayOwnMessage.connect(self._displayOwnMessage)
         self._messagesHandler.newMessage.connect(self._displayMessage)
         
     def deactivate(self):
-        iface_gui_plugin.deactivate(self)
+        self.set_hidden_option(u"next_msgid", self._messagesHandler.getNextMessageIDForStorage(), convert=False)
         self._messagesHandler.deactivate()
         self._messagesThread.quit()
         self._messagesThread.wait()
@@ -62,6 +129,7 @@ class private_messages(iface_gui_plugin):
         self._messagesThread = None
         self._storage = None
         self._lock = None
+        iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
         self._openChats = {} # mapping peer ID -> ChatDockWidget
@@ -105,7 +173,6 @@ class private_messages(iface_gui_plugin):
         if self._storage == None:
             with self._lock:
                 if self._storage == None:
-                    from private_messages.chat_messages_storage import ChatMessagesStorage
                     self._storage = ChatMessagesStorage()
         return self._storage
     
@@ -113,6 +180,8 @@ class private_messages(iface_gui_plugin):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
         errorMsg = convert_string(errorMsg)
+        if recvTime == -1:
+            recvTime = None
         if not errorMsg:
             errorMsg = None
         
@@ -189,6 +258,12 @@ class private_messages(iface_gui_plugin):
         if otherID in self._openChats:
             chatWindow = self._openChats[otherID]
             chatWindow.getChatWidget().delayedDelivery(msgID, recvTime, error, errorMessage)
+
+    def _messageIDChanged(self, otherID, oldID, newID):
+        otherID = convert_string(otherID)
+        if otherID in self._openChats:
+            chatWindow = self._openChats[otherID]
+            chatWindow.getChatWidget().messageIDChanged(oldID, newID)
 
     def _displayMessage(self, otherID, msgHTML, msgTime, msgDict):
         try:

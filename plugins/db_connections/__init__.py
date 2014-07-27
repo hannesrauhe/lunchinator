@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_general_plugin
+from lunchinator.plugin import iface_general_plugin
 from lunchinator import get_plugin_manager, get_settings, log_error, log_debug, \
     log_warning, log_exception, get_notification_center
 from lunchinator.logging_mutex import loggingMutex
@@ -52,7 +52,6 @@ class db_connections(iface_general_plugin):
                                                               k)
                     p_options["plugin_type"]=plugin_type
                     self.conn_properties[conn_name] = p_options.copy()
-                get_notification_center().emitDBConnReady()
             except:
                 raise
             finally:
@@ -93,6 +92,9 @@ class db_connections(iface_general_plugin):
             self.open_connections[name] = ob.create_connection(props)
         
         return self.open_connections[name], props["plugin_type"]
+    
+    def has_options_widget(self):
+        return True
     
     def create_options_widget(self, parent):
         from db_connections.DbConnOptions import DbConnOptions

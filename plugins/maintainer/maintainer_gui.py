@@ -81,14 +81,12 @@ class maintainer_gui(QTabWidget):
     def __init__(self,parent):
         super(maintainer_gui, self).__init__(parent)
         self.info_table = None
-        self.visible = False
         
         self.membersWidget = MembersWidget(parent) 
         self.addTab(self.membersWidget, "Members")        
         self.addTab(self.create_info_table_widget(self), "Info")
         
         self.setCurrentIndex(0)
-        self.visible = True
         
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
         
@@ -122,9 +120,8 @@ class maintainer_gui(QTabWidget):
         get_notification_center().disconnectPeerRemoved(self.info_table_model.externalRowRemoved)
         
         self.membersWidget.destroy_widget()
-        self.visible = False
     
 if __name__ == "__main__":
-    from lunchinator.iface_plugins import iface_gui_plugin
+    from lunchinator.plugin import iface_gui_plugin
     iface_gui_plugin.run_standalone(lambda window : maintainer_gui(window))
     

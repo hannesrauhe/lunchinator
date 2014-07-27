@@ -1,5 +1,4 @@
-from lunchinator.iface_plugins import iface_plugin
-from lunchinator import log_exception, log_info, log_error, convert_string
+from lunchinator.plugin import iface_plugin
 import types
 
 ''' every DB plugin consists of at least two objects:
@@ -34,8 +33,8 @@ class iface_db_plugin(iface_plugin):
     ''' Options are set differently from other plugins, since - again - multiple
     instances with different options are allowed. The DB Connections plugin handles the
     properties'''
-    def create_options_widget(self, parent):
-        return None  
+    def has_options_widget(self):
+        return False
       
     def save_options_widget_data(self, **_kwargs):
         pass
@@ -64,7 +63,6 @@ class iface_db_plugin(iface_plugin):
                 e.setText(v)
         
     def get_options_from_widget(self):
-        from PyQt4.QtCore import Qt
         if not self.option_widgets:
             return
         for o,e in self.option_widgets.iteritems():

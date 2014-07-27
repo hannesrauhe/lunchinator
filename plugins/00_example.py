@@ -1,5 +1,4 @@
-
-from lunchinator.iface_plugins import *
+from lunchinator.plugin import *
 from lunchinator import get_server, log_info, log_error
 
 '''use iface_called_plugin if you want to do something when a message arrives

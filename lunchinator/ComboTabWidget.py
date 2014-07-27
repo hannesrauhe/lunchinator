@@ -52,6 +52,9 @@ class ComboTabWidget(QWidget):
     def setCurrentIndex(self, index):
         self.switchCombo.setCurrentIndex(index)
         
+    def widget(self, index):
+        return self.pageArea.widget(index)
+        
     def currentIndex(self):
         return self.switchCombo.currentIndex()
     

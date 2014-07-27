@@ -1,7 +1,7 @@
 import os
 from functools import partial
 from lunchinator import convert_string, get_notification_center, get_settings
-from lunchinator.iface_plugins import iface_general_plugin
+from lunchinator.plugin import iface_general_plugin
 from lunchinator.utilities import getValidQtParent
 from lunchinator.git import GitHandler
 from lunchinator.callables import AsyncCall
@@ -28,6 +28,9 @@ class plugin_repositories(iface_general_plugin):
         get_notification_center().disconnectOutdatedRepositoriesChanged(self._processUpdates)
         get_notification_center().disconnectUpToDateRepositoriesChanged(self._processUpdates)
         iface_general_plugin.deactivate(self)
+        
+    def has_options_widget(self):
+        return True
         
     def create_options_widget(self, parent):
         self._ui = PluginRepositoriesGUI(parent)
@@ -140,6 +143,6 @@ class plugin_repositories(iface_general_plugin):
                 get_notification_center().emitRestartRequired(u"Plugin Repositories have been modified.")
     
 if __name__ == '__main__':
-    from lunchinator.iface_plugins import iface_gui_plugin
+    from lunchinator.plugin import iface_gui_plugin
     w = plugin_repositories()
     w.run_options_widget()

@@ -116,5 +116,5 @@ class SimpleViewWidget(QWidget):
             log_info("Simple View: was not able to disconnect timer")
         
 if __name__ == '__main__':        
-    from lunchinator.iface_plugins import iface_gui_plugin
+    from lunchinator.plugin import iface_gui_plugin
     iface_gui_plugin.run_standalone(lambda window : SimpleViewWidget(window))

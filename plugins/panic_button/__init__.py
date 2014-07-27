@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_general_plugin
+from lunchinator.plugin import iface_general_plugin
 from lunchinator import get_server, log_info, log_error
     
 class panic_button(iface_general_plugin):

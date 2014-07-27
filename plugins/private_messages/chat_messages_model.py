@@ -130,5 +130,11 @@ class ChatMessagesModel(QStandardItemModel):
                 return True
         return False
         
+    def messageIDChanged(self, oldID, newID):
+        if oldID in self._idToRow:
+            self._idToRow[newID] = self._idToRow[oldID]
+            del self._idToRow[oldID]
+        
+        
     def getLastIndex(self):
         return self.index(self.rowCount() - 1, 1)

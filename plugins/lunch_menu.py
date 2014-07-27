@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator.plugin import iface_gui_plugin
 import urllib2, contextlib
 from lunchinator.callables import AsyncCall
 from lunchinator.utilities import getValidQtParent

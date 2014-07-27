@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_general_plugin
+from lunchinator.plugin import iface_general_plugin
 from avatar.l_avatar import l_avatar
 import mimetypes
 from lunchinator import get_server, get_settings, log_error, convert_string, log_debug
@@ -74,6 +74,9 @@ class avatar(iface_general_plugin):
     def _display_avatar(self):
         img_path = os.path.join(get_settings().get_avatar_dir(), get_settings().get_avatar_file())
         self._setImage(img_path, self.label)
+        
+    def has_options_widget(self):
+        return True
         
     def create_options_widget(self, parent):
         from PyQt4.QtGui import QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton

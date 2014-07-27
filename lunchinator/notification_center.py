@@ -118,6 +118,17 @@ class NotificationCenter(object):
     def emitPluginActivated(self, pluginName, category):
         pass
     
+    """Called immediately before a plugin is deactivated."""    
+    @_connectFunc
+    def connectPluginWillBeDeactivated(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPluginWillBeDeactivated(self, callback):
+        pass
+    @_emitFunc
+    def emitPluginWillBeDeactivated(self, pluginName, category):
+        pass
+    
     """Called whenever a plugin was deactivated. The plugin is already deactivated when the signal is emitted."""    
     @_connectFunc
     def connectPluginDeactivated(self, callback):
@@ -251,6 +262,16 @@ class NotificationCenter(object):
         pass
     
     @_connectFunc
+    def connectPeerNameAdded(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPeerNameAdded(self, callback):
+        pass
+    @_emitFunc
+    def emitPeerNameAdded(self, peerID, peerName):
+        pass
+    
+    @_connectFunc
     def connectAvatarChanged(self, callback):
         pass
     @_disconnectFunc
@@ -342,26 +363,43 @@ class NotificationCenter(object):
     def emitDBSettingChanged(self, dbConnName):
         pass
     
-    """Notifies Plugins when all database connections are ready"""    
+    """Emitted whenever a peer action is added.
+    
+    A dict of {added plugin's name : [peer action]} is provided.
+    """
     @_connectFunc
-    def connectDBConnReady(self, callback):
+    def connectPeerActionsAdded(self, callback):
         pass
     @_disconnectFunc
-    def disconnectDBConnReady(self, callback):
+    def disconnectPeerActionsAdded(self, callback):
         pass
     @_emitFunc
-    def emitDBConnReady(self):
+    def emitPeerActionsAdded(self, removedActions):
+        pass
+    
+    """Emitted whenever a peer action is removed.
+    
+    A dict of {removed plugin's name : [peer action]} is provided.
+    """    
+    @_connectFunc
+    def connectPeerActionsRemoved(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPeerActionsRemoved(self, callback):
+        pass
+    @_emitFunc
+    def emitPeerActionsRemoved(self, addedActions):
         pass
     
     """Emitted whenever a peer action is added or removed."""    
     @_connectFunc
-    def connectPeerActionsChanged(self, callback):
+    def connectPrivacySettingsChanged(self, callback):
         pass
     @_disconnectFunc
-    def disconnectPeerActionsChanged(self, callback):
+    def disconnectPrivacySettingsChanged(self, callback):
         pass
     @_emitFunc
-    def emitPeerActionsChanged(self):
+    def emitPrivacySettingsChanged(self, pluginName, actionName):
         pass
 
 if __name__ == '__main__':

@@ -4,7 +4,7 @@ import urllib2, sys, os, contextlib, subprocess, json
 import tempfile
 from functools import partial
 from xml.etree import ElementTree
-from lunchinator.iface_plugins import iface_general_plugin
+from lunchinator.plugin import iface_general_plugin
 from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
 from lunchinator.utilities import getValidQtParent, displayNotification, \
     getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, PLATFORM_LINUX, which,\
@@ -70,15 +70,22 @@ class online_update(iface_general_plugin):
         self._repoUpdateHandler.deactivate()
         iface_general_plugin.deactivate(self)
     
+    def has_options_widget(self):
+        return True
+    
     def create_options_widget(self, parent):
-        ui = OnlineUpdateGUI(self._appUpdateHandler.getInstalledVersion(), parent)
-        ui.setCanCheckForAppUpdate(self._appUpdateHandler.canCheckForUpdate())
-        ui.installUpdates.connect(self.installUpdates)
+        self._ui = OnlineUpdateGUI(self._appUpdateHandler.getInstalledVersion(), parent)
+        self._ui.setCanCheckForAppUpdate(self._appUpdateHandler.canCheckForUpdate())
+        self._ui.installUpdates.connect(self.installUpdates)
         
-        self._appUpdateHandler.setUI(ui)
-        self._repoUpdateHandler.setUI(ui)
+        self._appUpdateHandler.setUI(self._ui)
+        self._repoUpdateHandler.setUI(self._ui)
         
-        return ui
+        return self._ui
+    
+    def destroy_options_widget(self):
+        self._ui.installUpdates.disconnect(self.installUpdates)
+        iface_general_plugin.destroy_options_widget(self)
         
     def checkForUpdate(self):
         if self._appUpdateHandler.canCheckForUpdate():
@@ -96,6 +103,6 @@ class online_update(iface_general_plugin):
             restartWithCommands(commands)
         
 if __name__ == '__main__':
-    from lunchinator.iface_plugins import iface_gui_plugin
+    from lunchinator.plugin import iface_gui_plugin
     w = online_update()
     w.run_options_widget()

@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator.plugin import iface_gui_plugin
 from lunchinator import get_server, get_settings, log_exception, log_error,\
     get_peers, convert_string
 from lunchinator.utilities import displayNotification
@@ -127,5 +127,5 @@ if __name__ == "__main__":
     def call_dummy(place, time):
         pass
     
-    from lunchinator.iface_plugins import iface_gui_plugin
+    from lunchinator.plugin import iface_gui_plugin
     iface_gui_plugin.run_standalone(lambda window : voterWidget(window, call_dummy))

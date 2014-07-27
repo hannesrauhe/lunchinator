@@ -1,6 +1,6 @@
 import subprocess, sys, os, contextlib, json, shutil, socket
 from datetime import datetime, timedelta 
-from time import mktime, time, strftime
+from time import mktime, strftime
 from lunchinator import log_exception, log_warning, log_debug, \
     get_settings, log_error
 import locale
@@ -74,27 +74,39 @@ def getValidQtParent():
         return qtParent
     raise Exception("Could not find a valid QObject instance")
     
-def processPluginCall(ip, call, newPeer, fromQueue):
-    from lunchinator import get_peers, get_plugin_manager
+def _processCallOnPlugin(pluginObject, pluginName, ip, call, newPeer, fromQueue, member_info):
+    from lunchinator.plugin import iface_called_plugin, iface_gui_plugin
+    
+    # called also contains gui plugins
+    if not (isinstance(pluginObject, iface_called_plugin) or \
+            isinstance(pluginObject, iface_gui_plugin)):
+        log_warning("Plugin '%s' is not a called/gui plugin" % pluginName)
+        return
+    if pluginObject.is_activated:
+        try:
+            if (pluginObject.processes_events_immediately() and not fromQueue) or \
+               (not pluginObject.processes_events_immediately() and not newPeer):
+                call(pluginObject, ip, member_info)
+        except:
+            log_exception(u"plugin error in %s while processing event" % pluginName)
+    
+def processPluginCall(ip, call, newPeer, fromQueue, action=None):
     if not get_settings().get_plugins_enabled():
         return
-    from lunchinator.iface_plugins import iface_called_plugin, iface_gui_plugin
+    from lunchinator import get_peers, get_plugin_manager
     
     member_info = get_peers().getPeerInfo(pIP=ip)
     
     # called also contains gui plugins
     for pluginInfo in get_plugin_manager().getPluginsOfCategory("called")+get_plugin_manager().getPluginsOfCategory("gui"):
-        if not (isinstance(pluginInfo.plugin_object, iface_called_plugin) or \
-                isinstance(pluginInfo.plugin_object, iface_gui_plugin)):
-            log_warning("Plugin '%s' is not a called/gui plugin" % pluginInfo.name)
-            continue
-        if pluginInfo.plugin_object.is_activated:
-            try:
-                if (pluginInfo.plugin_object.processes_events_immediately() and not fromQueue) or \
-                   (not pluginInfo.plugin_object.processes_events_immediately() and not newPeer):
-                    call(pluginInfo.plugin_object, ip, member_info)
-            except:
-                log_exception(u"plugin error in %s while processing event" % pluginInfo.name)
+        # if this is a peer action, only call special plugins
+        if action is None or (pluginInfo.plugin_object.processes_all_peer_actions() and \
+                              pluginInfo.name != action.getPluginName()):
+            _processCallOnPlugin(pluginInfo.plugin_object, pluginInfo.name, ip, call, newPeer, fromQueue, member_info)
+    
+    # perform peer action
+    if action is not None:
+        _processCallOnPlugin(action.getPluginObject(), action.getPluginName(), ip, call, newPeer, fromQueue, member_info)
                 
 def which(program):
     def is_exe(fpath):
@@ -419,7 +431,7 @@ def installPipDependencyWindows(package, notifyRestart=True):
                               lpParameters=params)
 
     procHandle = procInfo['hProcess']    
-    obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
+    _obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
     rc = win32process.GetExitCodeProcess(procHandle)
     log_debug("Process handle %s returned code %s" % (procHandle, rc))
 

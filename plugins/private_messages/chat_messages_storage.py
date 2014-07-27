@@ -2,10 +2,15 @@ from lunchinator.logging_mutex import loggingMutex
 from lunchinator import get_settings, get_db_connection, log_warning, log_error
 from private_messages.chat_messages_model import ChatMessagesModel
 
+class InconsistentIDError(Exception):
+    def __init__(self, validID):
+        self.validID = validID
+
 class ChatMessagesStorage(object):
     _DB_VERSION_INITIAL = 0
     _DB_VERSION_RECEIVE_TIME = 1
-    _DB_VERSION_CURRENT = _DB_VERSION_RECEIVE_TIME
+    _DB_VERSION_NO_NEXTID = 2
+    _DB_VERSION_CURRENT = _DB_VERSION_NO_NEXTID
     
     MSG_PARTNER_COL = 0
     MSG_ID_COL = 1
@@ -72,19 +77,6 @@ class ChatMessagesStorage(object):
             self._db.execute("CREATE INDEX PRIVATE_MESSAGE_TIME_INDEX on PRIVATE_MESSAGES(TIME)")
             self._db.execute("CREATE INDEX PRIVATE_MESSAGE_PARTNER_INDEX on PRIVATE_MESSAGES(PARTNER)")
             
-        if not self._db.existsTable("PRIVATE_MESSAGES_NEXTID"):
-            self._db.execute("CREATE TABLE PRIVATE_MESSAGES_NEXTID(NEXTID INTEGER NOT NULL)")
-            
-            # obtain next message ID
-            rows = self._db.query("SELECT MAX(M_ID) FROM PRIVATE_MESSAGES WHERE IS_OWN_MESSAGE = ?", True)
-            if not rows or rows[0][0] == None:
-                nextID = 0
-            else:
-                nextID = rows[0][0] + 1
-            
-            # insert initial next ID
-            self._db.execute("INSERT INTO PRIVATE_MESSAGES_NEXTID VALUES(?)", nextID)
-            
         self._checkDBVersion()
 
     def _getDBVersion(self):
@@ -101,6 +93,10 @@ class ChatMessagesStorage(object):
         if dbVersion == self._DB_VERSION_INITIAL:
             self._db.execute("ALTER TABLE PRIVATE_MESSAGES ADD COLUMN RECV_TIME REAL")
             self._db.execute("UPDATE PRIVATE_MESSAGES SET RECV_TIME = TIME")
+            dbVersion = self._DB_VERSION_RECEIVE_TIME
+        if dbVersion == self._DB_VERSION_RECEIVE_TIME:
+            self._db.execute("DROP TABLE IF EXISTS PRIVATE_MESSAGES_NEXTID")
+            dbVersion = self._DB_VERSION_NO_NEXTID
         
         self._updateDBVersion()    
     
@@ -113,7 +109,6 @@ class ChatMessagesStorage(object):
                          msgState,
                          msg,
                          recvTime)
-        self._db.execute("UPDATE PRIVATE_MESSAGES_NEXTID SET NEXTID=NEXTID+1")
         
     def addOtherMessage(self, msgID, partner, msgTime, msg, recvTime):
         self._db.execute("INSERT INTO PRIVATE_MESSAGES VALUES(?, ?, ?, ?, ?, ?, ?)",
@@ -143,17 +138,30 @@ class ChatMessagesStorage(object):
         
     def updateReceiveTime(self, partner, msgID, recvTime):
         self._db.execute("UPDATE PRIVATE_MESSAGES SET RECV_TIME=? WHERE PARTNER = ? AND M_ID = ?", recvTime, partner, msgID)
-        
-    def getNextMessageID(self):
-        rows = self._db.query("SELECT NEXTID FROM PRIVATE_MESSAGES_NEXTID")
-        if not rows or rows[0][0] == None:
-            # should not happen
-            return 0
-        return rows[0][0]
       
-    def containsMessage(self, partner, msgID):
-        rows = self._db.query("SELECT 1 FROM PRIVATE_MESSAGES WHERE PARTNER = ? AND M_ID = ?", partner, msgID)
-        return len(rows) > 0
+    def getMessage(self, partner, msgID, ownMessage):
+        rows = self._db.query("SELECT * FROM PRIVATE_MESSAGES WHERE PARTNER = ? AND M_ID = ? AND IS_OWN_MESSAGE=?", partner, msgID, ownMessage)
+        if len(rows) > 0:
+            return rows[0]
+        return None
+    
+    def updateMessageID(self, partner, oldID, newID, ownMessage):
+        try:
+            self._db.execute("UPDATE PRIVATE_MESSAGES SET M_ID = ? WHERE PARTNER = ? AND M_ID = ? AND IS_OWN_MESSAGE = ?", newID, partner, oldID, ownMessage)
+            return True
+        except:
+            return False
+      
+    def containsMessage(self, partner, msgID, msgHTML, sendTime, ownMessage):
+        msgTuple = self.getMessage(partner, msgID, ownMessage)
+        if msgTuple is not None:
+            dbHTML = msgTuple[self.MSG_TEXT_COL]
+            dbSendTime = msgTuple[self.MSG_TIME_COL]
+            if (sendTime is not None and dbSendTime != sendTime) or dbHTML != msgHTML:
+                lastID = self.getLastReceivedMessageID(partner)
+                raise InconsistentIDError(lastID + 1)
+            return True
+        return False
       
     def deleteMessagesForPartner(self, partner):
         if not partner:
@@ -186,3 +194,21 @@ class ChatMessagesStorage(object):
     
     def clearHistory(self, partner):
         self._db.execute("DELETE FROM PRIVATE_MESSAGES WHERE PARTNER = ?", partner)
+        
+    def getLastSentMessageID(self):
+        """Backwards compatibility: On first initialization, next message ID
+        will be obtained the old, error-prone way."""
+        rows = self._db.query("SELECT MAX(M_ID) FROM PRIVATE_MESSAGES WHERE IS_OWN_MESSAGE = ?", True)
+        if not rows or rows[0][0] == None:
+            return -1
+        else:
+            return rows[0][0]
+        
+    def getLastReceivedMessageID(self, partner):
+        """Returns the last received message ID from a chat partner."""
+        rows = self._db.query("SELECT MAX(M_ID) FROM PRIVATE_MESSAGES WHERE PARTNER = ? AND IS_OWN_MESSAGE = ?", partner, False)
+        if not rows or rows[0][0] == None:
+            return -1
+        else:
+            return rows[0][0]
+        

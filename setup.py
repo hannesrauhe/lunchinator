@@ -1,5 +1,5 @@
 #!/usr/bin/python
-fror __future__ import with_statement
+from __future__ import with_statement
 import os, platform
 from distutils.core import setup
 from distutils.command import install
@@ -143,7 +143,7 @@ setup(
     maintainer =     os.getenv('DEBFULLNAME'),
     maintainer_email = os.getenv('DEBEMAIL'),
     license =       'GPLv3',
-    packages =      ['lunchinator', 'lunchinator.cli', 'lunchinator.peer_actions'],
+    packages =      ['lunchinator', 'lunchinator.plugin', 'lunchinator.cli', 'lunchinator.peer_actions', 'lunchinator.privacy'],
     scripts =       ['bin/lunchinator'],
     data_files =    data_files,
     cmdclass =      {'install': my_install},

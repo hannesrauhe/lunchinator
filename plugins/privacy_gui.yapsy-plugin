@@ -1,0 +1,9 @@
+[Core]
+Name = hannesrauhe.lunchinator.privacy_settings
+Module = privacy_gui
+
+[Documentation]
+Author = Cornelius Ratsch
+Version = 0.1
+Website = http://www.lunchinator.de
+Description = GUI for managing privacy settings.

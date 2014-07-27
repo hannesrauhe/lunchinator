@@ -1,5 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import get_plugin_manager
+from lunchinator.plugin import iface_gui_plugin
     
 class list_plugins(iface_gui_plugin):
     def __init__(self):
