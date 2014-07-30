@@ -1,7 +1,8 @@
 """ lunch_socket+exceptions, extendedMessages(Incoming/Outgoing)"""
 
-import socket, errno, sys, math, hashlib
-from lunchinator import convert_string, log_debug, log_error, log_warning
+import socket, errno, math, hashlib
+from lunchinator import log_debug, log_error
+import itertools
 
 """ lunch_socket is the class to 
 1. abstract sockets to support IPv6 and IPv4 sockets transparently (TODO)
@@ -18,12 +19,12 @@ class lunch_socket(object):
         
         self.port = 50000
         self.max_msg_length = 512
-        self.incomplete_messages = {}
+        self.incomplete_messages = {} # TODO add IP / ID as dict key to avoid thirds adding message parts, also: is hash unique enough? do we nees message IDs?
     
     """ sends a message to an IP on the configured port, 
     
-    @long If only message an IP are given and the message string is shorter than 
-    the maximum length, it will be send as is.    
+    @long If only message and IP are given and the message string is shorter than 
+    the maximum length, it will be sent as is.    
     If the message is longer or encryption/signatures are enabled, the message
     will be send as HELOX call.
     
@@ -39,15 +40,15 @@ class lunch_socket(object):
         if not self.s:
             raise Exception("Cannot send. There is no open lunch socket")
         
-        send_str = msg.encode('utf-8')
+        # TODO remove leading HELO_, never use HELOX for old-school messages (they won't become too long anyways)?
         log_debug("Sending", msg, "to", ip.strip())
         
         if not disable_extended and len(msg) > self.max_msg_length:
             xmsg = extMessageOutgoing(msg, self.max_msg_length)
-            for f in xmsg.getFragments():     
+            for f in xmsg.getFragments():
                 self.s.sendto(f, (ip.strip(), self.port))
         else:
-            self.s.sendto(send_str, (ip.strip(), self.port))
+            self.s.sendto(msg, (ip.strip(), self.port))
 
     """ receives a message from a socket and returns the received data and the sender's 
     address
@@ -58,7 +59,7 @@ class lunch_socket(object):
         if not self.s:
             raise Exception("Cannot recv. There is no open lunch socket")
         
-        for _ in range(0, 5):
+        for _ in itertools.repeat(None, 5):
             try:
                 data, addr = self.s.recvfrom(self.max_msg_length)                
                 ip = unicode(addr[0])
@@ -69,14 +70,18 @@ class lunch_socket(object):
                     if not xmsg.isComplete():
                         s = xmsg.getSplitID()
                         if s in self.incomplete_messages:
-                            xmsg.merge(self.incomplete_messages[s])
+                            incompMsg = self.incomplete_messages[s]
+                            incompMsg.merge(xmsg)
+                            xmsg = incompMsg
+                        else:
+                            self.incomplete_messages[s] = xmsg
                         
-                        if not xmsg.isComplete():                            
+                        if not xmsg.isComplete():
                             raise split_call(xmsg.getSplitID())
                     msg = xmsg.getPlainMessage()
-                else:                    
+                else:
                     try:
-                        msg = data.decode('utf-8')
+                        msg = data
                     except:
                         log_error("Received illegal data from %s, maybe wrong encoding" % ip)
                         continue    
@@ -116,6 +121,7 @@ class split_call(Exception):
 """ Message classes """
     
 class extMessage(object):
+    # TODO why whitespace?
     """Extended Messages start with HELOX (will be ignored by older lunchinators), 
     are always compressed, and are split into fragments if necessary:
     Message looks like this:
@@ -149,7 +155,7 @@ class extMessage(object):
         return self._fragments
     
     def getPlainMessage(self):
-        return self._plainMsg#.decode('utf-8')
+        return self._plainMsg
     
     def getSplitID(self):
         return self._splitID
@@ -230,12 +236,14 @@ class extMessageIncoming(extMessage):
             
             
 """builds the extMessage from a plain message"""
-class extMessageOutgoing(extMessage):    
+class extMessageOutgoing(extMessage):
+    HEADER_SIZE = len("HELOX xx0000") # TODO why whitespace?
+    
     """ @param outgoingMessage as unicode object """
     def __init__(self, outgoingMessage, fragment_size):
         super(extMessageOutgoing, self).__init__()
         self._plainMsg = outgoingMessage
-        self._fragment_size = fragment_size - len("HELOX xx0000")
+        self._fragment_size = fragment_size - self.HEADER_SIZE
         if self._fragment_size < 1:
             raise Exception("Fragment size %d to small to hold header"%fragment_size)
 
@@ -259,7 +267,7 @@ class extMessageOutgoing(extMessage):
         n = self._fragment_size
         m = int(math.ceil(float(msg_len) / float(n)))
         if m > 128:
-            raise Exception("Message to large to be send over lunch socket: %d byte"%msg_len)
+            raise Exception("Message too large to be sent over lunch socket: %d byte"%msg_len)
         
         self._splitID = self.hashPlainMessage()
         

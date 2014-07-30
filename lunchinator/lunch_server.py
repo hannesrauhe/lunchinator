@@ -234,7 +234,7 @@ class lunch_server(object):
         both peerIDs and peerIPs should be sets
         Used also by start_lunchinator to send messages without initializing
         the whole lunch server."""     
-        msg = convert_string(msg)
+        msg = convert_string(msg) # TODO no unicode here?
         target = []
         
         if len(peerIDs) == 0 and len(peerIPs) == 0:
@@ -285,7 +285,7 @@ class lunch_server(object):
         try:      
             for ip in target:
                 try:
-                    s.sendto(msg, ip.strip())
+                    s.sendto(msg.encode('utf-8'), ip.strip())
                     i += 1
                 except:
                     # only warning message; happens sometimes if the host is not reachable
@@ -598,6 +598,9 @@ class lunch_server(object):
     
     def _broadcast(self):
         try:
+            # TODO if the info dict becomes too big, this will fail, right?
+            # at least in this case, we shoud broadcast the HELOX parts
+            # anyways, is there a reason for this second socket?
             s_broad = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
