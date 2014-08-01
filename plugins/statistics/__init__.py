@@ -11,7 +11,7 @@ class statistics(iface_called_plugin):
                           self.reconnect_db),
                          get_settings().get_default_db_connection())]
         self.add_supported_dbms("SQLite Connection", statistics_sqlite)
-        self.add_supported_dbms("HANA Connection", statistics_hana)
+        self.add_supported_dbms("SAP HANA Connection", statistics_hana)
     
     def activate(self):
         iface_called_plugin.activate(self)
@@ -96,17 +96,17 @@ class statistics_hana(db_for_plugin_iface):
             avatar VARCHAR(255), lunch_begin VARCHAR(5), lunch_end VARCHAR(5), rtime SECONDDATE)"; 
     
     def init_db(self):
-        if not self.dbconn.existsTable("members"):
+        if not self.dbConn.existsTable("members"):
             self.dbconn.execute(self.members_schema)
-        if not self.dbconn.existsTable("messages"):
-            self.dbconn.execute(self.messages_schema)
+        if not self.dbConn.existsTable("messages"):
+            self.dbConn.execute(self.messages_schema)
                 
     def insert_call(self,mtype,msg,sender):
-        self.dbconn.execute("INSERT INTO messages(mtype,message,sender,rtime,receiver) VALUES (?,?,?,now(),?)",mtype,msg,sender,get_settings().get_ID())          
+        self.dbConn.execute("INSERT INTO messages(mtype,message,sender,rtime,receiver) VALUES (?,?,?,now(),?)",mtype,msg,sender,get_settings().get_ID())          
     
     def insert_members(self,ip,name,avatar,lunch_begin,lunch_end):
-        self.dbconn.execute("INSERT INTO members(IP, name, avatar, lunch_begin, lunch_end, rtime) VALUES (?,?,?,?,?,now())",ip,name,avatar,lunch_begin,lunch_end)
+        self.dbConn.execute("INSERT INTO members(IP, name, avatar, lunch_begin, lunch_end, rtime) VALUES (?,?,?,?,?,now())",ip,name,avatar,lunch_begin,lunch_end)
                 
     def get_newest_members_data(self):  
-        return self.dbconn.query("select * from members, (SELECT ip as maxtimeip,MAX(rtime) as maxtime FROM members GROUP BY IP) as maxtable where maxtimeip=ip and maxtime = rtime")      
+        return self.dbConn.query("select * from members, (SELECT ip as maxtimeip,MAX(rtime) as maxtime FROM members GROUP BY IP) as maxtable where maxtimeip=ip and maxtime = rtime")      
 
