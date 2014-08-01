@@ -33,7 +33,7 @@ class lunch_menu(iface_gui_plugin):
             proxy_handler = urllib2.ProxyHandler({})
             opener = urllib2.build_opener(proxy_handler)   
             with contextlib.closing(opener.open(req)) as u:
-                return u.read
+                return u.read()
             
         resp = urllib2.urlopen(self.options["url"])
         return resp.read()
