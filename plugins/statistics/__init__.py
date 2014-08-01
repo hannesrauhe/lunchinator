@@ -8,7 +8,7 @@ class statistics(iface_called_plugin):
         super(statistics, self).__init__()
         self.options = [((u"db_connection", u"DB Connection", 
                           get_settings().get_available_db_connections(),
-                          self.connect_to_db),
+                          self.reconnect_db),
                          get_settings().get_default_db_connection())]
         self.add_supported_dbms("SQLite Connection", statistics_sqlite)
         self.add_supported_dbms("HANA Connection", statistics_hana)
