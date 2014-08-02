@@ -1,8 +1,8 @@
 """ lunch_socket+exceptions, extendedMessages(Incoming/Outgoing)"""
 
 import socket, errno, math, hashlib
-from lunchinator import log_debug, log_error
-import itertools
+from lunchinator import get_settings, log_debug, log_error
+import itertools, time
 
 """ lunch_socket is the class to 
 1. abstract sockets to support IPv6 and IPv4 sockets transparently (TODO)
@@ -17,9 +17,9 @@ class lunch_socket(object):
             self.s = None
             raise
         
-        self.port = 50000
-        self.max_msg_length = 512
-        self.incomplete_messages = {} # TODO add IP / ID as dict key to avoid thirds adding message parts, also: is hash unique enough? do we nees message IDs?
+        self.port = get_settings().get_udp_port()
+        self.max_msg_length = get_settings().get_max_fragment_length()
+        self.incomplete_messages = {}
     
     """ sends a message to an IP on the configured port, 
     
@@ -70,11 +70,13 @@ class lunch_socket(object):
                     if not xmsg.isComplete():
                         s = xmsg.getSplitID()
                         if s in self.incomplete_messages:
-                            incompMsg = self.incomplete_messages[s]
+                            incompMsg, _ = self.incomplete_messages[(ip,s)]
                             incompMsg.merge(xmsg)
                             xmsg = incompMsg
+                            if xmsg.isComplete():
+                                del self.incomplete_messages[(ip,s)]
                         else:
-                            self.incomplete_messages[s] = xmsg
+                            self.incomplete_messages[(ip,s)] = (xmsg, time.time())
                         
                         if not xmsg.isComplete():
                             raise split_call(xmsg.getSplitID())
@@ -105,8 +107,16 @@ class lunch_socket(object):
     """ closes the socket"""    
     def close(self):
         if self.s:
+            self.drop_incomplete_messages()
             self.s.close()
         self.s = None
+        
+    """ clean up the cache for incomplete messages """
+    def drop_incomplete_messages(self):
+        timeout = get_settings().get_peer_timeout()
+        for msg, timestamp in self.incomplete_messages.itervalues():
+            pass
+        
     
 class split_call(Exception):
     def __init__(self, splitID):
@@ -121,7 +131,6 @@ class split_call(Exception):
 """ Message classes """
     
 class extMessage(object):
-    # TODO why whitespace?
     """Extended Messages start with HELOX (will be ignored by older lunchinators), 
     are always compressed, and are split into fragments if necessary:
     Message looks like this:

@@ -149,8 +149,10 @@ class lunch_settings(object):
                 
         #also in config, but hidden
         self._ID = u""
-        self._peer_timeout = 300
+        self._peer_timeout = 300 # time until unreachable peers are dropped and until incomplete HELOX calls are dropped
         self._message_cache_timeout = 5 # cache lifetime to detect duplicate messages
+        self._udp_port = 50000
+        self._max_fragment_length = 512
         
         self._next_lunch_begin = None
         self._next_lunch_end = None
@@ -492,6 +494,18 @@ class lunch_settings(object):
     @hidden_setting()
     def set_peer_timeout(self, v):
         self._peer_timeout = v
+        
+    def get_max_fragment_length(self):
+        return self._max_fragment_length
+    @hidden_setting()
+    def set_max_fragment_length(self, v):
+        self._max_fragment_length = v
+        
+    def get_udp_port(self):
+        return self._udp_port
+    @hidden_setting()
+    def set_udp_port(self, v):
+        self._udp_port = v
         
     def get_message_cache_timeout(self):
         return self._message_cache_timeout
