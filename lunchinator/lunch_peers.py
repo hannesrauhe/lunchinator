@@ -528,8 +528,9 @@ class LunchPeers(object):
                         continue
                     try:
                         self._potentialPeers.add(hostn)
-                        ip = unicode(socket.gethostbyname(hostn))
-                        peerIPs.append(ip)
+                        _hn, _al, ips = socket.gethostbyname_ex(hostn)
+                        for ip in ips:
+                            peerIPs.append(ip)
                     except socket.error:
                         log_debug("cannot find host specified in members_file by %s with name %s" % (p_file, hostn))
         return peerIPs
