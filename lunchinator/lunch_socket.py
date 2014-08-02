@@ -1,7 +1,7 @@
 """ lunch_socket+exceptions, extendedMessages(Incoming/Outgoing)"""
 
 import socket, errno, math, hashlib
-from lunchinator import get_settings, log_debug, log_error
+from lunchinator import get_settings, log_debug, log_error, log_warning
 import itertools, time
 
 """ lunch_socket is the class to 
@@ -43,12 +43,22 @@ class lunch_socket(object):
         # TODO remove leading HELO_, never use HELOX for old-school messages (they won't become too long anyways)?
         log_debug("Sending", msg, "to", ip.strip())
         
-        if not disable_extended and len(msg) > self.max_msg_length:
+        if len(msg) > self.max_msg_length:         
+            if disable_extended:
+                log_warning("Message to peer %s is too long and should be compressed/split,"%ip + \
+                 "but extended message is disabled for this call")   
+                self.s.sendto(msg, (ip.strip(), self.port))
+                return   
+                
+            log_debug("Sending as extended Message")
             xmsg = extMessageOutgoing(msg, self.max_msg_length)
             for f in xmsg.getFragments():
                 self.s.sendto(f, (ip.strip(), self.port))
+            return
         else:
             self.s.sendto(msg, (ip.strip(), self.port))
+        
+    
 
     """ receives a message from a socket and returns the received data and the sender's 
     address

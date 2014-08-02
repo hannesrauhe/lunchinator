@@ -285,10 +285,11 @@ class lunch_server(object):
         try:      
             for ip in target:
                 try:
-                    s.sendto(msg.encode('utf-8'), ip.strip())
+                    s.sendto(msg.encode('utf-8'), ip.strip(), \
+                             disable_extended=(self._peers.getPeerCommitCount(pIP = ip) == None or \
+                                               self._peers.getPeerCommitCount(pIP = ip) < 1526))
                     i += 1
                 except:
-                    # only warning message; happens sometimes if the host is not reachable
                     log_exception("Message %s could not be delivered to %s: %s" % (msg, ip, str(sys.exc_info()[0])))
         finally:
             s.close() 
