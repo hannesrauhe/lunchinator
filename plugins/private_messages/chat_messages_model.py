@@ -85,7 +85,7 @@ class ChatMessagesModel(QStandardItemModel):
             
         item.setData(QVariant(messageState), self.MESSAGE_STATE_ROLE)
         item.setData(QVariant(messageTime), self.MESSAGE_TIME_ROLE)
-        if recvTime != None:
+        if recvTime:
             item.setData(QVariant(recvTime), self.RECV_TIME_ROLE)
         
         if messageState == self.MESSAGE_STATE_NOT_DELIVERED:
