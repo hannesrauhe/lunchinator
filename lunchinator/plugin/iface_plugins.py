@@ -467,12 +467,17 @@ class iface_plugin(IPlugin):
             elif "default" in self._supported_dbms:
                 self._specialized_db_conn = self._supported_dbms["default"](dbPlugin)
             else:
+                log_error("DB Conn of type %s is not supported by this plugin"%plugin_type)
                 self._specialized_db_conn = None
                 return False
                 
             log_debug("Plugin %s uses DB Connection of type %s "%(type(self),plugin_type))
                         
             return True
+            
+    def reconnect_db(self, _, __):
+        """method for changed options callback"""
+        self.connect_to_db()
         
     def is_db_ready(self):
         return self._specialized_db_conn and self._specialized_db_conn.is_open()

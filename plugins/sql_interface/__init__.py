@@ -14,7 +14,7 @@ class sql_interface(iface_gui_plugin):
                          get_settings().get_default_db_connection()),
                         ((u"db_connection", u"DB Connection to store history", 
                           get_settings().get_available_db_connections(),
-                          self.connect_to_db),
+                          self.reconnect_db),
                          get_settings().get_default_db_connection()),
                         ((u"use_textedit", u"Use multi-line sql editor"),False)]
         self.db_connection = None

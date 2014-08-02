@@ -57,6 +57,8 @@ class ChatWidget(QWidget):
     def __init__(self, parent, ownName, otherName, ownPicFile, otherPicFile, otherID):
         super(ChatWidget, self).__init__(parent)
         
+        self._firstShowEvent = True
+        
         self._offline = False
         self._delivering = False
         self._lastTimeRow = 0
@@ -302,40 +304,33 @@ class ChatWidget(QWidget):
         self._otherWasTyping = False
         self.setStatus(None)
        
-    def scrollToEnd(self, force=True):
-        lastIndex = self._model.getLastIndex()
-        if not force:
-            rect = self.table.visualRect(lastIndex)
-            if rect.topLeft().y() > self.table.viewport().height():
-                # last item not visible -> don't scroll
-                return
-        self.table.scrollTo(lastIndex)
-        
-    def addTimeRow(self, rtime, scroll=True):
+    def showEvent(self, event):
+        QWidget.showEvent(self, event)
+        if self._firstShowEvent:
+            self._firstShowEvent = False
+            # relayout (i don't know why this is necessary)
+            self.table.reset()
+       
+    def addTimeRow(self, rtime):
         self._model.addTimeRow(rtime)
-        if scroll:
-            self.scrollToEnd(force=False)
         
-    def _checkTime(self, msgTime, scroll):
+    def _checkTime(self, msgTime):
         if msgTime - self._lastTimeRow > self._TIME_ROW_INTERVAL:
-            self.addTimeRow(msgTime, scroll)
+            self.addTimeRow(msgTime)
             self._lastTimeRow = msgTime
         
-    def addOwnMessage(self, msgID, recvTime, msg, msgTime, messageState=None, toolTip=None, scroll=True):
-        self._checkTime(msgTime, scroll)
+    def addOwnMessage(self, msgID, recvTime, msg, msgTime, messageState=None, toolTip=None):
+        self._checkTime(msgTime)
         self._model.addOwnMessage(msgID, recvTime, msg, msgTime, messageState, toolTip)
         self.entry.clear()
         self._delivering = False
         self._checkEntryState()
         self.entry.setFocus(Qt.OtherFocusReason)
-        if scroll:
-            self.scrollToEnd()
+        self.table.setScrollToEnd(True)
         
-    def addOtherMessage(self, msg, msgTime, recvTime, scroll=True):
-        self._checkTime(msgTime, scroll)
+    def addOtherMessage(self, msg, msgTime, recvTime):
+        self._checkTime(msgTime)
         self._model.addOtherMessage(msg, msgTime, recvTime)
-        if scroll:
-            self.scrollToEnd(force=False)
         
     def delayedDelivery(self, msgID, recvTime, error, errorMessage):
         return self._model.messageDelivered(msgID, recvTime, error, errorMessage)
@@ -448,7 +443,6 @@ class ChatWidget(QWidget):
         return QSize(self.PREFERRED_WIDTH, sizeHint.height())
         
 if __name__ == '__main__':
-    from time import time
     from lunchinator.plugin import iface_gui_plugin
     
     def createTable(window):
