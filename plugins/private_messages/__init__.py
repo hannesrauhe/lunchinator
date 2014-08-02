@@ -83,7 +83,10 @@ class _BlockAction(PeerAction):
             
         PrivacySettings.get().addException(self._sendMessageAction, None, policy, peerID, newVal)
         
-    def appliesToPeer(self, _peerID, _peerInfo):
+    def appliesToPeer(self, _peerID, peerInfo):
+        if not u"PM_v" in peerInfo:
+            # no blocking for peers without chat plugin
+            return False
         policy = self._sendMessageAction.getPrivacyPolicy()
         return policy in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX)
     
