@@ -28,9 +28,27 @@ class ChatMessagesView(QTreeView):
         self.setAlternatingRowColors(False)
         self.setIndentation(0)
         
+        self.setVerticalScrollMode(self.ScrollPerPixel)
+        self.verticalScrollBar().rangeChanged.connect(self._scrollRangeChanged)
+        self.verticalScrollBar().valueChanged.connect(self._scrollValueChanged)
+        
         self.setFrameShadow(QFrame.Plain)
         self.setFrameShape(QFrame.NoFrame)
         self.setFocusPolicy(Qt.NoFocus)
+        
+        self._scrollToEnd = True
+        self._scrollMax = 0
+        
+    def _scrollValueChanged(self, val):
+        self._scrollToEnd = val >= self._scrollMax
+        
+    def _scrollRangeChanged(self, _minV, maxV):
+        self._scrollMax = maxV
+        if self._scrollToEnd:
+            self.verticalScrollBar().setValue(self._scrollMax)
+            
+    def setScrollToEnd(self, scroll):
+        self._scrollToEnd = scroll
         
     def stopEditing(self):
         if self.itemDelegate().getEditor() != None:

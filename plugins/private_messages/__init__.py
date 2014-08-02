@@ -215,14 +215,11 @@ class private_messages(iface_gui_plugin):
                                                         row[ChatMessagesStorage.MSG_RECV_TIME_COL],
                                                         row[ChatMessagesStorage.MSG_TEXT_COL],
                                                         row[ChatMessagesStorage.MSG_TIME_COL],
-                                                        row[ChatMessagesStorage.MSG_STATUS_COL],
-                                                        scroll=False)
+                                                        row[ChatMessagesStorage.MSG_STATUS_COL])
             else:
                 newWindow.getChatWidget().addOtherMessage(row[ChatMessagesStorage.MSG_TEXT_COL],
                                                           row[ChatMessagesStorage.MSG_TIME_COL],
-                                                          row[ChatMessagesStorage.MSG_RECV_TIME_COL],
-                                                          scroll=False)
-        newWindow.getChatWidget().scrollToEnd()
+                                                          row[ChatMessagesStorage.MSG_RECV_TIME_COL])
         return self._activateChat(newWindow)
         
     def _chatClosed(self, pID):
