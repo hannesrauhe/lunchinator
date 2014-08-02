@@ -57,7 +57,6 @@ class ChatMessagesStorage(object):
     """
     
     def __init__(self):
-        self._lock = loggingMutex("chat messages storage", logging=get_settings().get_verbose())
         self._db, plugin_type = get_db_connection()
         
         if self._db == None:

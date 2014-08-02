@@ -56,7 +56,8 @@ class remote_pictures(iface_gui_plugin):
                         ((u"max_opacity", u"Maximum opacity of controls:", self.maxOpacityChanged),80),
                         ((u"thumbnail_size", u"Thumbnail Size:", self.thumbnailSizeChanged),150),
                         ((u"smooth_scaling", u"Smooth scaling", self.smoothScalingChanged),False)]
-        self.gui = None
+        self._gui = None
+        self._handler = None
         self._rpAction = None
         
     def _handleOpacity(self, newValue, signal):
@@ -69,10 +70,10 @@ class remote_pictures(iface_gui_plugin):
         return newValue
         
     def minOpacityChanged(self, _setting, newValue):
-        return self._handleOpacity(newValue, self.gui.minOpacityChanged)
+        return self._handleOpacity(newValue, self._gui.minOpacityChanged)
     
     def maxOpacityChanged(self, _setting, newValue):
-        return self._handleOpacity(newValue, self.gui.maxOpacityChanged)
+        return self._handleOpacity(newValue, self._gui.maxOpacityChanged)
     
     def thumbnailSizeChanged(self, _setting, newValue):
         from remote_pictures.remote_pictures_gui import RemotePicturesGui
@@ -81,26 +82,41 @@ class remote_pictures(iface_gui_plugin):
         elif newValue > RemotePicturesGui.MAX_THUMBNAIL_SIZE:
             newValue = RemotePicturesGui.MAX_THUMBNAIL_SIZE
         
-        self.gui.thumbnailSizeChanged(newValue)
+        self._gui.thumbnailSizeChanged(newValue)
         return newValue
         
     def smoothScalingChanged(self, _setting, newValue):
-        self.gui.imageLabel.smooth_scaling = newValue
+        self._gui.setSmoothScaling(newValue)
+        
+    def getThumbnailSize(self):
+        return self.get_option(u'thumbnail_size')
     
     def create_widget(self, parent):
+        from PyQt4.QtCore import QThread
         from remote_pictures.remote_pictures_gui import RemotePicturesGui
+        from remote_pictures.remote_pictures_handler import RemotePicturesHandler
         super(remote_pictures, self).create_widget(parent)
-        self.gui = RemotePicturesGui(parent, self)
-        return self.gui
+        self._gui = RemotePicturesGui(parent,
+                                      self.get_option(u"smooth_scaling"),
+                                      self.get_option(u"min_opacity"),
+                                      self.get_option(u"max_opacity"))
+        
+        self._messagesThread = QThread()
+        self._handler = RemotePicturesHandler(self, self, self._gui)
+        self._handler.moveToThread(self._messagesThread)
+        self._messagesThread.start()
+        
+        return self._gui
     
     def destroy_widget(self):
-        if self.gui != None:
-            self.gui.destroyWidget()
+        self._handler.finish()
+        self._messagesThread.quit()
+        self._messagesThread.wait()
+        self._messagesThread.deleteLater()
+        self._gui.destroyWidget()
+        
         iface_gui_plugin.destroy_widget(self)
 
-    def process_message(self,msg,addr,member_info):
-        pass
-    
     def get_peer_actions(self):
         self._rpAction = _RemotePictureAction()
         return [self._rpAction]
@@ -123,7 +139,7 @@ class remote_pictures(iface_gui_plugin):
         newFile.seek(0)
         displayNotification(name, description, newFile.name)
         
-        self.gui.addPicture(newFile, url, category, description)
+        self._handler.addPicture(newFile, url, category, description)
           
     def extract_pic(self,url,category,description):
         try:
@@ -131,7 +147,7 @@ class remote_pictures(iface_gui_plugin):
         except:
             log_warning("Remote Pictures does not work without QT")
             return
-        if not self.gui.hasPicture(url, category):
+        if not self._handler.hasPicture(category, url):
             downloadThread = DownloadThread(getValidQtParent(), url)
             downloadThread.success.connect(partial(self.downloadedPicture, category, description))
             downloadThread.error.connect(self.errorDownloadingPicture)
@@ -171,9 +187,6 @@ class remote_pictures(iface_gui_plugin):
         val_list.append(new_v)
         new_val = ";;".join(val_list)
         self.set_option(o, new_val, convert=False)
-            
-    def privacySettingsChanged(self):
-        get_notification_center().emitPrivacySettingsChanged(self._rpAction.getPluginName(), self._rpAction.getName())
             
     def process_event(self,cmd,value,_ip,_info):
         if cmd=="HELO_REMOTE_PIC":

@@ -35,6 +35,11 @@ class ResizingImageLabel(QLabel):
     
     def setImage(self, path):
         self.setRawPixmap(QPixmap.fromImage(QImage(path)))
+        
+    def setSmoothScaling(self, newValue):
+        if self.smooth_scaling != newValue:
+            self.smooth_scaling = newValue
+            self.setScaledPixmap()
 
 class ResizingWebImageLabel(ResizingImageLabel):
     """Constructor
@@ -54,7 +59,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
         self.pic_url = pic_url
         self.no_proxy = no_proxy
         
-        self._displayFallbackPic()
+        self.displayFallbackPic()
                 
         self.timeout = int(timeout)*1000
         if update:
@@ -63,7 +68,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
             updateImageTimer.timeout.connect(self.update)
             updateImageTimer.start(self.timeout)
             
-    def _displayFallbackPic(self):
+    def displayFallbackPic(self):
         if self.fallback_pic != None:
             try:
                 self.setImage(self.fallback_pic)
@@ -73,7 +78,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
             self.setPixmap(QPixmap())
             
     def setURL(self, newURL):
-        self._displayFallbackPic()
+        self.displayFallbackPic()
         self.pic_url = newURL
         self.update()
             
@@ -102,5 +107,5 @@ class ResizingWebImageLabel(ResizingImageLabel):
             thread.success.connect(self.downloadFinished)
             thread.start()
         else:
-            self._displayFallbackPic()
+            self.displayFallbackPic()
         return True
