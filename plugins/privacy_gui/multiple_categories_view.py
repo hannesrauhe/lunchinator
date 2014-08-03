@@ -71,7 +71,11 @@ class MultipleCategoriesView(QWidget):
         for category in self._action.getPrivacyCategories():
             singleView = SingleCategoryView(self._action, toolBox, category)
             self._currentSingleViews.append(singleView)
-            toolBox.addItem(singleView, self._action.getCategoryIcon(category), category)
+            icon = self._action.getCategoryIcon(category)
+            if icon is not None:
+                toolBox.addItem(singleView, icon, category)
+            else:
+                toolBox.addItem(singleView, category)
         
         peerExceptions = SingleCategoryView(self._action, toolBox, category=None, mode=PrivacySettings.POLICY_PEER_EXCEPTION)
         self._currentSingleViews.append(peerExceptions)

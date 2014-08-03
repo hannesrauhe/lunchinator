@@ -210,6 +210,8 @@ class PrivacySettings(object):
         if category is None:
             defaultPolicy = action.getDefaultPrivacyPolicy()
         else:
+            if not action.hasPrivacyCategory(category):
+                return self.STATE_BLOCKED
             defaultPolicy = action.getDefaultCategoryPrivacyPolicy()
         
         with self._lock:

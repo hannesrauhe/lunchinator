@@ -45,6 +45,13 @@ class PeerAction(object):
         """
         return None
     
+    def hasPrivacyCategory(self, category):
+        """Returns True if the given category is supported.
+        
+        If this method returns False, the action will always be blocked.
+        """
+        return category in self.getPrivacyCategories()
+    
     def getCategoryIcon(self, _category):
         """Returns a QIcon for a given category name."""
         return None
