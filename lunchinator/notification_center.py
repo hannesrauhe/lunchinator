@@ -94,7 +94,8 @@ class NotificationCenter(object):
         if not signal in self._callbacks:
             return
         callbacks = self._callbacks[signal]
-        callbacks.remove(callback)
+        if callback in callbacks:
+            callbacks.remove(callback)
     
     def _emit(self, signal, *args, **kwargs):
         if not signal in self._callbacks:
