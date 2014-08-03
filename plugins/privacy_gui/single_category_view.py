@@ -78,7 +78,7 @@ class SingleCategoryView(QWidget):
             self._determineOwnMode = False
         else:
             self._determineOwnMode = True
-            mode = PrivacySettings.get().getPolicy(self._action, self._category, useModified=True)
+            mode = PrivacySettings.get().getPolicy(self._action, self._category, useModified=True, categoryPolicy=self._getCategoryPolicy())
             topWidget = self._initTopView(mode)
             
         centralWidget = self._initPeerList(mode)
@@ -103,6 +103,9 @@ class SingleCategoryView(QWidget):
         get_notification_center().disconnectDisplayedPeerNameChanged(self._peerModel.peerNameChanged)
         get_notification_center().disconnectPrivacySettingsChanged(self._privacySettingsChanged)
         
+    def _getCategoryPolicy(self):
+        return PrivacySettings.CATEGORY_NEVER if self._category is None else PrivacySettings.CATEGORY_ALWAYS
+        
     def _initTopView(self, mode):
         topWidget = QWidget(self)
         
@@ -126,7 +129,7 @@ class SingleCategoryView(QWidget):
         capsuleLayout.setContentsMargins(10, 0, 10, 0)
         
         if mode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX, PrivacySettings.POLICY_PEER_EXCEPTION):
-            exceptions = PrivacySettings.get().getExceptions(self._action, self._category, mode, useModified=True)
+            exceptions = PrivacySettings.get().getExceptions(self._action, self._category, mode, useModified=True, categoryPolicy=self._getCategoryPolicy())
         else:
             exceptions = {}
         self._peerModel = PeerModel(exceptions,
@@ -160,11 +163,12 @@ class SingleCategoryView(QWidget):
                                                self._mode,
                                                convert_string(item.data(PeerModel.KEY_ROLE).toString()),
                                                1 if item.checkState() == Qt.Checked else 0 if item.checkState() == Qt.Unchecked else -1,
-                                               applyImmediately=False)
+                                               applyImmediately=False,
+                                               categoryPolicy=self._getCategoryPolicy())
     
     def _askForConfirmationChanged(self, newState):
         if not self._resetting:
-            PrivacySettings.get().setAskForConfirmation(self._action, self._category, newState == Qt.Checked, applyImmediately=False)
+            PrivacySettings.get().setAskForConfirmation(self._action, self._category, newState == Qt.Checked, applyImmediately=False, categoryPolicy=self._getCategoryPolicy())
         
     def _modeChanged(self, newMode, notify=True, resetModel=True):
         self._resetting = True
@@ -172,14 +176,15 @@ class SingleCategoryView(QWidget):
             if resetModel:
                 # no change notifications, we are just resetting the model
                 self._peerModel.itemChanged.disconnect(self._peerDataChanged)
-                self._peerModel.setExceptionData(PrivacySettings.get().getExceptions(self._action, self._category, newMode, useModified=True))
+                self._peerModel.setExceptionData(PrivacySettings.get().getExceptions(self._action, self._category, newMode, useModified=True, categoryPolicy=self._getCategoryPolicy()))
                 self._peerModel.itemChanged.connect(self._peerDataChanged)
             self._peerList.setVisible(True)
         else:
             self._peerList.setVisible(False)
         
         if newMode == PrivacySettings.POLICY_NOBODY_EX:
-            self._askForConfirmationBox.setCheckState(Qt.Checked if PrivacySettings.get().getAskForConfirmation(self._action, self._category, useModified=True) else Qt.Unchecked)
+            ask = PrivacySettings.get().getAskForConfirmation(self._action, self._category, useModified=True, categoryPolicy=self._getCategoryPolicy())
+            self._askForConfirmationBox.setCheckState(Qt.Checked if ask else Qt.Unchecked)
             self._askForConfirmationBox.setVisible(True)
         else:
             self._askForConfirmationBox.setVisible(False)
@@ -187,16 +192,16 @@ class SingleCategoryView(QWidget):
         
         self._resetting = False
         if notify:
-            PrivacySettings.get().setPolicy(self._action, self._category, self._mode, applyImmediately=False)
+            PrivacySettings.get().setPolicy(self._action, self._category, self._mode, applyImmediately=False, categoryPolicy=self._getCategoryPolicy())
         
     def setMode(self, newMode):
-        self._modeChanged(newMode)
+        self._modeChanged(newMode, notify=False)
 
     def _privacySettingsChanged(self, pluginName, actionName):
         if pluginName != self._action.getPluginName() or actionName != self._action.getName():
             return
         if self._determineOwnMode:
-            newMode = PrivacySettings.get().getPolicy(self._action, self._category)
+            newMode = PrivacySettings.get().getPolicy(self._action, self._category, categoryPolicy=self._getCategoryPolicy())
         else:
             newMode = self._mode
         self._modeChanged(newMode, notify=False)

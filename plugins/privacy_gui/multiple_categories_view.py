@@ -3,15 +3,17 @@ from PyQt4.QtGui import QWidget, QComboBox, QHBoxLayout, QLabel, QToolBox,\
 from PyQt4.QtCore import Qt
 from privacy_gui.single_category_view import SingleCategoryView
 from lunchinator.privacy.privacy_settings import PrivacySettings
-from lunchinator import get_notification_center
+from lunchinator import get_notification_center, log_error
+from itertools import izip
 
 class MultipleCategoriesView(QWidget):
     def __init__(self, action, parent):
         super(MultipleCategoriesView, self).__init__(parent)
 
         self._action = action
-        self._mode = PrivacySettings.get().getPolicy(self._action, None, useModified=True)
-        self._currentSingleViews = []
+        self._mode = PrivacySettings.get().getPolicy(self._action, None, useModified=True, categoryPolicy=PrivacySettings.CATEGORY_NEVER)
+        self._currentSingleViews = {}
+        self._currentToolBox = None
         
         topView = self._initTopView()
         self._initSettingsWidget()
@@ -52,9 +54,9 @@ class MultipleCategoriesView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
     
     def _clearCurrentView(self):
-        for view in self._currentSingleViews:
+        for _cat, view in self._currentSingleViews.iteritems():
             view.finish()
-        self._currentSingleViews = []
+        self._currentSingleViews = {}
         
         layout = self._settingsWidget.layout()
         
@@ -63,39 +65,77 @@ class MultipleCategoriesView(QWidget):
             child.widget().deleteLater()
             child = layout.takeAt(0)
     
+    _PEER_EXCEPTIONS_VIEW = -1
+    
+    def _createAndInsertSingleView(self, category, index):
+        singleView = SingleCategoryView(self._action, self._currentToolBox, category)
+        self._currentSingleViews[category] = singleView
+        icon = self._action.getCategoryIcon(category)
+        title = u"Not Categorized" if category == PrivacySettings.NO_CATEGORY else category
+        if icon is not None:
+            self._currentToolBox.insertItem(index, singleView, icon, title)
+        else:
+            self._currentToolBox.insertItem(index, singleView, title)
+    
     def _createCategoryView(self):
         self._clearCurrentView()
         
-        toolBox = QToolBox(self)
-        toolBox.setAutoFillBackground(False)
+        self._currentToolBox = QToolBox(self)
+        self._currentToolBox.setAutoFillBackground(False)
         for category in self._action.getPrivacyCategories():
-            singleView = SingleCategoryView(self._action, toolBox, category)
-            self._currentSingleViews.append(singleView)
-            icon = self._action.getCategoryIcon(category)
-            if icon is not None:
-                toolBox.addItem(singleView, icon, category)
-            else:
-                toolBox.addItem(singleView, category)
+            self._createAndInsertSingleView(category, -1)
         
-        peerExceptions = SingleCategoryView(self._action, toolBox, category=None, mode=PrivacySettings.POLICY_PEER_EXCEPTION)
-        self._currentSingleViews.append(peerExceptions)
-        toolBox.addItem(peerExceptions, "Special Peers")
+        peerExceptions = SingleCategoryView(self._action, self._currentToolBox, category=None, mode=PrivacySettings.POLICY_PEER_EXCEPTION)
+        self._currentSingleViews[self._PEER_EXCEPTIONS_VIEW] = peerExceptions
+        self._currentToolBox.addItem(peerExceptions, "Special Peers")
         
         w = QScrollArea(self)
         w.setAutoFillBackground(False)
         w.viewport().setAutoFillBackground(False)
         w.setWidgetResizable(True)
-        w.setWidget(toolBox)
+        w.setWidget(self._currentToolBox)
         w.setFrameShape(QFrame.NoFrame)
         self._settingsWidget.layout().addWidget(w)
+        
+    def _updateCategoryView(self):
+        if self._currentToolBox is None:
+            log_error("Current tool box is None. Have to reset.")
+            self._createCategoryView()
+            return
+        
+        newCategories = self._action.getPrivacyCategories()
+        if PrivacySettings.NO_CATEGORY in self._currentSingleViews:
+            last = self._currentToolBox.count() - 2
+        else:
+            last = self._currentToolBox.count() - 1
+        oldCategories = [self._currentToolBox.itemText(i) for i in xrange(last)]
+        
+        # remove categories that are not there any more
+        reverse_enumerate = lambda l: izip(xrange(len(l)-1, -1, -1), reversed(l))
+        for i, oldCat in reverse_enumerate(oldCategories):
+            if oldCat not in newCategories:
+                self._currentToolBox.removeItem(i)
+                
+        # add new categories
+        lastFound = -1
+        for i, newCat in reverse_enumerate(newCategories):
+            if newCat in oldCategories:
+                lastFound = i
+            else:
+                self._createAndInsertSingleView(newCat, lastFound)
         
     def _createSingleView(self, mode):
         self._clearCurrentView()
         w = SingleCategoryView(self._action, self, mode=mode)
-        self._currentSingleViews.append(w)
+        self._currentSingleViews[None] = w
         self._settingsWidget.layout().addWidget(w)
         
     def _modeChanged(self, newMode, notify=True):
+        if newMode == self._mode and newMode == PrivacySettings.POLICY_BY_CATEGORY:
+            self._updateCategoryView()
+            return
+        
+        self._currentToolBox = None
         if newMode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
             # single mode
             if len(self._currentSingleViews) == 0 or self._mode not in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
@@ -103,18 +143,21 @@ class MultipleCategoriesView(QWidget):
                 self._createSingleView(newMode)
             else:
                 # only change mode
-                self._currentSingleViews[0].setMode(newMode)
+                self._currentSingleViews[None].setMode(newMode)
         elif newMode == PrivacySettings.POLICY_BY_CATEGORY:
             self._createCategoryView()
         else:
             self._clearCurrentView()
         
         self._mode = newMode
+        if self._modeCombo.currentIndex() != newMode:
+            self._modeCombo.setCurrentIndex(newMode)
         if notify:
-            PrivacySettings.get().setPolicy(self._action, None, self._mode, applyImmediately=False)
+            PrivacySettings.get().setPolicy(self._action, None, self._mode, applyImmediately=False, categoryPolicy=PrivacySettings.CATEGORY_NEVER)
     
     def _privacySettingsChanged(self, pluginName, actionName):
         if pluginName != self._action.getPluginName() or actionName != self._action.getName():
             return
-        newMode = PrivacySettings.get().getPolicy(self._action, None)
+        newMode = PrivacySettings.get().getPolicy(self._action, None, categoryPolicy=PrivacySettings.CATEGORY_NEVER)
         self._modeChanged(newMode, notify=False)
+        

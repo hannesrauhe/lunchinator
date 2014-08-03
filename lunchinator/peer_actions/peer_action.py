@@ -97,22 +97,28 @@ class PeerAction(object):
         self._pluginName = pluginName
         self._pluginObject = pluginObject
         
-    def getPrivacyPolicy(self, category=None):
+    def getPrivacyPolicy(self, category=None, categoryPolicy=None):
         """Convenience method to get the privacy policy"""
         from lunchinator.privacy import PrivacySettings
-        return PrivacySettings.get().getPolicy(self, category)
+        return PrivacySettings.get().getPolicy(self, category, categoryPolicy=categoryPolicy)
+    
+    def usesPrivacyCategories(self):
+        """Returns True if the current privacy policy uses categories."""
+        from lunchinator.privacy import PrivacySettings
+        policy = PrivacySettings.get().getPolicy(self, None, categoryPolicy=PrivacySettings.CATEGORY_NEVER)
+        return policy == PrivacySettings.POLICY_BY_CATEGORY
         
-    def getAskForConfirmation(self, category=None):
+    def getAskForConfirmation(self, category=None, categoryPolicy=None):
         """Convenience method to get the 'ask for confirmation' state"""
         from lunchinator.privacy import PrivacySettings
-        return PrivacySettings.get().getAskForConfirmation(self, category)
+        return PrivacySettings.get().getAskForConfirmation(self, category, categoryPolicy=categoryPolicy)
     
     def getPeerState(self, peerID, category=None):
         """Convenience method to get the peer's privacy state"""
         from lunchinator.privacy import PrivacySettings
         return PrivacySettings.get().getPeerState(peerID, self, category)
         
-    def getExceptions(self, policy, category=None):
+    def getExceptions(self, policy, category=None, categoryPolicy=None):
         """Convenience method to get the exception dict"""
         from lunchinator.privacy import PrivacySettings
-        return PrivacySettings.get().getExceptions(self, category, policy)
+        return PrivacySettings.get().getExceptions(self, category, policy, categoryPolicy=categoryPolicy)
