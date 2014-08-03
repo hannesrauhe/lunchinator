@@ -165,6 +165,11 @@ class lunch_server(object):
             while self.running:
                 try:
                     data, ip = s.recv()            
+                    try:
+                        data = data.decode('utf-8')
+                    except:
+                        log_error("Received illegal data from %s, maybe wrong encoding" % ip)
+                        continue         
                      
                     # check for local address: only stop command allowed, else ignore
                     if ip.startswith("127."):
@@ -285,7 +290,8 @@ class lunch_server(object):
         try:      
             for ip in target:
                 try:
-                    log_debug("Sending", msg, "to", ip.strip())
+                    short = msg if len(msg)<15 else msg[:14]+"..."
+                    log_debug("Sending", short, "to", ip.strip())
                     s.sendto(msg.encode('utf-8'), ip.strip())
                     i += 1
                 except Exception as e:
