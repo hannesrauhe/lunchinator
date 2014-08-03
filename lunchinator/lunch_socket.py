@@ -84,25 +84,24 @@ class lunch_socket(object):
         
         for _ in itertools.repeat(None, 5):
             try:
-                data, addr = self._s.recvfrom(self._max_msg_length)                
+                data, addr = self._s.recvfrom(self.LEGACY_MAX_LEN)                
                 ip = unicode(addr[0])
                 
                 msg = u""
                 if data.startswith("HELOX"):
                     xmsg = extMessageIncoming(data)
                     if not xmsg.isComplete():
+                        #it's a split message
                         s = xmsg.getSplitID()
-                        if s in self._incomplete_messages:
+                        if (ip,s) in self._incomplete_messages:
                             incompMsg, _ = self._incomplete_messages[(ip,s)]
-                            incompMsg.merge(xmsg)
-                            xmsg = incompMsg
-                            if xmsg.isComplete():
-                                del self._incomplete_messages[(ip,s)]
-                        else:
-                            self._incomplete_messages[(ip,s)] = (xmsg, time.time())
+                            xmsg.merge(incompMsg)                           
                         
                         if not xmsg.isComplete():
-                            raise split_call(xmsg.getSplitID())
+                            self._incomplete_messages[(ip,s)] = (xmsg, time.time())
+                            raise split_call(ip, xmsg)
+                        else:
+                            del self._incomplete_messages[(ip,s)]
                     msg = xmsg.getPlainMessage()
                 else:
                     try:
@@ -130,7 +129,6 @@ class lunch_socket(object):
     """ closes the socket"""    
     def close(self):
         if self._s:
-            self.drop_incomplete_messages()
             self._s.close()
         self._s = None
         
@@ -142,8 +140,8 @@ class lunch_socket(object):
         
     
 class split_call(Exception):
-    def __init__(self, splitID):
-        self.value = "Message %s not complete yet"%splitID
+    def __init__(self, ip, xmsg):
+        self.value = "Message from %s not complete (%.2f%%) yet"%(ip, xmsg.getCompleteness()*100)
         
     def __str__(self):
         return repr(self.value)
@@ -182,6 +180,14 @@ class extMessage(object):
     
     def isComplete(self):
         return len(self._fragments) and all(len(f) > 0 for f in self._fragments)
+    
+    def getCompleteness(self):
+        completeFragments = 0
+        i = 0
+        for f in self._fragments:
+            if f:
+                completeFragments += 1
+        return float(completeFragments) / float(len(self._fragments))
     
     def getFragments(self):
         return self._fragments

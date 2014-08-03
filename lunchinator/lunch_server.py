@@ -189,8 +189,8 @@ class lunch_server(object):
                         self.call_request_info([ip])
                     
                     self._handle_event(data, ip, time(), isNewPeer, False)
-                except split_call:
-                    pass
+                except split_call as e:
+                    log_debug(e.value)
                 except socket.timeout:                    
                     if len(self._peers) > 1:                     
                         if is_in_broadcast_mode:
