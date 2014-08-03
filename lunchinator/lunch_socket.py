@@ -1,7 +1,7 @@
 """ lunch_socket+exceptions, extendedMessages(Incoming/Outgoing)"""
 
 import socket, errno, math, hashlib
-from lunchinator import get_settings, log_debug, log_error, log_warning
+from lunchinator import get_settings, log_debug, log_error, log_warning, convert_string
 import itertools, time
 
 """ lunch_socket is the class to 
@@ -45,7 +45,6 @@ class lunch_socket(object):
             raise Exception("Cannot send. There is no open lunch socket")
         
         # TODO remove leading HELO_, never use HELOX for old-school messages (they won't become too long anyways)?
-        log_debug("Sending", msg, "to", ip.strip())
         
         if len(msg) > self._max_msg_length:                     
             if disable_extended:

@@ -285,6 +285,7 @@ class lunch_server(object):
         try:      
             for ip in target:
                 try:
+                    log_debug("Sending", msg, "to", ip.strip())
                     s.sendto(msg.encode('utf-8'), ip.strip())
                     i += 1
                 except Exception as e:
