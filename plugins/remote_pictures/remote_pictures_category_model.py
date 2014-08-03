@@ -1,11 +1,11 @@
 from PyQt4.QtGui import QStandardItemModel, QImage, QIcon, QPixmap,\
     QStandardItem
-from PyQt4.QtCore import Qt, QSize, QVariant, pyqtSignal
+from PyQt4.QtCore import Qt, QSize, QVariant, pyqtSignal, pyqtSlot
 from lunchinator.callables import AsyncCall
 from functools import partial
-from remote_pictures.remote_pictures_storage import RemotePicturesStorage
 from lunchinator import convert_string
 import os
+from lunchinator.privacy import PrivacySettings
 
 class CategoriesModel(QStandardItemModel):
     SORT_ROLE = Qt.UserRole + 1
@@ -45,13 +45,17 @@ class CategoriesModel(QStandardItemModel):
             return self._categoryIcons[cat]
         return None
         
+    @pyqtSlot(unicode, unicode, int)
     def addCategory(self, cat, thumbnailPath, thumbnailSize):
+        cat = convert_string(cat)
+        thumbnailPath = convert_string(thumbnailPath)
+        
         item = QStandardItem()
         item.setEditable(False)
-        item.setData(QVariant(cat), Qt.DisplayRole)
+        item.setData(QVariant(cat if cat != PrivacySettings.NO_CATEGORY else u"Not Categorized"), Qt.DisplayRole)
         self._initializeItem(item, thumbnailPath, thumbnailSize, cat, True)
         item.setData(QVariant() if thumbnailPath is None else QVariant(thumbnailPath), self.PATH_ROLE)
-        item.setData(QVariant(cat if cat != RemotePicturesStorage.UNCATEGORIZED else ""), self.SORT_ROLE)
+        item.setData(QVariant(cat), self.SORT_ROLE)
         self.appendRow([item])
         
     def thumbnailSizeChanged(self, thumbnailSize):

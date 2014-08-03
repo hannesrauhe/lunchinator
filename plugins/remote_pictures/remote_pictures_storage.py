@@ -1,7 +1,8 @@
 from lunchinator import get_db_connection, log_error, log_warning,\
     convert_string, log_exception, get_settings
-from PyQt4.QtCore import QSettings, pyqtSignal
+from PyQt4.QtCore import QSettings
 from time import time
+from lunchinator.privacy import PrivacySettings
 
 class RemotePicturesStorage(object):
     _DB_VERSION_LEGACY = 0
@@ -20,8 +21,6 @@ class RemotePicturesStorage(object):
     CAT_TITLE_COL = 0
     CAT_THUMBNAIL_COL = 1
     CAT_HIDDEN_COL = 2
-    
-    UNCATEGORIZED = "Not Categorized"
     
     _PICTURES_TABLE_STATEMENT = """
        CREATE TABLE REMOTE_PICTURES(CAT TEXT NOT NULL REFERENCES REMOTE_PICTURES_CATEGORY(TITLE),
@@ -120,6 +119,8 @@ class RemotePicturesStorage(object):
                 for aCat in storedThumbnails:
                     thumbnailPath = convert_string(storedThumbnails[aCat].toString())
                     aCat = convert_string(aCat)
+                    if aCat == u"Not Categorized":
+                        aCat = PrivacySettings.NO_CATEGORY
                     self._addCategory(aCat, thumbnailPath)
                     
             categoryPictures = self.settings.value("categoryPictures", None)
@@ -128,6 +129,8 @@ class RemotePicturesStorage(object):
                 added = time()
                 for aCat in tmpDict:
                     newKey = convert_string(aCat)
+                    if newKey == u"Not Categorized":
+                        newKey = PrivacySettings.NO_CATEGORY
                     picTupleList = tmpDict[aCat].toList()
                     for picTuple in picTupleList:
                         tupleList = picTuple.toList()
@@ -158,8 +161,8 @@ class RemotePicturesStorage(object):
         if self._db is None:
             return False
         
-        if not cat:
-            cat = self.UNCATEGORIZED
+        if cat is None:
+            cat = PrivacySettings.NO_CATEGORY
             
         rows = self._db.query("SELECT ROWID FROM REMOTE_PICTURES WHERE CAT = ? AND URL = ?", cat, url)
         if len(rows) == 0:
@@ -221,7 +224,7 @@ class RemotePicturesStorage(object):
             rows = self._db.query("SELECT * FROM REMOTE_PICTURES_CATEGORY")
         else:
             rows = self._db.query("SELECT * FROM REMOTE_PICTURES_CATEGORY C WHERE EXISTS(SELECT 1 FROM REMOTE_PICTURES P WHERE P.CAT = C.TITLE)")
-        return sorted(rows, key=lambda row : row[0].lower() if row[0] != self.UNCATEGORIZED else "")
+        return sorted(rows, key=lambda row : row[0].lower())
     
     def getCategoryNames(self, alsoEmpty=True):
         if self._db is None:

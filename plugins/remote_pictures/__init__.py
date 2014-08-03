@@ -46,7 +46,7 @@ class _RemotePictureAction(PeerAction):
                 self.getPluginObject().checkCategory(valueList[2])
                 return valueList[2]
         from remote_pictures.remote_pictures_gui import RemotePicturesGui
-        return RemotePicturesGui.UNCATEGORIZED
+        return PrivacySettings.NO_CATEGORY
     
 class remote_pictures(iface_gui_plugin):
     def __init__(self):

@@ -12,6 +12,7 @@ from PyQt4.QtCore import QObject, Qt, pyqtSignal, pyqtSlot
 from PyQt4.QtGui import QImage
 from lunchinator.utilities import displayNotification
 from urlparse import urlparse
+from lunchinator.privacy import PrivacySettings
 
 class RemotePicturesHandler(QObject):
     addCategory = pyqtSignal(unicode, unicode, int) # category, thumbnail path, thumbnail size
@@ -145,7 +146,7 @@ class RemotePicturesHandler(QObject):
 
     def _addPicture(self, imageFile, url, category, description, sender):
         if category == None:
-            category = self.UNCATEGORIZED
+            category = PrivacySettings.NO_CATEGORY
 
         catAdded = self._storage.addPicture(category,
                                             url if url else None,
