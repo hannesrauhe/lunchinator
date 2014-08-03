@@ -21,7 +21,8 @@ class PeerModel(TableModelBase):
             for pID in peers:
                 self.appendContentRow(pID, None)
         else:
-            self.appendContentRow("test", None)
+            for i in range(20):
+                self.appendContentRow("test %d" % i, None)
         
     def setExceptionData(self, data):
         if data is None:
@@ -142,7 +143,7 @@ class SingleCategoryView(QWidget):
         self._peerList.setItemsExpandable(False)
         self._peerList.setIndentation(0)
         self._peerList.setModel(self._peerModel)
-        self._peerList.setSelectionMode(QTreeView.SingleSelection)
+        self._peerList.setSelectionMode(QTreeView.NoSelection)
         self._peerList.setAutoFillBackground(False)
         self._peerList.viewport().setAutoFillBackground(False)
         self._peerList.setFrameShape(QFrame.NoFrame)
