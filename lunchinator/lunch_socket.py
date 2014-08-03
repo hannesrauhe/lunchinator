@@ -9,6 +9,9 @@ import itertools, time
 2. provide extended messages (HELOX) to enable encrypted and signed messages 
 as well as splitting of long messages"""
 class lunch_socket(object):    
+    LEGACY_MAX_LEN = 1024
+    EXT_MSG_VERSION = 1526
+    
     def __init__(self, peers):
         self._s = None
         try:
@@ -44,25 +47,28 @@ class lunch_socket(object):
         # TODO remove leading HELO_, never use HELOX for old-school messages (they won't become too long anyways)?
         log_debug("Sending", msg, "to", ip.strip())
         
-        if len(msg) > self._max_msg_length:         
+        if len(msg) > self._max_msg_length:                     
             if disable_extended:
                 log_warning("Message to peer %s is too long and should be compressed/split,"%ip + \
                  "but extended message is disabled for this call")   
-                self._s.sendto(msg, (ip.strip(), self._port))
-                return
-            peerversion = self._peers.getPeerCommitCount(pIP = ip)
-            peerversion = peerversion if peerversion else 0
-            if peerversion == None or peerversion < 1526:                
-                log_warning("Message to peer %s is too long and should be compressed/split,"%ip + \
-                 "but peer has version %d and cannot receive extended messages"%peerversion) 
-                self._s.sendto(msg, (ip.strip(), self._port))
-                return
-                
-            log_debug("Sending as extended Message")
-            xmsg = extMessageOutgoing(msg, self._max_msg_length)
-            for f in xmsg.getFragments():
-                self._s.sendto(f, (ip.strip(), self.port))
-            return
+            else:
+                peerversion = self._peers.getPeerCommitCount(pIP = ip)
+                peerversion = peerversion if peerversion else 0
+                if peerversion < self.EXT_MSG_VERSION:                
+                    log_warning("Message to peer %s is too long and should be compressed/split,"%ip + \
+                     "but peer has version %d and cannot receive extended messages"%peerversion) 
+                    disable_extended = True
+            
+            if disable_extended:
+                if len(msg) > self.LEGACY_MAX_LEN:
+                    raise Exception("Message too large to be send over socket in one piece")
+                else:
+                    self._s.sendto(msg, (ip.strip(), self._port))
+            else:
+                log_debug("Sending as extended Message")
+                xmsg = extMessageOutgoing(msg, self._max_msg_length)
+                for f in xmsg.getFragments():
+                    self._s.sendto(f, (ip.strip(), self._port))
         else:
             self._s.sendto(msg, (ip.strip(), self._port))
         

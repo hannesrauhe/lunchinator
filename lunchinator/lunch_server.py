@@ -287,8 +287,8 @@ class lunch_server(object):
                 try:
                     s.sendto(msg.encode('utf-8'), ip.strip())
                     i += 1
-                except:
-                    log_exception("Message %s could not be delivered to %s: %s" % (msg, ip, str(sys.exc_info()[0])))
+                except Exception as e:
+                    log_exception("The following message could not be delivered to %s: %s\n%s" % (ip, str(sys.exc_info()[0]), msg))
         finally:
             s.close() 
         return i
