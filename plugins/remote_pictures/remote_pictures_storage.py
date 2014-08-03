@@ -1,8 +1,8 @@
-from lunchinator.logging_mutex import loggingMutex
-from lunchinator import get_settings, get_db_connection, log_error, log_warning,\
-    convert_string, log_exception
-from PyQt4.QtCore import QSettings
-import os
+from lunchinator import get_db_connection, log_error, log_warning,\
+    convert_string, log_exception, get_settings
+from PyQt4.QtCore import QSettings, pyqtSignal
+from time import time
+
 class RemotePicturesStorage(object):
     _DB_VERSION_LEGACY = 0
     _DB_VERSION_INITIAL = 1
@@ -24,7 +24,7 @@ class RemotePicturesStorage(object):
     UNCATEGORIZED = "Not Categorized"
     
     _PICTURES_TABLE_STATEMENT = """
-       CREATE TABLE REMOTE_PICTURES(CAT TEXT NOT NULL REFERENCES(REMOTE_PICTURES_CATEGORY(TITLE)),
+       CREATE TABLE REMOTE_PICTURES(CAT TEXT NOT NULL REFERENCES REMOTE_PICTURES_CATEGORY(TITLE),
                                     URL TEXT,
                                     DESC TEXT,
                                     FILE TEXT,
@@ -74,7 +74,7 @@ class RemotePicturesStorage(object):
             # load legacy index, if exists
             self._loadIndex()
             
-    def addCategory(self, title, thumbnail, hidden=False):
+    def _addCategory(self, title, thumbnail, hidden=False):
         if self._db is None:
             log_error("Cannot add category, no database connection")
             return
@@ -84,20 +84,35 @@ class RemotePicturesStorage(object):
         
         self._db.execute("INSERT INTO REMOTE_PICTURES_CATEGORY VALUES(?, ?, ?)", title, thumbnail, hidden)
         
+    def addEmptyCategory(self, title, thumbnail=None, hidden=False):
+        """Adds a category to the index that has no pictures yet."""
+        self._addCategory(title, thumbnail, hidden)
+        
     def addPicture(self, cat, url, desc, localFile, added, seen, sender):
+        """Adds a picture and its category, if needed.
+        
+        Returns True if the category did not exist already and had to be
+        created or if this is the first image in a previously empty
+        category.
+        """
         if self._db is None:
             log_error("Cannot add picture, no database connection")
             return
         
+        catAdded = False
         if not self.hasCategory(cat):
-            self.addCategory(cat, None)
-            # TODO inform about category without thumbnail, create thumbnail from picture
+            self._addCategory(cat, None)
+            catAdded = True
+        elif self.isCategoryEmpty(cat):
+            catAdded = True
             
-        self._db.execute("INSERT INTO REMOTE_PICTURES VALUES(?, ?, ?, ?, ?, ?)", cat, url, desc, localFile, added, seen, sender)
+        self._db.execute("INSERT INTO REMOTE_PICTURES VALUES(?, ?, ?, ?, ?, ?, ?)", cat, url, desc, localFile, added, seen, sender)
+        
+        return catAdded
             
     def _loadIndex(self):
         try:
-            self.settings = QSettings(self._delegate.getIndexFile(), QSettings.NativeFormat)
+            self.settings = QSettings(get_settings().get_config("remote_pictures", "index"), QSettings.NativeFormat)
                         
             storedThumbnails  = self.settings.value("categoryThumbnails", None)
             if storedThumbnails != None:
@@ -105,11 +120,12 @@ class RemotePicturesStorage(object):
                 for aCat in storedThumbnails:
                     thumbnailPath = convert_string(storedThumbnails[aCat].toString())
                     aCat = convert_string(aCat)
-                    self.addCategory(aCat, thumbnailPath)
+                    self._addCategory(aCat, thumbnailPath)
                     
             categoryPictures = self.settings.value("categoryPictures", None)
             if categoryPictures != None:
                 tmpDict = categoryPictures.toMap()
+                added = time()
                 for aCat in tmpDict:
                     newKey = convert_string(aCat)
                     picTupleList = tmpDict[aCat].toList()
@@ -117,7 +133,7 @@ class RemotePicturesStorage(object):
                         tupleList = picTuple.toList()
                         picURL = convert_string(tupleList[0].toString())
                         picDesc = convert_string(tupleList[1].toString())
-                        self.addPicture(newKey, picURL, picDesc, None, None, None, None)
+                        self.addPicture(newKey, picURL, picDesc, None, added, None, None)
                         if not picDesc:
                             picDesc = None
                         
@@ -130,6 +146,13 @@ class RemotePicturesStorage(object):
         
         rows = self._db.query("SELECT 1 FROM REMOTE_PICTURES_CATEGORY WHERE TITLE = ?", cat)
         return len(rows) > 0
+
+    def isCategoryEmpty(self, cat):
+        if self._db is None:
+            return True
+        
+        rows = self._db.query("SELECT 1 FROM REMOTE_PICTURES WHERE CAT = ? LIMIT 1", cat)
+        return len(rows) == 0
 
     def getPictureID(self, cat, url):
         if self._db is None:
@@ -146,6 +169,36 @@ class RemotePicturesStorage(object):
     def hasPicture(self, cat, url):
         return self.getPictureID(cat, url) is not None
     
+    def getLatestPicture(self, category):
+        """Returns (picture ID, picture row) of the latest picture in a given category or (None, None)."""
+        if self._db is None:
+            return None, None
+        
+        rows = self._db.query("SELECT *, ROWID FROM REMOTE_PICTURES P1 WHERE P1.CAT = ? AND NOT EXISTS(SELECT 1 FROM REMOTE_PICTURES P2 WHERE P1.CAT = P2.CAT AND P2.ROWID > P1.ROWID)", category)
+        if len(rows) == 0:
+            return None, None
+        return rows[0][self._PIC_LAST_COL + 1], rows[0]
+    
+    def getPreviousPicture(self, cat, picID):
+        """Returns (picture ID, picture row) of the previous picture of the same category or (None, None)."""
+        if self._db is None:
+            return None, None
+        
+        rows = self._db.query("SELECT *, ROWID FROM REMOTE_PICTURES P1 WHERE P1.ROWID < ? AND P1.CAT = ? AND NOT EXISTS(SELECT 1 FROM REMOTE_PICTURES P2 WHERE P1.CAT = P2.CAT AND P2.ROWID > P1.ROWID AND P2.ROWID < ?)", picID, cat, picID)
+        if len(rows) == 0:
+            return None, None
+        return rows[0][self._PIC_LAST_COL + 1], rows[0]
+    
+    def getNextPicture(self, cat, picID):
+        """Returns (picture ID, picture row) of the previous picture of the same category or (None, None)."""
+        if self._db is None:
+            return None, None
+        
+        rows = self._db.query("SELECT *, ROWID FROM REMOTE_PICTURES P1 WHERE P1.ROWID > ? AND P1.CAT = ? AND NOT EXISTS(SELECT 1 FROM REMOTE_PICTURES P2 WHERE P1.CAT = P2.CAT AND P2.ROWID < P1.ROWID AND P2.ROWID > ?)", picID, cat, picID)
+        if len(rows) == 0:
+            return None, None
+        return rows[0][self._PIC_LAST_COL + 1], rows[0]
+    
     def hasPrevious(self, cat, picID):
         if self._db is None:
             return False
@@ -160,19 +213,26 @@ class RemotePicturesStorage(object):
         rows = self._db.query("SELECT 1 FROM REMOTE_PICTURES WHERE CAT = ? AND ROWID > ?", cat, picID)
         return len(rows) > 0
     
-    def getLatestPicture(self, category):
-        """Returns (picture row, picture ID) of the latest picture in a given category or (None, None)."""
-        if self._db is None:
-            return None, None
-        
-        rows = self._db.query("SELECT *, ROWID FROM REMOTE_PICTURES P1 WHERE P1.CAT = ? AND NOT EXISTS(SELECT 1 FROM REMOTE_PICTURES P2 WHERE P2.ROWID > P1.ROWID)", category)
-        if len(rows) == 0:
-            return None, None
-        return rows[0], rows[0][self._PIC_LAST_COL + 1]
-    
-    def getCategories(self):
+    def getCategories(self, alsoEmpty=True):
         if self._db is None:
             return []
         
-        rows = [row[0] for row in self._db.query("SELECT TITLE FROM REMOTE_PICTURES_CATEGORY")]
-        return sorted(rows, key=lambda cat : cat.lower() if cat != self.UNCATEGORIZED else "")
+        if alsoEmpty:
+            rows = self._db.query("SELECT * FROM REMOTE_PICTURES_CATEGORY")
+        else:
+            rows = self._db.query("SELECT * FROM REMOTE_PICTURES_CATEGORY C WHERE EXISTS(SELECT 1 FROM REMOTE_PICTURES P WHERE P.CAT = C.TITLE)")
+        return sorted(rows, key=lambda row : row[0].lower() if row[0] != self.UNCATEGORIZED else "")
+    
+    def getCategoryNames(self, alsoEmpty=True):
+        if self._db is None:
+            return []
+        
+        categories = self.getCategories(alsoEmpty)
+        return [row[0] for row in categories]
+    
+    def setCategoryThumbnail(self, category, thumbnailPath):
+        if self._db is None:
+            log_error("Cannot set category thumbnail, no database connection")
+            return
+        
+        self._db.execute("UPDATE REMOTE_PICTURES_CATEGORY SET THUMBNAIL=? WHERE TITLE=?", thumbnailPath, category)

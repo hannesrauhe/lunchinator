@@ -26,16 +26,14 @@ class _RemotePictureAction(PeerAction):
         return True
     
     def getPrivacyCategories(self):
-        if self.getPluginObject().gui is not None:
-            return self.getPluginObject().gui.getCategories()
-        log_error("Remote Pictures GUI is None")
-        return []
+        return self.getPluginObject().getCategories()
+    
+    def hasPrivacyCategory(self, _category):
+        # we add categories dynamically
+        return True
     
     def getCategoryIcon(self, category):
-        if self.getPluginObject().gui is not None:
-            return self.getPluginObject().gui.getCategoryIcon(category)
-        log_error("Remote Pictures GUI is None")
-        return None
+        return self.getPluginObject().getCategoryIcon(category)
     
     def getDefaultPrivacyPolicy(self):
         return PrivacySettings.POLICY_BY_CATEGORY
@@ -45,6 +43,7 @@ class _RemotePictureAction(PeerAction):
             reader = csv.reader(strIn, delimiter = ' ', quotechar = '"')
             valueList = [aValue.decode('utf-8') for aValue in reader.next()]
             if len(valueList) > 2:
+                self.getPluginObject().checkCategory(valueList[2])
                 return valueList[2]
         from remote_pictures.remote_pictures_gui import RemotePicturesGui
         return RemotePicturesGui.UNCATEGORIZED
@@ -66,31 +65,33 @@ class remote_pictures(iface_gui_plugin):
         elif newValue > 100:
             newValue = 100
             
-        signal.emit(float(newValue) / 100.)
+        if signal is not None:
+            signal.emit(float(newValue) / 100.)
         return newValue
         
     def minOpacityChanged(self, _setting, newValue):
-        return self._handleOpacity(newValue, self._gui.minOpacityChanged)
+        return self._handleOpacity(newValue, None if self._gui is None else self._gui.minOpacityChanged)
     
     def maxOpacityChanged(self, _setting, newValue):
-        return self._handleOpacity(newValue, self._gui.maxOpacityChanged)
+        return self._handleOpacity(newValue, None if self._gui is None else self._gui.maxOpacityChanged)
     
     def thumbnailSizeChanged(self, _setting, newValue):
-        from remote_pictures.remote_pictures_gui import RemotePicturesGui
-        if newValue < RemotePicturesGui.MIN_THUMBNAIL_SIZE:
-            newValue = RemotePicturesGui.MIN_THUMBNAIL_SIZE
-        elif newValue > RemotePicturesGui.MAX_THUMBNAIL_SIZE:
-            newValue = RemotePicturesGui.MAX_THUMBNAIL_SIZE
+        from remote_pictures.remote_pictures_category_model import CategoriesModel
+        if newValue < CategoriesModel.MIN_THUMBNAIL_SIZE:
+            newValue = CategoriesModel.MIN_THUMBNAIL_SIZE
+        elif newValue > CategoriesModel.MAX_THUMBNAIL_SIZE:
+            newValue = CategoriesModel.MAX_THUMBNAIL_SIZE
         
-        self._gui.thumbnailSizeChanged(newValue)
+        if self._gui is not None:
+            self._gui.thumbnailSizeChanged(newValue)
+        if self._handler is not None:
+            self._handler.thumbnailSizeChanged(newValue)
         return newValue
         
     def smoothScalingChanged(self, _setting, newValue):
-        self._gui.setSmoothScaling(newValue)
+        if self._gui is not None:
+            self._gui.setSmoothScaling(newValue)
         
-    def getThumbnailSize(self):
-        return self.get_option(u'thumbnail_size')
-    
     def create_widget(self, parent):
         from PyQt4.QtCore import QThread
         from remote_pictures.remote_pictures_gui import RemotePicturesGui
@@ -102,103 +103,73 @@ class remote_pictures(iface_gui_plugin):
                                       self.get_option(u"max_opacity"))
         
         self._messagesThread = QThread()
-        self._handler = RemotePicturesHandler(self, self, self._gui)
+        self._handler = RemotePicturesHandler(self.get_option(u"thumbnail_size"), self._gui)
         self._handler.moveToThread(self._messagesThread)
         self._messagesThread.start()
+        
+        self._gui.openCategory.connect(self._handler.openCategory)
+        self._gui.displayPrev.connect(self._handler.displayPrev)
+        self._gui.displayNext.connect(self._handler.displayNext)
+        
+        self._handler.addCategory.connect(self._gui.categoryModel.addCategory)
+        self._handler.displayImageInGui.connect(self._gui.displayImage)
+        
+        self._gui.categoryModel.categoriesChanged.connect(self._privacySettingsChanged)
+        self._handler.categoriesChanged.connect(self._privacySettingsChanged)
+        
+        self._handler.loadPictures()
         
         return self._gui
     
     def destroy_widget(self):
-        self._handler.finish()
-        self._messagesThread.quit()
-        self._messagesThread.wait()
-        self._messagesThread.deleteLater()
-        self._gui.destroyWidget()
+        if self._gui is not None and self._handler is not None:
+            self._gui.openCategory.disconnect(self._handler.openCategory)
+            self._gui.displayPrev.disconnect(self._handler.displayPrev)
+            self._gui.displayNext.disconnect(self._handler.displayNext)
+            
+            self._handler.addCategory.disconnect(self._gui.categoryModel.addCategory)
+            self._handler.displayImageInGui.disconnect(self._gui.displayImage)
+            
+        if self._gui is not None:
+            self._gui.categoryModel.categoriesChanged.disconnect(self._privacySettingsChanged)
+            self._gui.destroyWidget()
+        
+        if self._handler is not None:
+            self._handler.categoriesChanged.disconnect(self._privacySettingsChanged)
+            self._handler.finish()
+            
+        if self._messagesThread is not None:
+            self._messagesThread.quit()
+            self._messagesThread.wait()
+            self._messagesThread.deleteLater()
         
         iface_gui_plugin.destroy_widget(self)
 
     def get_peer_actions(self):
         self._rpAction = _RemotePictureAction()
         return [self._rpAction]
-    
-    def errorDownloadingPicture(self, thread, url):
-        log_error("Error downloading picture from url %s" % convert_string(url))
-        thread.deleteLater()
-        
-    def downloadedPicture(self, category, description, thread, url):
-        from PyQt4.QtGui import QPixmap, QImage
-        name = "New Remote Picture"
-        if category != None:
-            name = name + " in category %s" % category
             
-        # create temporary image file to display in notification
-        url = convert_string(url)
-        ext = os.path.splitext(urlparse(url).path)[1]
-        newFile = NamedTemporaryFile(suffix=ext)
-        newFile.write(thread.getResult())
-        newFile.seek(0)
-        displayNotification(name, description, newFile.name)
-        
-        self._handler.addPicture(newFile, url, category, description)
-          
-    def extract_pic(self,url,category,description):
-        try:
-            getValidQtParent()
-        except:
-            log_warning("Remote Pictures does not work without QT")
-            return
-        if not self._handler.hasPicture(category, url):
-            downloadThread = DownloadThread(getValidQtParent(), url)
-            downloadThread.success.connect(partial(self.downloadedPicture, category, description))
-            downloadThread.error.connect(self.errorDownloadingPicture)
-            downloadThread.finished.connect(downloadThread.deleteLater)
-            downloadThread.start()
-        else:
-            log_debug("Remote Pics: Downloaded this url before, won't do it again:",url)
+    def checkCategory(self, cat):
+        if self._handler is not None:
+            self._handler.checkCategory(cat)
             
-    def _generateIPList(self, listStr):
-        for aPeer in listStr.split(";;"):
-            aPeer = aPeer.strip()
-            
-            peerIDs = []
-            if get_peers().isPeerID(pID=aPeer):
-                # is a peer ID
-                peerIDs = [aPeer]
-            else:
-                # check if it is a peer name
-                peerIDs = get_peers().getPeerIDsByName(aPeer)
-                if not peerIDs:
-                    # might be hostname or IP
-                    ip = socket.gethostbyname(aPeer)
-                    if ip:
-                        yield ip
-                    
-            for peerID in peerIDs:
-                # yield each IP for this peer ID 
-                for ip in get_peers().getPeerIPs(pID=peerID):
-                    yield ip
-            
-    def _appendListOption(self, o, new_v):
-        old_val = self.options[o]
-        if len(old_val) > 0:
-            val_list = old_val.split(";;")
-        else:
-            val_list = []
-        val_list.append(new_v)
-        new_val = ";;".join(val_list)
-        self.set_option(o, new_val, convert=False)
-            
-    def process_event(self,cmd,value,_ip,_info):
+    def process_event(self, cmd, value, ip, _info):
         if cmd=="HELO_REMOTE_PIC":
-            with contextlib.closing(StringIO(value.encode('utf-8'))) as strIn:
-                reader = csv.reader(strIn, delimiter = ' ', quotechar = '"')
-                valueList = [aValue.decode('utf-8') for aValue in reader.next()]
-                url = valueList[0]
-                desc = None
-                cat = None
-                if len(valueList) > 1:
-                    desc = valueList[1]
-                if len(valueList) > 2:
-                    cat = valueList[2]
-            
-            self.extract_pic(url, cat, desc)
+            if self._handler is not None:
+                self._handler.processRemotePicture(value, ip)
+    
+    def getCategories(self):
+        if self._handler is None:
+            log_error("Remote Pictures not initialized")
+            return []
+    
+        return self._handler.getCategoryNames(alsoEmpty=True)
+    
+    def getCategoryIcon(self, category):
+        if self._gui is None:
+            log_error("Remote Pictures not initialized")
+            return None
+        return self._gui.getCategoryIcon(category)
+    
+    def _privacySettingsChanged(self):
+        get_notification_center().emitPrivacySettingsChanged(self._rpAction.getPluginName(), self._rpAction.getName())

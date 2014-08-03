@@ -1,5 +1,5 @@
 import sys
-from lunchinator import log_debug, log_warning
+from lunchinator import log_debug, log_warning, convert_string
 from PyQt4.QtGui import QStackedWidget, QListView, QWidget, QHBoxLayout, \
     QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy, QSortFilterProxyModel, \
     QFrame
@@ -7,14 +7,12 @@ from PyQt4.QtCore import QTimer, QSize, Qt, pyqtSlot, pyqtSignal, QModelIndex
 from lunchinator.resizing_image_label import ResizingWebImageLabel
 from functools import partial
 from remote_pictures.remote_pictures_category_model import CategoriesModel
+import os
 
 class RemotePicturesGui(QStackedWidget):
-    MIN_THUMBNAIL_SIZE = 16
-    MAX_THUMBNAIL_SIZE = 1024
-    
     openCategory = pyqtSignal(unicode) # category
-    displayNext = pyqtSignal(int) # current ID
-    displayPrev = pyqtSignal(int) # current ID
+    displayNext = pyqtSignal(unicode, int) # current category, current ID
+    displayPrev = pyqtSignal(unicode, int) # current category, current ID
     
     minOpacityChanged = pyqtSignal(float)
     maxOpacityChanged = pyqtSignal(float)
@@ -29,7 +27,7 @@ class RemotePicturesGui(QStackedWidget):
         self.categoryPictures = {}
         self.currentCategory = None
         self.curPicIndex = 0
-        self.categoryModel = None
+        self.categoryModel = CategoriesModel()
         self.sortProxy = None
         
         self.categoryView = QListView(self)
@@ -38,6 +36,14 @@ class RemotePicturesGui(QStackedWidget):
         self.categoryView.setResizeMode(QListView.Adjust);
         self.categoryView.doubleClicked.connect(self._itemDoubleClicked)
         self.categoryView.setFrameShape(QFrame.NoFrame)
+        
+        self.sortProxy = QSortFilterProxyModel(self)
+        self.sortProxy.setSortCaseSensitivity(Qt.CaseInsensitive)
+        self.sortProxy.setSortRole(CategoriesModel.SORT_ROLE)
+        self.sortProxy.setDynamicSortFilter(True)
+        self.sortProxy.setSourceModel(self.categoryModel)
+        self.sortProxy.sort(0)
+        self.categoryView.setModel(self.sortProxy)
 
         self.addWidget(self.categoryView)
         
@@ -94,16 +100,6 @@ class RemotePicturesGui(QStackedWidget):
         self.minOpacityChanged.emit(float(minOpacity) / 100.)
         self.maxOpacityChanged.emit(float(maxOpacity) / 100.)
     
-    def setModel(self, model):
-        self.categoryModel = model
-        self.sortProxy = QSortFilterProxyModel(self)
-        self.sortProxy.setSortCaseSensitivity(Qt.CaseInsensitive)
-        self.sortProxy.setSortRole(CategoriesModel.SORT_ROLE)
-        self.sortProxy.setDynamicSortFilter(True)
-        self.sortProxy.setSourceModel(self.categoryModel)
-        self.sortProxy.sort(0)
-        self.categoryView.setModel(self.sortProxy)
-        
     def getCategoryIcon(self, cat):
         return self.categoryModel.getCategoryIcon(cat)
         
@@ -120,17 +116,23 @@ class RemotePicturesGui(QStackedWidget):
         self.openCategory.emit(cat)
         
     def _displayNextImage(self):
-        self.displayNext.emit()
+        self.displayNext.emit(self.currentCategory, self.curPicIndex)
         
     def _displayPreviousImage(self):
-        self.displayPrev.emit()
+        self.displayPrev.emit(self.currentCategory, self.curPicIndex)
     
-    def displayImage(self, cat, picID, picURL=None, picFile=None, picDesc=None, hasPrev=False, hasNext=False):
+    @pyqtSlot(unicode, int, unicode, unicode, unicode, bool, bool)
+    def displayImage(self, cat, picID, picURL, picFile, picDesc, hasPrev, hasNext):
+        cat = convert_string(cat)
+        picURL = convert_string(picURL)
+        picFile = convert_string(picFile)
+        picDesc = convert_string(picDesc)
+        
         self.currentCategory = cat
         self.categoryLabel.setText(cat)
         
         self.curPicIndex = picID
-        if picFile:
+        if picFile and os.path.exists(picFile):
             self.imageLabel.setImage(picFile)
         elif picURL:
             self.imageLabel.setURL(picURL)
@@ -152,10 +154,10 @@ class RemotePicturesGui(QStackedWidget):
         self.imageLabel.setSmoothScaling(newValue)
         
     def isShowingCategory(self, category):
-        return self.currentIndex() == 1 and category == self._gui.currentCategory
+        return self.currentIndex() == 1 and category == self.currentCategory
         
     def destroyWidget(self):
-        self._saveIndex()
+        pass
         
 class HiddenWidgetBase(object):
     INITIAL_TIMEOUT = 2000
@@ -288,11 +290,5 @@ class HiddenToolButton(QToolButton, HiddenWidgetBase):
         return super(HiddenToolButton, self).leaveEvent(event)
 
 if __name__ == '__main__':
-    class RemotePicturesWrapper(object):
-        options = {u'min_opacity': 10,
-                   u'max_opacity': 90,
-                   u'thumbnail_size': 200,
-                   u'smooth_scaling':True}
-    
     from lunchinator.plugin import iface_gui_plugin
-    iface_gui_plugin.run_standalone(lambda window : RemotePicturesGui(window, RemotePicturesWrapper()))
+    iface_gui_plugin.run_standalone(lambda window : RemotePicturesGui(window, True, 0.2, 0.8))
