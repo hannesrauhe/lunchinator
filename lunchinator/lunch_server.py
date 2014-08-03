@@ -149,7 +149,7 @@ class lunch_server(object):
         
         is_in_broadcast_mode = False
         
-        s = lunch_socket()
+        s = lunch_socket(self._peers)
         try: 
             s.bind()
             self.running = True
@@ -281,13 +281,11 @@ class lunch_server(object):
                     print "WARNING: %s" % warn
 
         i = 0
-        s = lunch_socket()
+        s = lunch_socket(self._peers)
         try:      
             for ip in target:
                 try:
-                    s.sendto(msg.encode('utf-8'), ip.strip(), \
-                             disable_extended=(self._peers.getPeerCommitCount(pIP = ip) == None or \
-                                               self._peers.getPeerCommitCount(pIP = ip) < 1526))
+                    s.sendto(msg.encode('utf-8'), ip.strip())
                     i += 1
                 except:
                     log_exception("Message %s could not be delivered to %s: %s" % (msg, ip, str(sys.exc_info()[0])))

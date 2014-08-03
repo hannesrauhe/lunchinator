@@ -9,17 +9,18 @@ import itertools, time
 2. provide extended messages (HELOX) to enable encrypted and signed messages 
 as well as splitting of long messages"""
 class lunch_socket(object):    
-    def __init__(self):
-        self.s = None
+    def __init__(self, peers):
+        self._s = None
         try:
-            self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+            self._s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
         except:
-            self.s = None
+            self._s = None
             raise
         
-        self.port = get_settings().get_udp_port()
-        self.max_msg_length = get_settings().get_max_fragment_length()
-        self.incomplete_messages = {}
+        self._peers = peers
+        self._port = get_settings().get_udp_port()
+        self._max_msg_length = get_settings().get_max_fragment_length()
+        self._incomplete_messages = {}
     
     """ sends a message to an IP on the configured port, 
     
@@ -37,26 +38,33 @@ class lunch_socket(object):
     @param disable_split automatic message splitting can be disabled by setting to True 
     """        
     def sendto(self, msg, ip, disable_extended=False):
-        if not self.s:
+        if not self._s:
             raise Exception("Cannot send. There is no open lunch socket")
         
         # TODO remove leading HELO_, never use HELOX for old-school messages (they won't become too long anyways)?
         log_debug("Sending", msg, "to", ip.strip())
         
-        if len(msg) > self.max_msg_length:         
+        if len(msg) > self._max_msg_length:         
             if disable_extended:
                 log_warning("Message to peer %s is too long and should be compressed/split,"%ip + \
                  "but extended message is disabled for this call")   
-                self.s.sendto(msg, (ip.strip(), self.port))
-                return   
+                self._s.sendto(msg, (ip.strip(), self._port))
+                return
+            peerversion = self._peers.getPeerCommitCount(pIP = ip)
+            peerversion = peerversion if peerversion else 0
+            if peerversion == None or peerversion < 1526:                
+                log_warning("Message to peer %s is too long and should be compressed/split,"%ip + \
+                 "but peer has version %d and cannot receive extended messages"%peerversion) 
+                self._s.sendto(msg, (ip.strip(), self._port))
+                return
                 
             log_debug("Sending as extended Message")
-            xmsg = extMessageOutgoing(msg, self.max_msg_length)
+            xmsg = extMessageOutgoing(msg, self._max_msg_length)
             for f in xmsg.getFragments():
-                self.s.sendto(f, (ip.strip(), self.port))
+                self._s.sendto(f, (ip.strip(), self.port))
             return
         else:
-            self.s.sendto(msg, (ip.strip(), self.port))
+            self._s.sendto(msg, (ip.strip(), self._port))
         
     
 
@@ -66,12 +74,12 @@ class lunch_socket(object):
     If the received message was split (HELOX) and is still incomplete
     the socket throws the split_call exception -> recv should be called again""" 
     def recv(self):
-        if not self.s:
+        if not self._s:
             raise Exception("Cannot recv. There is no open lunch socket")
         
         for _ in itertools.repeat(None, 5):
             try:
-                data, addr = self.s.recvfrom(self.max_msg_length)                
+                data, addr = self._s.recvfrom(self._max_msg_length)                
                 ip = unicode(addr[0])
                 
                 msg = u""
@@ -79,14 +87,14 @@ class lunch_socket(object):
                     xmsg = extMessageIncoming(data)
                     if not xmsg.isComplete():
                         s = xmsg.getSplitID()
-                        if s in self.incomplete_messages:
-                            incompMsg, _ = self.incomplete_messages[(ip,s)]
+                        if s in self._incomplete_messages:
+                            incompMsg, _ = self._incomplete_messages[(ip,s)]
                             incompMsg.merge(xmsg)
                             xmsg = incompMsg
                             if xmsg.isComplete():
-                                del self.incomplete_messages[(ip,s)]
+                                del self._incomplete_messages[(ip,s)]
                         else:
-                            self.incomplete_messages[(ip,s)] = (xmsg, time.time())
+                            self._incomplete_messages[(ip,s)] = (xmsg, time.time())
                         
                         if not xmsg.isComplete():
                             raise split_call(xmsg.getSplitID())
@@ -108,23 +116,23 @@ class lunch_socket(object):
         
     """ binds the socket to every interface and the lunchinator port; sets a timeout"""    
     def bind(self):   
-        if not self.s:
+        if not self._s:
             raise Exception("Cannot bind. There is no open lunch socket")
         
-        self.s.bind(("", self.port)) 
-        self.s.settimeout(5.0)
+        self._s.bind(("", self._port)) 
+        self._s.settimeout(5.0)
     
     """ closes the socket"""    
     def close(self):
-        if self.s:
+        if self._s:
             self.drop_incomplete_messages()
-            self.s.close()
-        self.s = None
+            self._s.close()
+        self._s = None
         
     """ clean up the cache for incomplete messages """
     def drop_incomplete_messages(self):
         timeout = get_settings().get_peer_timeout()
-        for msg, timestamp in self.incomplete_messages.itervalues():
+        for msg, timestamp in self._incomplete_messages.itervalues():
             pass
         
     
