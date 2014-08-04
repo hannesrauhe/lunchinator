@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator.plugin import iface_gui_plugin
 from lunchinator import get_server, log_exception
 
 class simple_view(iface_gui_plugin):
@@ -22,7 +22,7 @@ class simple_view(iface_gui_plugin):
         return self.w
         
     def create_menus(self, menuBar):
-        if self.w:
+        if self.w != None:
             menu = self.w.create_menu(menuBar)
             return [menu]
             

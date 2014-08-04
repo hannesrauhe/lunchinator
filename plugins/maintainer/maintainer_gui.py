@@ -12,20 +12,35 @@ class ExtendedMembersModel(TableModelBase):
         for peerID in self.dataSource:
             self.updateModel(peerID, self.dataSource.getPeerInfo(peerID))
     
+    def _headerCmp(self, x, y):
+        x = x.lower()
+        y = y.lower()
+        
+        if x == y:
+            return 0
+        
+        if x == u"name":
+            return -1
+        if y == u"name":
+            return 1
+        
+        if x == u"id":
+            return -1
+        if y == u"id":
+            return 1 
+        
+        return cmp(x, y)
+        
     @pyqtSlot(dict)
     def updateModel(self, peerID, infoDict, update=False, prepend=False):
-        table_headers = set()
-        table_headers.add(u"ip") 
-        for k in infoDict:
-            if not k in table_headers:
-                table_headers.add(convert_string(k))
-        
         # update columns labels
-        for aHeaderName in table_headers:
-            if not aHeaderName in self.headerNames:
-                self.setHorizontalHeaderItem(len(self.headerNames), QStandardItem(aHeaderName))
-                self.headerNames.append(aHeaderName)
-
+        
+        newHeaderNames = sorted(set(self.headerNames).union(infoDict.keys()), cmp=self._headerCmp)
+        if newHeaderNames != self.headerNames:
+            self.headerNames = newHeaderNames
+            for i, headerName in enumerate(newHeaderNames):
+                self.setHorizontalHeaderItem(i, QStandardItem(headerName))
+            
         if update:
             if peerID in self.keys:
                 index = self.keys.index(peerID)
@@ -39,9 +54,7 @@ class ExtendedMembersModel(TableModelBase):
     def callItemInitializer(self, column, key, data, item):
         headerName = self.headerNames[column]
         text = ""
-        if headerName == "ip":
-            text = key
-        elif headerName in data:
+        if headerName in data:
             text = data[headerName]
         item.setData(QVariant(text), Qt.DisplayRole)
         
@@ -68,14 +81,12 @@ class maintainer_gui(QTabWidget):
     def __init__(self,parent):
         super(maintainer_gui, self).__init__(parent)
         self.info_table = None
-        self.visible = False
         
         self.membersWidget = MembersWidget(parent) 
         self.addTab(self.membersWidget, "Members")        
         self.addTab(self.create_info_table_widget(self), "Info")
         
         self.setCurrentIndex(0)
-        self.visible = True
         
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
         
@@ -109,9 +120,8 @@ class maintainer_gui(QTabWidget):
         get_notification_center().disconnectPeerRemoved(self.info_table_model.externalRowRemoved)
         
         self.membersWidget.destroy_widget()
-        self.visible = False
     
 if __name__ == "__main__":
-    from lunchinator.iface_plugins import iface_gui_plugin
+    from lunchinator.plugin import iface_gui_plugin
     iface_gui_plugin.run_standalone(lambda window : maintainer_gui(window))
     

@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_called_plugin
+from lunchinator.plugin import iface_called_plugin
 from lunchinator import get_server, log_info, log_warning, log_error, log_exception, log_debug
 
 import os, sys, time, pprint
@@ -39,15 +39,18 @@ class twitter_status(iface_called_plugin):
             self.set_widget_message()
             
     def set_widget_message(self, _ = None, __ = None):
-        if len(self.options[u"twitter_account"]):
+        if len(self.options[u"twitter_account"]) > 0:
             if len(self.remote_account) == 0:
                 msg = "Nobody in your network has configured a remote account - remote calls not possible"
             else:
                 msg = "Mention @%s in a tweet to trigger a remote call from %s" % (self.remote_account, self.remote_member)
         else:
             msg = "Fill in your twitter account to allow remote lunch calls from it"
-        if self.msg_label:
+        if self.msg_label != None:
             self.msg_label.setText(msg)
+    
+    def has_options_widget(self):
+        return True
             
     def create_options_widget(self, parent):
         from PyQt4.QtGui import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QGridLayout, QComboBox, QSpinBox, QLineEdit, QCheckBox

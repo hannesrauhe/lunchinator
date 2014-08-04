@@ -1,6 +1,7 @@
 from functools import partial
 from lunchinator.cli import LunchCLIModule
-from lunchinator import get_settings, get_plugin_manager, log_exception
+from lunchinator import get_settings, get_plugin_manager, log_exception,\
+ get_notification_center
 
 class CLIPluginHandling(LunchCLIModule):
     def __init__(self, parent):
@@ -52,14 +53,13 @@ class CLIPluginHandling(LunchCLIModule):
                 elif pInfo.plugin_object.is_activated:
                     print "Plugin already loaded."
                 else:
-                    po = get_plugin_manager().activatePluginByName(pInfo.name,pInfo.categories[0])
-                    self.parent.addModule(po)                    
-                    #plugins with db connection wait for this signal
-                    get_notification_center().emitDBConnReady()
+                    get_plugin_manager().activatePlugin(pluginInfo=pInfo)
+                    self.parent.addModule(pInfo.plugin_object)
             except:
                 log_exception("while loading plugin")
             
     def unloadPlugins(self, args):
+        pluginInfos = []
         while len(args) > 0:
             pluginName = args.pop(0).upper()
             try:
@@ -73,10 +73,12 @@ class CLIPluginHandling(LunchCLIModule):
                 elif not pInfo.plugin_object.is_activated:
                     print "Plugin is not loaded."
                 else:
-                    get_plugin_manager().deactivatePluginByName(pInfo.name,pInfo.categories[0])
+                    pluginInfos.append(pInfo)
                     self.parent.removeModule(pInfo.plugin_object)
             except:
                 log_exception("while unloading plugin")
+        
+        get_plugin_manager().deactivatePlugins(pluginInfos)
     
     def do_plugin(self, args):
         """

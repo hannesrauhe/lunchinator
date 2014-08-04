@@ -42,7 +42,7 @@ class AppUpdateHandler(object):
         Caches or displays the given change log.
         log: list of strings
         """
-        if self._ui:
+        if self._ui != None:
             self._ui.setAppChangeLog(log)
         else:
             self._changelogHolder = log
@@ -61,7 +61,7 @@ class AppUpdateHandler(object):
         else:
             log_info("Updater: " + status)
             
-        if self._ui:
+        if self._ui != None:
             self._ui.setAppStatus("Status: " + status, progress)
         else:
             self._statusHolder = "Status: " + status
@@ -72,7 +72,7 @@ class AppUpdateHandler(object):
         self._install_ready = True
         get_notification_center().emitApplicationUpdate()
         displayNotification("New Version Available", "Install via Update Plugin")
-        if self._ui:
+        if self._ui != None:
             self._ui.appInstallReady()    
             
     ############# To be implemented in subclass ##############

@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin, db_for_plugin_iface
+from lunchinator.plugin import iface_gui_plugin, db_for_plugin_iface
 from lunchinator import log_exception, log_error, get_settings, get_server, get_db_connection
 import urllib2,sys
 
@@ -14,7 +14,7 @@ class sql_interface(iface_gui_plugin):
                          get_settings().get_default_db_connection()),
                         ((u"db_connection", u"DB Connection to store history", 
                           get_settings().get_available_db_connections(),
-                          self.connect_to_db),
+                          self.reconnect_db),
                          get_settings().get_default_db_connection()),
                         ((u"use_textedit", u"Use multi-line sql editor"),False)]
         self.db_connection = None
@@ -22,7 +22,7 @@ class sql_interface(iface_gui_plugin):
         self.add_supported_dbms("SQLite Connection", sql_commands_sqlite)
     
     def activate(self):
-        iface_gui_plugin.activate(self)      
+        iface_gui_plugin.activate(self)
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)        
@@ -73,7 +73,9 @@ class sql_interface(iface_gui_plugin):
         from PyQt4.QtCore import Qt
         from lunchinator.table_widget import TableWidget
         self.resultTable = TableWidget(parent, "Execute", self.sendSqlClicked, useTextEdit=self.options['use_textedit'])
-        
+        hist = self.specialized_db_conn().get_last_commands()
+        if hist:
+            self.resultTable.addToHistory(hist)
         return self.resultTable
     
     def add_menu(self,menu):
@@ -86,3 +88,9 @@ class sql_commands_sqlite(db_for_plugin_iface):
 
     def insert_command(self, cmd):
         self.get_db_conn().execute("INSERT INTO SQL_INTERFACE_HISTORY(CMD) VALUES(?)",cmd)
+        
+    def get_last_commands(self, limit = 100):
+        tmp = self.get_db_conn().query("SELECT CMD FROM SQL_INTERFACE_HISTORY ORDER BY cmd_id DESC LIMIT ?", limit)
+        tmp.reverse()
+        res = [c[0] for c in tmp]
+        return res

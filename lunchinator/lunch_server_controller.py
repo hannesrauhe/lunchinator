@@ -1,11 +1,14 @@
 """Base class for Lunch Server Controller classes"""
 import sys
 from lunchinator import get_server, get_settings, log_info, get_notification_center,\
-    log_debug, get_peers, log_exception, get_plugin_manager, convert_string
+    log_debug, get_peers, log_exception, get_plugin_manager, convert_string,\
+    get_peer_actions, logs_debug
+    
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall, getTimeDifference
 from lunchinator.notification_center import NotificationCenter
-from time import localtime, strftime, mktime
+from time import localtime, strftime
+from lunchinator.peer_actions import PeerActions
 
 class LunchServerController(object):
     def __init__(self):
@@ -24,9 +27,7 @@ class LunchServerController(object):
     def initPlugins(self):
         if get_settings().get_plugins_enabled():
             from yapsy.PluginManager import PluginManagerSingleton
-            from iface_plugins import iface_called_plugin, iface_general_plugin, iface_gui_plugin
-            from iface_db_plugin import iface_db_plugin
-            from lunchinator.notification_plugin_manager import NotificationPluginManager
+            from lunchinator.plugin import NotificationPluginManager
             
             PluginManagerSingleton.setBehaviour([
                 NotificationPluginManager,
@@ -35,22 +36,13 @@ class LunchServerController(object):
             self.plugin_manager.app = self
             self.plugin_manager.setConfigParser(get_settings().get_config_file(), get_settings().write_config_to_hd)
             self.plugin_manager.setPluginPlaces(get_settings().get_plugin_dirs())
-            categoriesFilter = {
-               "general" : iface_general_plugin,
-               "called" : iface_called_plugin,
-               "gui" : iface_gui_plugin,
-               "db" : iface_db_plugin
-               }
-            self.plugin_manager.setCategoriesFilter(categoriesFilter) 
 
             try:
                 self.plugin_manager.collectPlugins()
             except:
                 log_exception("problem when loading plugins")
             
-            for p in self.plugin_manager.getAllPlugins():
-                if p.plugin_object.is_activation_forced() and not p.plugin_object.is_activated:
-                    self.plugin_manager.activatePluginByName(p.name, p.category, emit=False)
+            get_peer_actions().initialize()
         else:
             log_info("lunchinator initialised without plugins")
     
@@ -83,11 +75,11 @@ class LunchServerController(object):
         # TODO really get open port
         return get_settings().get_tcp_port()
     
-    def receiveFile(self, ip, fileSize, fileName, tcp_port):
+    def receiveFile(self, ip, fileSize, fileName, tcp_port, successFunc=None, errorFunc=None):
         if tcp_port == 0:
             tcp_port = get_settings().get_tcp_port()
         log_info("Receiving file of size %d on port %d"%(fileSize,tcp_port))
-        dr = DataReceiverThread(ip,fileSize,fileName,get_settings().get_tcp_port())
+        dr = DataReceiverThread(ip, fileSize, fileName, get_settings().get_tcp_port(), successFunc, errorFunc)
         dr.start()
     
     def sendFile(self, ip, fileOrData, otherTCPPort, isData = False):
@@ -96,7 +88,41 @@ class LunchServerController(object):
     
     def processEvent(self, cmd, value, addr, _eventTime, newPeer, fromQueue):
         """ process any non-message event """
-        processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info), newPeer, fromQueue)
+        action = None
+        if cmd.startswith(u"HELO"):
+            prefix = cmd[5:]
+            action = PeerActions.get().getPeerAction(prefix)
+            
+            peerID = get_peers().getPeerID(pIP=addr)
+            if action is not None:
+                if action.willIgnorePeerAction(value):
+                    if logs_debug():
+                        log_debug("Ignore",
+                                  "peer action", action.getPluginName(), ":", action.getName(),
+                                  "from peer:", peerID, 
+                                  "message:", value)
+                    return
+                
+                if action.hasCategories():
+                    category = action.getCategoryFromMessage(value)
+                else:
+                    category = None
+                
+                shouldProcess = PeerActions.get().shouldProcessMessage(action, category, peerID, self.getMainGUI())
+                
+                if logs_debug():
+                    log_debug("Accept" if shouldProcess else "Reject",
+                              "peer action", action.getPluginName(), ":", action.getName(),
+                              "from peer:", peerID,
+                              "" if category is None else "category " + category)
+                
+                if not shouldProcess:
+                    return
+                
+        processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info), newPeer, fromQueue, action)
+    
+    def getMainGUI(self):
+        return None
     
     def _checkSendInfoDict(self, pluginName, category):
         pluginName = convert_string(pluginName)
@@ -108,7 +134,7 @@ class LunchServerController(object):
                 get_server().call_info()
     
     def _insertMessage(self,mtime, addr, msg):
-        if get_server().get_messages():
+        if get_server().get_messages() != None:
             get_server().get_messages().insert(mtime, addr, msg)
         
     def processMessage(self, msg, addr, eventTime, newPeer, fromQueue):
@@ -148,12 +174,7 @@ class LunchServerController(object):
     def serverStopped(self, _exit_code):
         get_settings().write_config_to_hd()
         if get_settings().get_plugins_enabled():
-            for pluginInfo in get_plugin_manager().getAllPlugins():
-                if pluginInfo.plugin_object.is_activated:
-                    try:
-                        get_plugin_manager().deactivatePluginByName(pluginInfo.name, pluginInfo.category)
-                    except:
-                        log_exception("An error occured while deactivating %s"%pluginInfo.name)
+            get_plugin_manager().deactivatePlugins(get_plugin_manager().getAllPlugins(), save_state=False)
         get_notification_center().disconnectPluginActivated(self._checkSendInfoDict)
         get_notification_center().disconnectPluginDeactivated(self._checkSendInfoDict)
         get_notification_center().finish()

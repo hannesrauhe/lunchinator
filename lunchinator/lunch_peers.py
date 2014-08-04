@@ -1,10 +1,11 @@
 import os, codecs, socket
 from copy import deepcopy
 from time import time
-from lunchinator import get_settings, log_warning, log_exception, log_debug, log_info, get_notification_center,\
+from lunchinator import get_settings, log_exception, log_debug, log_info, get_notification_center,\
     log_error
 from lunchinator.utilities import getTimeDifference
 from lunchinator.logging_mutex import loggingMutex
+from lunchinator.peer_names import PeerNames
         
 def peerGetter(needsID=False):
     def peerDecorator(func):
@@ -75,6 +76,11 @@ class LunchPeers(object):
         self._groups = set()  # seen group names
         
         self._lock = loggingMutex("peers", logging=get_settings().get_verbose())
+        
+        if get_settings().get_plugins_enabled():
+            self._peerNames = PeerNames(self._lock)
+        else:
+            self._peerNames = None 
         
     def finish(self):
         """should be called for a clean shutdown of the program, the peer information will be stored in a file"""
@@ -211,6 +217,11 @@ class LunchPeers(object):
     def isMember(self, pID):
         """check if the given IP/ID belongs to a member"""
         return pID in self._memberIDs
+    
+    @peerGetter(needsID=True)
+    def isMe(self, pID):
+        """check if the given IP/ID belongs to a member"""
+        return pID == get_settings().get_ID()
 
     @peerGetter()
     def getPeerInfo(self, ip):
@@ -232,13 +243,34 @@ class LunchPeers(object):
         return None    
     
     @peerGetter()
-    def getPeerName(self, ip):
-        """Returns the name of the peer or None if not a peer"""
+    def getRealPeerName(self, ip):
+        """Returns the real name of the peer, as provided by its info dict."""
         i = self.getPeerInfo(pIP=ip, lock=False)
         if i:
             return i[u'name']
-        return None 
-    
+        return None
+
+    @peerGetter(needsID=True)
+    def getDisplayedPeerName(self, peerID):
+        """Returns the displayed peer name for a given peer ID.
+        
+        The displayed name is the last known peer name in the
+        info dict of the given peer if no custom name was specified.
+        Else, the custom name is returned.
+        """
+        if self._peerNames != None:
+            return self._peerNames.getDisplayedPeerName(peerID)
+        else:
+            return self.getRealPeerName(pID=peerID, lock=False)
+        
+    @peerGetter(needsID=True)
+    def hasCustomPeerName(self, peerID):
+        """Returns True if the peer has a custom peer name."""
+        if self._peerNames == None:
+            return False
+        
+        return self._peerNames.hasCustomName(peerID)
+        
     @peerGetter()    
     def getPeerID(self, ip):
         """Returns the ID of a peer that was sent from the given IP"""
@@ -317,21 +349,44 @@ class LunchPeers(object):
             return True
         
     def getPeerIDsByName(self, peerName):
-        """Returns a list of peer IDs of peers with the given name."""
-        names = []
-        with self._lock:
-            for anID, aDict in self._peer_info.iteritems():
-                if u"name" in aDict and aDict[u"name"] == peerName:
-                    names.append(anID)
-        return names
+        """Returns a list of peer IDs of peers with the given name.
+        
+        The name can either be a peer's real name or a custom name.
+        """
+        if self._peerNames != None:
+            return [peerID for peerID in self._peerNames.iterPeerIDsByName(peerName)]
+        else:
+            names = []
+            with self._lock:
+                for anID, aDict in self._peer_info.iteritems():
+                    if u"name" in aDict and aDict[u"name"] == peerName:
+                        names.append(anID)
+            return names
     
     def getPeers(self):
         """returns the IDs of all peers"""
-        return self._idToIp.keys()
+        with self._lock:
+            return list(self._idToIp.keys())
+    
+    def getAllKnownPeerIDs(self):
+        """Returns the IDs of all peers ever known."""
+        with self._lock:
+            return self._peerNames.getAllPeerIDs()
     
     def getPeerInfoDict(self):
         """Returns all data stored in the peerInfo dict -> all data on all peers"""
         return deepcopy(self._peer_info)
+    
+    ############# Setters #################
+    
+    def setCustomPeerName(self, peerID, customName):
+        if self.isMe(pID=peerID):
+            # special case: it doesn't make sense to use the custom name for myself
+            get_settings().set_user_name(customName)
+        else:
+            with self._lock:
+                infoDict = self.getPeerInfo(pID=peerID, lock=False)
+                self._peerNames.setCustomName(peerID, customName, infoDict)
     
     ############# Methods for initialization and update ################
     
@@ -392,13 +447,23 @@ class LunchPeers(object):
                     return
                     
                 old_info = deepcopy(existing_info)
-                self._peer_info[ip].update(newInfo)
+                existing_info.update(newInfo)
+                
+                removedKeys = set(old_info.keys()) - set(newInfo.keys())
+                for key in removedKeys:
+                    existing_info.pop(key)
                     
-                if old_info != self._peer_info[ip]:
-                    get_notification_center().emitPeerUpdated(newPID, deepcopy(self._peer_info[ip]))
-                    log_debug("%s has new info: %s; \n update was %s" % (ip, self._peer_info[ip], newInfo))
+                if old_info != existing_info:
+                    get_notification_center().emitPeerUpdated(newPID, deepcopy(existing_info))
+                    log_debug("%s has new info: %s; \n update was %s" % (ip, existing_info, newInfo))
                 else:
                     log_debug("%s sent info - without new info" % ip)
+                    
+                if u"avatar" in old_info and u"avatar" in existing_info and \
+                   old_info[u"avatar"] != existing_info[u"avatar"] and \
+                   not self.getAvatarOutdated(pIP=ip, lock=False):
+                    # avatar changed but we already have the picture
+                    get_notification_center().emitAvatarChanged(newPID, deepcopy(existing_info[u"avatar"]))
             
             own_group = get_settings().get_group()
             
@@ -463,8 +528,9 @@ class LunchPeers(object):
                         continue
                     try:
                         self._potentialPeers.add(hostn)
-                        ip = unicode(socket.gethostbyname(hostn))
-                        peerIPs.append(ip)
+                        _hn, _al, ips = socket.gethostbyname_ex(hostn)
+                        for ip in ips:
+                            peerIPs.append(ip)
                     except socket.error:
                         log_debug("cannot find host specified in members_file by %s with name %s" % (p_file, hostn))
         return peerIPs

@@ -1,5 +1,4 @@
-from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import get_plugin_manager
+from lunchinator.plugin import iface_gui_plugin
     
 class list_plugins(iface_gui_plugin):
     def __init__(self):
@@ -11,7 +10,7 @@ class list_plugins(iface_gui_plugin):
         
     def deactivate(self):
         iface_gui_plugin.deactivate(self)
-        if self.w:
+        if self.w != None:
             self.w.finish()
             self.w = None
     

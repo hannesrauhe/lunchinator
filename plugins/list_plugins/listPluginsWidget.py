@@ -1,7 +1,8 @@
 from ui_plugins import Ui_Plugins
 from PyQt4.Qt import QWidget, QListWidgetItem
 from PyQt4.QtCore import Qt
-from lunchinator import log_error, get_plugin_manager, get_notification_center
+from lunchinator import get_plugin_manager, get_notification_center,\
+    get_server
 
 class listPluginsWidget(QWidget):
     def __init__(self, parent):
@@ -54,12 +55,6 @@ class listPluginsWidget(QWidget):
                 flags &= ~Qt.ItemIsUserCheckable
                 item.setFlags(flags)
             
-            #deactivate toggling of gui plugins for now
-            if "gui" in p_info["categories"]:
-                flags = item.flags()
-                flags &= ~Qt.ItemIsUserCheckable
-                item.setFlags(flags)
-
             item.setHidden(not showAll and p_info["forced"])
             self.ui.pluginView.addItem(item)
             
@@ -71,7 +66,7 @@ class listPluginsWidget(QWidget):
         self.ui.pluginView.setCurrentRow(r)        
             
     def plugin_selected(self, current, old):
-        if not current:
+        if current == None:
             return
         p = self.p_info[str(current.toolTip())]
         self.ui.authorLabel.setText("Author: "+p["author"])
@@ -108,9 +103,8 @@ class listPluginsWidget(QWidget):
                           self.p_info[p_name]["full_name"], self.p_info[p_name]["categories"][0])
             
             self.p_info[p_name]["activated"]=True
-            
-        if item.checkState()==Qt.Unchecked and self.p_info[p_name]["activated"]:
-            get_plugin_manager().deactivatePluginByName(\
-                          self.p_info[p_name]["full_name"], self.p_info[p_name]["categories"][0])
+        elif item.checkState()==Qt.Unchecked and self.p_info[p_name]["activated"]:
+            pluginInfo = get_plugin_manager().getPluginByName(self.p_info[p_name]["full_name"], self.p_info[p_name]["categories"][0])
+            get_plugin_manager().deactivatePlugins([pluginInfo])
             
             self.p_info[p_name]["activated"]=False

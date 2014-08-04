@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import *
+from lunchinator.plugin import iface_called_plugin, db_for_plugin_iface
 from lunchinator import get_server, log_debug,\
     get_settings, get_db_connection, log_warning, \
     get_notification_center, get_peers
@@ -8,10 +8,10 @@ class statistics(iface_called_plugin):
         super(statistics, self).__init__()
         self.options = [((u"db_connection", u"DB Connection", 
                           get_settings().get_available_db_connections(),
-                          self.connect_to_db),
+                          self.reconnect_db),
                          get_settings().get_default_db_connection())]
         self.add_supported_dbms("SQLite Connection", statistics_sqlite)
-        self.add_supported_dbms("HANA Connection", statistics_hana)
+        self.add_supported_dbms("SAP HANA Connection", statistics_hana)
     
     def activate(self):
         iface_called_plugin.activate(self)
@@ -24,27 +24,30 @@ class statistics(iface_called_plugin):
         iface_called_plugin.deactivate(self)    
         
     def processes_events_immediately(self):
-        return True    
+        return True
     
-    def process_message(self,msg,addr,member_info):
+    def processes_all_peer_actions(self):
+        return True
+    
+    def process_message(self,msg,addr,_member_info):
         if self.is_db_ready():
             self.specialized_db_conn().insert_call("msg", msg, addr)
         else:
             log_warning("Statistics: DB not ready -- cannot process message")
             
-    def process_lunch_call(self,msg,ip,member_info):
+    def process_lunch_call(self,msg,ip,_member_info):
         if self.is_db_ready():
             self.specialized_db_conn().insert_call("lunch", msg, ip)
         else:
             log_warning("Statistics: DB not ready -- cannot process lunch_call")
     
-    def process_event(self,cmd,value,ip,member_info):
+    def process_event(self,cmd,value,ip,_member_info):
         if self.is_db_ready():
             self.specialized_db_conn().insert_call(cmd, value, ip)
         else:
             log_warning("Statistics: DB not ready -- cannot process event")
             
-    def peer_update(self, peerID, peerInfo):        
+    def peer_update(self, _peerID, peerInfo):        
         if self.is_db_ready():
             self.specialized_db_conn().insert_members("ip", peerInfo["name"], \
                                  peerInfo["avatar"], peerInfo["next_lunch_begin"], peerInfo["next_lunch_end"])
@@ -93,17 +96,17 @@ class statistics_hana(db_for_plugin_iface):
             avatar VARCHAR(255), lunch_begin VARCHAR(5), lunch_end VARCHAR(5), rtime SECONDDATE)"; 
     
     def init_db(self):
-        if not self.dbconn.existsTable("members"):
+        if not self.dbConn.existsTable("members"):
             self.dbconn.execute(self.members_schema)
-        if not self.dbconn.existsTable("messages"):
-            self.dbconn.execute(self.messages_schema)
+        if not self.dbConn.existsTable("messages"):
+            self.dbConn.execute(self.messages_schema)
                 
     def insert_call(self,mtype,msg,sender):
-        self.dbconn.execute("INSERT INTO messages(mtype,message,sender,rtime,receiver) VALUES (?,?,?,now(),?)",mtype,msg,sender,get_settings().get_ID())          
+        self.dbConn.execute("INSERT INTO messages(mtype,message,sender,rtime,receiver) VALUES (?,?,?,now(),?)",mtype,msg,sender,get_settings().get_ID())          
     
     def insert_members(self,ip,name,avatar,lunch_begin,lunch_end):
-        self.dbconn.execute("INSERT INTO members(IP, name, avatar, lunch_begin, lunch_end, rtime) VALUES (?,?,?,?,?,now())",ip,name,avatar,lunch_begin,lunch_end)
+        self.dbConn.execute("INSERT INTO members(IP, name, avatar, lunch_begin, lunch_end, rtime) VALUES (?,?,?,?,?,now())",ip,name,avatar,lunch_begin,lunch_end)
                 
     def get_newest_members_data(self):  
-        return self.dbconn.query("select * from members, (SELECT ip as maxtimeip,MAX(rtime) as maxtime FROM members GROUP BY IP) as maxtable where maxtimeip=ip and maxtime = rtime")      
+        return self.dbConn.query("select * from members, (SELECT ip as maxtimeip,MAX(rtime) as maxtime FROM members GROUP BY IP) as maxtable where maxtimeip=ip and maxtime = rtime")      
 

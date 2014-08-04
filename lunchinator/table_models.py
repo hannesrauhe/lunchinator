@@ -20,6 +20,9 @@ class TableModelBase(QStandardItemModel):
 
     def hasKey(self, key):
         return key in self.keys
+    
+    def keyAtIndex(self, index):
+        return self.keys[index.row()]
 
     def callItemInitializer(self, column, key, data, item):
         item.setData(None, self.SORT_ROLE)
@@ -89,6 +92,15 @@ class TableModelBase(QStandardItemModel):
         """Updates all rows in the table."""
         for row, key in enumerate(self.keys):
             self.updateRow(key, self._dataForKey(key), row)
+            
+    def removeAllRows(self):
+        for key in list(self.keys):
+            self.externalRowRemoved(key)
+            
+    def removeMissingKeys(self, newKeys):
+        """Removes rows with keys not in the given collection"""
+        for key in set(self.keys) - set(newKeys):
+            self.externalRowRemoved(key)
             
     @classmethod   
     def convertDict(cls, aDict):

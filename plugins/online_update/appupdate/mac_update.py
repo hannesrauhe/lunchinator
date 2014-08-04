@@ -6,13 +6,13 @@ from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
     getApplicationBundle
 from lunchinator.download_thread import DownloadThread
 import tempfile
-from lunchinator import log_debug, get_settings, log_error
+from lunchinator import log_debug, get_settings, log_error, get_server
 from lunchinator.shell_thread import ShellThread
 
 class MacUpdateHandler(GPGUpdateHandler):
     @classmethod
     def appliesToConfiguration(cls):
-        return getPlatform() == PLATFORM_MAC and getApplicationBundle() != None
+        return get_server().has_gui() and getPlatform() == PLATFORM_MAC and getApplicationBundle() != None
     
     def activate(self):
         GPGUpdateHandler.activate(self)

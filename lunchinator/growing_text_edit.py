@@ -11,9 +11,9 @@ class GrowingTextEdit(QTextEdit):
         self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
         self.sizeChange()
 
-    def resizeEvent(self, *args, **kwargs):
+    def resizeEvent(self, event):
         self.sizeChange()
-        return QTextEdit.resizeEvent(self, *args, **kwargs)
+        return super(GrowingTextEdit, self).resizeEvent(event)
 
     def setDocHeight(self, height):
         self.setMinimumHeight(height)

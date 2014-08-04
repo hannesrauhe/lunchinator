@@ -1,7 +1,9 @@
-from lunchinator.iface_plugins import iface_gui_plugin
+from lunchinator.plugin import iface_gui_plugin
 from lunchinator import get_server, get_notification_center, get_peers,\
-    convert_string
+    convert_string, get_peer_actions
 from lunchinator.utilities import msecUntilNextMinute
+from functools import partial
+from lunchinator.peer_actions import peer_action_utils
     
 class members_table(iface_gui_plugin):
     def __init__(self):
@@ -53,6 +55,8 @@ class members_table(iface_gui_plugin):
                 return self.sourceModel().keys[left.row()] < self.sourceModel().keys[right.row()]
         
         self.membersTable = TableWidget(parent, "Add Host", self.addHostClicked, sortedColumn=MembersTableModel.LUNCH_TIME_COL_INDEX, placeholderText="Enter hostname")
+        self.membersTable.getTable().setContextMenuPolicy(Qt.CustomContextMenu)
+        self.membersTable.getTable().customContextMenuRequested.connect(self._showContextMenu)
         
         # initialize members table
         self.membersModel = MembersTableModel(get_peers())
@@ -73,11 +77,16 @@ class members_table(iface_gui_plugin):
         get_notification_center().connectMemberAppended(self._updatePeer)
         get_notification_center().connectMemberRemoved(self._updatePeer)
         
+        get_notification_center().connectDisplayedPeerNameChanged(self._displayedNameChanged)
+        
         self._lunchTimeColumnTimer = QTimer(self.membersModel)
         self._lunchTimeColumnTimer.timeout.connect(self._startSyncedTimer)
         self._lunchTimeColumnTimer.start(msecUntilNextMinute())
         
         return self.membersTable
+    
+    def _displayedNameChanged(self, peerID, _newName, infoDict):
+        self._updatePeer(peerID, infoDict)
 
     def _updatePeer(self, peerID, infoDict=None):
         peerID = convert_string(peerID)
@@ -97,6 +106,14 @@ class members_table(iface_gui_plugin):
         self._lunchTimeColumnTimer.timeout.connect(self.membersModel.updateLunchTimeColumn)
         self._lunchTimeColumnTimer.start(60000)
 
+    def _showContextMenu(self, point):
+        from PyQt4.QtGui import QMenu, QCursor
+        index = self.membersTable.getTable().indexAt(point)
+        index = self.membersProxyModel.mapToSource(index)
+        if index != None:
+            peerID = self.membersModel.keyAtIndex(index)
+            peer_action_utils.showPeerActionsPopup(peerID, lambda _pluginName, _action : True, self.membersTable.getTable())
+
     def destroy_widget(self):
         iface_gui_plugin.destroy_widget(self)
         
@@ -106,6 +123,8 @@ class members_table(iface_gui_plugin):
 
         get_notification_center().disconnectMemberAppended(self._updatePeer)
         get_notification_center().disconnectMemberRemoved(self._updatePeer)
+        
+        get_notification_center().disconnectDisplayedPeerNameChanged(self._displayedNameChanged)
         
         self._lunchTimeColumnTimer.stop()
         self._lunchTimeColumnTimer.deleteLater()

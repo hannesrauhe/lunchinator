@@ -1,0 +1,9 @@
+[Core]
+Name = hannesrauhe.lunchinator.private_messages
+Module = private_messages
+
+[Documentation]
+Author = Hannes Rauhe, Cornelius Ratsch
+Version = 0.1
+Website = http://www.lunchinator.de
+Description = Allows you to chat directly with peers.

@@ -63,7 +63,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._ui.setProgress(prog)
             
     def _updateVersionLabel(self):
-        if self._version_info and self._ui:
+        if self._version_info and self._ui != None:
             vstr = "Online Version Info:\n"
             for k, v in self._version_info.iteritems():
                 vstr += str(k) + ":" + str(v) + "\n"

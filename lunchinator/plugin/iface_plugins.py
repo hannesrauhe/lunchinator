@@ -33,7 +33,7 @@ class iface_plugin(IPlugin):
         self._readOptionsFromFile()
         if len(self._supported_dbms)>0:
             get_notification_center().connectDBSettingChanged(self.connect_to_db)
-            get_notification_center().connectDBConnReady(self.connect_to_db)            
+            self.connect_to_db()
         return
 
     def deactivate(self):
@@ -42,9 +42,8 @@ class iface_plugin(IPlugin):
         """
         if len(self._supported_dbms)>0:
             get_notification_center().disconnectDBSettingChanged(self.connect_to_db)
-            get_notification_center().disconnectDBConnReady(self.connect_to_db)
-        IPlugin.deactivate(self)
         self.option_widgets = {}
+        IPlugin.deactivate(self)
     
     def _initOptions(self):
         if type(self.options) == list and self.option_names == None:
@@ -289,11 +288,13 @@ class iface_plugin(IPlugin):
         return new_v      
         
     """ Public interface """
+    def has_options_widget(self):
+        """Called from settings dialog. Override if you have a custom options widget."""
+        return self.has_options() and self.is_activated
+    
     def create_options_widget(self, parent):
         """Called from settings dialog. Override to create custom widgets."""
         from PyQt4.QtGui import QWidget, QGridLayout
-        if not self.has_options() or not self.is_activated:
-            return None
         optionsWidget = QWidget(parent)
         t = QGridLayout(optionsWidget)
         i = 0
@@ -315,6 +316,10 @@ class iface_plugin(IPlugin):
         t.setRowStretch(row, 1)
         return optionsWidget
     
+    def destroy_options_widget(self):
+        """Called before the options widget is removed from its parent."""
+        pass
+    
     def extendsInfoDict(self):
         """Returns True if this plugin overrides extendInfoDict"""
         return False
@@ -325,6 +330,10 @@ class iface_plugin(IPlugin):
         Make sure that extendsInfoDict() returns True.
         """
         pass
+    
+    def get_peer_actions(self):
+        """Returns a list of PeerAction instances"""
+        return None
     
     def get_option_description(self, key):
         """Returns the readable description of an option."""
@@ -441,15 +450,14 @@ class iface_plugin(IPlugin):
         
     def connect_to_db(self, changedDBConn = None):
         """
-        this method should be called by a signal and not directly, 
-        should definitely not be called before all plugins are activated, especially not in activate of a plugin
+        connects to a database or changes the database connection type.
         """
         with self._specialized_db_connect_lock:
             if self._specialized_db_conn and changedDBConn and changedDBConn != self.options["db_connection"]:
                 return
             dbPlugin, plugin_type = get_db_connection(self.options["db_connection"])
             
-            if not dbPlugin:
+            if dbPlugin == None:
                 log_error("Plugin %s: DB  connection %s not available: Maybe DB Connections are not active yet?"
                           %(type(self),self.options["db_connection"]))
                 return False
@@ -459,12 +467,17 @@ class iface_plugin(IPlugin):
             elif "default" in self._supported_dbms:
                 self._specialized_db_conn = self._supported_dbms["default"](dbPlugin)
             else:
+                log_error("DB Conn of type %s is not supported by this plugin"%plugin_type)
                 self._specialized_db_conn = None
                 return False
                 
             log_debug("Plugin %s uses DB Connection of type %s "%(type(self),plugin_type))
                         
             return True
+            
+    def reconnect_db(self, _, __):
+        """method for changed options callback"""
+        self.connect_to_db()
         
     def is_db_ready(self):
         return self._specialized_db_conn and self._specialized_db_conn.is_open()
@@ -477,9 +490,10 @@ class iface_plugin(IPlugin):
     @classmethod
     def prepare_application(cls, factory):
         from PyQt4.QtGui import QApplication, QMainWindow
-        from lunchinator import setLoggingLevel
+        from lunchinator import setLoggingLevel, get_settings
         from utilities import setValidQtParent
     
+        get_settings().set_verbose(True)
         setLoggingLevel(logging.DEBUG)    
         app = QApplication(sys.argv)
         window = QMainWindow()
@@ -488,18 +502,19 @@ class iface_plugin(IPlugin):
         window.setWindowTitle("Layout Example")
         window.resize(300, 300)
         window.setCentralWidget(factory(window))
-        window.show()
-        window.activateWindow()
+        window.showNormal()
         window.raise_()
+        window.activateWindow()
         return window, app
     
     def _init_run_options_widget(self, parent):
+        self.hasConfigOption = lambda _ : False
         self.activate()
         return self.create_options_widget(parent)
     
     def run_options_widget(self):
         _window, app = iface_general_plugin.prepare_application(self._init_run_options_widget)
-        sys.exit(app.exec_())
+        return app.exec_()
                     
 class db_for_plugin_iface(object):
     """to support different DBMS within a plugin, a class inherited from this one is needed"""
@@ -513,7 +528,7 @@ class db_for_plugin_iface(object):
             log_exception("Problem while migrating dataset to new version")
     
     def is_open(self):
-        if self.dbConn:
+        if self.dbConn != None:
             return self.dbConn.isOpen()
         return False
     
@@ -540,6 +555,10 @@ class iface_called_plugin(iface_plugin):
         is unknown.
         """ 
         return False
+    
+    def processes_all_peer_actions(self):
+        """Override if plugin processes all (non-blocked) peer actions.""" 
+        return False
         
     def process_message(self, msg, ip, member_info):
         pass
@@ -554,15 +573,13 @@ class iface_gui_plugin(iface_plugin):
     def __init__(self):
         super(iface_gui_plugin, self).__init__()
         self.sortOrder = -1
-        self.visible = False
         
     def create_widget(self, _parent):
-        self.visible = True
         return None
     
     def destroy_widget(self):
         """Called when the widget is hidden / closed. Ensure that create_widget restores the state."""
-        self.visible = False
+        pass
     
     def create_menus(self, _menuBar):
         """Creates plugin specific menus and returns a list of QMenu objects"""
@@ -586,6 +603,10 @@ class iface_gui_plugin(iface_plugin):
         not known yet. Note that member_info will be None if the peer
         is unknown.
         """ 
+        return False
+    
+    def processes_all_peer_actions(self):
+        """Override if plugin processes all (non-blocked) peer actions.""" 
         return False
     
     def process_message(self, msg, ip, member_info):

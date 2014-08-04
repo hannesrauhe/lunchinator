@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QEvent, Qt, pyqtSignal
-from PyQt4.QtGui import QLineEdit
+from PyQt4.QtGui import QLineEdit, QKeyEvent
 from lunchinator.growing_text_edit import GrowingTextEdit
 
 class HistoryBase(object):
@@ -17,7 +17,8 @@ class HistoryBase(object):
         return self.history[-index]
     
     def appendHistory(self, text):
-        self.history.append(text)
+        if len(self.history) == 0 or text != self.history[-1]:
+            self.history.append(text)
     
     def handleHistory(self, newIndex):
         if self.index == 0 or self.getText(self.index) != self.text():
@@ -67,9 +68,10 @@ class HistoryLineEdit(QLineEdit, HistoryBase):
 class HistoryTextEdit(GrowingTextEdit, HistoryBase):
     returnPressed = pyqtSignal()
     
-    def __init__(self, parent):
+    def __init__(self, parent, triggerOnEnter=False):
         GrowingTextEdit.__init__(self, parent, 150)
         HistoryBase.__init__(self, Qt.ControlModifier)
+        self._triggerOnEnter = triggerOnEnter
     
     def text(self):
         return self.toPlainText()
@@ -77,10 +79,24 @@ class HistoryTextEdit(GrowingTextEdit, HistoryBase):
     def setText(self, text):
         self.setPlainText(text)
     
+    def isQueryKey(self, event):
+        if self._triggerOnEnter:
+            return (event.key() == Qt.Key_Return and (int(event.modifiers()) & int(Qt.AltModifier | Qt.ShiftModifier)) == 0) or\
+                    event.key() == Qt.Key_Enter
+        else:
+            return HistoryBase.isQueryKey(self, event)
+    
     def event(self, event):
         retVal = HistoryBase.event(self, event)
         if event.type() == QEvent.KeyPress and self.isQueryKey(event):
             self.returnPressed.emit()
+            return True
         if not retVal:
+            if self._triggerOnEnter and \
+               event.type() == QEvent.KeyPress and \
+               event.key() == Qt.Key_Return and \
+               ((int(event.modifiers()) & Qt.AltModifier) == Qt.AltModifier or \
+                (int(event.modifiers()) & Qt.ShiftModifier) == Qt.ShiftModifier):
+                event = QKeyEvent(QEvent.KeyPress, Qt.Key_Return, Qt.NoModifier, event.text(), event.isAutoRepeat(), event.count())
             return super(HistoryTextEdit, self).event(event)
         return True

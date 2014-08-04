@@ -1,19 +1,30 @@
 from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplication, QMenu, QKeySequence, QIcon
-from PyQt4.QtCore import Qt, QSettings, QVariant, QEvent
-from lunchinator import get_settings, get_server, log_exception, convert_string, get_plugin_manager
+from PyQt4.QtCore import Qt, QSettings, QVariant, QEvent, pyqtSignal
+from lunchinator import get_settings, log_exception, convert_string, get_plugin_manager, get_notification_center
 import sys
 from StringIO import StringIO
 import traceback
 
 class PluginDockWidget(QDockWidget):
-    def __init__(self, name, parent, closeCallback):
-        super(PluginDockWidget, self).__init__(name, parent)
-        self.closeCallback = closeCallback
+    closePressed = pyqtSignal(unicode) # plugin name
+    
+    def __init__(self, pluginName, displayedName, parent):
+        super(PluginDockWidget, self).__init__(displayedName, parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self._pluginName = pluginName
+        self._emitOnClose = True
         
     def closeEvent(self, closeEvent):
-        self.closeCallback(self)
-        return super(PluginDockWidget, self).closeEvent(closeEvent)
+        if self._emitOnClose:
+            self._emitOnClose = False
+            self.closePressed.emit(self._pluginName)
+            closeEvent.ignore()
+        else:
+            closeEvent.accept()
+            
+    def closeFromOutside(self):
+        self._emitOnClose = False
+        self.close()
 
 class LunchinatorWindow(QMainWindow):
     def __init__(self, controller):
@@ -39,7 +50,8 @@ class LunchinatorWindow(QMainWindow):
         
         if savedState == None:
             # first run, create initial state
-            self.addPluginWidgetByName(u"Simple View")
+            get_plugin_manager().activatePluginByName(u"Simple View", "gui")
+            get_plugin_manager().activatePluginByName(u"Auto Update", "general")
         
         # add plugins
         try:
@@ -58,16 +70,43 @@ class LunchinatorWindow(QMainWindow):
         if savedState != None:
             self.restoreState(savedState.toByteArray())
 
+        get_notification_center().connectPluginActivated(self._pluginActivated)
+        get_notification_center().connectPluginWillBeDeactivated(self._pluginWillBeDeactivated)
+        
         if len(self.pluginNameToDockWidget) == 0:
             # no gui plugins activated, show about plugins
-            self.addPluginWidgetByName(u"About Plugins")
+            get_plugin_manager().activatePluginByName(u"About Plugins", "gui")
         
         if self.locked:
             self.lockDockWidgets()
         
         # prevent from closing twice
         self.closed = False
+
+    def finish(self):
+        get_notification_center().disconnectPluginActivated(self._pluginActivated)
+        get_notification_center().disconnectPluginWillBeDeactivated(self._pluginWillBeDeactivated)
+    
+    def _pluginActivated(self, pName, pCat):
+        pName = convert_string(pName)
+        pCat = convert_string(pCat)
+        if pCat == "gui":
+            try:
+                pluginInfo = get_plugin_manager().getPluginByName(pName, u"gui")
+                self.addPluginWidget(pluginInfo.plugin_object, pName)
+            except:
+                log_exception("while including plugins %s"%str(sys.exc_info()))
             
+    def _pluginWillBeDeactivated(self, pName, pCat):
+        pName = convert_string(pName)
+        pCat = convert_string(pCat)
+        if pCat == "gui":
+            pluginInfo = get_plugin_manager().getPluginByName(pName, pCat)
+            try:
+                pluginInfo.plugin_object.destroy_widget()
+            except:
+                log_exception("Error destroying plugin widget for plugin", pName)
+            self.removePluginWidget(pName)
             
     def _prepareMenuBar(self):
         self.windowMenu = QMenu("Window", self.menuBar())
@@ -105,24 +144,8 @@ class LunchinatorWindow(QMainWindow):
         for aDockWidget in self.pluginNameToDockWidget.values():
             aDockWidget.setFeatures(aDockWidget.features() | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
             
-    def addPluginWidgetByName(self, name):
-        if not get_settings().get_plugins_enabled():
-            return
-        try:
-            pluginInfo = get_plugin_manager().getPluginByName(name, u"gui")
-            if not pluginInfo.plugin_object.is_activated:
-                po = get_plugin_manager().activatePluginByName(name, u"gui")
-            else:
-                po = pluginInfo.plugin_object
-            self.addPluginWidget(po, name)
-        except:
-            log_exception("while including plugins %s"%str(sys.exc_info()))
-            
-    def closePlugin(self, dockWidget):
-        objectName = convert_string(dockWidget.objectName())
-        if objectName in self.objectNameToPluginName:
-            name = self.objectNameToPluginName[objectName]
-            self.guiHandler.plugin_widget_closed(name)
+    def _dockWidgetClosed(self, pluginName):
+        get_plugin_manager().deactivatePluginByName(pluginName, "gui")
             
     def addPluginWidget(self, po, name, makeVisible = False, noTabs = False):
         if name in self.pluginNameToDockWidget:
@@ -130,8 +153,9 @@ class LunchinatorWindow(QMainWindow):
             return
         
         displayedName = po.get_displayed_name() if po.get_displayed_name() else name
-        dockWidget = PluginDockWidget(displayedName, self, self.closePlugin)
+        dockWidget = PluginDockWidget(name, displayedName, self)
         dockWidget.setObjectName(u"plugin.%s" % name)
+        dockWidget.closePressed.connect(self._dockWidgetClosed, type=Qt.QueuedConnection)
         newWidget = self.window_msgCheckCreatePluginWidget(dockWidget, po, name)
         dockWidget.setWidget(newWidget)
         self.pluginNameToDockWidget[name] = dockWidget
@@ -177,7 +201,7 @@ class LunchinatorWindow(QMainWindow):
         dockWidget = self.pluginNameToDockWidget[name]
         del self.objectNameToPluginName[convert_string(dockWidget.objectName())]
         del self.pluginNameToDockWidget[name]
-        dockWidget.close()
+        dockWidget.closeFromOutside()
         if name in self.pluginNameToMenus:
             for aMenu in self.pluginNameToMenus[name]:
                 self.menuBar().removeAction(aMenu.menuAction())
@@ -215,7 +239,6 @@ class LunchinatorWindow(QMainWindow):
         sw = None
         try:
             sw = plugin_object.create_widget(parent)
-            #sw = QWidget(parent)
         except:
             stringOut = StringIO()
             traceback.print_exc(None, stringOut)

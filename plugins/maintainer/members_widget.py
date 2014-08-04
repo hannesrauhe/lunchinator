@@ -125,11 +125,13 @@ class MembersWidget(QWidget):
         get_notification_center().connectPeerAppended(self.dropdown_members_model.externalRowAppended)
         get_notification_center().connectPeerUpdated(self.dropdown_members_model.externalRowUpdated)
         get_notification_center().connectPeerRemoved(self.dropdown_members_model.externalRowRemoved)
+        get_notification_center().connectPeerUpdated(self.updateMemberInformation)
         
     def destroy_widget(self):
         get_notification_center().disconnectPeerAppended(self.dropdown_members_model.externalRowAppended)
         get_notification_center().disconnectPeerUpdated(self.dropdown_members_model.externalRowUpdated)
         get_notification_center().disconnectPeerRemoved(self.dropdown_members_model.externalRowRemoved)
+        get_notification_center().disconnectPeerUpdated(self.updateMemberInformation)
         
     def listLogfiles(self, basePath, sort = None):
         if sort is None:
@@ -266,10 +268,6 @@ class MembersWidget(QWidget):
             else:
                 self.requestFinished()
         
-        #TODO: how to check if visible?
-#         if not self.visible:
-#             return False
-        
         if len(logsAdded) > 0 or len(logsRenamed) > 0:
             self.updateLogList(logsAdded, logsRenamed)
     
@@ -281,7 +279,7 @@ class MembersWidget(QWidget):
         self.requestFinished()
         
     def get_selected_log_member(self):
-        member = str(self.dropdown_members.currentText())
+        member = convert_string(self.dropdown_members.currentText())
         if not member:
             return None
         
@@ -291,8 +289,8 @@ class MembersWidget(QWidget):
             
         return member
     
-    def request_log(self, member = None, logNum = 0):
-        if member is None:
+    def request_log(self, member=None, logNum=0):
+        if member == None:
             member = self.get_selected_log_member()
         if member != None:
             log_debug("Requesting log %d from %s" % (logNum, member))
@@ -400,7 +398,7 @@ class MembersWidget(QWidget):
                 else:
                     self.initializeLogItem(item, logFile)
                 
-                if oldItem is None:
+                if oldItem == None:
                     # else, the old item is being modified
                     self.log_tree_view.insertTopLevelItem(index, item)
                 self.log_tree_view.setSelectionMode(QTreeWidget.SingleSelection)
@@ -415,7 +413,7 @@ class MembersWidget(QWidget):
     
     def getSelectedLogContent(self):
         member = self.get_selected_log_member()
-        if member is None:
+        if member == None:
             return "No Log selected."
         selection = self.log_tree_view.selectedIndexes()
         if len(selection) is 0:
@@ -453,7 +451,11 @@ class MembersWidget(QWidget):
             get_server().call(convert_string(lineEdit.text()),set([selectedMember]))
             lineEdit.clear()
         
-    def updateMemberInformation(self):
+    def updateMemberInformation(self, peerID=None, peerInfo=None):
+        if peerID != None and peerID != self.get_selected_log_member():
+            # only update if selected member updated
+            return
+        
         self.memberInformationTable.clear()
         
         if self.get_selected_log_member() == None:
@@ -461,18 +463,19 @@ class MembersWidget(QWidget):
             self.memberInformationTable.setHeaderLabel("No member selected.")
             return
 
-        memberInformation = get_peers().getPeerInfo(pID=self.get_selected_log_member())
+        if peerInfo == None:
+            peerInfo = get_peers().getPeerInfo(pID=self.get_selected_log_member())
             
-        if memberInformation == None:
+        if peerInfo == None:
             self.memberInformationTable.setColumnCount(0)
             self.memberInformationTable.setHeaderLabel("No member information available.")
             return
         
-        self.memberInformationTable.setColumnCount(len(memberInformation))
-        headers = sorted(memberInformation.keys())
+        self.memberInformationTable.setColumnCount(len(peerInfo))
+        headers = sorted(peerInfo.keys(), key=lambda s: s.lower())
         self.memberInformationTable.setHeaderLabels(QStringList(headers))
         item = QTreeWidgetItem(self.memberInformationTable)
         for col, header in enumerate(headers):
-            item.setData(col, Qt.DisplayRole, QVariant(memberInformation[header]))
+            item.setData(col, Qt.DisplayRole, QVariant(peerInfo[header]))
         for col in range(self.memberInformationTable.columnCount()):
             self.memberInformationTable.resizeColumnToContents(col)

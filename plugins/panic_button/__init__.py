@@ -1,4 +1,4 @@
-from lunchinator.iface_plugins import iface_general_plugin
+from lunchinator.plugin import iface_general_plugin
 from lunchinator import get_server, log_info, log_error
     
 class panic_button(iface_general_plugin):
@@ -22,7 +22,7 @@ class panic_button(iface_general_plugin):
         
     def deactivate(self):
         log_info("Stopping panic button listener")
-        if self.panic_thread:
+        if self.panic_thread != None:
             self.panic_thread.stop_daemon()
             #TODO: self.panic_thread.join()
         iface_general_plugin.deactivate(self)

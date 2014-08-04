@@ -8,7 +8,6 @@ from PyQt4.QtCore import Qt, QVariant, QModelIndex
 from PyQt4.QtGui import QColor, QBrush
 
 class MembersTableModel(TableModelBase):
-    LUNCH_TIME_TIMER_ROLE = TableModelBase.SORT_ROLE + 1
     _NAME_KEY = u'name'
     _GROUP_KEY = u"group"
     _LUNCH_BEGIN_KEY = u"next_lunch_begin"
@@ -48,28 +47,11 @@ class MembersTableModel(TableModelBase):
         else:
             item.setData(self._blackBrush, Qt.ForegroundRole)
 
-    def _updateNameItem(self, peerID, infoDict, item):
-        if self._NAME_KEY in infoDict:
-            item.setText(infoDict[self._NAME_KEY])
-        else:
-            item.setText(peerID)
+    def _updateNameItem(self, peerID, _infoDict, item):
+        item.setText(get_peers().getDisplayedPeerName(pID=peerID))
         self._grayOutIfNoMember(item, peerID)
         
-    def removeRow(self, row, parent=QModelIndex()):
-        # ensure no timer is active after a row has been removed
-        item = self.item(row, self.LUNCH_TIME_COL_INDEX)
-        timer = item.data(self.LUNCH_TIME_TIMER_ROLE)
-        if timer != None:
-            timer.stop()
-            timer.deleteLater()
-        return TableModelBase.removeRow(self, row, parent)
-        
     def _updateLunchTimeItem(self, peerID, infoDict, item):
-        oldTimer = item.data(self.LUNCH_TIME_TIMER_ROLE)
-        if oldTimer != None:
-            oldTimer.stop()
-            oldTimer.deleteLater()
-            
         isMember = self.dataSource.isMember(pID=peerID)
         if self._LUNCH_BEGIN_KEY in infoDict and self._LUNCH_END_KEY in infoDict:
             item.setText(infoDict[self._LUNCH_BEGIN_KEY]+"-"+infoDict[self._LUNCH_END_KEY])

@@ -1,57 +1,56 @@
 import sys
-from lunchinator import log_exception, get_settings, convert_string, log_debug
-from PyQt4.QtGui import QImage, QPixmap, QStackedWidget, QIcon, QListView, QStandardItemModel, QStandardItem, QWidget, QHBoxLayout, QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy, QSortFilterProxyModel
-from PyQt4.QtCore import QTimer, QSize, Qt, QVariant, QSettings, pyqtSlot, pyqtSignal, QModelIndex
+from lunchinator import log_debug, log_warning, convert_string, get_peers
+from PyQt4.QtGui import QStackedWidget, QListView, QWidget, QHBoxLayout, \
+    QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy, QSortFilterProxyModel, \
+    QFrame
+from PyQt4.QtCore import QTimer, QSize, Qt, pyqtSlot, pyqtSignal, QModelIndex
 from lunchinator.resizing_image_label import ResizingWebImageLabel
-import tempfile
-import os
 from functools import partial
-from lunchinator.callables import AsyncCall
+from remote_pictures.remote_pictures_category_model import CategoriesModel
+import os
+from remote_pictures.remote_pictures_storage import RemotePicturesStorage
+from lunchinator.utilities import formatTime
+from time import localtime
 
 class RemotePicturesGui(QStackedWidget):
-    MIN_THUMBNAIL_SIZE = 16
-    MAX_THUMBNAIL_SIZE = 1024
-    UNCATEGORIZED = "Not Categorized"
+    openCategory = pyqtSignal(unicode) # category
+    displayNext = pyqtSignal(unicode, int) # current category, current ID
+    displayPrev = pyqtSignal(unicode, int) # current category, current ID
     
-    categoryOpened = pyqtSignal()
     minOpacityChanged = pyqtSignal(float)
     maxOpacityChanged = pyqtSignal(float)
     
-    def __init__(self,parent,rp):
+    _categoryOpened = pyqtSignal() # used to flash hidden widgets
+    
+    def __init__(self, parent, smoothScaling, minOpacity, maxOpacity):
         super(RemotePicturesGui, self).__init__(parent)
         
-        self.rp = rp
         self.good = True
         self.settings = None
         self.categoryPictures = {}
         self.currentCategory = None
         self.curPicIndex = 0
-
-        if not os.path.exists(self._picturesDirectory()):
-            try:
-                os.makedirs(self._picturesDirectory())
-            except:
-                log_exception("Could not create remote pictures directory '%s'" % self._picturesDirectory())
-                self.good = False
-                
         self.categoryModel = CategoriesModel()
+        self.sortProxy = None
+        
+        self.categoryView = QListView(self)
+        self.categoryView.setViewMode(QListView.IconMode);
+        self.categoryView.setIconSize(QSize(200,200));
+        self.categoryView.setResizeMode(QListView.Adjust);
+        self.categoryView.doubleClicked.connect(self._itemDoubleClicked)
+        self.categoryView.setFrameShape(QFrame.NoFrame)
+        
         self.sortProxy = QSortFilterProxyModel(self)
         self.sortProxy.setSortCaseSensitivity(Qt.CaseInsensitive)
         self.sortProxy.setSortRole(CategoriesModel.SORT_ROLE)
         self.sortProxy.setDynamicSortFilter(True)
         self.sortProxy.setSourceModel(self.categoryModel)
         self.sortProxy.sort(0)
-        
-        self.categoryView = QListView(self)
         self.categoryView.setModel(self.sortProxy)
-        self.categoryView.setViewMode(QListView.IconMode);
-        self.categoryView.setIconSize(QSize(200,200));
-        self.categoryView.setResizeMode(QListView.Adjust);
-        self.categoryView.doubleClicked.connect(self._itemDoubleClicked)
 
         self.addWidget(self.categoryView)
         
-        self.imageLabel = ResizingWebImageLabel(self, smooth_scaling=self.rp.options['smooth_scaling'])
+        self.imageLabel = ResizingWebImageLabel(self, smooth_scaling=smoothScaling)
         imageViewerLayout = QVBoxLayout(self.imageLabel)
         imageViewerLayout.setContentsMargins(0, 0, 0, 0)
         imageViewerLayout.setSpacing(0)
@@ -101,28 +100,14 @@ class RemotePicturesGui(QStackedWidget):
         self._initializeHiddenWidget(self.nextButton)
         self._initializeHiddenWidget(self.descriptionLabel)
         
-        self.minOpacityChanged.emit(float(self.rp.options['min_opacity']) / 100.)
-        self.maxOpacityChanged.emit(float(self.rp.options['max_opacity']) / 100.)
-                
-        self._createThumbnailAndAddCategory = AsyncCall(self,
-                                                        self._createThumbnail,
-                                                        self._addCategoryAndCloseFile)
-                
-        # load categories index
-        self._loadIndex()
-        
-    def hasPicture(self, url, cat):
-        if not cat:
-            cat = self.UNCATEGORIZED
-        if not cat in self.categoryPictures:
-            return False
-        for anUrl, _desc in self.categoryPictures[cat]:
-            if url == anUrl:
-                return True
-        return False
+        self.minOpacityChanged.emit(float(minOpacity) / 100.)
+        self.maxOpacityChanged.emit(float(maxOpacity) / 100.)
+    
+    def getCategoryIcon(self, cat):
+        return self.categoryModel.getCategoryIcon(cat)
         
     def _initializeHiddenWidget(self, w):
-        self.categoryOpened.connect(w.showTemporarily)
+        self._categoryOpened.connect(w.showTemporarily)
         self.minOpacityChanged.connect(w.setMinOpacity)
         self.maxOpacityChanged.connect(w.setMaxOpacity)
 
@@ -130,157 +115,61 @@ class RemotePicturesGui(QStackedWidget):
     def _itemDoubleClicked(self, index):
         index = self.sortProxy.mapToSource(index)
         item = self.categoryModel.item(index.row())
-        self._openCategory(convert_string(item.data(Qt.DisplayRole).toString()))
-        
-    def _displayImage(self, index = -1):
-        if self.currentCategory == None:
-            return
-        
-        if index < 0:
-            index = len(self.categoryPictures[self.currentCategory]) + index
-            
-        if index < 0 or index >= len(self.categoryPictures[self.currentCategory]):
-            # invalid index
-            return
-        
-        self.curPicIndex = index
-        newestPicTuple = self.categoryPictures[self.currentCategory][self.curPicIndex]
-        self.imageLabel.setURL(newestPicTuple[0])
-        self.descriptionLabel.setText(newestPicTuple[1])
-        self.setCurrentIndex(1)
-        
-        self.prevButton.setEnabled(self.curPicIndex > 0)
-        self.nextButton.setEnabled(self.curPicIndex < len(self.categoryPictures[self.currentCategory]) - 1)
+        cat = item.data(CategoriesModel.CAT_ROLE).toString()
+        self.openCategory.emit(cat)
         
     def _displayNextImage(self):
-        self._displayImage(self.curPicIndex + 1)
+        self.displayNext.emit(self.currentCategory, self.curPicIndex)
         
     def _displayPreviousImage(self):
-        self._displayImage(self.curPicIndex - 1)    
+        self.displayPrev.emit(self.currentCategory, self.curPicIndex)
     
-    def _openCategory(self, cat):
+    @pyqtSlot(unicode, int, list, bool, bool)
+    def displayImage(self, cat, picID, picRow, hasPrev, hasNext):
+        cat = convert_string(cat)
+        picURL = convert_string(picRow[RemotePicturesStorage.PIC_URL_COL])
+        picFile = convert_string(picRow[RemotePicturesStorage.PIC_FILE_COL])
+        picDesc = convert_string(picRow[RemotePicturesStorage.PIC_DESC_COL])
+        picSender = convert_string(picRow[RemotePicturesStorage.PIC_SENDER_COL])
+        picTime = picRow[RemotePicturesStorage.PIC_ADDED_COL]
+        
         self.currentCategory = cat
         self.categoryLabel.setText(cat)
-        self._displayImage()
-        self.categoryOpened.emit()
         
-    def _loadIndex(self):
-        if self.good:
-            try:
-                self.settings = QSettings(os.path.join(self._picturesDirectory(), u"index"), QSettings.NativeFormat)
-                        
-                storedCategories = self.settings.value("categoryPictures", None)
-                if storedCategories != None:
-                    tmpDict = storedCategories.toMap()
-                    self.categoryPictures = {}
-                    for aCat in tmpDict:
-                        newKey = convert_string(aCat)
-                        picTupleList = tmpDict[aCat].toList()
-                        newTupleList = []
-                        for picTuple in picTupleList:
-                            tupleList = picTuple.toList()
-                            newTupleList.append([convert_string(tupleList[0].toString()), convert_string(tupleList[1].toString())])
-                        if len(newTupleList) > 0:
-                            self.categoryPictures[newKey] = newTupleList
-                            
-                storedThumbnails  = self.settings.value("categoryThumbnails", None)
-                if storedThumbnails != None:
-                    storedThumbnails = storedThumbnails.toMap()
-                    for aCat in storedThumbnails:
-                        thumbnailPath = convert_string(storedThumbnails[aCat].toString())
-                        aCat = convert_string(aCat)
-                        if aCat in self.categoryPictures:
-                            self._addCategory(aCat, thumbnailPath=thumbnailPath)
-                        else:
-                            # there has been an error, the category is empty. Remove it.
-                            if os.path.exists(thumbnailPath):
-                                os.remove(thumbnailPath)
-            except:
-                log_exception("Could not load thumbnail index.")
-    
-    def _saveIndex(self):
-        if self.good and self.settings != None:
-            try:
-                self.settings.setValue("categoryPictures", self.categoryPictures)
-                
-                thumbnailDict = {}
-                for i in range(self.categoryModel.rowCount()):
-                    item = self.categoryModel.item(i)
-                    cat = item.data(Qt.DisplayRole).toString()
-                    path = item.data(CategoriesModel.PATH_ROLE)
-                    thumbnailDict[cat] = path
-                self.settings.setValue("categoryThumbnails", thumbnailDict)
-                self.settings.sync()
-            except:
-                log_exception("Could not save thumbnail index.")
-    
-    def _picturesDirectory(self):
-        return os.path.join(get_settings().get_main_config_dir(), "remote_pictures")
+        self.curPicIndex = picID
+        if picFile and os.path.exists(picFile):
+            self.imageLabel.setImage(picFile)
+        elif picURL:
+            self.imageLabel.setURL(picURL)
+        else:
+            log_warning("No image source specified")
+            self.imageLabel.displayFallbackPic()
         
-    def _fileForThumbnail(self, _category):
-        return tempfile.NamedTemporaryFile(suffix='.jpg', dir=self._picturesDirectory(), delete=False)
+        if picSender:
+            self.imageLabel.setToolTip(u"Sent to you by %s,\nSent %s" % (get_peers().getDisplayedPeerName(pID=picSender),
+                                                                         formatTime(localtime(picTime))))
+        else:
+            self.imageLabel.setToolTip(u"")
+            
+        self.descriptionLabel.setText(picDesc)
+        self.setCurrentIndex(1)
+        
+        self.prevButton.setEnabled(hasPrev)
+        self.nextButton.setEnabled(hasNext)
+        
+        self._categoryOpened.emit()
     
     def thumbnailSizeChanged(self, newValue):
         self.categoryModel.thumbnailSizeChanged(newValue)
-    
-    def _getThumbnailSize(self):
-        return self.rp.options['thumbnail_size']
-    
-    def _createThumbnail(self, inFile, category):
-        """Called asynchronously"""
-        outFile = self._fileForThumbnail(category)
-        fileName = outFile.name
         
-        imageData = inFile.read()
-        oldImage = QImage.fromData(imageData)
-        if oldImage.width() > self.MAX_THUMBNAIL_SIZE or oldImage.height() > self.MAX_THUMBNAIL_SIZE:
-            newImage = oldImage.scaled(self.MAX_THUMBNAIL_SIZE,
-                                       self.MAX_THUMBNAIL_SIZE,
-                                       Qt.KeepAspectRatio,
-                                       Qt.SmoothTransformation)
-        else:
-            # no up-scaling here
-            newImage = oldImage
-        newImage.save(fileName, format='jpeg')
-        return fileName, inFile, category
-            
-    def _addCategoryAndCloseFile(self, aTuple):
-        """Called synchronously, with result of _createThumbnail"""
-        thumbnailPath, imageFile, category = aTuple
-        self.categoryModel.addCategory(category, thumbnailPath, self._getThumbnailSize())
-        imageFile.close()
-            
-    def _addCategory(self, category, thumbnailPath = None, imageFile = None):
-        # cache category image
-        closeImmediately = True
-        try:
-            if thumbnailPath != None:
-                self.categoryModel.addCategory(category, thumbnailPath, self._getThumbnailSize())
-            elif imageFile != None:
-                # create thumbnail asynchronously, then close imageFile
-                self._createThumbnailAndAddCategory(imageFile, category)
-                closeImmediately = False
-            else:
-                raise Exception("No image path specified.")
-            if category not in self.categoryPictures:
-                self.categoryPictures[category] = []
-        finally:
-            if closeImmediately and imageFile != None:
-                imageFile.close()
-
-    def addPicture(self, imageFile, url, category, description):
-        if category == None:
-            category = self.UNCATEGORIZED
-        if not category in self.categoryPictures:
-            self._addCategory(category, imageFile = imageFile)
+    def setSmoothScaling(self, newValue):
+        self.imageLabel.setSmoothScaling(newValue)
         
-        self.categoryPictures[category].append([url, description if description != None else u""])
-        if self.currentIndex() == 1 and category == self.currentCategory:
-            # if category is open, display image immediately
-            self._displayImage()
+    def isShowingCategory(self, category):
+        return self.currentIndex() == 1 and category == self.currentCategory
         
     def destroyWidget(self):
-        self._saveIndex()
+        pass
         
 class HiddenWidgetBase(object):
     INITIAL_TIMEOUT = 2000
@@ -318,7 +207,7 @@ class HiddenWidgetBase(object):
         if self.fadingEnabled and not self.timer.isActive():
             self.timer.start(self.INTERVAL)
         
-    def showTemporarily(self):
+    def showTemporarily(self, _=None):
         if self.good:
             self.fadingEnabled = False
             self.fadeIn = False
@@ -412,45 +301,6 @@ class HiddenToolButton(QToolButton, HiddenWidgetBase):
         self._mouseLeft()
         return super(HiddenToolButton, self).leaveEvent(event)
 
-class CategoriesModel(QStandardItemModel):
-    SORT_ROLE = Qt.UserRole + 1
-    PATH_ROLE = SORT_ROLE + 1
-    
-    def __init__(self):
-        super(CategoriesModel, self).__init__()
-        self.setColumnCount(1)
-        
-    def _createThumbnail(self, imagePath, thumbnailSize):
-        """Called asynchronously, hence, no QPixmaps here."""
-        image = QImage(imagePath)
-        return image.scaled(QSize(thumbnailSize, thumbnailSize), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        
-    def _setThumbnail(self, item, image):
-        item.setData(QVariant(QIcon(QPixmap.fromImage(image))), Qt.DecorationRole)
-        
-    def _initializeItem(self, item, imagePath, thumbnailSize):
-        AsyncCall(self, self._createThumbnail, partial(self._setThumbnail, item))(imagePath, thumbnailSize)
-        
-    def addCategory(self, cat, firstImage, thumbnailSize):
-        item = QStandardItem()
-        item.setEditable(False)
-        item.setData(QVariant(cat), Qt.DisplayRole)
-        self._initializeItem(item, firstImage, thumbnailSize)
-        item.setData(QVariant(firstImage), self.PATH_ROLE)
-        item.setData(QVariant(cat if cat != RemotePicturesGui.UNCATEGORIZED else ""), self.SORT_ROLE)
-        self.appendRow([item])
-        
-    def thumbnailSizeChanged(self, thumbnailSize):
-        for i in range(self.rowCount()):
-            item = self.item(i)
-            self._initializeItem(item, item.data(self.PATH_ROLE).toString(), thumbnailSize)
-
 if __name__ == '__main__':
-    class RemotePicturesWrapper(object):
-        options = {u'min_opacity': 10,
-                   u'max_opacity': 90,
-                   u'thumbnail_size': 200,
-                   u'smooth_scaling':True}
-    
-    from lunchinator.iface_plugins import iface_gui_plugin
-    iface_gui_plugin.run_standalone(lambda window : RemotePicturesGui(window, RemotePicturesWrapper()))
+    from lunchinator.plugin import iface_gui_plugin
+    iface_gui_plugin.run_standalone(lambda window : RemotePicturesGui(window, True, 0.2, 0.8))

@@ -1,5 +1,6 @@
-from lunchinator.iface_plugins import iface_gui_plugin
-from lunchinator import get_server, get_settings, log_exception, log_error
+from lunchinator.plugin import iface_gui_plugin
+from lunchinator import get_server, get_settings, log_exception, log_error,\
+    get_peers, convert_string
 from lunchinator.utilities import displayNotification
 from PyQt4.QtGui import QTreeView, QWidget, QSortFilterProxyModel, QSizePolicy, QTableWidgetItem, QPushButton, QPalette, QColor
 from PyQt4.QtCore import Qt, QTime
@@ -20,13 +21,13 @@ class voter(iface_gui_plugin):
     
     def process_event(self, cmd, value, ip, member_info):
         if cmd == "HELO_VOTE":
-            if not self.w:
+            if self.w is None:
                 log_error("Voter: Vote cannot be processed")
                 return
             vote = json.loads(value)
             if vote.has_key("time") and vote.has_key("place"):
                 self.add_vote(member_info[u"ID"], vote["place"], vote["time"])
-                displayNotification("New Vote", "%s voted"%member_info[u"name"])
+                displayNotification("New Vote", "%s voted" % get_peers().getDisplayedPeerName(pIP=ip))
             else:
                 log_error("Voter: Vote does not look valid: " + value)
         
@@ -36,7 +37,7 @@ class voter(iface_gui_plugin):
             # member has already voted, revoke old vote
             old_vote = self.ip2vote[ip]
             self.vote_count[ old_vote ] -= 1
-            if self.w:
+            if self.w is not None:
                 self.w.update_table_row(old_vote[0],
                                    old_vote[1],
                                    self.vote_count[ old_vote])
@@ -46,19 +47,19 @@ class voter(iface_gui_plugin):
         self.ip2vote[ip] = (vote_place, vote_time)
         if self.vote_count.has_key(self.ip2vote[ip]):
             self.vote_count[ self.ip2vote[ip] ] += 1
-            if self.w:
+            if self.w is not None:
                 self.w.update_table_row(vote_place,
                                    vote_time,
                                    self.vote_count[ self.ip2vote[ip] ])
         else:
             self.vote_count[ self.ip2vote[ip] ] = 1  
-            if self.w: 
+            if self.w is not None:
                 self.w.add_place_to_dropdown(vote_place)  
                 self.w.add_table_row(vote_place, vote_time)  
             
     
     def send_vote(self, place, stime):
-        vote_call = "HELO_VOTE " + json.dumps({"place": unicode(place), "time": unicode(stime.toString("hh:mm"))})
+        vote_call = "HELO_VOTE " + json.dumps({"place": place, "time": unicode(stime.toString("hh:mm"))})
         get_server().call(vote_call)
         
         etime = stime.addSecs(60 * 30)
@@ -76,8 +77,9 @@ class voterWidget(QWidget):
         self.ui.tableWidget.setRowCount(0)
         
     def vote_clicked(self):
-        if self.ui.comboBox.currentText():
-            self.send_vote(self.ui.comboBox.currentText(), self.ui.timeEdit.time())
+        currentText = convert_string(self.ui.comboBox.currentText())
+        if currentText:
+            self.send_vote(currentText, self.ui.timeEdit.time())
         
     def tablevote_clicked(self, row, column):
         vote_place = self.ui.tableWidget.item(row, 0).text()
@@ -125,5 +127,5 @@ if __name__ == "__main__":
     def call_dummy(place, time):
         pass
     
-    from lunchinator.iface_plugins import iface_gui_plugin
+    from lunchinator.plugin import iface_gui_plugin
     iface_gui_plugin.run_standalone(lambda window : voterWidget(window, call_dummy))

@@ -47,7 +47,7 @@ class RepoUpdateHandler(object):
         
         if nOutdated > 0:
             displayNotification("Update(s) available", self._getRepoStatus())
-        if self._ui:
+        if self._ui != None:
             self._ui.setRepoUpdatesAvailable(nOutdated > 0)
             self._updateRepoStatus(nOutdated)
     

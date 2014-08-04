@@ -60,13 +60,20 @@ def initialize_logger(path=None):
     _lunchinator_logger.get_singleton_logger(path)
 
 def convert_string(string):
-    import traceback
-    from cStringIO import StringIO
+    if string is None:
+        return None
     if type(string) == unicode:
         return string
     elif type(string) == str:
         return string.decode('utf-8')
     return unicode(string.toUtf8(), 'utf-8')
+
+def convert_raw(string):
+    if type(string) == str:
+        return string
+    elif type(string) == unicode:
+        return string.decode('utf-8')
+    return str(string)
 
 def _get_logger():
     return _lunchinator_logger.get_singleton_logger()
@@ -116,6 +123,9 @@ def log_info(*s):
     
 def log_debug(*s):
     _get_logger().debug(_generate_string(*s))
+    
+def logs_debug():
+    return _get_logger().isEnabledFor(logging.DEBUG)
 
 from lunchinator.notification_center import NotificationCenter
 def get_notification_center():
@@ -140,12 +150,19 @@ def get_server():
 def get_peers():
     return get_server().getLunchPeers()
 
+def get_messages():
+    return get_server().get_messages()
+
 def get_plugin_manager():
     if get_settings().get_plugins_enabled():
         from yapsy.PluginManager import PluginManagerSingleton
         return PluginManagerSingleton.get()
     else:
         log_exception("Cannnot load plugin manager: plugins are disabled")   
+        
+def get_peer_actions():
+    from lunchinator.peer_actions import PeerActions
+    return PeerActions.get()
     
 def get_db_connection(name=""):
     """returns tuple (connection_handle, connection_type) of the given connection"""
