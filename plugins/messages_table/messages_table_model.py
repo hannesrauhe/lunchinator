@@ -63,6 +63,9 @@ class MessagesTableModel(QAbstractItemModel):
             else:
                 # return display role as fallback
                 return self.data(index)
+        elif role == Qt.ToolTipRole:
+            if index.column() == self.MESSAGE_COL:
+                return self.data(index, Qt.DisplayRole)
         return QVariant()
             
     def headerData(self, section, orientation, role=Qt.DisplayRole):
