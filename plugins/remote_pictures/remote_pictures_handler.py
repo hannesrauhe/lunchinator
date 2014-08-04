@@ -268,3 +268,7 @@ class RemotePicturesHandler(QObject):
     
     def getCategoryNames(self, alsoEmpty):
         return self._storage.getCategoryNames(alsoEmpty)
+    
+    def willIgnorePeerAction(self, category, url):
+        return self._hasPicture(category, url)
+    

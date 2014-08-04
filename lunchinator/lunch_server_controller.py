@@ -8,7 +8,7 @@ from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSende
 from lunchinator.utilities import processPluginCall, getTimeDifference
 from lunchinator.notification_center import NotificationCenter
 from time import localtime, strftime
-from lunchinator.peer_actions.peer_actions_singleton import PeerActions
+from lunchinator.peer_actions import PeerActions
 
 class LunchServerController(object):
     def __init__(self):
@@ -93,19 +93,27 @@ class LunchServerController(object):
             prefix = cmd[5:]
             action = PeerActions.get().getPeerAction(prefix)
             
+            peerID = get_peers().getPeerID(pIP=addr)
             if action is not None:
+                if action.willIgnorePeerAction(value):
+                    if logs_debug():
+                        log_debug("Ignore",
+                                  "peer action", action.getPluginName(), ":", action.getName(),
+                                  "from peer:", peerID, 
+                                  "message:", value)
+                    return
+                
                 if action.hasCategories():
                     category = action.getCategoryFromMessage(value)
                 else:
                     category = None
-                peerID = get_peers().getPeerID(pIP=addr)
                 
                 shouldProcess = PeerActions.get().shouldProcessMessage(action, category, peerID, self.getMainGUI())
                 
                 if logs_debug():
                     log_debug("Accept" if shouldProcess else "Reject",
                               "peer action", action.getPluginName(), ":", action.getName(),
-                              "from peer", peerID,
+                              "from peer:", peerID,
                               "" if category is None else "category " + category)
                 
                 if not shouldProcess:

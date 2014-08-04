@@ -38,6 +38,16 @@ class _RemotePictureAction(PeerAction):
     def getDefaultPrivacyPolicy(self):
         return PrivacySettings.POLICY_BY_CATEGORY
     
+    def willIgnorePeerAction(self, value):
+        with contextlib.closing(StringIO(value.encode('utf-8'))) as strIn:
+            reader = csv.reader(strIn, delimiter = ' ', quotechar = '"')
+            valueList = [aValue.decode('utf-8') for aValue in reader.next()]
+            url = valueList[0]
+            cat = PrivacySettings.NO_CATEGORY
+            if len(valueList) > 2:
+                cat = valueList[2]
+            return self.getPluginObject().willIgnorePeerAction(cat, url)
+    
     def getCategoryFromMessage(self, value):
         with contextlib.closing(StringIO(value.encode('utf-8'))) as strIn:
             reader = csv.reader(strIn, delimiter = ' ', quotechar = '"')
@@ -45,7 +55,6 @@ class _RemotePictureAction(PeerAction):
             if len(valueList) > 2:
                 self.getPluginObject().checkCategory(valueList[2])
                 return valueList[2]
-        from remote_pictures.remote_pictures_gui import RemotePicturesGui
         return PrivacySettings.NO_CATEGORY
     
 class remote_pictures(iface_gui_plugin):
@@ -171,6 +180,9 @@ class remote_pictures(iface_gui_plugin):
             log_error("Remote Pictures not initialized")
             return None
         return self._gui.getCategoryIcon(category)
+    
+    def willIgnorePeerAction(self, category, url):
+        return self._handler.willIgnorePeerAction(category, url)
     
     def _privacySettingsChanged(self):
         get_notification_center().emitPrivacySettingsChanged(self._rpAction.getPluginName(), self._rpAction.getName())

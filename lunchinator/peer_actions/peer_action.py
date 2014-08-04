@@ -60,6 +60,14 @@ class PeerAction(object):
         """Must return True if getPrivacyCategories returns a list of categories."""
         return False
     
+    def willIgnorePeerAction(self, _msgData):
+        """Returns True if the action will not be processed regardless of the privacy settings.
+        
+        If this method returns True, privacy settings will not be considered.
+        The message will be processed as if it was blocked.
+        """
+        return False
+    
     def getCategoryFromMessage(self, _msgData):
         """Extracts and returns the category of a message.
         
