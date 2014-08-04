@@ -149,7 +149,7 @@ class lunch_settings(object):
                 
         #also in config, but hidden
         self._ID = u""
-        self._peer_timeout = 300
+        self._peer_timeout = 120
         self._message_cache_timeout = 5 # cache lifetime to detect duplicate messages
         
         self._next_lunch_begin = None
