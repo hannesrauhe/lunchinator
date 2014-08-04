@@ -239,3 +239,10 @@ class RemotePicturesStorage(object):
             return
         
         self._db.execute("UPDATE REMOTE_PICTURES_CATEGORY SET THUMBNAIL=? WHERE TITLE=?", thumbnailPath, category)
+        
+    def seenPicture(self, picID):
+        if self._db is None:
+            return
+        
+        self._db.execute("UPDATE REMOTE_PICTURES SET SEEN=? WHERE ROWID=?", time(), picID)
+        

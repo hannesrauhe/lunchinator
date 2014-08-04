@@ -172,17 +172,7 @@ class RemotePicturesHandler(QObject):
             
         if self._gui.isShowingCategory(category):
             # if category is open, display image immediately
-            picID = self._storage.getPictureID(category, url)
-            if picID is None:
-                log_error("Cannot display picture (not found)")
-                return
-            self.displayImageInGui.emit(category,
-                                        picID,
-                                        url,
-                                        imagePath if imagePath is not None else u"",
-                                        description,
-                                        self._storage.hasPrevious(category, picID),
-                                        False)
+            self._displayImage(category, self._storage.getLatestPicture(category))
     
     def _hasPicture(self, cat, url):
         return self._storage.hasPicture(cat, url)
@@ -202,6 +192,7 @@ class RemotePicturesHandler(QObject):
                                     picDesc if picDesc else u"",
                                     self._storage.hasPrevious(category, picID),
                                     self._storage.hasNext(category, picID))
+        self._storage.seenPicture(picID)
          
     @pyqtSlot(unicode)   
     def openCategory(self, category):
