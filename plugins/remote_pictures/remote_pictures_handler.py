@@ -18,8 +18,8 @@ import string
 class RemotePicturesHandler(QObject):
     addCategory = pyqtSignal(unicode, unicode, int) # category, thumbnail path, thumbnail size
     categoriesChanged = pyqtSignal()
-    # cat, picID, picURL, picFile, picDesc, hasPrev, hasNext
-    displayImageInGui = pyqtSignal(unicode, int, unicode, unicode, unicode, bool, bool)
+    # cat, picID, picRow, hasPrev, hasNext
+    displayImageInGui = pyqtSignal(unicode, int, list, bool, bool)
 
     _loadPictures = pyqtSignal()
     _processRemotePicture = pyqtSignal(str, unicode, bool) # data, ip, store locally
@@ -182,23 +182,19 @@ class RemotePicturesHandler(QObject):
         if picID is None:
             log_error("Cannot display picture", category, "(picture not found).")
             
-        picURL = picRow[RemotePicturesStorage.PIC_URL_COL]
-        picFile = picRow[RemotePicturesStorage.PIC_FILE_COL]
-        picDesc = picRow[RemotePicturesStorage.PIC_DESC_COL]
         self.displayImageInGui.emit(category,
                                     picID,
-                                    picURL if picURL else u"",
-                                    picFile if picFile else u"",
-                                    picDesc if picDesc else u"",
+                                    list(picRow),
                                     self._storage.hasPrevious(category, picID),
                                     self._storage.hasNext(category, picID))
         self._storage.seenPicture(picID)
-         
+        
     @pyqtSlot(unicode)   
     def openCategory(self, category):
         category = convert_string(category)
         if not self._storage.hasCategory(category):
             log_error("Cannot open category", category, "(category not found).")
+            return
         
         self._displayImage(category, self._storage.getLatestPicture(category))
     

@@ -60,6 +60,8 @@ def initialize_logger(path=None):
     _lunchinator_logger.get_singleton_logger(path)
 
 def convert_string(string):
+    if string is None:
+        return None
     if type(string) == unicode:
         return string
     elif type(string) == str:

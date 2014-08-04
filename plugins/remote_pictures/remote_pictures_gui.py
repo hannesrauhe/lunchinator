@@ -1,5 +1,5 @@
 import sys
-from lunchinator import log_debug, log_warning, convert_string
+from lunchinator import log_debug, log_warning, convert_string, get_peers
 from PyQt4.QtGui import QStackedWidget, QListView, QWidget, QHBoxLayout, \
     QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy, QSortFilterProxyModel, \
     QFrame
@@ -8,6 +8,9 @@ from lunchinator.resizing_image_label import ResizingWebImageLabel
 from functools import partial
 from remote_pictures.remote_pictures_category_model import CategoriesModel
 import os
+from remote_pictures.remote_pictures_storage import RemotePicturesStorage
+from lunchinator.utilities import formatTime
+from time import localtime
 
 class RemotePicturesGui(QStackedWidget):
     openCategory = pyqtSignal(unicode) # category
@@ -112,7 +115,7 @@ class RemotePicturesGui(QStackedWidget):
     def _itemDoubleClicked(self, index):
         index = self.sortProxy.mapToSource(index)
         item = self.categoryModel.item(index.row())
-        cat = item.data(Qt.DisplayRole).toString()
+        cat = item.data(CategoriesModel.CAT_ROLE).toString()
         self.openCategory.emit(cat)
         
     def _displayNextImage(self):
@@ -121,12 +124,14 @@ class RemotePicturesGui(QStackedWidget):
     def _displayPreviousImage(self):
         self.displayPrev.emit(self.currentCategory, self.curPicIndex)
     
-    @pyqtSlot(unicode, int, unicode, unicode, unicode, bool, bool)
-    def displayImage(self, cat, picID, picURL, picFile, picDesc, hasPrev, hasNext):
+    @pyqtSlot(unicode, int, list, bool, bool)
+    def displayImage(self, cat, picID, picRow, hasPrev, hasNext):
         cat = convert_string(cat)
-        picURL = convert_string(picURL)
-        picFile = convert_string(picFile)
-        picDesc = convert_string(picDesc)
+        picURL = convert_string(picRow[RemotePicturesStorage.PIC_URL_COL])
+        picFile = convert_string(picRow[RemotePicturesStorage.PIC_FILE_COL])
+        picDesc = convert_string(picRow[RemotePicturesStorage.PIC_DESC_COL])
+        picSender = convert_string(picRow[RemotePicturesStorage.PIC_SENDER_COL])
+        picTime = picRow[RemotePicturesStorage.PIC_ADDED_COL]
         
         self.currentCategory = cat
         self.categoryLabel.setText(cat)
@@ -139,6 +144,13 @@ class RemotePicturesGui(QStackedWidget):
         else:
             log_warning("No image source specified")
             self.imageLabel.displayFallbackPic()
+        
+        if picSender:
+            self.imageLabel.setToolTip(u"Sent to you by %s,\nSent %s" % (get_peers().getDisplayedPeerName(pID=picSender),
+                                                                         formatTime(localtime(picTime))))
+        else:
+            self.imageLabel.setToolTip(u"")
+            
         self.descriptionLabel.setText(picDesc)
         self.setCurrentIndex(1)
         

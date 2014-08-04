@@ -10,6 +10,7 @@ from lunchinator.privacy import PrivacySettings
 class CategoriesModel(QStandardItemModel):
     SORT_ROLE = Qt.UserRole + 1
     PATH_ROLE = SORT_ROLE + 1
+    CAT_ROLE = PATH_ROLE + 1
     
     MIN_THUMBNAIL_SIZE = 16
     MAX_THUMBNAIL_SIZE = 1024
@@ -55,7 +56,9 @@ class CategoriesModel(QStandardItemModel):
         item.setData(QVariant(cat if cat != PrivacySettings.NO_CATEGORY else u"Not Categorized"), Qt.DisplayRole)
         self._initializeItem(item, thumbnailPath, thumbnailSize, cat, True)
         item.setData(QVariant() if thumbnailPath is None else QVariant(thumbnailPath), self.PATH_ROLE)
-        item.setData(QVariant(cat), self.SORT_ROLE)
+        catv = QVariant(cat)
+        item.setData(catv, self.SORT_ROLE)
+        item.setData(catv, self.CAT_ROLE)
         self.appendRow([item])
         
     def thumbnailSizeChanged(self, thumbnailSize):
