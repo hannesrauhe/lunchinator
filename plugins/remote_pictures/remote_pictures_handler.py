@@ -13,6 +13,7 @@ from PyQt4.QtGui import QImage
 from lunchinator.utilities import displayNotification
 from urlparse import urlparse
 from lunchinator.privacy import PrivacySettings
+import string
 
 class RemotePicturesHandler(QObject):
     addCategory = pyqtSignal(unicode, unicode, int) # category, thumbnail path, thumbnail size
@@ -21,7 +22,7 @@ class RemotePicturesHandler(QObject):
     displayImageInGui = pyqtSignal(unicode, int, unicode, unicode, unicode, bool, bool)
 
     _loadPictures = pyqtSignal()
-    _processRemotePicture = pyqtSignal(str, unicode) # data, ip
+    _processRemotePicture = pyqtSignal(str, unicode, bool) # data, ip, store locally
     _checkCategory = pyqtSignal(unicode)
     _thumbnailSizeChanged = pyqtSignal(int)
     
@@ -74,34 +75,39 @@ class RemotePicturesHandler(QObject):
     def _getPicturesDirectory(self):
         return get_settings().get_config("remote_pictures")
     
-    def _fileForThumbnail(self, _category):
-        return tempfile.NamedTemporaryFile(suffix='.jpg', dir=self._getPicturesDirectory(), delete=False)
+    def _createPictureFile(self, category, ext='.jpg'):
+        valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+        prefix = ''.join(c for c in category if c in valid_chars)
+        return tempfile.NamedTemporaryFile(suffix=ext, prefix=prefix, dir=self._getPicturesDirectory(), delete=False)
     
-    def _createThumbnail(self, inFile, inURL, category):
+    def _createThumbnail(self, inFile, inPath, inURL, category):
         """Called asynchronously"""
-        outFile = self._fileForThumbnail(category)
-        fileName = outFile.name
-
-        try:        
-            if inFile and os.path.exists(inFile):
+        try:
+            outFile = self._createPictureFile(category)
+            fileName = outFile.name
+    
+            if inFile:
                 imageData = inFile.read()
+            elif inPath and os.path.exists(inPath):
+                with contextlib.closing(open(inFile, 'rb')) as inFile:
+                    imageData = inFile.read()
             else:
                 imageData = urllib2.urlopen(inURL.encode('utf-8')).read()
+            
+            oldImage = QImage.fromData(imageData)
+            if oldImage.width() > CategoriesModel.MAX_THUMBNAIL_SIZE or oldImage.height() > CategoriesModel.MAX_THUMBNAIL_SIZE:
+                newImage = oldImage.scaled(CategoriesModel.MAX_THUMBNAIL_SIZE,
+                                           CategoriesModel.MAX_THUMBNAIL_SIZE,
+                                           Qt.KeepAspectRatio,
+                                           Qt.SmoothTransformation)
+            else:
+                # no up-scaling here
+                newImage = oldImage
+            newImage.save(fileName, format='jpeg')
+            return fileName, inFile, category
         except:
-            log_exception("Error reading data for category thumbnail.")
+            log_exception("Error trying to create thumbnail for category")
             return None, inFile, category
-        
-        oldImage = QImage.fromData(imageData)
-        if oldImage.width() > CategoriesModel.MAX_THUMBNAIL_SIZE or oldImage.height() > CategoriesModel.MAX_THUMBNAIL_SIZE:
-            newImage = oldImage.scaled(CategoriesModel.MAX_THUMBNAIL_SIZE,
-                                       CategoriesModel.MAX_THUMBNAIL_SIZE,
-                                       Qt.KeepAspectRatio,
-                                       Qt.SmoothTransformation)
-        else:
-            # no up-scaling here
-            newImage = oldImage
-        newImage.save(fileName, format='jpeg')
-        return fileName, inFile, category
             
     def _addCategoryAndCloseFile(self, aTuple):
         """Called synchronously, with result of _createThumbnail"""
@@ -144,20 +150,25 @@ class RemotePicturesHandler(QObject):
             self._storage.addEmptyCategory(cat)
             self.categoriesChanged.emit()
 
-    def _addPicture(self, imageFile, url, category, description, sender):
+    def _addPicture(self, imageFile, imagePath, url, category, description, sender):
         if category == None:
             category = PrivacySettings.NO_CATEGORY
 
         catAdded = self._storage.addPicture(category,
                                             url if url else None,
                                             description if description else None,
-                                            None, # TODO locally stored image
+                                            imagePath,
                                             time(),
                                             None,
                                             sender if sender else None)
         
         if catAdded:
-            self._createThumbnailAndAddCategory(None, url, category) # TODO local image
+            if imageFile is not None:
+                imageFile.seek(0)
+            # image file will be closed after thumbnail was created
+            self._createThumbnailAndAddCategory(imageFile, imagePath, url, category)
+        elif imageFile is not None:
+            imageFile.close()
             
         if self._gui.isShowingCategory(category):
             # if category is open, display image immediately
@@ -168,7 +179,7 @@ class RemotePicturesHandler(QObject):
             self.displayImageInGui.emit(category,
                                         picID,
                                         url,
-                                        u"", # TODO locally stored image
+                                        imagePath if imagePath is not None else u"",
                                         description,
                                         self._storage.hasPrevious(category, picID),
                                         False)
@@ -214,36 +225,42 @@ class RemotePicturesHandler(QObject):
         log_error("Error downloading picture from url %s" % convert_string(url))
         thread.deleteLater()
         
-    def _downloadedPicture(self, category, description, sender, thread, url):
+    def _downloadedPicture(self, category, description, sender, storeLocally, thread, url):
         name = "New Remote Picture"
         if category != None:
             name = name + " in category %s" % category
             
         # create temporary image file to display in notification
         url = convert_string(url)
-        ext = os.path.splitext(urlparse(url.encode('utf-8')).path)[1]
-        newFile = tempfile.NamedTemporaryFile(suffix=ext)
-        newFile.write(thread.getResult())
-        newFile.seek(0)
-        displayNotification(name, description, newFile.name)
+        displayNotification(name, description, thread.target.name)
         
-        # TODO close file
-        self._addPicture(newFile, url, category, description, sender)
+        self._addPicture(thread.target,
+                         thread.target.name if storeLocally else None,
+                         url,
+                         category,
+                         description,
+                         sender)
           
-    def _extractPicture(self, url, category, description, sender):
+    def _extractPicture(self, url, category, description, sender, storeLocally):
         if not self._hasPicture(category, url):
-            downloadThread = DownloadThread(self, url)
-            downloadThread.success.connect(partial(self._downloadedPicture, category, description, sender))
+            ext = os.path.splitext(urlparse(url.encode('utf-8')).path)[1]
+            if storeLocally:
+                target = self._createPictureFile(category, ext=ext)
+            else:
+                target = tempfile.NamedTemporaryFile(suffix=ext)
+            
+            downloadThread = DownloadThread(self, url, target)
+            downloadThread.success.connect(partial(self._downloadedPicture, category, description, sender, storeLocally))
             downloadThread.error.connect(self._errorDownloadingPicture)
             downloadThread.finished.connect(downloadThread.deleteLater)
             downloadThread.start()
         else:
             log_debug("Remote Pics: Downloaded this url before, won't do it again:",url)
         
-    def processRemotePicture(self, value, ip):
-        self._processRemotePicture.emit(value, ip)
-    @pyqtSlot(str, unicode)
-    def _processRemotePictureSlot(self, value, ip):
+    def processRemotePicture(self, value, ip, storeLocally):
+        self._processRemotePicture.emit(value, ip, storeLocally)
+    @pyqtSlot(str, unicode, bool)
+    def _processRemotePictureSlot(self, value, ip, storeLocally):
         value = convert_raw(value)
         ip = convert_string(ip)
         with contextlib.closing(StringIO(value)) as strIn:
@@ -257,7 +274,7 @@ class RemotePicturesHandler(QObject):
             if len(valueList) > 2:
                 cat = valueList[2]
         
-        self._extractPicture(url, cat, desc, get_peers().getPeerID(pIP=ip))    
+        self._extractPicture(url, cat, desc, get_peers().getPeerID(pIP=ip), storeLocally)    
     
     def getCategories(self, alsoEmpty):
         return self._storage.getCategories(alsoEmpty)

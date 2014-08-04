@@ -51,10 +51,11 @@ class _RemotePictureAction(PeerAction):
 class remote_pictures(iface_gui_plugin):
     def __init__(self):
         super(remote_pictures, self).__init__()
-        self.options = [((u"min_opacity", u"Minimum opacity of controls:", self.minOpacityChanged),20),
-                        ((u"max_opacity", u"Maximum opacity of controls:", self.maxOpacityChanged),80),
-                        ((u"thumbnail_size", u"Thumbnail Size:", self.thumbnailSizeChanged),150),
-                        ((u"smooth_scaling", u"Smooth scaling", self.smoothScalingChanged),False)]
+        self.options = [((u"min_opacity", u"Minimum opacity of controls:", self.minOpacityChanged), 20),
+                        ((u"max_opacity", u"Maximum opacity of controls:", self.maxOpacityChanged), 80),
+                        ((u"thumbnail_size", u"Thumbnail Size:", self.thumbnailSizeChanged), 150),
+                        ((u"smooth_scaling", u"Smooth scaling", self.smoothScalingChanged), False),
+                        ((u"store_locally", u"Store pictures locally"), True)]
         self._gui = None
         self._handler = None
         self._rpAction = None
@@ -156,7 +157,7 @@ class remote_pictures(iface_gui_plugin):
     def process_event(self, cmd, value, ip, _info):
         if cmd=="HELO_REMOTE_PIC":
             if self._handler is not None:
-                self._handler.processRemotePicture(value, ip)
+                self._handler.processRemotePicture(value, ip, self.get_option(u"store_locally"))
     
     def getCategories(self):
         if self._handler is None:
