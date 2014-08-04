@@ -202,7 +202,7 @@ class lunch_server(object):
                                 is_in_broadcast_mode = True
                                 log_warning("seems like you are alone - broadcasting for others")
                             s.broadcast('HELO_REQUEST_INFO ' + self._build_info_string())
-                            #init peers from file
+                            #forgotten peers may be on file
                             requests = self._peers.initPeersFromFile()
                             self.call_request_info(requests)
                             
