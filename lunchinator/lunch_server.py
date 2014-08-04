@@ -201,7 +201,11 @@ class lunch_server(object):
                             if not is_in_broadcast_mode:
                                 is_in_broadcast_mode = True
                                 log_warning("seems like you are alone - broadcasting for others")
-                            self._broadcast()
+                            s.broadcast('HELO_REQUEST_INFO ' + self._build_info_string())
+                            #init peers from file
+                            requests = self._peers.initPeersFromFile()
+                            self.call_request_info(requests)
+                            
         except socket.error as e:
             # socket error messages may contain special characters, which leads to crashes on old python versions
             log_error(u"stopping lunchinator because of socket error:", convert_string(str(e)))
@@ -601,16 +605,3 @@ class lunch_server(object):
         if self._messages:
             self._messages.finish()
         self.controller.serverStopped(self.exitCode)
-    
-    def _broadcast(self):
-        try:
-            # TODO if the info dict becomes too big, this will fail, right?
-            # at least in this case, we shoud broadcast the HELOX parts
-            # anyways, is there a reason for this second socket?
-            s_broad = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            s_broad.sendto('HELO_REQUEST_INFO ' + self._build_info_string(), ('255.255.255.255', 50000))
-            s_broad.close()
-        except:
-            log_exception("Problem while broadcasting")

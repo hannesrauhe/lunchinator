@@ -1,7 +1,7 @@
 """ lunch_socket+exceptions, extendedMessages(Incoming/Outgoing)"""
 
 import socket, errno, math, hashlib
-from lunchinator import get_settings, log_debug, log_error, log_warning, convert_string
+from lunchinator import get_settings, log_debug, log_error, log_warning, log_exception, convert_string
 import itertools, time
 
 """ lunch_socket is the class to 
@@ -71,6 +71,22 @@ class lunch_socket(object):
         else:
             self._s.sendto(msg, (ip.strip(), self._port))
         
+    def broadcast(self, msg):
+        try:
+            s_broad = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            
+            if len(msg) > self.LEGACY_MAX_LEN:
+                log_debug("Broadcasting as extended Message")
+                xmsg = extMessageOutgoing(msg, self._max_msg_length)
+                for f in xmsg.getFragments():
+                    self._s.sendto(f, ('255.255.255.255', self._port))
+            else:
+                s_broad.sendto(msg, ('255.255.255.255', self._port))
+            s_broad.close()
+        except:
+            log_exception("Problem while broadcasting")
     
 
     """ receives a message from a socket and returns the received data and the sender's 
