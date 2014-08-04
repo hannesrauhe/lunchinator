@@ -2,6 +2,7 @@ import json
 from lunchinator import log_exception, get_settings, log_warning, log_error,\
     get_notification_center
 from lunchinator.logging_mutex import loggingMutex
+from copy import deepcopy
 
 def _setter(func):
     def newSetter(self, action, category, *args, **kwargs):
@@ -12,21 +13,29 @@ def _setter(func):
             del kwargs["applyImmediately"]
         else:
             applyImmediately = True
+            
+        if "categoryPolicy" in kwargs:
+            categoryPolicy = kwargs["categoryPolicy"]
+            del kwargs["categoryPolicy"]
+        else:
+            categoryPolicy = False
         
         if applyImmediately:
             # check if modification is in progress
             settings = self._getActionDict(pluginName, actionName, self._modifications)
             if settings is not None:
                 # apply to modified
+                if categoryPolicy is not self.CATEGORY_NEVER:
+                    settings = self._initModification(action, category, actionDictSource=self._modifications)
                 func(self, action, category, settingsDict=settings, *args, **kwargs)
             # apply to stored settings
-            settings = self._initModification(action, category, actionDictSource=self._settings)
+            settings = self._initModification(action, category, actionDictSource=self._settings, categoryPolicy=categoryPolicy)
             func(self, action, category, settingsDict=settings, *args, **kwargs)
             
             get_notification_center().emitPrivacySettingsChanged(action.getPluginName(), action.getName())
         else:
             # only add to modification dict
-            settings = self._initModification(action, category, actionDictSource=self._modifications)
+            settings = self._initModification(action, category, actionDictSource=self._modifications, categoryPolicy=categoryPolicy)
             func(self, action, category, settingsDict=settings, *args, **kwargs)
     return newSetter
 
@@ -53,6 +62,12 @@ class PrivacySettings(object):
     """The action has multiple categories and you didn't specify one""" 
     STATE_UNKNOWN = 3
     
+    NO_CATEGORY = u""
+    
+    CATEGORY_AUTO = 0
+    CATEGORY_NEVER = 1
+    CATEGORY_ALWAYS = 2
+    
     _instance = None
     
     @classmethod
@@ -78,13 +93,6 @@ class PrivacySettings(object):
         with self._lock:
             return json.dumps(self._settings)
     
-    def _setPeerActionSettings(self, pluginName, actionName, actionSettings):
-        if pluginName not in self._settings:
-            self._settings[pluginName] = {}
-        pluginDict = self._settings[pluginName]
-            
-        pluginDict[actionName] = actionSettings
-    
     def save(self, notify=True):
         """Saves the current modifications"""
         with self._lock:
@@ -93,14 +101,20 @@ class PrivacySettings(object):
                     if u"pol" in actionDict and actionDict[u"pol"] != PrivacySettings.POLICY_BY_CATEGORY:
                         # don't store category information if not necessary
                         actionDict.pop(u"cat", None)
-                    self._setPeerActionSettings(pluginName, actionName, actionDict)
+                        
+                    if pluginName not in self._settings:
+                        self._settings[pluginName] = {}
+                    pluginDict = self._settings[pluginName]
+                    pluginDict[actionName] = actionDict
+                    
                     if notify:
                         get_notification_center().emitPrivacySettingsChanged(pluginName, actionName)
+            self._modifications = {}
                 
     def discard(self):
         """Discards all modifications since the last save"""
-        self._modifications = {}
-    
+        with self._lock:
+            self._modifications = {}
     
     ######################### GETTER ########################
     
@@ -111,9 +125,15 @@ class PrivacySettings(object):
                 return pluginDict[actionName]
         return None
     
-    def _getSettings(self, action, category, useModified=False):
+    def _getSettings(self, action, category, useModified=False, categoryPolicy=None):
+        """returns (settings dict, is category dict)"""
+        if categoryPolicy is None:
+            categoryPolicy = self.CATEGORY_AUTO
+        
         pluginName = action.getPluginName()
         actionName = action.getName()
+        
+        policy = action.getDefaultPrivacyPolicy()
         
         actionDict = None
         if useModified:
@@ -124,61 +144,86 @@ class PrivacySettings(object):
             # use action dict from unmodified settings
             actionDict = self._getActionDict(pluginName, actionName, self._settings)
             if actionDict is None:
-                # there are no settings
-                return None
+                # there are no settings, especially no setings by category
+                if categoryPolicy is self.CATEGORY_ALWAYS:
+                    isCat = True
+                elif categoryPolicy is self.CATEGORY_NEVER:
+                    isCat = False
+                else:
+                    isCat = policy == self.POLICY_BY_CATEGORY
+                return None, isCat 
         
-        if category is None:
-            return actionDict
+        # per-category actions only returned if the policy is "by category"
+        policy = actionDict.get(u"pol", policy)
+        if categoryPolicy is not self.CATEGORY_ALWAYS and \
+                (policy != self.POLICY_BY_CATEGORY or categoryPolicy is self.CATEGORY_NEVER):
+            return actionDict, False
         else:
+            if category is None:
+                category = self.NO_CATEGORY
             if u"cat" in actionDict:
                 categories = actionDict[u"cat"]
                 if category in categories:
                     catDict = categories[category]
-                    return catDict
-        return None
+                    return catDict, True
+            return None, True
     
-    def _getValue(self, action, category, key, default, useModified=False):
-        settings = self._getSettings(action, category, useModified)
+    def _getValue(self, action, category, key, default, useModified=False, categoryPolicy=None):
+        if categoryPolicy is None:
+            categoryPolicy = self.CATEGORY_AUTO
+        
+        settings, isCat = self._getSettings(action, category, useModified, categoryPolicy)
         if settings is not None and key in settings:
-            return settings[key]
-        return default
+            return settings[key], isCat
+        return default, isCat
     
-    def getAskForConfirmation(self, action, category, useModified=False):
+    def getAskForConfirmation(self, action, category, useModified=False, categoryPolicy=None):
         """Returns True if the 'ask for confirmation' checkbox is set"""
+        if categoryPolicy is None:
+            categoryPolicy = self.CATEGORY_AUTO
+        
         with self._lock:
-            return self._getValue(action, category, u"ask", True, useModified)
+            return self._getValue(action, category, u"ask", True, useModified, categoryPolicy)[0]
     
-    def getPolicy(self, action, category, useModified=False):
+    def getPolicy(self, action, category, useModified=False, categoryPolicy=None):
         """Get the privacy policy for a peer action.
         
         Can be POLICY_NOBODY, POLICY_NOBODY_EX, POLICY_EVERYBODY_EX,
         POLICY_EVERYBODY or POLICY_BY_CATEGORY."""
-        if category is None:
-            default = action.getDefaultPrivacyPolicy()
-        else:
-            default = action.getDefaultCategoryPrivacyPolicy()
+        if categoryPolicy is None:
+            categoryPolicy = self.CATEGORY_AUTO
+        
         with self._lock:
-            return self._getValue(action, category, u"pol", default, useModified)
+            policy, isCat = self._getValue(action, category, u"pol", None, useModified, categoryPolicy)
+        if policy is None:
+            policy = action.getDefaultPrivacyPolicy() if not isCat else action.getDefaultCategoryPrivacyPolicy()
+        return policy
     
-    def getWhitelist(self, action, category, useModified=False):
+    def getWhitelist(self, action, category, useModified=False, categoryPolicy=None):
         """Returns the whitelist dictionary.
         
         The dictionary has the form {peerID : state}, where state is
         1 for whitelisted peers and 0 for explicitly not whitelisted
         peers.
         """
-        with self._lock:
-            return dict(self._getValue(action, category, u"wht", {}, useModified))
+        if categoryPolicy is None:
+            categoryPolicy = self.CATEGORY_AUTO
         
-    def getBlacklist(self, action, category, useModified=False):
+        with self._lock:
+            return dict(self._getValue(action, category, u"wht", {}, useModified, categoryPolicy)[0])
+        
+    def getBlacklist(self, action, category, useModified=False, categoryPolicy=None):
         """Returns the blacklist dictionary.
         
         The dictionary has the form {peerID : state}, where state is
         1 for blacklisted peers and 0 for explicitly not blacklisted
         peers.
         """
+        if categoryPolicy is None:
+            categoryPolicy = self.CATEGORY_AUTO
+        
         with self._lock:
-            return dict(self._getValue(action, category, u"blk", {}, useModified))
+            return dict(self._getValue(action, category, u"blk", {}, useModified, categoryPolicy)[0])
         
     def getPeerExceptions(self, action, useModified=False):
         """Returns the peer exception dictionary.
@@ -188,17 +233,18 @@ class PrivacySettings(object):
         that should be STATE_BLOCKED by default.
         """
         with self._lock:
-            return dict(self._getValue(action, None, u"exc", {}, useModified))
+            return dict(self._getValue(action, None, u"exc", {}, useModified, categoryPolicy=self.CATEGORY_NEVER)[0])
         
-    def getExceptions(self, action, category, policy, useModified=False):
+    def getExceptions(self, action, category, policy, useModified=False, categoryPolicy=None):
         """Returns the exception dictionary for a given policy."""
+        if categoryPolicy is None:
+            categoryPolicy = self.CATEGORY_AUTO
+        
         if policy == self.POLICY_EVERYBODY_EX:
-            return self.getBlacklist(action, category, useModified)
+            return self.getBlacklist(action, category, useModified, categoryPolicy)
         if policy == self.POLICY_NOBODY_EX:
-            return self.getWhitelist(action, category, useModified)
+            return self.getWhitelist(action, category, useModified, categoryPolicy)
         if policy == self.POLICY_PEER_EXCEPTION:
-            if category is not None:
-                log_warning("peer exceptions do not exist for individual categories.")
             return self.getPeerExceptions(action, useModified)
         log_error("There are no exceptions for policy", policy)
                 
@@ -207,22 +253,21 @@ class PrivacySettings(object):
         
         Can be STATE_BLOCKED, STATE_FREE, STATE_CONFIRM and STATE_UNKNOWN.
         """
-        if category is None:
-            defaultPolicy = action.getDefaultPrivacyPolicy()
-        else:
-            defaultPolicy = action.getDefaultCategoryPrivacyPolicy()
-        
         with self._lock:
-            settings = self._getSettings(action, category)
+            settings, isPerCategory = self._getSettings(action, category)
             if settings is not None:
                 settings = dict(settings)
             else:
                 settings = {}
-        
-        if settings is None or u"pol" not in settings:
-            policy = defaultPolicy
+                
+        if isPerCategory:
+            if not action.hasPrivacyCategory(category):
+                return self.STATE_BLOCKED
+            defaultPolicy = action.getDefaultCategoryPrivacyPolicy()
         else:
-            policy = settings[u"pol"]
+            defaultPolicy = action.getDefaultPrivacyPolicy()
+        
+        policy = settings.get(u"pol", defaultPolicy)
             
         if policy == self.POLICY_EVERYBODY:
             return self.STATE_FREE
@@ -235,6 +280,7 @@ class PrivacySettings(object):
             else:
                 state = None
             
+            # if None, we look up in special peers            
             if state == 1:
                 return self.STATE_BLOCKED
             if state == 0:
@@ -246,6 +292,7 @@ class PrivacySettings(object):
             else:
                 state = None
             
+            # if None, we look up in special peers
             if state == 1:
                 return self.STATE_FREE
             if state == 0:
@@ -254,7 +301,7 @@ class PrivacySettings(object):
         if policy in (self.POLICY_EVERYBODY_EX, self.POLICY_NOBODY_EX):
             # unknown state, special handling here: look up global exception list
             with self._lock:
-                actionSettings = self._getSettings(action, None)
+                actionSettings, _isCat = self._getSettings(action, None, categoryPolicy=self.CATEGORY_NEVER)
                 if actionSettings is not None:
                     actionSettings = dict(actionSettings)
                 else:
@@ -286,7 +333,10 @@ class PrivacySettings(object):
     
     ###################### MODIFICATION #####################
     
-    def _initModification(self, action, category, actionDict=None, actionDictSource=None):
+    def _initModification(self, action, category, actionDict=None, actionDictSource=None, categoryPolicy=None):
+        if categoryPolicy is None:
+            categoryPolicy = self.CATEGORY_AUTO
+        
         if actionDict is None:
             # get or create action dict
             pluginName = action.getPluginName()
@@ -296,15 +346,21 @@ class PrivacySettings(object):
                 
             actionName = action.getName()
             if actionName not in pluginDict:
+                # copy from settings if exists
                 if pluginName in self._settings and actionName in self._settings[pluginName]:
-                    pluginDict[actionName] = self._settings[pluginName][actionName]
+                    pluginDict[actionName] = deepcopy(self._settings[pluginName][actionName])
                 else:
                     pluginDict[actionName] = {}
             actionDict = pluginDict[actionName]
     
-        if category is None:
+        policy = actionDict.get(u"pol", action.getDefaultPrivacyPolicy())
+    
+        if categoryPolicy is not self.CATEGORY_ALWAYS and \
+                (policy != self.POLICY_BY_CATEGORY or categoryPolicy is self.CATEGORY_NEVER):
             return actionDict
         else:
+            if category is None:
+                category = self.NO_CATEGORY
             if u"cat" not in actionDict:
                 actionDict[u"cat"] = {}
             categories = actionDict[u"cat"]
@@ -328,8 +384,7 @@ class PrivacySettings(object):
             key = u"blk"
         elif policy == self.POLICY_PEER_EXCEPTION:
             if category is not None:
-                log_error("There are no peer exceptions for individual categories. Resetting to None")
-                return
+                log_warning("There are no peer exceptions for individual categories. Please check what you're doing here.")
             key = u"exc"
             
         if key not in settingsDict:

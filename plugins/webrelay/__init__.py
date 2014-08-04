@@ -54,7 +54,7 @@ class webrelay(iface_called_plugin):
             except:
                 log_error("Invalid response from webserver after relaying call: "+response)
                 
-            if not resp["success"]:
+            if not "success" in resp:
                 log_error("Webrelay: negative response from webserver after relaying call: "+response)
             
             

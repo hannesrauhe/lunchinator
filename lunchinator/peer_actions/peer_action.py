@@ -45,12 +45,27 @@ class PeerAction(object):
         """
         return None
     
+    def hasPrivacyCategory(self, category):
+        """Returns True if the given category is supported.
+        
+        If this method returns False, the action will always be blocked.
+        """
+        return category in self.getPrivacyCategories()
+    
     def getCategoryIcon(self, _category):
         """Returns a QIcon for a given category name."""
         return None
     
     def hasCategories(self):
         """Must return True if getPrivacyCategories returns a list of categories."""
+        return False
+    
+    def willIgnorePeerAction(self, _msgData):
+        """Returns True if the action will not be processed regardless of the privacy settings.
+        
+        If this method returns True, privacy settings will not be considered.
+        The message will be processed as if it was blocked.
+        """
         return False
     
     def getCategoryFromMessage(self, _msgData):
@@ -90,22 +105,28 @@ class PeerAction(object):
         self._pluginName = pluginName
         self._pluginObject = pluginObject
         
-    def getPrivacyPolicy(self, category=None):
+    def getPrivacyPolicy(self, category=None, categoryPolicy=None):
         """Convenience method to get the privacy policy"""
         from lunchinator.privacy import PrivacySettings
-        return PrivacySettings.get().getPolicy(self, category)
+        return PrivacySettings.get().getPolicy(self, category, categoryPolicy=categoryPolicy)
+    
+    def usesPrivacyCategories(self):
+        """Returns True if the current privacy policy uses categories."""
+        from lunchinator.privacy import PrivacySettings
+        policy = PrivacySettings.get().getPolicy(self, None, categoryPolicy=PrivacySettings.CATEGORY_NEVER)
+        return policy == PrivacySettings.POLICY_BY_CATEGORY
         
-    def getAskForConfirmation(self, category=None):
+    def getAskForConfirmation(self, category=None, categoryPolicy=None):
         """Convenience method to get the 'ask for confirmation' state"""
         from lunchinator.privacy import PrivacySettings
-        return PrivacySettings.get().getAskForConfirmation(self, category)
+        return PrivacySettings.get().getAskForConfirmation(self, category, categoryPolicy=categoryPolicy)
     
     def getPeerState(self, peerID, category=None):
         """Convenience method to get the peer's privacy state"""
         from lunchinator.privacy import PrivacySettings
         return PrivacySettings.get().getPeerState(peerID, self, category)
         
-    def getExceptions(self, policy, category=None):
+    def getExceptions(self, policy, category=None, categoryPolicy=None):
         """Convenience method to get the exception dict"""
         from lunchinator.privacy import PrivacySettings
-        return PrivacySettings.get().getExceptions(self, category, policy)
+        return PrivacySettings.get().getExceptions(self, category, policy, categoryPolicy=categoryPolicy)

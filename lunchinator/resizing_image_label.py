@@ -35,6 +35,11 @@ class ResizingImageLabel(QLabel):
     
     def setImage(self, path):
         self.setRawPixmap(QPixmap.fromImage(QImage(path)))
+        
+    def setSmoothScaling(self, newValue):
+        if self.smooth_scaling != newValue:
+            self.smooth_scaling = newValue
+            self.setScaledPixmap()
 
 class ResizingWebImageLabel(ResizingImageLabel):
     """Constructor
@@ -47,14 +52,15 @@ class ResizingWebImageLabel(ResizingImageLabel):
     timeout -- number of seconds between updates
     no_proxy -- True to disable proxy for pic_url
     """
-    def __init__(self, parent, pic_url = None, fallback_pic = None, smooth_scaling = False, update = False, timeout = 0, no_proxy = False):
+    def __init__(self, parent, pic_url=None, fallback_pic=None, smooth_scaling=False, update=False, timeout=0, no_proxy=False):
         super(ResizingWebImageLabel, self).__init__(parent, smooth_scaling, QSize(640, 480))
         
         self.fallback_pic = fallback_pic
         self.pic_url = pic_url
+        self.pic_path = None
         self.no_proxy = no_proxy
         
-        self._displayFallbackPic()
+        self.displayFallbackPic()
                 
         self.timeout = int(timeout)*1000
         if update:
@@ -63,7 +69,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
             updateImageTimer.timeout.connect(self.update)
             updateImageTimer.start(self.timeout)
             
-    def _displayFallbackPic(self):
+    def displayFallbackPic(self):
         if self.fallback_pic != None:
             try:
                 self.setImage(self.fallback_pic)
@@ -73,8 +79,13 @@ class ResizingWebImageLabel(ResizingImageLabel):
             self.setPixmap(QPixmap())
             
     def setURL(self, newURL):
-        self._displayFallbackPic()
+        self.displayFallbackPic()
         self.pic_url = newURL
+        self.update()
+        
+    def setImage(self, path):
+        self.pic_path = path
+        self.pic_url = None
         self.update()
             
     @pyqtSlot(QThread, unicode)
@@ -95,12 +106,14 @@ class ResizingWebImageLabel(ResizingImageLabel):
         if not self.isVisible():
             return
          
-        if self.pic_url != None:
+        if self.pic_url is not None:
             thread = DownloadThread(self, self.pic_url, no_proxy = self.no_proxy)
             thread.finished.connect(thread.deleteLater)
             thread.error.connect(self.errorDownloading)
             thread.success.connect(self.downloadFinished)
             thread.start()
+        elif self.pic_path is not None:
+            super(ResizingWebImageLabel, self).setImage(self.pic_path)
         else:
-            self._displayFallbackPic()
+            self.displayFallbackPic()
         return True

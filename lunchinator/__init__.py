@@ -60,13 +60,20 @@ def initialize_logger(path=None):
     _lunchinator_logger.get_singleton_logger(path)
 
 def convert_string(string):
-    import traceback
-    from cStringIO import StringIO
+    if string is None:
+        return None
     if type(string) == unicode:
         return string
     elif type(string) == str:
         return string.decode('utf-8')
     return unicode(string.toUtf8(), 'utf-8')
+
+def convert_raw(string):
+    if type(string) == str:
+        return string
+    elif type(string) == unicode:
+        return string.decode('utf-8')
+    return str(string)
 
 def _get_logger():
     return _lunchinator_logger.get_singleton_logger()

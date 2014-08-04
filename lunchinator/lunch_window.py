@@ -51,6 +51,7 @@ class LunchinatorWindow(QMainWindow):
         if savedState == None:
             # first run, create initial state
             get_plugin_manager().activatePluginByName(u"Simple View", "gui")
+            get_plugin_manager().activatePluginByName(u"Auto Update", "general")
         
         # add plugins
         try:

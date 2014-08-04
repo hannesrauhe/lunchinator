@@ -3,7 +3,7 @@ from lunchinator import get_settings, get_notification_center,\
 from lunchinator.logging_mutex import loggingMutex
 from lunchinator.peer_actions.standard_peer_actions import getStandardPeerActions
 from lunchinator.privacy.privacy_settings import PrivacySettings
-from lunchinator.privacy.confirmation_dialog import PrivacyConfirmationDialog
+from lunchinator.privacy import PrivacyConfirmationDialog
 
 class PeerActions(object):
     _instance = None
@@ -124,6 +124,9 @@ class PeerActions(object):
                 return self._msgPrefixes[msgPrefix]
         
     def shouldProcessMessage(self, action, category, peerID, mainGUI):
+        if category is None:
+            category = PrivacySettings.NO_CATEGORY
+        
         state = action.getPeerState(peerID, category)
         if state == PrivacySettings.STATE_FREE:
             return True
@@ -135,8 +138,11 @@ class PeerActions(object):
                 return False
             peerName = get_peers().getDisplayedPeerName(peerID)
             
-            if category is not None:
-                message = "%s wants to perform the following action: %s, in category %s" % (peerName, action.getName(), category)
+            if action.usesPrivacyCategories():
+                if category == PrivacySettings.NO_CATEGORY:
+                    message = "%s wants to perform the following action: %s (uncategorized)" % (peerName, action.getName())
+                else:
+                    message = "%s wants to perform the following action: %s, in category %s" % (peerName, action.getName(), category)
             else:
                 message = "%s wants to perform the following action: %s" % (peerName, action.getName())
             dialog = PrivacyConfirmationDialog(mainGUI,

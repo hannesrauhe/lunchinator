@@ -88,6 +88,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
         get_notification_center().connectUpdatesDisabled(self._updatesDisabled)
         get_notification_center().connectMessagePrepended(self._newMessage)
         get_notification_center().connectRestartRequired(self._restartRequired)
+        get_notification_center().connectPluginActivated(self._pluginActivated)
+        get_notification_center().connectPluginDeactivated(self._pluginDeactivated)
         
         self.serverThread = LunchServerThread(self)
         self.serverThread.finished.connect(self.serverFinishedUnexpectedly)
@@ -507,11 +509,19 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def updateRequested(self):
         self.quit(EXIT_CODE_UPDATE)
     
-    @pyqtSlot(unicode)
-    def plugin_widget_closed(self, p_name):
-        # just un-check the menu item, this will cause a callback
-        anAction = self.pluginNameToMenuAction[p_name]
-        anAction.setChecked(False)
+    @pyqtSlot(unicode, unicode)
+    def _pluginActivated(self, pluginName, _category):
+        pluginName = convert_string(pluginName)
+        if pluginName in self.pluginNameToMenuAction:
+            anAction = self.pluginNameToMenuAction[pluginName]
+            anAction.setChecked(True)
+            
+    @pyqtSlot(unicode, unicode)
+    def _pluginDeactivated(self, pluginName, _category):
+        pluginName = convert_string(pluginName)
+        if pluginName in self.pluginNameToMenuAction:
+            anAction = self.pluginNameToMenuAction[pluginName]
+            anAction.setChecked(False)
 
     @pyqtSlot(unicode, unicode, bool)
     def toggle_plugin(self, p_name, p_cat, new_state):

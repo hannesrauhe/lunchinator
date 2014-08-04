@@ -13,14 +13,15 @@ class PrivacyConfirmationDialog(QDialog):
     SCOPE_EVERYONE_CATEGORY = 2
     SCOPE_EVERYONE = 3
     
-    def __init__(self, parent, title, message, peerName, peerID, action, category=None):
+    def __init__(self, parent, title, message, peerName, peerID, action, category=PrivacySettings.NO_CATEGORY):
         super(PrivacyConfirmationDialog, self).__init__(parent)
         
         self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
         
         self._peerID = peerID
         self._action = action
-        self._category = category
+        self._category = category if category is not None else PrivacySettings.NO_CATEGORY
+        self._useCategories = self._action.usesPrivacyCategories()
         
         layout = QVBoxLayout(self)
         
@@ -65,7 +66,7 @@ class PrivacyConfirmationDialog(QDialog):
         scopeWidget = QWidget(self)
         self._scopeGroup = QButtonGroup(self)
         
-        if category is None:
+        if not self._useCategories:
             thisPeer = QRadioButton(peerName, scopeWidget)
             thisPeer.clicked.connect(partial(self._setScope, self.SCOPE_PEER))
             self._scopeGroup.addButton(thisPeer)
@@ -74,7 +75,12 @@ class PrivacyConfirmationDialog(QDialog):
             everyone.clicked.connect(partial(self._setScope, self.SCOPE_EVERYONE))
             self._scopeGroup.addButton(everyone)
         else:
-            b = QRadioButton(u"%s, category %s" % (peerName, category), scopeWidget)
+            if self._category == PrivacySettings.NO_CATEGORY:
+                catDesc = u"uncategorized"
+            else:
+                catDesc = u"category %s" % category
+            
+            b = QRadioButton(u"%s, %s" % (peerName, catDesc), scopeWidget)
             b.clicked.connect(partial(self._setScope, self.SCOPE_PEER_CATEGORY))
             self._scopeGroup.addButton(b)
             
@@ -82,7 +88,7 @@ class PrivacyConfirmationDialog(QDialog):
             b.clicked.connect(partial(self._setScope, self.SCOPE_PEER))
             self._scopeGroup.addButton(b)
             
-            b = QRadioButton(u"Everyone, category %s" % (category), scopeWidget)
+            b = QRadioButton(u"Everyone, %s" % (catDesc), scopeWidget)
             b.clicked.connect(partial(self._setScope, self.SCOPE_EVERYONE_CATEGORY))
             self._scopeGroup.addButton(b)
             
@@ -145,38 +151,44 @@ class PrivacyConfirmationDialog(QDialog):
         
     def _storeDecision(self, accepted):
         # store decision
-        if self._category is None:
+        if not self._useCategories:
             if self._scope == self.SCOPE_PEER:
                 PrivacySettings.get().addException(self._action,
                                                    None,
                                                    PrivacySettings.POLICY_NOBODY_EX,
                                                    self._peerID,
-                                                   1 if accepted else 0)
+                                                   1 if accepted else 0,
+                                                   categoryPolicy=PrivacySettings.CATEGORY_NEVER)
             elif self._scope == self.SCOPE_EVERYONE:
                 PrivacySettings.get().setPolicy(self._action,
                                                 None,
-                                                PrivacySettings.POLICY_EVERYBODY if accepted else PrivacySettings.POLICY_NOBODY)
+                                                PrivacySettings.POLICY_EVERYBODY if accepted else PrivacySettings.POLICY_NOBODY,
+                                                categoryPolicy=PrivacySettings.CATEGORY_NEVER)
         else:
             if self._scope == self.SCOPE_PEER_CATEGORY:
                 PrivacySettings.get().addException(self._action,
                                                    self._category,
                                                    PrivacySettings.POLICY_NOBODY_EX,
                                                    self._peerID,
-                                                   1 if accepted else 0)
+                                                   1 if accepted else 0,
+                                                   categoryPolicy=PrivacySettings.CATEGORY_ALWAYS)
             elif self._scope == self.SCOPE_PEER:
                 PrivacySettings.get().addException(self._action,
                                                    None,
                                                    PrivacySettings.POLICY_PEER_EXCEPTION,
                                                    self._peerID,
-                                                   1 if accepted else 0)
+                                                   1 if accepted else 0,
+                                                   categoryPolicy=PrivacySettings.CATEGORY_NEVER)
             elif self._scope == self.SCOPE_EVERYONE_CATEGORY:
                 PrivacySettings.get().setPolicy(self._action,
                                                 self._category,
-                                                PrivacySettings.POLICY_EVERYBODY if accepted else PrivacySettings.POLICY_NOBODY)
+                                                PrivacySettings.POLICY_EVERYBODY if accepted else PrivacySettings.POLICY_NOBODY,
+                                                categoryPolicy=PrivacySettings.CATEGORY_ALWAYS)
             elif self._scope == self.SCOPE_EVERYONE:
                 PrivacySettings.get().setPolicy(self._action,
                                                 None,
-                                                PrivacySettings.POLICY_EVERYBODY if accepted else PrivacySettings.POLICY_NOBODY)
+                                                PrivacySettings.POLICY_EVERYBODY if accepted else PrivacySettings.POLICY_NOBODY,
+                                                categoryPolicy=PrivacySettings.CATEGORY_NEVER)
             
     def accept(self):
         if self._action is not None and self._policy == self.POLICY_FOREVER:
