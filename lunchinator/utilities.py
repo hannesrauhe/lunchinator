@@ -166,11 +166,6 @@ def getGPG(secret=False):
         # TODO will this work on systems without English locale?
         os.putenv("LANG", "en_US.UTF-8")
     
-    if not locale.getpreferredencoding():
-        # Fix for GnuPG on Mac
-        # TODO will this work on systems without English locale?
-        os.putenv("LANG", "en_US.UTF-8")
-    
     try:
         gpg = None
         if getPlatform() == PLATFORM_WINDOWS:
