@@ -5,7 +5,8 @@ from lunchinator import get_server, log_exception, log_info, get_settings, \
     get_plugin_manager
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QSystemTrayIcon, QIcon, QCursor,\
     QDialog
-from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplication, QTimer
+from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplication, QTimer,\
+    Qt
 from PyQt4 import QtCore
 from functools import partial
 from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
@@ -338,7 +339,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         anAction = parentMenu.addAction(displayedName)
         anAction.setCheckable(True)
         anAction.setChecked(pluginInfo.plugin_object.is_activated)
-        anAction.toggled.connect(partial(self.toggle_plugin, pluginInfo.name, aCat))
+        anAction.triggered.connect(partial(self.toggle_plugin, pluginInfo.name, aCat), type=Qt.DirectConnection)
         self.pluginNameToMenuAction[pluginInfo.name] = anAction
         return anAction
         
