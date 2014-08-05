@@ -255,7 +255,7 @@ class RemotePicturesHandler(QObject):
             valueList = [aValue.decode('utf-8') for aValue in reader.next()]
             url = valueList[0]
             desc = None
-            cat = None
+            cat = PrivacySettings.NO_CATEGORY
             if len(valueList) > 1:
                 desc = valueList[1]
             if len(valueList) > 2:
