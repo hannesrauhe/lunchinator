@@ -15,4 +15,4 @@ if __name__ == '__main__':
             app = QApplication([])
             QMessageBox.critical(None, "Lunchinator Critical Error", msg)
         except:
-            pass
+            print msg

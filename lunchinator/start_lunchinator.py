@@ -2,21 +2,21 @@
 #
 #this script is used to start the lunchinator in all its flavors
 
-import platform, sys, subprocess
-import signal
+import platform, sys, subprocess, os, re, logging, signal
 from functools import partial
 from optparse import OptionParser
 from lunchinator import log_info, log_error, get_settings,\
     get_server, log_exception, initialize_logger, MAIN_CONFIG_DIR
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
 from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS, restart
-import os
 from lunchinator import setLoggingLevel
-import logging
     
 def parse_args():
     usage = "usage: %prog [options]"
     optionParser = OptionParser(usage = usage)
+    optionParser.add_option("--install-dependencies",
+                      default = False, dest = "installDep", action = "store_true",
+                      help = "Trigger dependency installation")
     optionParser.add_option("--no-plugins",
                       default = False, dest = "noPlugins", action = "store_true",
                       help = "Disable plugins completely.")
@@ -59,6 +59,49 @@ def sendMessage(msg, cli):
     
 def handleInterrupt(lanschi, _signal, _frame):
     lanschi.quit()
+    
+def installDependencies(deps = [], gui = False):
+    if len(deps)==0:    
+        #'yapsy', 'requests', 'requests-oauthlib', 'oauthlib', 'python-twitter', 'python-gnupg'
+        req_file = get_settings().get_resource("requirements.txt")
+        if os.path.exists(req_file):
+            with open(req_file, 'r') as f:    
+                for line in f.readlines():
+                    d = re.split("[\=\<\>]", line, 1)
+                    deps.append(d[0])
+            
+    result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + deps)
+    
+    if result == EXIT_CODE_UPDATE:
+        # need to restart
+        restart()
+        return False
+    
+    try:
+        import yapsy
+        if gui:
+            from PyQt4.QtGui import QMessageBox
+            if result == 0:
+                QMessageBox.information(None,
+                                        "Success",
+                                        "Dependencies were installed successfully.",
+                                        buttons=QMessageBox.Ok,
+                                        defaultButton=QMessageBox.Ok)
+            else:
+                QMessageBox.warning(None,
+                                    "Errors during installation",
+                                    "There were errors during installation, but Lunchinator might work anyways. If you experience problems with some plugins, try to install the required libraries manually using pip.")
+            return True
+        log_info("yapsy is working after dependency installation")
+        #without gui there are enough messages on the screen already
+    except:
+        if gui:
+            QMessageBox.critical(None,
+                                 "Error installing dependencies",
+                                 "There was an error, the dependencies could not be installed. Continuing without plugins.")
+        log_error("Dependencies could not be installed.")
+    return False
+        
 
 def checkDependencies(noPlugins, gui = False):
     """ Returns whether or not to use plugins """
@@ -69,63 +112,40 @@ def checkDependencies(noPlugins, gui = False):
         import yapsy
         return True
     except:
-        if getPlatform()==PLATFORM_WINDOWS:
-            #not possible to install pip with admin rights on Windows (although get-pip.py looked promising)
-            msg = "There are missing dependencies. Install pip and run python -m pip install -r requirements.txt"
-            if gui:                
-                from PyQt4.QtGui import QMessageBox
-                QMessageBox.critical(None,
-                                         "Error: missing dependencies",
-                                         msg)
-            log_error(msg)
-            return False
-        if gui:
+        pass
+    
+    if getPlatform()==PLATFORM_WINDOWS:
+        #not possible to install pip with admin rights on Windows (although get-pip.py looked promising)
+        msg = "There are missing dependencies. Install pip and run python -m pip install -r requirements.txt"
+        if gui:                
             from PyQt4.QtGui import QMessageBox
-            mbox = QMessageBox (QMessageBox.Question,
-                                "Dependencies missing",
-                                "Some dependencies are missing and can installed using pip. You can select 'None' and continue without plugins.",
-                                QMessageBox.Yes | QMessageBox.YesToAll | QMessageBox.No)
-            mbox.button(QMessageBox.Yes).setText("Minimal")
-            mbox.button(QMessageBox.YesToAll).setText("Complete (recommended)")
-            mbox.button(QMessageBox.No).setText("None")
-            mbox.setDefaultButton(QMessageBox.YesToAll)
-            mbox.setEscapeButton(QMessageBox.No)
-            res = mbox.exec_()
-            
-            if res == QMessageBox.No:
-                return False
-            elif res == QMessageBox.Yes:
-                # install only Yapsy
-                deps = ['yapsy']
-            elif res == QMessageBox.YesToAll:
-                deps = ['yapsy', 'requests', 'requests-oauthlib', 'oauthlib', 'python-twitter', 'python-gnupg']
-            
-            result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + deps)
-            
-            if result == EXIT_CODE_UPDATE:
-                # need to restart
-                restart()
-                return False
-            
-            try:
-                import yapsy
-                if result == 0:
-                    QMessageBox.information(None,
-                                            "Success",
-                                            "Dependencies were installed successfully.",
-                                            buttons=QMessageBox.Ok,
-                                            defaultButton=QMessageBox.Ok)
-                else:
-                    QMessageBox.warning(None,
-                                        "Errors during installation",
-                                        "There were errors during installation, but Lunchinator might work anyways. If you experience problems with some plugins, try to install the required libraries manually using pip.")
-                return True
-            except:
-                QMessageBox.critical(None,
-                                     "Error installing dependencies",
-                                     "There was an error, the dependencies could not be installed. Continuing without plugins.")
-                log_error("Dependencies could not be installed.")
+            QMessageBox.critical(None,
+                                     "Error: missing dependencies",
+                                     msg)
+        log_error(msg)
+        return False
+    if gui:
+        from PyQt4.QtGui import QMessageBox
+        mbox = QMessageBox (QMessageBox.Question,
+                            "Dependencies missing",
+                            "Some dependencies are missing and can installed using pip. You can select 'None' and continue without plugins.",
+                            QMessageBox.Yes | QMessageBox.YesToAll | QMessageBox.No)
+        mbox.button(QMessageBox.Yes).setText("Minimal")
+        mbox.button(QMessageBox.YesToAll).setText("Complete (recommended)")
+        mbox.button(QMessageBox.No).setText("None")
+        mbox.setDefaultButton(QMessageBox.YesToAll)
+        mbox.setEscapeButton(QMessageBox.No)
+        res = mbox.exec_()
+        
+        if res == QMessageBox.No:
             return False
+        elif res == QMessageBox.Yes:
+            # install only Yapsy
+            deps = ['yapsy']
+        elif res == QMessageBox.YesToAll:
+            deps = []
+            
+    return installDependencies(deps, gui)
 
 def startLunchinator():
     (options, _args) = parse_args()
@@ -147,6 +167,9 @@ def startLunchinator():
         get_server().set_has_gui(False)
         get_server().stop_server(stop_any=True)
         print "Sent stop command to local lunchinator"
+    elif options.installDep:
+        initialize_logger()
+        installDependencies()
     elif options.cli:
         initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))
         usePlugins = checkDependencies(usePlugins)
