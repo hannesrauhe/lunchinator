@@ -6,17 +6,24 @@ def _fillPeerActionsMenu(popupMenu, peerID, filterFunc):
     peerInfo = get_peers().getPeerInfo(pID=peerID)
     actionsDict = get_peer_actions().getPeerActions(peerID, peerInfo, filterFunc)
     if actionsDict:
-        actionKeys = sorted(actionsDict.keys())
+        actionsList = [] # tuples (sort key, displayed name, [actions])
+        
         first = True
-        for actionKey in actionKeys:
+        for actionKey in actionsDict:
             actions = actionsDict[actionKey]
             if actionKey == PeerActions.STANDARD_PEER_ACTIONS_KEY:
                 displayedName = "General"
+                sortKey = u""
             else:
                 displayedName = actions[0].getPluginObject().get_displayed_name()
                 if not displayedName:
                     displayedName = actionKey
+                sortKey = displayedName
                     
+            actionsList.append((sortKey, displayedName, actions))
+        
+        actionsList = sorted(actionsList, key=lambda tup:tup[0].lower())
+        for _, displayedName, actions in actionsList:
             if not first:
                 popupMenu.addSeparator()
             else:
