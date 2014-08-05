@@ -260,7 +260,7 @@ class LunchPeers(object):
         i = self.getPeerInfo(pIP=ip, lock=False)
         if i:
             return i[u'name']
-        return "<unknown>"
+        return u"<unknown>"
 
     @peerGetter(needsID=True)
     def getDisplayedPeerName(self, peerID):
