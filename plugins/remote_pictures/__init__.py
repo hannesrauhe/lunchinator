@@ -197,7 +197,7 @@ class remote_pictures(iface_gui_plugin):
         return self._handler.willIgnorePeerAction(category, url)
     
     def sendRemotePicture(self, peerID, peerInfo):
-        dialog = RemotePicturesDialog(getValidQtParent(), peerID, peerInfo)
+        dialog = RemotePicturesDialog(get_server().getController().getMainGUI(), peerID, peerInfo)
         result = dialog.exec_()
         if result == RemotePicturesDialog.Accepted:
             data = [dialog.getURL().encode('utf-8')]
@@ -205,7 +205,7 @@ class remote_pictures(iface_gui_plugin):
                 data.append(dialog.getDescription().encode('utf-8'))
                 if dialog.getCategory():
                     data.append(dialog.getCategory().encode('utf-8'))
-            get_server().call("HELO_REMOTE_PIC " + ' '.join(data), pIDs=[peerID])
+        get_server().call("HELO_REMOTE_PIC " + ' '.join(data), peerIDs=[peerID])
     
     def _privacySettingsChanged(self):
         get_notification_center().emitPrivacySettingsChanged(self._rpAction.getPluginName(), self._rpAction.getName())

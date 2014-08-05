@@ -3,7 +3,7 @@ from PyQt4.QtGui import QWidget, QComboBox, QHBoxLayout, QLabel, QToolBox,\
 from PyQt4.QtCore import Qt
 from privacy_gui.single_category_view import SingleCategoryView
 from lunchinator.privacy.privacy_settings import PrivacySettings
-from lunchinator import get_notification_center, log_error
+from lunchinator import get_notification_center, log_debug
 from itertools import izip
 
 class MultipleCategoriesView(QWidget):
@@ -99,7 +99,7 @@ class MultipleCategoriesView(QWidget):
         
     def _updateCategoryView(self):
         if self._currentToolBox is None:
-            log_error("Current tool box is None. Have to reset.")
+            log_debug("Current tool box is None. Have to reset.")
             self._createCategoryView()
             return
         
