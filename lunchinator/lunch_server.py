@@ -310,7 +310,9 @@ class lunch_server(object):
     """ ---------------------- PRIVATE -------------------------------- """
     
     def _startCleanupTimer(self):
-        self._cleanupTimer = Timer(get_settings().get_peer_timeout() / 2, self._cleanup)
+        interval = get_settings().get_peer_timeout() / 2
+        interval = 30 if interval>30 else interval
+        self._cleanupTimer = Timer(interval, self._cleanup)
         self._cleanupTimer.start()
     
     def _cleanup(self):
