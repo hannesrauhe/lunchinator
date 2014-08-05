@@ -147,10 +147,18 @@ class lunch_settings(object):
         self._warn_if_members_not_ready = True
         self._notification_if_everybody_ready = False
                 
-        #also in config, but hidden
+        """===also in config, but hidden==="""
+        # ID (UUID) is generated at first startup
         self._ID = u""
-        self._peer_timeout = 120
-        self._message_cache_timeout = 5 # cache lifetime to detect duplicate messages
+        # time until unreachable peers are dropped and until incomplete HELOX calls are dropped
+        # cleanUp thread runs twice in this interval
+        self._peer_timeout = 120 
+        # cache lifetime to detect duplicate messages
+        self._message_cache_timeout = 5
+        # lunchinators standard UPD port 
+        self._udp_port = 50000
+        # size of a single UDP package (best value depends on the network)
+        self._max_fragment_length = 512
         
         self._next_lunch_begin = None
         self._next_lunch_end = None
@@ -492,6 +500,18 @@ class lunch_settings(object):
     @hidden_setting()
     def set_peer_timeout(self, v):
         self._peer_timeout = v
+        
+    def get_max_fragment_length(self):
+        return self._max_fragment_length
+    @hidden_setting()
+    def set_max_fragment_length(self, v):
+        self._max_fragment_length = v
+        
+    def get_udp_port(self):
+        return self._udp_port
+    @hidden_setting()
+    def set_udp_port(self, v):
+        self._udp_port = v
         
     def get_message_cache_timeout(self):
         return self._message_cache_timeout

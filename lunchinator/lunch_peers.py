@@ -240,7 +240,19 @@ class LunchPeers(object):
         """Returns the group of a peer"""
         if ip in self._peer_info:
             return self._peer_info[ip][u'group']
-        return None    
+        return None   
+    
+    
+    @peerGetter()
+    def getPeerCommitCount(self, ip):
+        """Returns the internal version of a peer"""
+        if ip in self._peer_info:
+            try:
+                return int(self._peer_info[ip][u'version_commit_count'])
+            except:
+                log_debug("Commit Count is not an Integer")
+                return None
+        return None   
     
     @peerGetter()
     def getRealPeerName(self, ip):

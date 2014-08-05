@@ -5,6 +5,7 @@ import socket, sys, os, json, contextlib, tarfile, platform, random, errno
 from time import strftime, localtime, time
 from cStringIO import StringIO
 
+from lunchinator.lunch_socket import lunch_socket, split_call
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string, get_notification_center
 from lunchinator.logging_mutex import loggingMutex
@@ -148,10 +149,9 @@ class lunch_server(object):
         
         is_in_broadcast_mode = False
         
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._recv_socket = lunch_socket(self._peers)
         try: 
-            s.bind(("", 50000)) 
-            s.settimeout(5.0)
+            self._recv_socket.bind()
             self.running = True
             self._cleanupLock = loggingMutex("cleanup", logging=get_settings().get_verbose())
             self._startCleanupTimer()
@@ -164,15 +164,12 @@ class lunch_server(object):
             
             while self.running:
                 try:
-                    data, addr = s.recvfrom(1024)
-                    ip = unicode(addr[0])
-                    
-                    log_debug(u"Incoming event from %s: %s" % (ip, convert_string(data)))
+                    data, ip = self._recv_socket.recv()            
                     try:
                         data = data.decode('utf-8')
                     except:
                         log_error("Received illegal data from %s, maybe wrong encoding" % ip)
-                        continue                 
+                        continue         
                      
                     # check for local address: only stop command allowed, else ignore
                     if ip.startswith("127."):
@@ -192,8 +189,9 @@ class lunch_server(object):
                         self.call_request_info([ip])
                     
                     self._handle_event(data, ip, time(), isNewPeer, False)
-                except socket.timeout:
-                    
+                except split_call as e:
+                    log_debug(e.value)
+                except socket.timeout:                    
                     if len(self._peers) > 1:                     
                         if is_in_broadcast_mode:
                             is_in_broadcast_mode = False
@@ -203,10 +201,13 @@ class lunch_server(object):
                             if not is_in_broadcast_mode:
                                 is_in_broadcast_mode = True
                                 log_warning("seems like you are alone - broadcasting for others")
-                            self._broadcast()
-                except socket.error as e:
-                    if e.errno != errno.EINTR:
-                        raise
+                            s_broad = lunch_socket(self._peers)
+                            s_broad.broadcast('HELO_REQUEST_INFO ' + self._build_info_string())
+                            s_broad.close()
+                            #forgotten peers may be on file
+                            requests = self._peers.initPeersFromFile()
+                            self.call_request_info(requests)
+                            
         except socket.error as e:
             # socket error messages may contain special characters, which leads to crashes on old python versions
             log_error(u"stopping lunchinator because of socket error:", convert_string(str(e)))
@@ -222,7 +223,8 @@ class lunch_server(object):
                     self._cleanupTimer.cancel()
                 
                 self.call("HELO_LEAVE bye")
-                s.close()  
+                self._recv_socket.close()
+                self._recv_socket = None 
             except:
                 log_warning("Wasn't able to send the leave call and close the socket...")
             self._finish()
@@ -244,7 +246,7 @@ class lunch_server(object):
         both peerIDs and peerIPs should be sets
         Used also by start_lunchinator to send messages without initializing
         the whole lunch server."""     
-        msg = convert_string(msg)
+        msg = convert_string(msg) # TODO no unicode here?
         target = []
         
         if len(peerIDs) == 0 and len(peerIPs) == 0:
@@ -291,17 +293,16 @@ class lunch_server(object):
                     print "WARNING: %s" % warn
 
         i = 0
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
+        s = lunch_socket(self._peers)
         try:      
             for ip in target:
                 try:
-                    log_debug("Sending", msg, "to", ip.strip())
-                    s.sendto(msg.encode('utf-8'), (ip.strip(), 50000))
+                    short = msg if len(msg)<15 else msg[:14]+"..."
+                    log_debug("Sending", short, "to", ip.strip())
+                    s.sendto(msg.encode('utf-8'), ip.strip())
                     i += 1
-                except:
-                    # only warning message; happens sometimes if the host is not reachable
-                    log_warning("Message %s could not be delivered to %s: %s" % (s, ip, str(sys.exc_info()[0])))
-                    continue
+                except Exception as e:
+                    log_exception("The following message could not be delivered to %s: %s\n%s" % (ip, str(sys.exc_info()[0]), msg))
         finally:
             s.close() 
         return i
@@ -309,7 +310,7 @@ class lunch_server(object):
     """ ---------------------- PRIVATE -------------------------------- """
     
     def _startCleanupTimer(self):
-        self._cleanupTimer = Timer(30, self._cleanup)
+        self._cleanupTimer = Timer(get_settings().get_peer_timeout() / 2, self._cleanup)
         self._cleanupTimer.start()
     
     def _cleanup(self):
@@ -326,6 +327,7 @@ class lunch_server(object):
                 self._peers.removeInactive()            
                 self._remove_timed_out_queues()
                 self._cleanup_cached_messages()
+                self._recv_socket.drop_incomplete_messages()
             except:
                 log_exception("Something went wrong in the lunch interval thread")
             self._startCleanupTimer()
@@ -607,13 +609,3 @@ class lunch_server(object):
         if self._messages:
             self._messages.finish()
         self.controller.serverStopped(self.exitCode)
-    
-    def _broadcast(self):
-        try:
-            s_broad = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            s_broad.sendto('HELO_REQUEST_INFO ' + self._build_info_string(), ('255.255.255.255', 50000))
-            s_broad.close()
-        except:
-            log_exception("Problem while broadcasting")
