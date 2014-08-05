@@ -4,6 +4,7 @@ import socket, errno, math, hashlib
 from lunchinator import get_settings, log_debug, log_error, log_warning, log_exception
 from lunchinator.logging_mutex import loggingMutex
 import itertools, time
+from logging import disable
 
 """ lunch_socket is the class to 
 1. abstract sockets to support IPv6 and IPv4 sockets transparently (TODO)
@@ -47,6 +48,7 @@ class lunch_socket(object):
         if not self._s:
             raise Exception("Cannot send. There is no open lunch socket")
         
+        ip = ip.strip()
         # TODO remove leading HELO_, never use HELOX for old-school messages (they won't become too long anyways)?
         
         if len(msg) > self._max_msg_length:                     
@@ -60,19 +62,26 @@ class lunch_socket(object):
                     log_warning("Message to peer %s is too long and should be compressed/split,"%ip + \
                      "but peer has version %d and cannot receive extended messages"%peerversion) 
                     disable_extended = True
-            
+        else:
+            disable_extended = True
+                
+        try:        
             if disable_extended:
                 if len(msg) > self.LEGACY_MAX_LEN:
                     raise Exception("Message too large to be send over socket in one piece")
                 else:
-                    self._s.sendto(msg, (ip.strip(), self._port))
+                    self._s.sendto(msg, (ip, self._port))
             else:
                 log_debug("Sending as extended Message")
                 xmsg = extMessageOutgoing(msg, self._max_msg_length)
                 for f in xmsg.getFragments():
-                    self._s.sendto(f, (ip.strip(), self._port))
-        else:
-            self._s.sendto(msg, (ip.strip(), self._port))
+                    self._s.sendto(f, (ip, self._port))
+        except socket.error as e:
+            if e.errno in [64,65]:
+                log_debug("lunch_socket: Removing IP because host is down or there is no route")
+                self._peers.removePeerIPs([ip])
+            else:
+                raise
         
     def broadcast(self, msg):
         try:
