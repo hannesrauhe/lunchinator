@@ -2,7 +2,7 @@ from private_messages.chat_messages_model import ChatMessagesModel
 
 from lunchinator import log_exception, log_error, log_debug,\
     log_warning, log_info, convert_string, get_server, get_peers,\
-    get_notification_center
+    get_notification_center, get_settings
 
 from PyQt4.QtCore import pyqtSignal, pyqtSlot, QTimer, QObject
 from time import time
@@ -11,8 +11,6 @@ from private_messages.chat_messages_storage import InconsistentIDError,\
     ChatMessagesStorage
         
 class ChatMessagesHandler(QObject):
-    _STOP_RESEND_TIME = 60 # seconds until resending is stopped
-    
     # other ID, message ID, receive time, HTML, time, state, error message
     displayOwnMessage = pyqtSignal(unicode, int, float, unicode, float, int, unicode)
     # other ID, message ID, receive time, error, error message
@@ -73,7 +71,7 @@ class ChatMessagesHandler(QObject):
             msgTime = msgTuple[ChatMessagesStorage.MSG_TIME_COL]
             if not force:
                 timeout = int(curTime - msgTime)
-                if timeout > self._STOP_RESEND_TIME:
+                if timeout > get_settings().get_peer_timeout():
                     continue
                 
             msgID = msgTuple[ChatMessagesStorage.MSG_ID_COL]
