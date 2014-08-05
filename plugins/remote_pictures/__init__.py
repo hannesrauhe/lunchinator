@@ -10,14 +10,17 @@ from tempfile import NamedTemporaryFile
 from urlparse import urlparse
 from lunchinator.peer_actions import PeerAction
 from lunchinator.privacy import PrivacySettings
+from remote_pictures.remote_pictures_dialog import RemotePicturesDialog
     
 class _RemotePictureAction(PeerAction):
     def getName(self):
         return "Send Remote Picture"
     
     def appliesToPeer(self, _peerID, _peerInfo):
-        # TODO have to implement performAction
-        return False
+        return True
+    
+    def performAction(self, peerID, peerInfo):
+        self.getPluginObject().sendRemotePicture(peerID, peerInfo)
     
     def getMessagePrefix(self):
         return "REMOTE_PIC"
@@ -58,6 +61,9 @@ class _RemotePictureAction(PeerAction):
         return PrivacySettings.NO_CATEGORY
     
 class remote_pictures(iface_gui_plugin):
+    VERSION_DB = 0
+    VERSION_CURRENT = VERSION_DB
+    
     def __init__(self):
         super(remote_pictures, self).__init__()
         self.options = [((u"min_opacity", u"Minimum opacity of controls:", self.minOpacityChanged), 20),
@@ -155,6 +161,12 @@ class remote_pictures(iface_gui_plugin):
         
         iface_gui_plugin.destroy_widget(self)
 
+    def extendsInfoDict(self):
+        return True
+        
+    def extendInfoDict(self, infoDict):
+        infoDict[u"RP_v"] = self.VERSION_CURRENT
+        
     def get_peer_actions(self):
         self._rpAction = _RemotePictureAction()
         return [self._rpAction]
@@ -183,6 +195,17 @@ class remote_pictures(iface_gui_plugin):
     
     def willIgnorePeerAction(self, category, url):
         return self._handler.willIgnorePeerAction(category, url)
+    
+    def sendRemotePicture(self, peerID, peerInfo):
+        dialog = RemotePicturesDialog(getValidQtParent(), peerID, peerInfo)
+        result = dialog.exec_()
+        if result == RemotePicturesDialog.Accepted:
+            data = [dialog.getURL().encode('utf-8')]
+            if dialog.getDescription():
+                data.append(dialog.getDescription().encode('utf-8'))
+                if dialog.getCategory():
+                    data.append(dialog.getCategory().encode('utf-8'))
+            get_server().call("HELO_REMOTE_PIC " + ' '.join(data), pIDs=[peerID])
     
     def _privacySettingsChanged(self):
         get_notification_center().emitPrivacySettingsChanged(self._rpAction.getPluginName(), self._rpAction.getName())
