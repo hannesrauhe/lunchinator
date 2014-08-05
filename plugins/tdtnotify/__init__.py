@@ -49,7 +49,7 @@ class tdtnotify(iface_called_plugin):
         
     def _startCheckTimer(self, immediately=False):
         if immediately:
-            timeout = 0
+            timeout = 30
         elif self.failed_attempts == 0:
             timeout = 60 * self.options["polling_time"]
         elif self.failed_attempts < 5:
