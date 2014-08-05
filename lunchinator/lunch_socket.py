@@ -73,9 +73,8 @@ class lunch_socket(object):
         
     def broadcast(self, msg):
         try:
-            s_broad = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s_broad.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            self._s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self._s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             
             if len(msg) > self.LEGACY_MAX_LEN:
                 log_debug("Broadcasting as extended Message")
@@ -83,8 +82,7 @@ class lunch_socket(object):
                 for f in xmsg.getFragments():
                     self._s.sendto(f, ('255.255.255.255', self._port))
             else:
-                s_broad.sendto(msg, ('255.255.255.255', self._port))
-            s_broad.close()
+                self._s.sendto(msg, ('255.255.255.255', self._port))
         except:
             log_exception("Problem while broadcasting")
     

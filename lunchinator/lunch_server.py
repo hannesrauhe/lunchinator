@@ -149,9 +149,9 @@ class lunch_server(object):
         
         is_in_broadcast_mode = False
         
-        s = lunch_socket(self._peers)
+        self._recv_socket = lunch_socket(self._peers)
         try: 
-            s.bind()
+            self._recv_socket.bind()
             self.running = True
             self._cleanupLock = loggingMutex("cleanup", logging=get_settings().get_verbose())
             self._startCleanupTimer()
@@ -164,7 +164,7 @@ class lunch_server(object):
             
             while self.running:
                 try:
-                    data, ip = s.recv()            
+                    data, ip = self._recv_socket.recv()            
                     try:
                         data = data.decode('utf-8')
                     except:
@@ -201,7 +201,9 @@ class lunch_server(object):
                             if not is_in_broadcast_mode:
                                 is_in_broadcast_mode = True
                                 log_warning("seems like you are alone - broadcasting for others")
-                            s.broadcast('HELO_REQUEST_INFO ' + self._build_info_string())
+                            s_broad = lunch_socket(self._peers)
+                            s_broad.broadcast('HELO_REQUEST_INFO ' + self._build_info_string())
+                            s_broad.close()
                             #forgotten peers may be on file
                             requests = self._peers.initPeersFromFile()
                             self.call_request_info(requests)
@@ -221,7 +223,8 @@ class lunch_server(object):
                     self._cleanupTimer.cancel()
                 
                 self.call("HELO_LEAVE bye")
-                s.close()  
+                self._recv_socket.close()
+                self._recv_socket = None 
             except:
                 log_warning("Wasn't able to send the leave call and close the socket...")
             self._finish()
@@ -324,6 +327,7 @@ class lunch_server(object):
                 self._peers.removeInactive()            
                 self._remove_timed_out_queues()
                 self._cleanup_cached_messages()
+                self._recv_socket.drop_incomplete_messages()
             except:
                 log_exception("Something went wrong in the lunch interval thread")
             self._startCleanupTimer()
