@@ -111,9 +111,13 @@ class PrivacySettings(object):
                         get_notification_center().emitPrivacySettingsChanged(pluginName, actionName)
             self._modifications = {}
                 
-    def discard(self):
+    def discard(self, notify=True):
         """Discards all modifications since the last save"""
         with self._lock:
+            for pluginName, pluginDict in self._modifications.iteritems():
+                for actionName, _actionDict in pluginDict.iteritems():
+                    if notify:
+                        get_notification_center().emitPrivacySettingsDiscarded(pluginName, actionName)
             self._modifications = {}
     
     ######################### GETTER ########################

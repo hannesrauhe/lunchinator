@@ -3,7 +3,7 @@ from PyQt4.QtGui import QWidget, QComboBox, QHBoxLayout, QLabel, QToolBox,\
 from PyQt4.QtCore import Qt
 from privacy_gui.single_category_view import SingleCategoryView
 from lunchinator.privacy.privacy_settings import PrivacySettings
-from lunchinator import get_notification_center, log_debug
+from lunchinator import get_notification_center, log_debug, convert_string
 from itertools import izip
 
 class MultipleCategoriesView(QWidget):
@@ -24,9 +24,11 @@ class MultipleCategoriesView(QWidget):
         self._modeChanged(self._mode, False)
         
         get_notification_center().connectPrivacySettingsChanged(self._privacySettingsChanged)
+        get_notification_center().connectPrivacySettingsDiscarded(self._privacySettingsChanged)
         
     def finish(self):
         get_notification_center().disconnectPrivacySettingsChanged(self._privacySettingsChanged)
+        get_notification_center().disconnectPrivacySettingsDiscarded(self._privacySettingsChanged)
         self._clearCurrentView()
 
     def _initTopView(self):
@@ -104,11 +106,8 @@ class MultipleCategoriesView(QWidget):
             return
         
         newCategories = self._action.getPrivacyCategories()
-        if PrivacySettings.NO_CATEGORY in self._currentSingleViews:
-            last = self._currentToolBox.count() - 2
-        else:
-            last = self._currentToolBox.count() - 1
-        oldCategories = [self._currentToolBox.itemText(i) for i in xrange(last)]
+        last = self._currentToolBox.count() - 1
+        oldCategories = [convert_string(self._currentToolBox.widget(i).getCategory()) for i in xrange(last)]
         
         # remove categories that are not there any more
         reverse_enumerate = lambda l: izip(xrange(len(l)-1, -1, -1), reversed(l))

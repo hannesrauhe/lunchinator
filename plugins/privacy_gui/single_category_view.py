@@ -98,11 +98,13 @@ class SingleCategoryView(QWidget):
         get_notification_center().connectPeerNameAdded(self._peerModel.peerNameAdded)
         get_notification_center().connectDisplayedPeerNameChanged(self._peerModel.peerNameChanged)
         get_notification_center().connectPrivacySettingsChanged(self._privacySettingsChanged)
+        get_notification_center().connectPrivacySettingsDiscarded(self._privacySettingsChanged)
         
     def finish(self):
         get_notification_center().disconnectPeerNameAdded(self._peerModel.peerNameAdded)
         get_notification_center().disconnectDisplayedPeerNameChanged(self._peerModel.peerNameChanged)
         get_notification_center().disconnectPrivacySettingsChanged(self._privacySettingsChanged)
+        get_notification_center().disconnectPrivacySettingsDiscarded(self._privacySettingsChanged)
         
     def _getCategoryPolicy(self):
         return PrivacySettings.CATEGORY_NEVER if self._category is None else PrivacySettings.CATEGORY_ALWAYS
@@ -197,6 +199,9 @@ class SingleCategoryView(QWidget):
         
     def setMode(self, newMode):
         self._modeChanged(newMode, notify=False)
+
+    def getCategory(self):
+        return self._category
 
     def _privacySettingsChanged(self, pluginName, actionName):
         if pluginName != self._action.getPluginName() or actionName != self._action.getName():

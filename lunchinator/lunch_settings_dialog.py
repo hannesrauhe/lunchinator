@@ -1,4 +1,5 @@
-from PyQt4.QtGui import QTabWidget, QDialog, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton
+from PyQt4.QtGui import QTabWidget, QDialog, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton,\
+    QDialogButtonBox
 from PyQt4.QtCore import Qt, pyqtSignal
 from lunchinator import get_settings, get_plugin_manager, log_exception,\
     get_notification_center, convert_string
@@ -36,7 +37,8 @@ class _SettingsWidgetContainer(QWidget):
         return self._showing
 
 class LunchinatorSettingsDialog(QDialog):
-    closed = pyqtSignal()
+    save = pyqtSignal()
+    discard = pyqtSignal()
     
     def __init__(self, parent):
         super(LunchinatorSettingsDialog, self).__init__(parent, Qt.Dialog)
@@ -69,18 +71,26 @@ class LunchinatorSettingsDialog(QDialog):
             # show first widget
             self.nb.widget(0).showContents()
             
-        bottomLayout = QHBoxLayout()
-        bottomLayout.addWidget(QWidget(self), 1)
+        buttonBox = QDialogButtonBox(Qt.Horizontal, self)
+        
         saveButton = QPushButton("Save", self)
-        saveButton.setAutoDefault(True)
+        #saveButton.setAutoDefault(True)
         saveButton.clicked.connect(self.savePressed)
-        bottomLayout.addWidget(saveButton)
+        buttonBox.addButton(saveButton, QDialogButtonBox.AcceptRole)
         
         cancelButton = QPushButton("Cancel", self)
         cancelButton.clicked.connect(self.cancelPressed)
-        bottomLayout.addWidget(cancelButton)
+        buttonBox.addButton(cancelButton, QDialogButtonBox.RejectRole)
         
-        contentLayout.addLayout(bottomLayout)
+        applyButton = QPushButton("Apply", self)
+        applyButton.clicked.connect(self.applyPressed)
+        buttonBox.addButton(applyButton, QDialogButtonBox.ApplyRole)
+        
+        discardButton = QPushButton("Discard", self)
+        discardButton.clicked.connect(self.discardPressed)
+        buttonBox.addButton(discardButton, QDialogButtonBox.ApplyRole)
+        
+        contentLayout.addWidget(buttonBox)
         
         get_notification_center().connectPluginActivated(self._pluginActivated)
         get_notification_center().connectPluginWillBeDeactivated(self._pluginWillBeDeactivated)
@@ -147,14 +157,20 @@ class LunchinatorSettingsDialog(QDialog):
             size = self.size()
             self.setMinimumSize(size.width(), size.height())
         
+    def applyPressed(self):
+        self.save.emit()
+        
+    def discardPressed(self):
+        self.discard.emit()
+        
     def savePressed(self):
         self.setResult(QDialog.Accepted)
-        self.closed.emit()
+        self.save.emit()
         self.setVisible(False)
         
     def cancelPressed(self):
         self.setResult(QDialog.Rejected)
-        self.closed.emit()
+        self.discard.emit()
         self.setVisible(False)
 
     def isOptionsWidgetLoaded(self, pluginName):

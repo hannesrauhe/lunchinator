@@ -226,3 +226,11 @@ class NotificationCenterQt(QObject):
     def emitPrivacySettingsChanged(self, pluginName, actionName):
         self._signalPrivacySettingsChanged.emit(pluginName, actionName)
         
+    _signalPrivacySettingsDiscarded = pyqtSignal(unicode, unicode)
+    def connectPrivacySettingsDiscarded(self, callback):
+        self._signalPrivacySettingsDiscarded.connect(callback, type=Qt.QueuedConnection)
+    def disconnectPrivacySettingsDiscarded(self, callback):
+        self._signalPrivacySettingsDiscarded.disconnect(callback)
+    def emitPrivacySettingsDiscarded(self, pluginName, actionName):
+        self._signalPrivacySettingsDiscarded.emit(pluginName, actionName)
+        

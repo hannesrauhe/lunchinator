@@ -607,20 +607,20 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
         if self.settingsWindow == None:
             self.settingsWindow = LunchinatorSettingsDialog(self.mainWindow)
-            self.settingsWindow.closed.connect(self.settingsDialogClosed)
+            self.settingsWindow.save.connect(partial(self.settingsDialogAction, True))
+            self.settingsWindow.discard.connect(partial(self.settingsDialogAction, False))
 
         self.settingsWindow.showNormal()
         self.settingsWindow.raise_()
         self.settingsWindow.activateWindow()
 
     @pyqtSlot()        
-    def settingsDialogClosed(self):
+    def settingsDialogAction(self, saved):
         if not get_settings().get_plugins_enabled():
             return
-        resp = self.settingsWindow.result()
         for pluginInfo in get_plugin_manager().getAllPlugins():
             if pluginInfo.plugin_object.is_activated and self.settingsWindow.isOptionsWidgetLoaded(pluginInfo.name):
-                if resp == LunchinatorSettingsDialog.Accepted:
+                if saved:
                     try:
                         pluginInfo.plugin_object.save_options_widget_data(sendInfoDict=False)
                     except:
