@@ -152,7 +152,7 @@ class lunch_settings(object):
         self._ID = u""
         # time until unreachable peers are dropped and until incomplete HELOX calls are dropped
         # cleanUp thread runs twice in this interval
-        self._peer_timeout = 120 
+        self._peer_timeout = 60
         # cache lifetime to detect duplicate messages
         self._message_cache_timeout = 5
         # lunchinators standard UPD port 
