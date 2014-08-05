@@ -1,7 +1,8 @@
 """ lunch_socket+exceptions, extendedMessages(Incoming/Outgoing)"""
 
 import socket, errno, math, hashlib
-from lunchinator import get_settings, log_debug, log_error, log_warning, log_exception, convert_string
+from lunchinator import get_settings, log_debug, log_error, log_warning, log_exception
+from lunchinator.logging_mutex import loggingMutex
 import itertools, time
 
 """ lunch_socket is the class to 
@@ -10,7 +11,7 @@ import itertools, time
 as well as splitting of long messages"""
 class lunch_socket(object):    
     LEGACY_MAX_LEN = 1024
-    EXT_MSG_VERSION = 1526
+    EXT_MSG_VERSION = 1556
     
     def __init__(self, peers):
         self._s = None
@@ -24,6 +25,8 @@ class lunch_socket(object):
         self._port = get_settings().get_udp_port()
         self._max_msg_length = get_settings().get_max_fragment_length()
         self._incomplete_messages = {}
+        
+        self._incMsgLock = loggingMutex("dropIncompleteMsg", logging=get_settings().get_verbose())
     
     """ sends a message to an IP on the configured port, 
     
@@ -107,15 +110,16 @@ class lunch_socket(object):
                     if not xmsg.isComplete():
                         #it's a split message
                         s = xmsg.getSplitID()
-                        if (ip,s) in self._incomplete_messages:
-                            incompMsg, _ = self._incomplete_messages[(ip,s)]
-                            xmsg.merge(incompMsg)                           
+                        with self._incMsgLock:
+                            if (ip,s) in self._incomplete_messages:
+                                incompMsg, _ = self._incomplete_messages[(ip,s)]
+                                xmsg.merge(incompMsg)                       
                         
-                        if not xmsg.isComplete():
-                            self._incomplete_messages[(ip,s)] = (xmsg, time.time())
-                            raise split_call(ip, xmsg)
-                        else:
-                            del self._incomplete_messages[(ip,s)]
+                            if not xmsg.isComplete():
+                                self._incomplete_messages[(ip,s)] = (xmsg, time.time())
+                                raise split_call(ip, xmsg)
+                            else:
+                                del self._incomplete_messages[(ip,s)]
                     msg = xmsg.getPlainMessage()
                 else:
                     try:
@@ -149,8 +153,15 @@ class lunch_socket(object):
     """ clean up the cache for incomplete messages """
     def drop_incomplete_messages(self):
         timeout = get_settings().get_peer_timeout()
-        for msg, timestamp in self._incomplete_messages.itervalues():
-            pass
+        drop_ids = []
+        
+        with self._incMsgLock:
+            for ID, (msg, timestamp) in self._incomplete_messages.iteritems():
+                if timestamp + timeout < time.time() :
+                    drop_ids.append(ID)
+                    
+            for ID in drop_ids:
+                del self._incomplete_messages[ID]
         
     
 class split_call(Exception):
