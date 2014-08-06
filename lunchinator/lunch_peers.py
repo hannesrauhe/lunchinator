@@ -531,6 +531,9 @@ class LunchPeers(object):
         p_file = get_settings().get_peers_file() if os.path.exists(get_settings().get_peers_file()) else get_settings().get_members_file()
         
         peerIPs = []
+        #TODO change AF_INET when going to v6
+        for ip in set(i[4][0] for i in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)):
+            peerIPs.append(ip)
         if os.path.exists(p_file):
             with codecs.open(p_file, 'r', 'utf-8') as f:    
                 for line in f.readlines():
@@ -541,7 +544,7 @@ class LunchPeers(object):
                     try:
                         self._potentialPeers.add(hostn)
                         #TODO change AF_INET when going to v6
-                        for ip in set(i[4][0] for i in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)):
+                        for ip in set(i[4][0] for i in socket.getaddrinfo(hostn, None, socket.AF_INET)):
                             peerIPs.append(ip)
                     except socket.error:
                         log_debug("cannot find host specified in members_file by %s with name %s" % (p_file, hostn))
