@@ -120,8 +120,8 @@ class LunchinatorSettingsDialog(QDialog):
             lo = 0
             if len(self.widget_names) > 0 and self.widget_names[0] == "General Settings":
                 lo = 1
-            iPos = bisect_left(self.widget_names, pName, lo=lo)
-        self.widget_names.insert(iPos, pName)
+            iPos = bisect_left(self.widget_names, displayedName, lo=lo)
+        self.widget_names.insert(iPos, displayedName)
         self.nb.insertTab(iPos, w, displayedName)
             
     def removePlugin(self, po, pName, pCat):
@@ -134,10 +134,15 @@ class LunchinatorSettingsDialog(QDialog):
             except:
                 log_exception("Error destroying options widget for plugin", pName, "from category", pCat)
                     
+        if po.get_displayed_name():
+            displayedName = po.get_displayed_name()
+        else:
+            displayedName = pName
+            
         self.widget_containers.pop(pName, None)
         # search for position
-        i = bisect_left(self.widget_names, pName, lo=1)
-        if i != len(self.widget_names) and self.widget_names[i] == pName:
+        i = bisect_left(self.widget_names, displayedName, lo=1)
+        if i != len(self.widget_names) and self.widget_names[i] == displayedName:
             del self.widget_names[i]
             self.nb.removeTab(i)
         
