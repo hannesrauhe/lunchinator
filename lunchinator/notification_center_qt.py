@@ -233,4 +233,3 @@ class NotificationCenterQt(QObject):
         self._signalPrivacySettingsDiscarded.disconnect(callback)
     def emitPrivacySettingsDiscarded(self, pluginName, actionName):
         self._signalPrivacySettingsDiscarded.emit(pluginName, actionName)
-        
