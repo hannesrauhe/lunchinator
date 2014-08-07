@@ -1,13 +1,15 @@
 from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView,\
     QSplitter, QTextDocument, QStandardItemModel, QSortFilterProxyModel,\
-    QLineEdit, QVBoxLayout, QPushButton, QFrame
+    QLineEdit, QVBoxLayout, QPushButton, QFrame, QToolButton, QMenu, QCursor
 from lunchinator import get_peers, log_warning,\
     convert_string
 from lunchinator.table_models import TableModelBase
 from lunchinator.utilities import formatTime, getPlatform, PLATFORM_MAC
 from time import localtime
+from functools import partial
 from PyQt4.QtCore import Qt, QVariant
 from private_messages.chat_messages_storage import ChatMessagesStorage
+from __init__ import log_error
 
 class HistoryPeersModel(TableModelBase):
     _NAME_KEY = u'name'
@@ -112,12 +114,20 @@ class ChatHistoryWidget(QWidget):
     def _initTopWidget(self):
         topWidget = QWidget(self)
         
-        refreshButton = QPushButton("Refresh")
+        refreshButton = QPushButton("Refresh", topWidget)
         refreshButton.clicked.connect(self._updatePeers)
         
-        self._clearButton = QPushButton("Clear Selected")
+        self._clearButton = QPushButton("Clear Selected", topWidget)
         self._clearButton.setEnabled(False)
         self._clearButton.clicked.connect(self._clearSelected)
+        
+        self._openChatButton = QToolButton(topWidget)
+        self._openChatButton.setText(u"Open chat with ")
+        self._openChatButton.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self._openChatButton.setPopupMode(QToolButton.InstantPopup)
+        menu = QMenu(self._openChatButton)
+        menu.aboutToShow.connect(partial(self._fillPeersPopup, menu))
+        self._openChatButton.setMenu(menu)
         
         self._searchField = QLineEdit(topWidget)
         if hasattr(self._searchField, "setPlaceholderText"):
@@ -127,7 +137,8 @@ class ChatHistoryWidget(QWidget):
         layout = QHBoxLayout(topWidget)
         layout.setContentsMargins(0, 10, 10, 0)
         layout.addWidget(refreshButton, 0, Qt.AlignLeft)
-        layout.addWidget(self._clearButton, 1, Qt.AlignLeft)
+        layout.addWidget(self._clearButton, 0, Qt.AlignLeft)
+        layout.addWidget(self._openChatButton, 1, Qt.AlignLeft)
         layout.addWidget(self._searchField, 0, Qt.AlignRight)
         return topWidget
       
@@ -141,6 +152,27 @@ class ChatHistoryWidget(QWidget):
         rows = self._delegate.getStorage().getMessages(partnerID) 
         historyModel = ChatHistoryModel(partnerID, rows)
         self._sortFilterModel.setSourceModel(historyModel)
+
+    def _fillPeersPopup(self, menu):
+        menu.clear()
+        
+        if get_peers() is None:
+            log_warning("no lunch_peers instance available, cannot show peer actions")
+            return
+        
+        with get_peers():
+            for peerID in get_peers():
+                peerInfo = get_peers().getPeerInfo(pID=peerID, lock=False)
+                if self._delegate.getOpenChatAction().appliesToPeer(peerID, peerInfo):
+                    menu.addAction(get_peers().getDisplayedPeerName(pID=peerID, lock=False), partial(self._openChat, peerID))
+        
+    def _openChat(self, peerID):
+        peerInfo = get_peers().getPeerInfo(pID=peerID)
+        if peerInfo is None:
+            log_error("No peer info found for peer", peerID)
+            return
+        
+        self._delegate.getOpenChatAction().performAction(peerID, peerInfo, self)
 
     def _updatePeers(self):
         if get_peers() is None:

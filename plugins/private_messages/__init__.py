@@ -2,14 +2,11 @@ from lunchinator.plugin import iface_gui_plugin
 from lunchinator import log_exception, convert_string, log_error, get_peers,\
     get_settings, get_server
 from lunchinator.peer_actions import PeerAction
-from private_messages.chat_history_view import ChatHistoryWidget
-from private_messages.chat_messages_handler import ChatMessagesHandler
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
     displayNotification
 import os
 from lunchinator.logging_mutex import loggingMutex
 import sys
-from private_messages.chat_messages_storage import ChatMessagesStorage
 from time import time
 from functools import partial
 from lunchinator.privacy.privacy_settings import PrivacySettings
@@ -109,9 +106,11 @@ class private_messages(iface_gui_plugin):
     def activate(self):
         iface_gui_plugin.activate(self)
         sendMessageAction = _SendMessageAction()
-        self._peerActions = [_OpenChatAction(sendMessageAction), _BlockAction(sendMessageAction), sendMessageAction]
+        self._openChatAction = _OpenChatAction(sendMessageAction)
+        self._peerActions = [self._openChatAction, _BlockAction(sendMessageAction), sendMessageAction]
         
         from PyQt4.QtCore import QThread
+        from private_messages.chat_messages_handler import ChatMessagesHandler
         self._messagesThread = QThread()
         self._messagesHandler = ChatMessagesHandler(self, self.hidden_options[u"ack_timeout"], self.hidden_options[u"next_msgid"])
         self._messagesHandler.moveToThread(self._messagesThread)
@@ -135,6 +134,7 @@ class private_messages(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
+        from private_messages.chat_history_view import ChatHistoryWidget
         self._openChats = {} # mapping peer ID -> ChatDockWidget
         return ChatHistoryWidget(self, parent)
     
@@ -176,6 +176,7 @@ class private_messages(iface_gui_plugin):
         if self._storage == None:
             with self._lock:
                 if self._storage == None:
+                    from private_messages.chat_messages_storage import ChatMessagesStorage
                     self._storage = ChatMessagesStorage()
         return self._storage
     
@@ -210,6 +211,7 @@ class private_messages(iface_gui_plugin):
         self._openChats[otherID] = newWindow
         
         prevMessages = self.getStorage().getPreviousMessages(otherID, self.get_option(u"prev_messages"))
+        from private_messages.chat_messages_storage import ChatMessagesStorage
         for row in reversed(prevMessages):
             # partner, ID, own, time, status, text
             isOwnMessage = row[ChatMessagesStorage.MSG_IS_OWN_MESSAGE_COL] != 0
@@ -234,6 +236,9 @@ class private_messages(iface_gui_plugin):
         else:
             log_error("Closed chat window was not maintained:", pID)
         
+    def getOpenChatAction(self):
+        return self._openChatAction
+    
     def openChat(self, pID, forceForeground=False):
         pID = convert_string(pID)
         
