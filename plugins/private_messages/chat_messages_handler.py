@@ -61,7 +61,7 @@ class ChatMessagesHandler(QObject):
     def getNextMessageIDForStorage(self):
         return self._nextMessageID
         
-    @pyqtSlot(unicode, dict)
+    @pyqtSlot(unicode, object)
     def _peerAppended(self, peerID, _infoDict):
         peerID = convert_string(peerID)
         self._resendUndeliveredMessages(curTime=None, partner=peerID, force=True)
@@ -284,7 +284,7 @@ class ChatMessagesHandler(QObject):
         
     def receivedSuccessfully(self, otherID, msgHTML, msgTime, msgDict, recvTime):
         self._receivedSuccessfully.emit(otherID, msgHTML, msgTime, msgDict, recvTime)
-    @pyqtSlot(unicode, unicode, float, dict, float)
+    @pyqtSlot(unicode, unicode, float, object, float)
     def _receivedSuccessfullySlot(self, otherID, msgHTML, msgTime, msgDict, recvTime):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
@@ -296,7 +296,7 @@ class ChatMessagesHandler(QObject):
         
     def errorReceivingMessage(self, otherID, msgDict, errorMsg):
         self._errorReceivingMessage.emit(otherID, msgDict, errorMsg)
-    @pyqtSlot(unicode, dict, unicode)
+    @pyqtSlot(unicode, object, unicode)
     def _errorReceivingMessageSlot(self, otherID, msgDict, errorMsg):
         otherID = convert_string(otherID)
         errorMsg = convert_string(errorMsg)
