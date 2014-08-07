@@ -73,7 +73,10 @@ class RemotePicturesHandler(QObject):
         pass
     
     def _getPicturesDirectory(self):
-        return get_settings().get_config("remote_pictures")
+        picDir = get_settings().get_config("remote_pictures")
+        if not os.path.exists(picDir):
+            os.makedirs(picDir)
+        return picDir
     
     def _createPictureFile(self, category, ext='.jpg'):
         valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
