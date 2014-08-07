@@ -175,6 +175,8 @@ class ChatMessagesStorage(object):
         return self._db.query("SELECT * FROM PRIVATE_MESSAGES WHERE PARTNER = ? ORDER BY TIME DESC", partner)
         
     def getPartners(self):
+        if self._db is None:
+            return []
         return self._db.query("SELECT DISTINCT PARTNER FROM PRIVATE_MESSAGES ORDER BY PARTNER ASC")
         
     def getRecentUndeliveredMessages(self, partner=None):
@@ -186,6 +188,9 @@ class ChatMessagesStorage(object):
         
         partner - specify a certain chat partner
         """
+        if self._db is None:
+            return []
+        
         if partner == None:
             return self._db.query(self._RECENT_UNDELIVERED_MESSAGES_SQL)
         else:
@@ -197,6 +202,9 @@ class ChatMessagesStorage(object):
     def getLastSentMessageID(self):
         """Backwards compatibility: On first initialization, next message ID
         will be obtained the old, error-prone way."""
+        if self._db is None:
+            return -1
+        
         rows = self._db.query("SELECT MAX(M_ID) FROM PRIVATE_MESSAGES WHERE IS_OWN_MESSAGE = ?", True)
         if not rows or rows[0][0] == None:
             return -1

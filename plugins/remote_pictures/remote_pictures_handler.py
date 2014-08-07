@@ -221,6 +221,7 @@ class RemotePicturesHandler(QObject):
         url = convert_string(url)
         displayNotification(name, description, thread.target.name)
         
+        thread.target.flush()
         self._addPicture(thread.target,
                          thread.target.name if storeLocally else None,
                          url,

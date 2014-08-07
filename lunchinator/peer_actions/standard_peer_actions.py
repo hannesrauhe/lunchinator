@@ -5,7 +5,7 @@ class ChangeDisplayedNameAction(PeerAction):
     def getName(self):
         return u"Change Displayed Name"
     
-    def performAction(self, peerID, _peerInfo):
+    def performAction(self, peerID, _peerInfo, _parent):
         try:
             from PyQt4.QtGui import QInputDialog
             oldName = get_peers().getDisplayedPeerName(pID=peerID)
@@ -20,7 +20,7 @@ class ResetCustomPeerNameAction(PeerAction):
     def getName(self):
         return u"Reset Displayed Name"
     
-    def performAction(self, peerID, _peerInfo):
+    def performAction(self, peerID, _peerInfo, _parent):
         get_peers().setCustomPeerName(peerID, None)
 
     def appliesToPeer(self, peerID, _peerInfo):

@@ -34,7 +34,7 @@ class _OpenChatAction(PeerAction):
     def getName(self):
         return "Open Chat"
     
-    def performAction(self, peerID, _peerInfo):
+    def performAction(self, peerID, _peerInfo, _parent):
         self.getPluginObject().openChat(peerID)
         
     def appliesToPeer(self, peerID, peerInfo):
@@ -69,7 +69,7 @@ class _BlockAction(PeerAction):
             else:
                 return "Unblock"
     
-    def performAction(self, peerID, _peerInfo):
+    def performAction(self, peerID, _peerInfo, _parent):
         policy = self._sendMessageAction.getPrivacyPolicy()
         if policy not in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
             log_error("Illegal policy for block action:", policy)
@@ -100,6 +100,9 @@ class private_messages(iface_gui_plugin):
         self.hidden_options = {u"ack_timeout" : 3, # seconds until message delivery is marked as timed out
                                u"next_msgid" : -1} # next free message ID. -1 = not initialized
         
+        self._storage = None
+        self._lock = loggingMutex("Private Messages", logging=get_settings().get_verbose())
+        
     def get_displayed_name(self):
         return u"Chat"
         
@@ -107,9 +110,6 @@ class private_messages(iface_gui_plugin):
         iface_gui_plugin.activate(self)
         sendMessageAction = _SendMessageAction()
         self._peerActions = [_OpenChatAction(sendMessageAction), _BlockAction(sendMessageAction), sendMessageAction]
-        
-        self._lock = loggingMutex("Private Messages", logging=get_settings().get_verbose())
-        self._storage = None
         
         from PyQt4.QtCore import QThread
         self._messagesThread = QThread()
@@ -286,4 +286,5 @@ class private_messages(iface_gui_plugin):
 
 if __name__ == '__main__':
     pm = private_messages()
+    pm.hasConfigOption = lambda s : False
     pm.run_in_window()

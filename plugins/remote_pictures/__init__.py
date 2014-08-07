@@ -19,8 +19,8 @@ class _RemotePictureAction(PeerAction):
     def appliesToPeer(self, _peerID, _peerInfo):
         return True
     
-    def performAction(self, peerID, peerInfo):
-        self.getPluginObject().sendRemotePicture(peerID, peerInfo)
+    def performAction(self, peerID, peerInfo, parent):
+        self.getPluginObject().sendRemotePicture(peerID, peerInfo, parent)
     
     def getMessagePrefix(self):
         return "REMOTE_PIC"
@@ -196,8 +196,8 @@ class remote_pictures(iface_gui_plugin):
     def willIgnorePeerAction(self, category, url):
         return self._handler.willIgnorePeerAction(category, url)
     
-    def sendRemotePicture(self, peerID, peerInfo):
-        dialog = RemotePicturesDialog(get_server().getController().getMainGUI(), peerID, peerInfo)
+    def sendRemotePicture(self, peerID, peerInfo, parent):
+        dialog = RemotePicturesDialog(parent, peerID, peerInfo)
         result = dialog.exec_()
         if result == RemotePicturesDialog.Accepted:
             data = [dialog.getURL().encode('utf-8')]

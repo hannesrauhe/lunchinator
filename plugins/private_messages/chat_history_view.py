@@ -143,9 +143,11 @@ class ChatHistoryWidget(QWidget):
         self._sortFilterModel.setSourceModel(historyModel)
 
     def _updatePeers(self):
+        if get_peers() is None:
+            return
         rows = self._delegate.getStorage().getPartners()
 
-        newPeers = {}      
+        newPeers = {}   
         with get_peers():
             for row in rows:
                 pID = row[0]
