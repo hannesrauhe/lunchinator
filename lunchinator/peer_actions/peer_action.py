@@ -17,7 +17,7 @@ class PeerAction(object):
         """Returns an icon representing this action."""
         return None
     
-    def performAction(self, peerID, peerInfo):
+    def performAction(self, peerID, peerInfo, parentWidget):
         """Called when the action is performed on some peer."""
         pass
     

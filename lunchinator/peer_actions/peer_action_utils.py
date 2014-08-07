@@ -2,7 +2,7 @@ from lunchinator import get_peers, get_peer_actions, log_warning
 from functools import partial
 from lunchinator.peer_actions.peer_actions_singleton import PeerActions
 
-def _fillPeerActionsMenu(popupMenu, peerID, filterFunc):
+def _fillPeerActionsMenu(popupMenu, peerID, filterFunc, parentWidget):
     peerInfo = get_peers().getPeerInfo(pID=peerID)
     actionsDict = get_peer_actions().getPeerActions(peerID, peerInfo, filterFunc)
     if actionsDict:
@@ -34,19 +34,19 @@ def _fillPeerActionsMenu(popupMenu, peerID, filterFunc):
             for action in actions:
                 icon = action.getIcon()
                 if icon is not None:
-                    popupMenu.addAction(icon, action.getDisplayedName(peerID), partial(action.performAction, peerID, peerInfo))
+                    popupMenu.addAction(icon, action.getDisplayedName(peerID), partial(action.performAction, peerID, peerInfo, parentWidget))
                 else:
-                    popupMenu.addAction(action.getDisplayedName(peerID), partial(action.performAction, peerID, peerInfo))
+                    popupMenu.addAction(action.getDisplayedName(peerID), partial(action.performAction, peerID, peerInfo, parentWidget))
     return popupMenu
 
-def initializePeerActionsMenu(menu, peerID, filterFunc):
+def initializePeerActionsMenu(menu, peerID, filterFunc, parentWidget):
     menu.clear()
     if get_peers() == None:
         log_warning("no lunch_peers instance available, cannot show peer actions")
         return menu
     
     if peerID:
-        _fillPeerActionsMenu(menu, peerID, filterFunc)
+        _fillPeerActionsMenu(menu, peerID, filterFunc, parentWidget)
     return menu
 
 def showPeerActionsPopup(peerID, filterFunc, parent):
@@ -55,7 +55,7 @@ def showPeerActionsPopup(peerID, filterFunc, parent):
         log_warning("no lunch_peers instance available, cannot show peer actions")
         return
     if peerID:
-        popupMenu = _fillPeerActionsMenu(QMenu(parent), peerID, filterFunc)
+        popupMenu = _fillPeerActionsMenu(QMenu(parent), peerID, filterFunc, parent)
         popupMenu.exec_(QCursor.pos())
         popupMenu.deleteLater()
             

@@ -220,7 +220,7 @@ class ChatWidget(QWidget):
         self._otherNameLabel.customContextMenuRequested.connect(partial(showPeerActionsPopup, self._otherID, self._filterPeerAction, self._otherNameLabel))
         self._otherNameLabel.setPopupMode(QToolButton.InstantPopup)
         menu = QMenu(self._otherNameLabel)
-        menu.aboutToShow.connect(partial(initializePeerActionsMenu, menu, self._otherID, self._filterPeerAction))
+        menu.aboutToShow.connect(partial(initializePeerActionsMenu, menu, self._otherID, self._filterPeerAction, self))
         self._otherNameLabel.setMenu(menu)
         
         self._otherPicLabel = QLabel(topWidget)
