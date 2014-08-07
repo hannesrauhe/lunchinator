@@ -18,13 +18,13 @@ class ChatMessagesHandler(QObject):
     # other ID, old ID, new ID
     messageIDChanged = pyqtSignal(unicode, int, int)
     # otherID, msgHTML, msgTime
-    newMessage = pyqtSignal(unicode, unicode, float, dict)
+    newMessage = pyqtSignal(unicode, unicode, float, object)
     
     # private signals
     _processAck = pyqtSignal(unicode, unicode, bool)
     _processMessage = pyqtSignal(unicode, unicode)
-    _receivedSuccessfully = pyqtSignal(unicode, unicode, float, dict, float)
-    _errorReceivingMessage = pyqtSignal(unicode, dict, unicode)
+    _receivedSuccessfully = pyqtSignal(unicode, unicode, float, object, float)
+    _errorReceivingMessage = pyqtSignal(unicode, object, unicode)
     
     def __init__(self, delegate, ackTimeout, nextMsgID):
         super(ChatMessagesHandler, self).__init__()
