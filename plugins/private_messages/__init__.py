@@ -239,7 +239,7 @@ class private_messages(iface_gui_plugin):
     def getOpenChatAction(self):
         return self._openChatAction
     
-    def openChat(self, pID, forceForeground=False):
+    def openChat(self, pID, forceForeground=True):
         pID = convert_string(pID)
         
         if pID in self._openChats:
