@@ -16,6 +16,9 @@ class ChangeDisplayedNameAction(PeerAction):
         except:
             log_exception("Error changing displayed peer name.")
             
+    def peerMustBeOnline(self):
+        return False
+    
 class ResetCustomPeerNameAction(PeerAction):
     def getName(self):
         return u"Reset Displayed Name"
@@ -25,6 +28,9 @@ class ResetCustomPeerNameAction(PeerAction):
 
     def appliesToPeer(self, peerID, _peerInfo):
         return get_peers().hasCustomPeerName(pID=peerID)
+            
+    def peerMustBeOnline(self):
+        return False
 
 def getStandardPeerActions():
     return [ChangeDisplayedNameAction(), ResetCustomPeerNameAction()]

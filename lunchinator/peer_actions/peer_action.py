@@ -21,6 +21,15 @@ class PeerAction(object):
         """Called when the action is performed on some peer."""
         pass
     
+    def peerMustBeOnline(self):
+        """If True (default), peer action will not apply to offline peers.
+        
+        If this method returns False and a peer action list is requested
+        for a peer that is currently not online (has no peer info), the
+        peer action will still be displayed.
+        """
+        return True
+    
     def appliesToPeer(self, _peerID, _peerInfo):
         """Override this method if the action only applies to specific peers."""
         return True

@@ -73,17 +73,6 @@ class PeerActions(object):
                 removed = self._removeActionsForPlugin(pi)
             if removed:
                 get_notification_center().emitPeerActionsRemoved(removed)
-        
-    def iterPeerActions(self, peerID, peerInfo):
-        """Iterates over peer actions for the given peer
-        
-        Yields tuples (parent plugin's name, peer action)
-        """
-        with self._lock:
-            for pluginName, actions in self._peerActions:
-                for action in actions:
-                    if action.appliesToPeer(peerID, peerInfo):
-                        yield (pluginName, action)
             
     def _getPeerActions(self, peerID=None, peerInfo=None, ignoreApplies=False, filterFunc=None):
         result = {}
@@ -91,7 +80,13 @@ class PeerActions(object):
             for pluginName, actions in self._peerActions.iteritems():
                 newActions = []
                 for action in actions:
-                    if ignoreApplies or action.appliesToPeer(peerID, peerInfo):
+                    if ignoreApplies:
+                        applies = True
+                    elif peerInfo is not None or not action.peerMustBeOnline():
+                        applies = action.appliesToPeer(peerID, peerInfo)
+                    else:
+                        applies = False
+                    if applies:
                         if filterFunc == None or filterFunc(pluginName, action):
                             newActions.append(action)
                 if newActions:
