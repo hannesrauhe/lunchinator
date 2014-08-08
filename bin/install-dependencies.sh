@@ -84,7 +84,8 @@ then
   # ensure pip does not install into current package
   pushd "$HOME" &>/dev/null 
   
-  if [ -n $(DISPLAY) ]
+  if [ -n "$DISPLAY" ]
+  then
     if type gnomesu &>/dev/null
     then
       EXITST=$(installGnomesu $@)
