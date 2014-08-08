@@ -3,7 +3,7 @@ from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QTextDocume
     QBrush, QColor, QLinearGradient, QPainter,\
     QTextEdit, QFrame, QSizePolicy, QIcon, QFont
 from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
-    QRectF, QSizeF, pyqtSignal, QModelIndex, QMetaType
+    QRectF, QSizeF, pyqtSignal, QModelIndex, QMetaType, pyqtSlot
 import webbrowser
 from PyQt4.Qt import QWidget
 from private_messages.chat_messages_model import ChatMessagesModel
@@ -64,7 +64,7 @@ class MessageItemDelegate(QStyledItemDelegate):
 
         # Revert the mouse cursor when the mouse isn't over 
         # an item but still on the view widget
-        parentView.viewportEntered.connect(parentView.unsetCursor)
+        parentView.viewportEntered.connect(self.unsetParentCursor)
 
         self.document = QTextDocument()
         self.mouseOverDocument = self.document
@@ -91,6 +91,10 @@ class MessageItemDelegate(QStyledItemDelegate):
         self.closeEditor.connect(self.editorClosing)
         
         self._rowHeights = {}
+        
+    @pyqtSlot()
+    def unsetParentCursor(self):
+        self.parent().unsetCursor()
         
     def setEditIndex(self, modelIndex):
         self._editIndex = modelIndex
