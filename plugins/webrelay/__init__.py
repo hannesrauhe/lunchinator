@@ -1,5 +1,5 @@
 from lunchinator.plugin import iface_called_plugin
-from lunchinator import get_server, log_error, log_debug
+from lunchinator import get_server, log_error, log_debug, get_settings
 import urllib, urllib2, contextlib, base64, json, threading
 
 class webrelay(iface_called_plugin):        
@@ -9,9 +9,9 @@ class webrelay(iface_called_plugin):
                         ((u"server",u"Server", self._startCheckTimer),""),
                         ((u"polling_time",u"Number of Sec to pull new messages", self._startCheckTimer),10),
                         ((u"pushURL", u"URL to open when call comes in", self._startCheckTimer),
-                         "/webrelay/addMessage.xsjs?message=$msg$&name=$name$&id=$id$"),
+                         "/webrelay/addMessage.xsjs?group=$group$&message=$msg$&name=$name$&id=$id$"),
                         ((u"pullURL", u"URL to pull calls that should be send", self._startCheckTimer),
-                         "/webrelay/getNewMessages.xsjs"),
+                         "/webrelay/getNewMessages.xsjs?group=$group$"),
                         ((u"http_user", u"User for HTTP Auth", self._startCheckTimer), ""),
                         ((u"http_pass", u"Password for HTTP Auth", self._startCheckTimer),"")]
         self.failed_attempts = 0
@@ -35,17 +35,22 @@ class webrelay(iface_called_plugin):
     def process_message(self, msg, addr, member_info):
 #         print member_info
         if self.options[u"server"]:
-            self._pushCall({"msg":msg, "id":member_info[u"ID"] , "name":member_info[u"name"]})
+            self._pushCall({"msg":msg, "id":member_info[u"ID"] , "name":member_info[u"name"], "group":get_settings().get_group()})
         else:
             log_error("WebRelay: please configure a server in Settings")
+            
+    def _fillUrlPlaceholders(self, url, info):
+        retUrl = url
+        
+        for var in info.iterkeys():
+            retUrl = retUrl.replace("$%s$"%var, urllib.quote_plus(info[var])) 
+            
+        #TODO (hannes) remove unknown placeholders
+        
+        return retUrl;
         
     def _pushCall(self, infos):
-        push_url = self.options[u"pushURL"]       
-        
-        for var in ["msg","name","id"]:
-            push_url = push_url.replace("$%s$"%var, urllib.quote_plus(infos[var])) 
-
-        push_url = self.options[u"server"] + push_url
+        push_url = self.options[u"server"] + self._fillUrlPlaceholders(self.options[u"pushURL"], infos)
         
         response = ""
         
@@ -77,9 +82,9 @@ class webrelay(iface_called_plugin):
             if not "success" in resp:
                 log_error("Webrelay: negative response from webserver after relaying call: "+response)
                 
-    def _pullCalls(self):
-        pull_url = self.options[u"server"] + self.options[u"pullURL"]
-        
+    def _pullCalls(self):        
+        pull_url = self.options[u"server"] + self._fillUrlPlaceholders(self.options[u"pullURL"], {"group":get_settings().get_group()})
+         
         response = ""
         
         try:
