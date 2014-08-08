@@ -134,8 +134,7 @@ class webrelay(iface_called_plugin):
         if self.failed_attempts < 5:
             timeout = self.options["polling_time"]
         else:
-            log_error("WebRelay: too many failed attempts, I stop trying")
-            return
+            timeout = 10*60 #too many failed attempts, I will try every ten minutes
             
         with self.timerRestartLock:            
             if not self.stop:
