@@ -73,7 +73,7 @@ data_files = [('share/lunchinator/sounds', ['sounds/sonar.wav']),
                                             'images/me.png',
                                             'images/warning.png',
                                             'images/error.png']),
-              ('share/lunchinator', ['lunchinator_pub_0x17F57DC2.asc', 'version']),
+              ('share/lunchinator', ['lunchinator_pub_0x17F57DC2.asc', 'version', 'requirements.txt']),
               ('share/icons/hicolor/scalable/apps', ['images/lunchinator.svg']),
               ('share/applications', ['lunchinator.desktop'])]
 # ensure icons are installed only on ubuntu
