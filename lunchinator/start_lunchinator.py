@@ -124,6 +124,9 @@ def checkDependencies(noPlugins, gui = False):
                                      msg)
         log_error(msg)
         return False
+    
+    deps = []
+    
     if gui:
         from PyQt4.QtGui import QMessageBox
         mbox = QMessageBox (QMessageBox.Question,
