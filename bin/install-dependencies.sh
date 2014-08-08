@@ -84,16 +84,21 @@ then
   # ensure pip does not install into current package
   pushd "$HOME" &>/dev/null 
   
-  if type gnomesu &>/dev/null
-  then
-    EXITST=$(installGnomesu $@)
-  elif type gksudo &>/dev/null
-  then
-    SUDO=gksudo
-    EXITST=$(installGksu $@)
-  elif type gksu &>/dev/null
-  then
-    SUDO=gksu
+  if [ -n $(DISPLAY) ]
+    if type gnomesu &>/dev/null
+    then
+      EXITST=$(installGnomesu $@)
+    elif type gksudo &>/dev/null
+    then
+        SUDO=gksudo
+        EXITST=$(installGksu $@)
+    elif type gksu &>/dev/null
+    then
+        SUDO=gksu
+        EXITST=$(installGksu $@)
+    fi
+  else
+    SUDO=sudo
     EXITST=$(installGksu $@)
   fi
   
