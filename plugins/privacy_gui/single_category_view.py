@@ -1,5 +1,5 @@
 from PyQt4.QtGui import QWidget, QHBoxLayout, QLabel, QComboBox, QTreeView,\
-    QVBoxLayout, QFrame, QCheckBox
+    QVBoxLayout, QFrame, QCheckBox, QSortFilterProxyModel
 from PyQt4.QtCore import Qt, QVariant
 from lunchinator.table_models import TableModelBase
 from lunchinator import get_peers, log_warning, get_notification_center,\
@@ -139,12 +139,18 @@ class SingleCategoryView(QWidget):
                                     mode == PrivacySettings.POLICY_PEER_EXCEPTION)
         self._peerModel.itemChanged.connect(self._peerDataChanged)
         
+        proxyModel = QSortFilterProxyModel(self)
+        proxyModel.setDynamicSortFilter(True)
+        proxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
+        proxyModel.setSourceModel(self._peerModel)
+        proxyModel.sort(0)
+        
         self._peerList = QTreeView(self)
         self._peerList.setAlternatingRowColors(False)
         self._peerList.setHeaderHidden(True)
         self._peerList.setItemsExpandable(False)
         self._peerList.setIndentation(0)
-        self._peerList.setModel(self._peerModel)
+        self._peerList.setModel(proxyModel)
         self._peerList.setSelectionMode(QTreeView.NoSelection)
         self._peerList.setAutoFillBackground(False)
         self._peerList.viewport().setAutoFillBackground(False)
