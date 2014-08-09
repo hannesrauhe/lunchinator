@@ -1,4 +1,4 @@
-import subprocess, sys, os, contextlib, json, shutil, socket
+import subprocess, sys, os, contextlib, json, shutil, socket, time
 from datetime import datetime, timedelta 
 from time import mktime, strftime
 from lunchinator import log_exception, log_warning, log_debug, \
@@ -31,6 +31,13 @@ def displayNotification(name, msg, icon=None):
     if msg == None:
         msg = u""
     myPlatform = getPlatform()
+    try: 
+        from lunchinator import get_server
+        if not get_server().has_gui():
+            print time.strftime("%Y-%m-%d %H:%M"),name, msg
+    except:
+        print time.strftime("%Y-%m-%d %H:%M"),name, msg
+    
     try:
         if myPlatform == PLATFORM_LINUX:
             if icon == None:
