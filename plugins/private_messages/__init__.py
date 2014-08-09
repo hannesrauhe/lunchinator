@@ -8,7 +8,6 @@ import os
 from lunchinator.logging_mutex import loggingMutex
 import sys
 from time import time
-from functools import partial
 from lunchinator.privacy.privacy_settings import PrivacySettings
 
 class _SendMessageAction(PeerAction):
@@ -206,8 +205,8 @@ class private_messages(iface_gui_plugin):
         newWindow = ChatWindow(None, myName, otherName, myAvatar, otherAvatar, otherID)
         newWindow.windowClosing.connect(self._chatClosed)
         newWindow.getChatWidget().sendMessage.connect(self._messagesHandler.sendMessage)
-        newWindow.getChatWidget().typing.connect(partial(self._messagesHandler.sendTyping, otherID))
-        newWindow.getChatWidget().cleared.connect(partial(self._messagesHandler.sendCleared, otherID))
+        newWindow.getChatWidget().typing.connect(self._messagesHandler.sendTyping)
+        newWindow.getChatWidget().cleared.connect(self._messagesHandler.sendCleared)
         self._openChats[otherID] = newWindow
         
         prevMessages = self.getStorage().getPreviousMessages(otherID, self.get_option(u"prev_messages"))

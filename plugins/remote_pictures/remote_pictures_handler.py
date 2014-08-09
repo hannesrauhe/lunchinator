@@ -192,25 +192,6 @@ class RemotePicturesHandler(QObject):
                                     self._storage.hasNext(category, picID))
         self._storage.seenPicture(picID)
         
-    @pyqtSlot(unicode)   
-    def openCategory(self, category):
-        category = convert_string(category)
-        if not self._storage.hasCategory(category):
-            log_error("Cannot open category", category, "(category not found).")
-            return
-        
-        self._displayImage(category, self._storage.getLatestPicture(category))
-    
-    @pyqtSlot(unicode, int)
-    def displayPrev(self, cat, curID):
-        cat = convert_string(cat)
-        self._displayImage(cat, self._storage.getPreviousPicture(cat, curID))
-    
-    @pyqtSlot(unicode, int)
-    def displayNext(self, cat, curID):
-        cat = convert_string(cat)
-        self._displayImage(cat, self._storage.getNextPicture(cat, curID))
-        
     def _errorDownloadingPicture(self, thread, url):
         log_error("Error downloading picture from url %s" % convert_string(url))
         thread.deleteLater()
@@ -275,4 +256,24 @@ class RemotePicturesHandler(QObject):
     
     def willIgnorePeerAction(self, category, url):
         return self._hasPicture(category, url)
+
+    ################# PUBLIC SLOTS ##################
+        
+    @pyqtSlot(unicode)   
+    def openCategory(self, category):
+        category = convert_string(category)
+        if not self._storage.hasCategory(category):
+            log_error("Cannot open category", category, "(category not found).")
+            return
+        
+        self._displayImage(category, self._storage.getLatestPicture(category))
     
+    @pyqtSlot(unicode, int)
+    def displayPrev(self, cat, curID):
+        cat = convert_string(cat)
+        self._displayImage(cat, self._storage.getPreviousPicture(cat, curID))
+    
+    @pyqtSlot(unicode, int)
+    def displayNext(self, cat, curID):
+        cat = convert_string(cat)
+        self._displayImage(cat, self._storage.getNextPicture(cat, curID))    

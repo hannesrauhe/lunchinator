@@ -1,9 +1,7 @@
 from private_messages.chat_messages_model import ChatMessagesModel
-
 from lunchinator import log_exception, log_error, log_debug,\
     log_warning, log_info, convert_string, get_server, get_peers,\
     get_notification_center, get_settings
-
 from PyQt4.QtCore import pyqtSignal, pyqtSlot, QTimer, QObject
 from time import time
 import json
@@ -37,7 +35,7 @@ class ChatMessagesHandler(QObject):
         self._nextMessageID = max(nextMsgID, nextIDFromDB)
         
         self._cleanupTimer = QTimer(self)
-        self._cleanupTimer.timeout.connect(self.cleanup)
+        self._cleanupTimer.timeout.connect(self._cleanup)
         self._cleanupTimer.start(2000)
         
         self._processAck.connect(self._processAckSlot)
@@ -88,7 +86,7 @@ class ChatMessagesHandler(QObject):
                 self.sendMessage(otherID, msgHTML, msgID, msgTime)
     
     @pyqtSlot()
-    def cleanup(self):
+    def _cleanup(self):
         curTime = time()
         
         self._resendUndeliveredMessages(curTime)
@@ -337,6 +335,8 @@ class ChatMessagesHandler(QObject):
             log_error(errorMsg)
             get_server().call("HELO_PM_ERROR " + json.dumps(answerDict), peerIDs=[otherID])  
     
+    ############### PUBLIC SLOTS #################
+    
     @pyqtSlot(unicode, unicode)
     def sendMessage(self, otherID, msgHTML, msgID=None, msgTime=None, isNoResend=False):
         otherID = convert_string(otherID)
@@ -371,8 +371,12 @@ class ChatMessagesHandler(QObject):
                                       msgHTML,
                                       isResend)
 
+    @pyqtSlot(unicode)
     def sendTyping(self, otherID):
+        otherID = convert_string(otherID)
         get_server().call("HELO_PM_TYPING 0", peerIDs=[otherID])
         
+    @pyqtSlot(unicode)
     def sendCleared(self, otherID):
+        otherID = convert_string(otherID)
         get_server().call("HELO_PM_CLEARED 0", peerIDs=[otherID])

@@ -52,8 +52,8 @@ class ChatWidget(QWidget):
     _TIME_ROW_INTERVAL = 10*60 # once every 10 minutes
     
     sendMessage = pyqtSignal(unicode, unicode) # peer ID, message HTML
-    typing = pyqtSignal()
-    cleared = pyqtSignal()
+    typing = pyqtSignal(unicode) # peer ID
+    cleared = pyqtSignal(unicode) # peer ID
         
     def __init__(self, parent, ownName, otherName, ownPicFile, otherPicFile, otherID):
         super(ChatWidget, self).__init__(parent)
@@ -289,11 +289,11 @@ class ChatWidget(QWidget):
             
     def _informTyping(self):
         if not self._offline:
-            self.typing.emit()
+            self.typing.emit(self._otherID)
         
     def _informCleared(self):
         if not self._offline:
-            self.cleared.emit()
+            self.cleared.emit(self._otherID)
             
     def otherIsTyping(self):
         if not self._otherWasTyping:
