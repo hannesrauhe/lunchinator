@@ -28,6 +28,7 @@ class online_update(iface_general_plugin):
         super(online_update, self).__init__()
         self.hidden_options = {"check_url": "http://update.lunchinator.de"}
         self._scheduleTimer = None
+        self.force_activation = True
     
     def activate(self):
         from PyQt4.QtCore import QTimer
