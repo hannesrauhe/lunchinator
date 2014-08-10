@@ -106,7 +106,7 @@ class RemotePicturesHandler(QObject):
             else:
                 # no up-scaling here
                 newImage = oldImage
-            newImage.save(fileName, format='jpeg')
+            newImage.save(fileName, 'jpeg')
             return fileName, inFile, category
         except:
             log_exception("Error trying to create thumbnail for category")
@@ -130,7 +130,7 @@ class RemotePicturesHandler(QObject):
                 self.addCategory.emit(category, thumbnailPath, self._thumbnailSize)
             elif (imageFile and os.path.exists(imageFile)) or imageURL is not None:
                 # create thumbnail asynchronously, then close imageFile
-                self._createThumbnailAndAddCategory(imageFile, imageURL, category)
+                self._createThumbnailAndAddCategory(None, imageFile, imageURL, category)
                 closeImmediately = False
             else:
                 raise Exception("No image path specified.")

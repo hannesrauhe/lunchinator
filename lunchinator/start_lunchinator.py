@@ -96,9 +96,13 @@ def installDependencies(deps = [], gui = False):
         #without gui there are enough messages on the screen already
     except:
         if gui:
-            QMessageBox.critical(None,
-                                 "Error installing dependencies",
-                                 "There was an error, the dependencies could not be installed. Continuing without plugins.")
+            try:
+                from PyQt4.QtGui import QMessageBox
+                QMessageBox.critical(None,
+                                     "Error installing dependencies",
+                                     "There was an error, the dependencies could not be installed. Continuing without plugins.")
+            except:
+                log_error("There was an error, the dependencies could not be installed. Continuing without plugins.")
         log_error("Dependencies could not be installed.")
     return False
         
