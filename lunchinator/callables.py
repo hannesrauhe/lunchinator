@@ -74,7 +74,7 @@ class SyncCall(_CallBase):
         
 class AsyncCall(QObject, _CallBase):
     _successSig = pyqtSignal(object)
-    _errorSig = pyqtSignal(unicode)
+    _errorSig = pyqtSignal(object)
     
     class CallThread(QThread):
         def __init__(self, parent, call):

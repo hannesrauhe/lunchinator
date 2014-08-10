@@ -2,7 +2,8 @@ from lunchinator.plugin import iface_gui_plugin
 from lunchinator import log_exception, get_settings, log_error, convert_string,\
     log_warning, get_server, log_debug, get_peers, get_notification_center
 import urllib2,sys,tempfile,csv,contextlib,os,socket
-from lunchinator.utilities import getValidQtParent, displayNotification
+from lunchinator.utilities import getValidQtParent, displayNotification,\
+    canUseBackgroundQThreads
 from lunchinator.download_thread import DownloadThread
 from StringIO import StringIO
 from functools import partial
@@ -112,10 +113,14 @@ class remote_pictures(iface_gui_plugin):
                                       self.get_option(u"min_opacity"),
                                       self.get_option(u"max_opacity"))
         
-        self._messagesThread = QThread()
+        if canUseBackgroundQThreads():
+            self._messagesThread = QThread()
+        else:
+            self._messagesThread = None
         self._handler = RemotePicturesHandler(self.get_option(u"thumbnail_size"), self._gui)
-        self._handler.moveToThread(self._messagesThread)
-        self._messagesThread.start()
+        if self._messagesThread is not None:
+            self._handler.moveToThread(self._messagesThread)
+            self._messagesThread.start()
         
         self._gui.openCategory.connect(self._handler.openCategory)
         self._gui.displayPrev.connect(self._handler.displayPrev)

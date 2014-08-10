@@ -13,9 +13,9 @@ from lunchinator.utilities import formatTime
 from time import localtime
 
 class RemotePicturesGui(QStackedWidget):
-    openCategory = pyqtSignal(unicode) # category
-    displayNext = pyqtSignal(unicode, int) # current category, current ID
-    displayPrev = pyqtSignal(unicode, int) # current category, current ID
+    openCategory = pyqtSignal(object) # category
+    displayNext = pyqtSignal(object, int) # current category, current ID
+    displayPrev = pyqtSignal(object, int) # current category, current ID
     
     minOpacityChanged = pyqtSignal(float)
     maxOpacityChanged = pyqtSignal(float)
@@ -124,7 +124,7 @@ class RemotePicturesGui(QStackedWidget):
     def _displayPreviousImage(self):
         self.displayPrev.emit(self.currentCategory, self.curPicIndex)
     
-    @pyqtSlot(unicode, int, list, bool, bool)
+    @pyqtSlot(object, int, list, bool, bool)
     def displayImage(self, cat, picID, picRow, hasPrev, hasNext):
         cat = convert_string(cat)
         picURL = convert_string(picRow[RemotePicturesStorage.PIC_URL_COL])

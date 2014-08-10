@@ -4,7 +4,7 @@ from PyQt4.QtCore import pyqtSignal
 from lunchinator import get_notification_center, convert_string
 
 class ChatWindow(QMainWindow):
-    windowClosing = pyqtSignal(unicode) # other's peer ID
+    windowClosing = pyqtSignal(object) # other's peer ID
     
     def __init__(self, parent, ownName, otherName, ownPicFile, otherPicFile, otherID):
         super(ChatWindow, self).__init__(parent)

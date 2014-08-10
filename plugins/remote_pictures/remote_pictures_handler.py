@@ -16,14 +16,14 @@ from lunchinator.privacy import PrivacySettings
 import string
 
 class RemotePicturesHandler(QObject):
-    addCategory = pyqtSignal(unicode, unicode, int) # category, thumbnail path, thumbnail size
+    addCategory = pyqtSignal(object, object, int) # category, thumbnail path, thumbnail size
     categoriesChanged = pyqtSignal()
     # cat, picID, picRow, hasPrev, hasNext
-    displayImageInGui = pyqtSignal(unicode, int, list, bool, bool)
+    displayImageInGui = pyqtSignal(object, int, list, bool, bool)
 
     _loadPictures = pyqtSignal()
-    _processRemotePicture = pyqtSignal(str, unicode, bool) # data, ip, store locally
-    _checkCategory = pyqtSignal(unicode)
+    _processRemotePicture = pyqtSignal(str, object, bool) # data, ip, store locally
+    _checkCategory = pyqtSignal(object)
     _thumbnailSizeChanged = pyqtSignal(int)
     
     def __init__(self, thumbnailSize, gui):
@@ -106,7 +106,7 @@ class RemotePicturesHandler(QObject):
             else:
                 # no up-scaling here
                 newImage = oldImage
-            newImage.save(fileName, format='jpeg')
+            newImage.save(fileName, 'jpeg')
             return fileName, inFile, category
         except:
             log_exception("Error trying to create thumbnail for category")
@@ -130,7 +130,7 @@ class RemotePicturesHandler(QObject):
                 self.addCategory.emit(category, thumbnailPath, self._thumbnailSize)
             elif (imageFile and os.path.exists(imageFile)) or imageURL is not None:
                 # create thumbnail asynchronously, then close imageFile
-                self._createThumbnailAndAddCategory(imageFile, imageURL, category)
+                self._createThumbnailAndAddCategory(None, imageFile, imageURL, category)
                 closeImmediately = False
             else:
                 raise Exception("No image path specified.")
@@ -146,7 +146,7 @@ class RemotePicturesHandler(QObject):
 
     def checkCategory(self, cat):
         self._checkCategory.emit(cat)
-    @pyqtSlot(unicode)
+    @pyqtSlot(object)
     def _checkCategorySlot(self, cat):
         cat = convert_string(cat)
         if not self._storage.hasCategory(cat):
@@ -192,25 +192,6 @@ class RemotePicturesHandler(QObject):
                                     self._storage.hasNext(category, picID))
         self._storage.seenPicture(picID)
         
-    @pyqtSlot(unicode)   
-    def openCategory(self, category):
-        category = convert_string(category)
-        if not self._storage.hasCategory(category):
-            log_error("Cannot open category", category, "(category not found).")
-            return
-        
-        self._displayImage(category, self._storage.getLatestPicture(category))
-    
-    @pyqtSlot(unicode, int)
-    def displayPrev(self, cat, curID):
-        cat = convert_string(cat)
-        self._displayImage(cat, self._storage.getPreviousPicture(cat, curID))
-    
-    @pyqtSlot(unicode, int)
-    def displayNext(self, cat, curID):
-        cat = convert_string(cat)
-        self._displayImage(cat, self._storage.getNextPicture(cat, curID))
-        
     def _errorDownloadingPicture(self, thread, url):
         log_error("Error downloading picture from url %s" % convert_string(url))
         thread.deleteLater()
@@ -222,6 +203,8 @@ class RemotePicturesHandler(QObject):
             
         # create temporary image file to display in notification
         url = convert_string(url)
+        thread.target.flush()
+        
         displayNotification(name, description, thread.target.name)
         
         self._addPicture(thread.target,
@@ -249,7 +232,7 @@ class RemotePicturesHandler(QObject):
         
     def processRemotePicture(self, value, ip, storeLocally):
         self._processRemotePicture.emit(value, ip, storeLocally)
-    @pyqtSlot(str, unicode, bool)
+    @pyqtSlot(str, object, bool)
     def _processRemotePictureSlot(self, value, ip, storeLocally):
         value = convert_raw(value)
         ip = convert_string(ip)
@@ -274,4 +257,25 @@ class RemotePicturesHandler(QObject):
     
     def willIgnorePeerAction(self, category, url):
         return self._hasPicture(category, url)
+
+    ################# PUBLIC SLOTS ##################
+        
+    @pyqtSlot(object)   
+    def openCategory(self, category):
+        category = convert_string(category)
+        if not self._storage.hasCategory(category):
+            log_error("Cannot open category", category, "(category not found).")
+            return
+        
+        self._displayImage(category, self._storage.getLatestPicture(category))
+
+    @pyqtSlot(object, int)
+    def displayPrev(self, cat, curID):
+        cat = convert_string(cat)
+        self._displayImage(cat, self._storage.getPreviousPicture(cat, curID))
     
+    @pyqtSlot(object, int)
+
+    def displayNext(self, cat, curID):
+        cat = convert_string(cat)
+        self._displayImage(cat, self._storage.getNextPicture(cat, curID))    

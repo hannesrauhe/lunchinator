@@ -49,8 +49,8 @@ class ChatWidget(QWidget):
     _URI_MATCHER=QRegExp(_URI_REGEX)
     _MAIL_MATCHER=QRegExp(_MAIL_REGEX)
     _TIME_ROW_INTERVAL = 10*60 # once every 10 minutes
-    
-    sendMessage = pyqtSignal(unicode, unicode) # peer ID, message HTML
+
+    sendMessage = pyqtSignal(object, object) # peer ID, message HTML
     typing = pyqtSignal()
     cleared = pyqtSignal()
         
@@ -407,8 +407,8 @@ class ChatWidget(QWidget):
         html = html.encode("utf-8")
         cleaned = u""
         e = ElementTree.fromstring(html)
-        body = e.iter("html").next().iter("body").next()
-        for p in body.iter("p"):
+        body = e.getiterator("html")[0].getiterator("body")[0]
+        for p in body.getiterator("p"):
             p.attrib = {}
             sio = StringIO()
             ElementTree.ElementTree(p).write(sio, "utf-8")

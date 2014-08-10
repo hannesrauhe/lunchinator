@@ -88,13 +88,13 @@ class ResizingWebImageLabel(ResizingImageLabel):
         self.pic_url = None
         self.update()
             
-    @pyqtSlot(QThread, unicode)
+    @pyqtSlot(QThread, object)
     def downloadFinished(self, thread, _url):
         qtimage = QImage()
         qtimage.loadFromData(thread.getResult())
         self.setRawPixmap(QPixmap.fromImage(qtimage))
             
-    @pyqtSlot(QThread, unicode)
+    @pyqtSlot(QThread, object)
     def errorDownloading(self, _thread, url):
         log_error("Error downloading webcam image from %s" % url)
         

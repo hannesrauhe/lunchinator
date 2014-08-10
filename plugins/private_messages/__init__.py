@@ -5,7 +5,7 @@ from lunchinator.peer_actions import PeerAction
 from private_messages.chat_history_view import ChatHistoryWidget
 from private_messages.chat_messages_handler import ChatMessagesHandler
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
-    displayNotification
+    displayNotification, canUseBackgroundQThreads
 import os
 from lunchinator.logging_mutex import loggingMutex
 import sys
@@ -112,10 +112,16 @@ class private_messages(iface_gui_plugin):
         self._storage = None
         
         from PyQt4.QtCore import QThread
-        self._messagesThread = QThread()
+        from private_messages.chat_messages_handler import ChatMessagesHandler
+        if canUseBackgroundQThreads():
+            self._messagesThread = QThread()
+        else:
+            self._messagesThread = None
+
         self._messagesHandler = ChatMessagesHandler(self, self.hidden_options[u"ack_timeout"], self.hidden_options[u"next_msgid"])
-        self._messagesHandler.moveToThread(self._messagesThread)
-        self._messagesThread.start()
+        if self._messagesThread is not None:
+            self._messagesHandler.moveToThread(self._messagesThread)
+            self._messagesThread.start()
         
         self._messagesHandler.delayedDelivery.connect(self._delayedDelivery)
         self._messagesHandler.messageIDChanged.connect(self._messageIDChanged)
@@ -125,11 +131,12 @@ class private_messages(iface_gui_plugin):
     def deactivate(self):
         self.set_hidden_option(u"next_msgid", self._messagesHandler.getNextMessageIDForStorage(), convert=False)
         self._messagesHandler.deactivate()
-        self._messagesThread.quit()
-        self._messagesThread.wait()
-        self._messagesThread.deleteLater()
+        if self._messagesThread is not None:
+            self._messagesThread.quit()
+            self._messagesThread.wait()
+            self._messagesThread.deleteLater()
+            self._messagesThread = None
         self._messagesHandler = None
-        self._messagesThread = None
         self._storage = None
         self._lock = None
         iface_gui_plugin.deactivate(self)
@@ -286,4 +293,5 @@ class private_messages(iface_gui_plugin):
 
 if __name__ == '__main__':
     pm = private_messages()
+    pm.hasConfigOption = lambda _ : False
     pm.run_in_window()

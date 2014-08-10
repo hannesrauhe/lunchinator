@@ -5,7 +5,7 @@ import socket
 from functools import partial
 
 class DataThreadBase(QThread):
-    successfullyTransferred = pyqtSignal(QThread, unicode)
+    successfullyTransferred = pyqtSignal(QThread, object)
     errorOnTransfer = pyqtSignal(QThread)
         
     def __init__(self, parent, file_path, portOrSocket):

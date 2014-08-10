@@ -224,7 +224,7 @@ class MembersWidget(QWidget):
         self.requestLogsButton.setEnabled(True)
         self.dropdown_members.setEnabled(True)
     
-    @pyqtSlot(QThread, unicode)
+    @pyqtSlot(QThread, object)
     def cb_log_transfer_success(self, thread, path):
         path = convert_string(path)
         

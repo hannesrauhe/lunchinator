@@ -1,9 +1,7 @@
 from private_messages.chat_messages_model import ChatMessagesModel
-
 from lunchinator import log_exception, log_error, log_debug,\
     log_warning, log_info, convert_string, get_server, get_peers,\
     get_notification_center, get_settings
-
 from PyQt4.QtCore import pyqtSignal, pyqtSlot, QTimer, QObject
 from time import time
 import json
@@ -12,19 +10,19 @@ from private_messages.chat_messages_storage import InconsistentIDError,\
         
 class ChatMessagesHandler(QObject):
     # other ID, message ID, receive time, HTML, time, state, error message
-    displayOwnMessage = pyqtSignal(unicode, int, float, unicode, float, int, unicode)
+    displayOwnMessage = pyqtSignal(object, int, float, object, float, int, object)
     # other ID, message ID, receive time, error, error message
-    delayedDelivery = pyqtSignal(unicode, int, float, bool, unicode)
+    delayedDelivery = pyqtSignal(object, int, float, bool, object)
     # other ID, old ID, new ID
-    messageIDChanged = pyqtSignal(unicode, int, int)
+    messageIDChanged = pyqtSignal(object, int, int)
     # otherID, msgHTML, msgTime
-    newMessage = pyqtSignal(unicode, unicode, float, object)
+    newMessage = pyqtSignal(object, object, float, object)
     
     # private signals
-    _processAck = pyqtSignal(unicode, unicode, bool)
-    _processMessage = pyqtSignal(unicode, unicode)
-    _receivedSuccessfully = pyqtSignal(unicode, unicode, float, object, float)
-    _errorReceivingMessage = pyqtSignal(unicode, object, unicode)
+    _processAck = pyqtSignal(object, object, bool)
+    _processMessage = pyqtSignal(object, object)
+    _receivedSuccessfully = pyqtSignal(object, object, float, object, float)
+    _errorReceivingMessage = pyqtSignal(object, object, object)
     
     def __init__(self, delegate, ackTimeout, nextMsgID):
         super(ChatMessagesHandler, self).__init__()
@@ -37,7 +35,7 @@ class ChatMessagesHandler(QObject):
         self._nextMessageID = max(nextMsgID, nextIDFromDB)
         
         self._cleanupTimer = QTimer(self)
-        self._cleanupTimer.timeout.connect(self.cleanup)
+        self._cleanupTimer.timeout.connect(self._cleanup)
         self._cleanupTimer.start(2000)
         
         self._processAck.connect(self._processAckSlot)
@@ -61,7 +59,7 @@ class ChatMessagesHandler(QObject):
     def getNextMessageIDForStorage(self):
         return self._nextMessageID
         
-    @pyqtSlot(unicode, object)
+    @pyqtSlot(object, object)
     def _peerAppended(self, peerID, _infoDict):
         peerID = convert_string(peerID)
         self._resendUndeliveredMessages(curTime=None, partner=peerID, force=True)
@@ -88,7 +86,7 @@ class ChatMessagesHandler(QObject):
                 self.sendMessage(otherID, msgHTML, msgID, msgTime)
     
     @pyqtSlot()
-    def cleanup(self):
+    def _cleanup(self):
         curTime = time()
         
         self._resendUndeliveredMessages(curTime)
@@ -172,7 +170,7 @@ class ChatMessagesHandler(QObject):
      
     def processAck(self, ackPeerID, valueJSON, error=False):
         self._processAck.emit(ackPeerID, valueJSON, error)
-    @pyqtSlot(unicode, unicode, bool)
+    @pyqtSlot(object, object, bool)
     def _processAckSlot(self, ackPeerID, valueJSON, error):
         ackPeerID = convert_string(ackPeerID)
         valueJSON = convert_string(valueJSON)
@@ -229,7 +227,7 @@ class ChatMessagesHandler(QObject):
         
     def processMessage(self, otherID, msgDictJSON):
         self._processMessage.emit(otherID, msgDictJSON)
-    @pyqtSlot(unicode, unicode)
+    @pyqtSlot(object, object)
     def _processMessageSlot(self, otherID, msgDictJSON):
         otherID = convert_string(otherID)
         msgDictJSON = convert_string(msgDictJSON)
@@ -284,7 +282,7 @@ class ChatMessagesHandler(QObject):
         
     def receivedSuccessfully(self, otherID, msgHTML, msgTime, msgDict, recvTime):
         self._receivedSuccessfully.emit(otherID, msgHTML, msgTime, msgDict, recvTime)
-    @pyqtSlot(unicode, unicode, float, object, float)
+    @pyqtSlot(object, object, float, object, float)
     def _receivedSuccessfullySlot(self, otherID, msgHTML, msgTime, msgDict, recvTime):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
@@ -296,7 +294,7 @@ class ChatMessagesHandler(QObject):
         
     def errorReceivingMessage(self, otherID, msgDict, errorMsg):
         self._errorReceivingMessage.emit(otherID, msgDict, errorMsg)
-    @pyqtSlot(unicode, object, unicode)
+    @pyqtSlot(object, object, object)
     def _errorReceivingMessageSlot(self, otherID, msgDict, errorMsg):
         otherID = convert_string(otherID)
         errorMsg = convert_string(errorMsg)
@@ -337,7 +335,9 @@ class ChatMessagesHandler(QObject):
             log_error(errorMsg)
             get_server().call("HELO_PM_ERROR " + json.dumps(answerDict), peerIDs=[otherID])  
     
-    @pyqtSlot(unicode, unicode)
+    ############### PUBLIC SLOTS #################
+    
+    @pyqtSlot(object, object)
     def sendMessage(self, otherID, msgHTML, msgID=None, msgTime=None, isNoResend=False):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
@@ -371,8 +371,12 @@ class ChatMessagesHandler(QObject):
                                       msgHTML,
                                       isResend)
 
+    @pyqtSlot(object)
     def sendTyping(self, otherID):
+        otherID = convert_string(otherID)
         get_server().call("HELO_PM_TYPING 0", peerIDs=[otherID])
         
+    @pyqtSlot(object)
     def sendCleared(self, otherID):
+        otherID = convert_string(otherID)
         get_server().call("HELO_PM_CLEARED 0", peerIDs=[otherID])
