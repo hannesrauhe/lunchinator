@@ -92,7 +92,7 @@ class RemotePicturesHandler(QObject):
             if inFile:
                 imageData = inFile.read()
             elif inPath and os.path.exists(inPath):
-                with contextlib.closing(open(inFile, 'rb')) as inFile:
+                with contextlib.closing(open(inPath, 'rb')) as inFile:
                     imageData = inFile.read()
             else:
                 imageData = urllib2.urlopen(inURL.encode('utf-8')).read()
