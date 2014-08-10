@@ -12,10 +12,8 @@ from lunchinator.utilities import formatTime
 from time import localtime
 
 class ItemEditor(QTextEdit):
-    def __init__(self, document, textSize, parent):
+    def __init__(self, text, width, parent):
         super(ItemEditor, self).__init__(parent)
-        self.setDocument(document)
-        self._textSize = textSize
         self.setReadOnly(True)
         
         self.viewport().setAutoFillBackground(False)
@@ -28,7 +26,11 @@ class ItemEditor(QTextEdit):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         
+        self.document().setHtml(text)
+        self.document().setTextWidth(width)
+        
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding)
+        textSize = QSize(self.document().idealWidth(), self.document().size().height())
         self.setMinimumSize(textSize)
         self.setMaximumSize(textSize)
         self.setFocusPolicy(Qt.StrongFocus)
@@ -107,23 +109,19 @@ class MessageItemDelegate(QStyledItemDelegate):
     def getEditor(self):
         return self._editor
     
-    def createEditor(self, parent, option, modelIndex):
+    def createEditor(self, parent, option_, modelIndex):
         self.setEditIndex(modelIndex)
         
+        option = QStyleOptionViewItemV4(option_)
         self.initStyleOption(option, modelIndex)
         
         text = QString(option.text)
-        doc = QTextDocument()
-        doc.setHtml(text)
-        
-        doc.setTextWidth(self._preferredMessageWidth(option.rect.width()))
-        
-        messageRect = self._getMessageRect(option, doc, modelIndex, relativeToItem=True)
     
         editorWidget = EditorWidget(parent)
-        editor = ItemEditor(doc, QSize(doc.idealWidth(), doc.size().height()), editorWidget)
+        editor = ItemEditor(text, self._preferredMessageWidth(option.rect.width()), editorWidget)
         editorWidget.setItemEditor(editor)
 
+        messageRect = self._getMessageRect(option, editor.document(), modelIndex, relativeToItem=True)
         pos = messageRect.topLeft()
         editor.move(pos)
         editor.resize(messageRect.size())
@@ -270,13 +268,15 @@ class MessageItemDelegate(QStyledItemDelegate):
             log_warning("shouldStartEditAt(): wrong mouse over document")
             return False
         messageRect = self._getMessageRect(self.mouseOverOption, self.mouseOverDocument, modelIndex)
-        anchor = self.mouseOverDocument.documentLayout().anchorAt(eventPos - messageRect.topLeft())
+        anchorPos = QPointF(eventPos) - QPointF(messageRect.topLeft())
+        anchor = self.mouseOverDocument.documentLayout().anchorAt(anchorPos)
         if anchor != "":
             return False
         
         return messageRect.contains(eventPos)
 
-    def editorEvent(self, event, _model, option, modelIndex):
+    def editorEvent(self, event, _model, option_, modelIndex):
+        option = QStyleOptionViewItemV4(option_)
         self.initStyleOption(option, modelIndex)
         text = QString(option.text)
         if not text:
@@ -293,7 +293,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         # Get the link at the mouse position
         pos = event.pos()
         messageRect = self._getMessageRect(option, self.mouseOverDocument, modelIndex)
-        anchor = self.mouseOverDocument.documentLayout().anchorAt(pos - messageRect.topLeft())
+        anchor = self.mouseOverDocument.documentLayout().anchorAt(QPointF(pos) - QPointF(messageRect.topLeft()))
         if anchor == "":
             if messageRect.contains(pos):
                 self.parent().setCursor(Qt.IBeamCursor)
