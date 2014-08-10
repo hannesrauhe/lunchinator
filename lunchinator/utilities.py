@@ -74,6 +74,15 @@ def getValidQtParent():
         return qtParent
     raise Exception("Could not find a valid QObject instance")
     
+def canUseBackgroundQThreads():
+    try:
+        from PyQt4.QtCore import PYQT_VERSION_STR
+        from distutils.version import LooseVersion
+        # TODO I have no clue from which version on it actually works.
+        return LooseVersion(PYQT_VERSION_STR) > LooseVersion("4.7.2")
+    except:
+        return False
+    
 def _processCallOnPlugin(pluginObject, pluginName, ip, call, newPeer, fromQueue, member_info):
     from lunchinator.plugin import iface_called_plugin, iface_gui_plugin
     

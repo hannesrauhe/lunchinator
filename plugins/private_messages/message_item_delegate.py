@@ -107,9 +107,10 @@ class MessageItemDelegate(QStyledItemDelegate):
     def getEditor(self):
         return self._editor
     
-    def createEditor(self, parent, option, modelIndex):
+    def createEditor(self, parent, option_, modelIndex):
         self.setEditIndex(modelIndex)
         
+        option = QStyleOptionViewItemV4(option_)
         self.initStyleOption(option, modelIndex)
         
         text = QString(option.text)
@@ -270,13 +271,15 @@ class MessageItemDelegate(QStyledItemDelegate):
             log_warning("shouldStartEditAt(): wrong mouse over document")
             return False
         messageRect = self._getMessageRect(self.mouseOverOption, self.mouseOverDocument, modelIndex)
-        anchor = self.mouseOverDocument.documentLayout().anchorAt(eventPos - messageRect.topLeft())
+        anchorPos = QPointF(eventPos) - QPointF(messageRect.topLeft())
+        anchor = self.mouseOverDocument.documentLayout().anchorAt(anchorPos)
         if anchor != "":
             return False
         
         return messageRect.contains(eventPos)
 
-    def editorEvent(self, event, _model, option, modelIndex):
+    def editorEvent(self, event, _model, option_, modelIndex):
+        option = QStyleOptionViewItemV4(option_)
         self.initStyleOption(option, modelIndex)
         text = QString(option.text)
         if not text:
@@ -293,7 +296,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         # Get the link at the mouse position
         pos = event.pos()
         messageRect = self._getMessageRect(option, self.mouseOverDocument, modelIndex)
-        anchor = self.mouseOverDocument.documentLayout().anchorAt(pos - messageRect.topLeft())
+        anchor = self.mouseOverDocument.documentLayout().anchorAt(QPointF(pos) - QPointF(messageRect.topLeft()))
         if anchor == "":
             if messageRect.contains(pos):
                 self.parent().setCursor(Qt.IBeamCursor)
