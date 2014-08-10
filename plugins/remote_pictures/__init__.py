@@ -210,7 +210,10 @@ class remote_pictures(iface_gui_plugin):
                 data.append(dialog.getDescription().encode('utf-8'))
                 if dialog.getCategory():
                     data.append(dialog.getCategory().encode('utf-8'))
-            get_server().call("HELO_REMOTE_PIC " + ' '.join(data), peerIDs=[peerID])
+            with contextlib.closing(StringIO()) as strOut:
+                writer = csv.writer(strOut, delimiter = ' ', quotechar = '"')
+                writer.writerow(data)
+                get_server().call("HELO_REMOTE_PIC " + strOut.getvalue(), peerIDs=[peerID])
     
     def _privacySettingsChanged(self):
         get_notification_center().emitPrivacySettingsChanged(self._rpAction.getPluginName(), self._rpAction.getName())
