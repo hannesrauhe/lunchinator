@@ -5,8 +5,8 @@ import urllib2, contextlib
 from urllib2 import HTTPError
    
 class DownloadThread(QThread):
-    success = pyqtSignal(QThread, unicode)
-    error = pyqtSignal(QThread, unicode)
+    success = pyqtSignal(QThread, object)
+    error = pyqtSignal(QThread, object)
     progressChanged = pyqtSignal(QThread, int)
     CHUNK_SIZE = 1024
     NUMBER_OF_TRIES = 5

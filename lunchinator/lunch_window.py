@@ -6,7 +6,7 @@ from StringIO import StringIO
 import traceback
 
 class PluginDockWidget(QDockWidget):
-    closePressed = pyqtSignal(unicode) # plugin name
+    closePressed = pyqtSignal(object) # plugin name
     
     def __init__(self, pluginName, displayedName, parent):
         super(PluginDockWidget, self).__init__(displayedName, parent)

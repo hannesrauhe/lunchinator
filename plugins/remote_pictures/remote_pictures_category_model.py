@@ -46,7 +46,7 @@ class CategoriesModel(QStandardItemModel):
             return self._categoryIcons[cat]
         return None
         
-    @pyqtSlot(unicode, unicode, int)
+    @pyqtSlot(object, object, int)
     def addCategory(self, cat, thumbnailPath, thumbnailSize):
         cat = convert_string(cat)
         thumbnailPath = convert_string(thumbnailPath)

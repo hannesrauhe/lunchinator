@@ -30,11 +30,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _menu = None
     # ---- SIGNALS ----------------
     _initDone = pyqtSignal()
-    _performCall = pyqtSignal(unicode, set, set)
-    _sendFile = pyqtSignal(unicode, bytearray, int, bool)
-    _receiveFile = pyqtSignal(unicode, int, unicode, int, object, object)
-    _processEvent = pyqtSignal(unicode, unicode, unicode, float, bool, bool)
-    _processMessage = pyqtSignal(unicode, unicode, float, bool, bool)
+    _performCall = pyqtSignal(object, set, set)
+    _sendFile = pyqtSignal(object, bytearray, int, bool)
+    _receiveFile = pyqtSignal(object, int, object, int, object, object)
+    _processEvent = pyqtSignal(object, object, object, float, bool, bool)
+    _processMessage = pyqtSignal(object, object, float, bool, bool)
     _updateRequested = pyqtSignal()
     # -----------------------------
     
@@ -502,7 +502,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def initDoneSlot(self):
         pass
     
-    @pyqtSlot(unicode, set, set)
+    @pyqtSlot(object, set, set)
     def performCallSlot(self, msg, peerIDs, peerIPs):
         get_server().perform_call(msg, peerIDs, peerIPs)
     
@@ -510,21 +510,21 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def updateRequested(self):
         self.quit(EXIT_CODE_UPDATE)
     
-    @pyqtSlot(unicode, unicode)
+    @pyqtSlot(object, object)
     def _pluginActivated(self, pluginName, _category):
         pluginName = convert_string(pluginName)
         if pluginName in self.pluginNameToMenuAction:
             anAction = self.pluginNameToMenuAction[pluginName]
             anAction.setChecked(True)
             
-    @pyqtSlot(unicode, unicode)
+    @pyqtSlot(object, object)
     def _pluginDeactivated(self, pluginName, _category):
         pluginName = convert_string(pluginName)
         if pluginName in self.pluginNameToMenuAction:
             anAction = self.pluginNameToMenuAction[pluginName]
             anAction.setChecked(False)
 
-    @pyqtSlot(unicode, unicode, bool)
+    @pyqtSlot(object, object, bool)
     def toggle_plugin(self, p_name, p_cat, new_state):
         p_cat = convert_string(p_cat)
         p_name = convert_string(p_name)
@@ -534,7 +534,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         else:
             get_plugin_manager().deactivatePluginByName(p_name, p_cat)
     
-    @pyqtSlot(unicode, QObject)
+    @pyqtSlot(object, QObject)
     def sendMessageClicked(self, message, text):
         if message != None:
             get_server().call_all_members(convert_string(message))
@@ -631,7 +631,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         get_server().call_info()      
 
-    @pyqtSlot(unicode, bytearray, int, bool)
+    @pyqtSlot(object, bytearray, int, bool)
     def sendFileSlot(self, addr, fileToSend, other_tcp_port, isData):
         addr = convert_string(addr)
         if isData:
@@ -648,7 +648,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def errorOnTransfer(self, _thread):
         log_error("Error receiving file")
     
-    @pyqtSlot(unicode, int, unicode, int, object, object)
+    @pyqtSlot(object, int, object, int, object, object)
     def receiveFileSlot(self, addr, file_size, file_name, tcp_port, successFunc, errorFunc):
         addr = convert_string(addr)
         file_name = convert_string(file_name)
@@ -662,14 +662,14 @@ class LunchinatorGuiController(QObject, LunchServerController):
         dr.finished.connect(dr.deleteLater)
         dr.start()
         
-    @pyqtSlot(unicode, unicode, unicode, float, bool, bool)
+    @pyqtSlot(object, object, object, float, bool, bool)
     def processEventSlot(self, cmd, value, addr, eventTime, newPeer, fromQueue):
         cmd = convert_string(cmd)
         value = convert_string(value)
         addr = convert_string(addr)
         super(LunchinatorGuiController, self).processEvent(cmd, value, addr, eventTime, newPeer, fromQueue)
      
-    @pyqtSlot(unicode, unicode, float, bool, bool)
+    @pyqtSlot(object, object, float, bool, bool)
     def processMessageSlot(self, msg, addr, eventTime, newPeer, fromQueue):
         msg = convert_string(msg)
         addr = convert_string(addr)
