@@ -554,8 +554,12 @@ class LunchPeers(object):
         try:
             with self._lock:
                 for ip in self._peer_info:
-                    hostname = socket.gethostbyaddr(ip)[0]
+                    try:
+                        hostname = socket.gethostbyaddr(ip)[0]
+                    except:
+                        hostname = ip
                     self._potentialPeers.add(hostname)
+                        
                 with codecs.open(get_settings().get_peers_file(), 'w', 'utf-8') as f:
                     f.truncate()
                     f.write(u"\n".join(sorted(self._potentialPeers)))
