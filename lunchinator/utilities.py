@@ -4,6 +4,8 @@ from time import mktime, strftime
 from lunchinator import log_exception, log_warning, log_debug, \
     get_settings, log_error
 import locale
+import platform
+from tempfile import NamedTemporaryFile
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -26,6 +28,10 @@ def checkBundleIdentifier(ident):
     res = subprocess.call([get_settings().get_resource('bin', 'check_bundle_identifier.sh'), ident])
     return res == 1
 
+def _mustScaleNotificationIcon():
+    if getPlatform() == PLATFORM_LINUX:
+        return platform.linux_distribution()[0].startswith("SUSE Linux Enterprise")
+
 # TODO: message groups for notification center
 def displayNotification(name, msg, icon=None):
     if msg == None:
@@ -40,9 +46,20 @@ def displayNotification(name, msg, icon=None):
     
     try:
         if myPlatform == PLATFORM_LINUX:
-            if icon == None:
+            fileToClose = None
+            if icon is None or not os.path.exists(icon):
                 icon = ""
+            elif _mustScaleNotificationIcon():
+                import Image
+                im = Image.open(icon)
+                im.thumbnail((64,64), Image.ANTIALIAS)
+                fileToClose = NamedTemporaryFile(suffix='.png', delete=True)
+                im.save(fileToClose, "PNG")
+                fileToClose.flush()
+                icon = fileToClose.name
             subprocess.call(["notify-send","--icon="+icon, name, msg])
+            if fileToClose is not None:
+                fileToClose.close()
         elif myPlatform == PLATFORM_MAC:
             fh = open(os.path.devnull,"w")
             exe = getBinary("terminal-notifier", "bin")
