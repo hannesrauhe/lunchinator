@@ -73,7 +73,7 @@ class LunchinatorWindow(QMainWindow):
         get_notification_center().connectPluginActivated(self._pluginActivated)
         get_notification_center().connectPluginWillBeDeactivated(self._pluginWillBeDeactivated)
         
-        if len(self.pluginNameToDockWidget) == 0:
+        if len(self.pluginNameToDockWidget) == 0 and get_settings().get_plugins_enabled():
             # no gui plugins activated, show about plugins
             get_plugin_manager().activatePluginByName(u"About Plugins", "gui")
         
