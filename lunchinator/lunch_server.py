@@ -5,7 +5,7 @@ import socket, sys, os, json, contextlib, tarfile, platform, random, errno
 from time import strftime, localtime, time
 from cStringIO import StringIO
 
-from lunchinator.lunch_socket import lunch_socket, split_call
+from lunchinator.lunch_socket import lunchSocket, splitCall
 from lunchinator import log_debug, log_info, log_critical, get_settings, log_exception, log_error, log_warning, \
     convert_string, get_notification_center
 from lunchinator.logging_mutex import loggingMutex
@@ -149,7 +149,7 @@ class lunch_server(object):
         
         is_in_broadcast_mode = False
         
-        self._recv_socket = lunch_socket(self._peers)
+        self._recv_socket = lunchSocket(self._peers)
         try: 
             self._recv_socket.bind()
             self.running = True
@@ -189,7 +189,7 @@ class lunch_server(object):
                         self.call_request_info([ip])
                     
                     self._handle_event(data, ip, time(), isNewPeer, False)
-                except split_call as e:
+                except splitCall as e:
                     log_debug(e.value)
                 except socket.timeout:                    
                     if len(self._peers) > 1:                     
@@ -201,7 +201,7 @@ class lunch_server(object):
                             if not is_in_broadcast_mode:
                                 is_in_broadcast_mode = True
                                 log_warning("seems like you are alone - broadcasting for others")
-                            s_broad = lunch_socket(self._peers)
+                            s_broad = lunchSocket(self._peers)
                             s_broad.broadcast('HELO_REQUEST_INFO ' + self._build_info_string())
                             s_broad.close()
                             #forgotten peers may be on file
@@ -293,7 +293,7 @@ class lunch_server(object):
                     print "WARNING: %s" % warn
 
         i = 0
-        s = lunch_socket(self._peers)
+        s = lunchSocket(self._peers)
         try:      
             for ip in target:
                 try:
