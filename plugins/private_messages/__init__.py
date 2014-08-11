@@ -115,6 +115,7 @@ class private_messages(iface_gui_plugin):
             self._messagesThread = QThread()
         else:
             self._messagesThread = None
+            
         self._messagesHandler = ChatMessagesHandler(self, self.hidden_options[u"ack_timeout"], self.hidden_options[u"next_msgid"])
         if self._messagesThread is not None:
             self._messagesHandler.moveToThread(self._messagesThread)

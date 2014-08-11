@@ -46,7 +46,6 @@ class webrelay(iface_called_plugin):
             retUrl = retUrl.replace("$%s$"%var, urllib.quote_plus(info[var])) 
             
         #TODO (hannes) remove unknown placeholders
-        
         return retUrl;
         
     def _pushCall(self, infos):

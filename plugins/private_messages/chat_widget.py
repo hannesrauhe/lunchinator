@@ -49,7 +49,7 @@ class ChatWidget(QWidget):
     _URI_MATCHER=QRegExp(_URI_REGEX)
     _MAIL_MATCHER=QRegExp(_MAIL_REGEX)
     _TIME_ROW_INTERVAL = 10*60 # once every 10 minutes
-    
+
     sendMessage = pyqtSignal(object, object) # peer ID, message HTML
     typing = pyqtSignal()
     cleared = pyqtSignal()
