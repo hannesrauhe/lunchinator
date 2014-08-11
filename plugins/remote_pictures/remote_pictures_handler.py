@@ -22,14 +22,16 @@ class RemotePicturesHandler(QObject):
     displayImageInGui = pyqtSignal(object, int, list, bool, bool)
 
     _loadPictures = pyqtSignal()
-    _processRemotePicture = pyqtSignal(str, object, bool) # data, ip, store locally
+    _processRemotePicture = pyqtSignal(str, object) # data, ip
     _checkCategory = pyqtSignal(object)
     _thumbnailSizeChanged = pyqtSignal(int)
+    _storeLocallyChanged = pyqtSignal(bool)
     
-    def __init__(self, thumbnailSize, gui):
+    def __init__(self, thumbnailSize, storeLocally, gui):
         super(RemotePicturesHandler, self).__init__()
 
-        self._thumbnailSize = thumbnailSize        
+        self._thumbnailSize = thumbnailSize
+        self._storeLocally = storeLocally 
         self._gui = gui
         self._storage = RemotePicturesStorage(self)
         
@@ -41,6 +43,7 @@ class RemotePicturesHandler(QObject):
         self._processRemotePicture.connect(self._processRemotePictureSlot)
         self._checkCategory.connect(self._checkCategorySlot)
         self._thumbnailSizeChanged.connect(self._thumbnailSizeChangedSlot)
+        self._storeLocallyChanged.connect(self._storeLocallyChangedSlot)
     
     def loadPictures(self):
         self._loadPictures.emit()
@@ -143,6 +146,12 @@ class RemotePicturesHandler(QObject):
     @pyqtSlot(int)
     def _thumbnailSizeChangedSlot(self, newValue):
         self._thumbnailSize = newValue
+        
+    def storeLocallyChanged(self, newValue):
+        self._storeLocallyChanged.emit(newValue)
+    @pyqtSlot(int)
+    def _storeLocallyChangedSlot(self, newValue):
+        self._storeLocally = newValue
 
     def checkCategory(self, cat):
         self._checkCategory.emit(cat)
@@ -196,7 +205,7 @@ class RemotePicturesHandler(QObject):
         log_error("Error downloading picture from url %s" % convert_string(url))
         thread.deleteLater()
         
-    def _downloadedPicture(self, category, description, sender, storeLocally, thread, url):
+    def _downloadedPicture(self, category, description, sender, thread, url):
         name = "New Remote Picture"
         if category != None:
             name = name + " in category %s" % category
@@ -208,32 +217,32 @@ class RemotePicturesHandler(QObject):
         displayNotification(name, description, thread.target.name)
         
         self._addPicture(thread.target,
-                         thread.target.name if storeLocally else None,
+                         thread.target.name if self._storeLocally else None,
                          url,
                          category,
                          description,
                          sender)
           
-    def _extractPicture(self, url, category, description, sender, storeLocally):
+    def _extractPicture(self, url, category, description, sender):
         if not self._hasPicture(category, url):
             ext = os.path.splitext(urlparse(url.encode('utf-8')).path)[1]
-            if storeLocally:
+            if self._storeLocally:
                 target = self._createPictureFile(category, ext=ext)
             else:
                 target = tempfile.NamedTemporaryFile(suffix=ext)
             
             downloadThread = DownloadThread(self, url, target)
-            downloadThread.success.connect(partial(self._downloadedPicture, category, description, sender, storeLocally))
+            downloadThread.success.connect(partial(self._downloadedPicture, category, description, sender))
             downloadThread.error.connect(self._errorDownloadingPicture)
             downloadThread.finished.connect(downloadThread.deleteLater)
             downloadThread.start()
         else:
             log_debug("Remote Pics: Downloaded this url before, won't do it again:",url)
         
-    def processRemotePicture(self, value, ip, storeLocally):
-        self._processRemotePicture.emit(value, ip, storeLocally)
-    @pyqtSlot(str, object, bool)
-    def _processRemotePictureSlot(self, value, ip, storeLocally):
+    def processRemotePicture(self, value, ip):
+        self._processRemotePicture.emit(value, ip)
+    @pyqtSlot(str, object)
+    def _processRemotePictureSlot(self, value, ip):
         value = convert_raw(value)
         ip = convert_string(ip)
         with contextlib.closing(StringIO(value)) as strIn:
@@ -247,7 +256,7 @@ class RemotePicturesHandler(QObject):
             if len(valueList) > 2:
                 cat = valueList[2]
         
-        self._extractPicture(url, cat, desc, get_peers().getPeerID(pIP=ip), storeLocally)    
+        self._extractPicture(url, cat, desc, get_peers().getPeerID(pIP=ip))    
     
     def getCategories(self, alsoEmpty):
         return self._storage.getCategories(alsoEmpty)
@@ -278,3 +287,12 @@ class RemotePicturesHandler(QObject):
     def displayNext(self, cat, curID):
         cat = convert_string(cat)
         self._displayImage(cat, self._storage.getNextPicture(cat, curID))    
+
+    @pyqtSlot(object, object, object)
+    def pictureDownloaded(self, category, url, picData):
+        if self._storeLocally:
+            ext = os.path.splitext(urlparse(url.encode('utf-8')).path)[1]
+            with contextlib.closing(self._createPictureFile(category, ext)) as picFile:
+                picFile.write(picData)
+                self._storage.setPictureFile(category, url, picFile.name)
+    

@@ -1,6 +1,5 @@
 from PyQt4.QtGui import QImage, QPixmap, QLabel, QSizePolicy
-from PyQt4.QtCore import Qt, QSize, QThread, pyqtSlot, QTimer
-import sys
+from PyQt4.QtCore import Qt, QSize, QThread, pyqtSlot, QTimer, pyqtSignal
 from lunchinator import log_exception, log_error
 from lunchinator.download_thread import DownloadThread
 
@@ -42,6 +41,8 @@ class ResizingImageLabel(QLabel):
             self.setScaledPixmap()
 
 class ResizingWebImageLabel(ResizingImageLabel):
+    imageDownloaded = pyqtSignal(object, object) # url, image data as str
+    
     """Constructor
     
     parent -- parent QObject
@@ -89,10 +90,12 @@ class ResizingWebImageLabel(ResizingImageLabel):
         self.update()
             
     @pyqtSlot(QThread, object)
-    def downloadFinished(self, thread, _url):
+    def downloadFinished(self, thread, url):
+        self.imageDownloaded.emit(url, thread.getResult())
         qtimage = QImage()
         qtimage.loadFromData(thread.getResult())
         self.setRawPixmap(QPixmap.fromImage(qtimage))
+        thread.close()
             
     @pyqtSlot(QThread, object)
     def errorDownloading(self, _thread, url):

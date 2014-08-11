@@ -16,6 +16,7 @@ class RemotePicturesGui(QStackedWidget):
     openCategory = pyqtSignal(object) # category
     displayNext = pyqtSignal(object, int) # current category, current ID
     displayPrev = pyqtSignal(object, int) # current category, current ID
+    pictureDownloaded = pyqtSignal(object, object, object) # current category, url, pic data
     
     minOpacityChanged = pyqtSignal(float)
     maxOpacityChanged = pyqtSignal(float)
@@ -51,6 +52,7 @@ class RemotePicturesGui(QStackedWidget):
         self.addWidget(self.categoryView)
         
         self.imageLabel = ResizingWebImageLabel(self, smooth_scaling=smoothScaling)
+        self.imageLabel.imageDownloaded.connect(self.pictureDownloadedSlot)
         imageViewerLayout = QVBoxLayout(self.imageLabel)
         imageViewerLayout.setContentsMargins(0, 0, 0, 0)
         imageViewerLayout.setSpacing(0)
@@ -170,6 +172,11 @@ class RemotePicturesGui(QStackedWidget):
         
     def destroyWidget(self):
         pass
+    
+    @pyqtSlot(object, object)
+    def pictureDownloadedSlot(self, url, picData):
+        if self.currentCategory is not None:
+            self.pictureDownloaded.emit(self.currentCategory, url, picData)
         
 class HiddenWidgetBase(object):
     INITIAL_TIMEOUT = 2000

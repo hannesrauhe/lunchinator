@@ -67,11 +67,11 @@ class remote_pictures(iface_gui_plugin):
     
     def __init__(self):
         super(remote_pictures, self).__init__()
-        self.options = [((u"min_opacity", u"Minimum opacity of controls:", self.minOpacityChanged), 20),
-                        ((u"max_opacity", u"Maximum opacity of controls:", self.maxOpacityChanged), 80),
-                        ((u"thumbnail_size", u"Thumbnail Size:", self.thumbnailSizeChanged), 150),
-                        ((u"smooth_scaling", u"Smooth scaling", self.smoothScalingChanged), False),
-                        ((u"store_locally", u"Store pictures locally"), True)]
+        self.options = [((u"min_opacity", u"Minimum opacity of controls:", self._minOpacityChanged), 20),
+                        ((u"max_opacity", u"Maximum opacity of controls:", self._maxOpacityChanged), 80),
+                        ((u"thumbnail_size", u"Thumbnail Size:", self._thumbnailSizeChanged), 150),
+                        ((u"smooth_scaling", u"Smooth scaling", self._smoothScalingChanged), False),
+                        ((u"store_locally", u"Store pictures locally", self._storeLocallyChanged), True)]
         self._gui = None
         self._handler = None
         self._rpAction = None
@@ -86,13 +86,13 @@ class remote_pictures(iface_gui_plugin):
             signal.emit(float(newValue) / 100.)
         return newValue
         
-    def minOpacityChanged(self, _setting, newValue):
+    def _minOpacityChanged(self, _setting, newValue):
         return self._handleOpacity(newValue, None if self._gui is None else self._gui.minOpacityChanged)
     
-    def maxOpacityChanged(self, _setting, newValue):
+    def _maxOpacityChanged(self, _setting, newValue):
         return self._handleOpacity(newValue, None if self._gui is None else self._gui.maxOpacityChanged)
     
-    def thumbnailSizeChanged(self, _setting, newValue):
+    def _thumbnailSizeChanged(self, _setting, newValue):
         from remote_pictures.remote_pictures_category_model import CategoriesModel
         if newValue < CategoriesModel.MIN_THUMBNAIL_SIZE:
             newValue = CategoriesModel.MIN_THUMBNAIL_SIZE
@@ -104,8 +104,12 @@ class remote_pictures(iface_gui_plugin):
         if self._handler is not None:
             self._handler.thumbnailSizeChanged(newValue)
         return newValue
+    
+    def _storeLocallyChanged(self, _setting, newValue):
+        self._handler.storeLocallyChanged(newValue)
+        return newValue
         
-    def smoothScalingChanged(self, _setting, newValue):
+    def _smoothScalingChanged(self, _setting, newValue):
         if self._gui is not None:
             self._gui.setSmoothScaling(newValue)
         
@@ -123,7 +127,9 @@ class remote_pictures(iface_gui_plugin):
             self._messagesThread = QThread()
         else:
             self._messagesThread = None
-        self._handler = RemotePicturesHandler(self.get_option(u"thumbnail_size"), self._gui)
+        self._handler = RemotePicturesHandler(self.get_option(u"thumbnail_size"),
+                                              self.get_option(u"store_locally"),
+                                              self._gui)
         if self._messagesThread is not None:
             self._handler.moveToThread(self._messagesThread)
             self._messagesThread.start()
@@ -131,6 +137,7 @@ class remote_pictures(iface_gui_plugin):
         self._gui.openCategory.connect(self._handler.openCategory)
         self._gui.displayPrev.connect(self._handler.displayPrev)
         self._gui.displayNext.connect(self._handler.displayNext)
+        self._gui.pictureDownloaded.connect(self._handler.pictureDownloaded)
         
         self._handler.addCategory.connect(self._gui.categoryModel.addCategory)
         self._handler.displayImageInGui.connect(self._gui.displayImage)
@@ -147,6 +154,7 @@ class remote_pictures(iface_gui_plugin):
             self._gui.openCategory.disconnect(self._handler.openCategory)
             self._gui.displayPrev.disconnect(self._handler.displayPrev)
             self._gui.displayNext.disconnect(self._handler.displayNext)
+            self._gui.pictureDownloaded.disconnect(self._handler.pictureDownloaded)
             
             self._handler.addCategory.disconnect(self._gui.categoryModel.addCategory)
             self._handler.displayImageInGui.disconnect(self._gui.displayImage)
@@ -183,8 +191,8 @@ class remote_pictures(iface_gui_plugin):
     def process_event(self, cmd, value, ip, _info):
         if cmd=="HELO_REMOTE_PIC":
             if self._handler is not None:
-                self._handler.processRemotePicture(value, ip, self.get_option(u"store_locally"))
-    
+                self._handler.processRemotePicture(value, ip)
+                
     def getCategories(self):
         if self._handler is None:
             log_error("Remote Pictures not initialized")

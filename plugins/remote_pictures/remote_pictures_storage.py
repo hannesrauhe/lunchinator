@@ -240,6 +240,13 @@ class RemotePicturesStorage(object):
         
         self._db.execute("UPDATE REMOTE_PICTURES_CATEGORY SET THUMBNAIL=? WHERE TITLE=?", thumbnailPath, category)
         
+    def setPictureFile(self, category, url, path):
+        if self._db is None:
+            log_error("Cannot set picture path, no database connection")
+            return
+        
+        self._db.execute("UPDATE REMOTE_PICTURES SET FILE=? WHERE CAT=? AND URL=? AND FILE IS NULL", path, category, url)
+        
     def seenPicture(self, picID):
         if self._db is None:
             return
