@@ -26,6 +26,9 @@ class twitter_status(iface_called_plugin):
         pass
     
     def process_event(self, cmd, value, ip, member_info):
+        if len(value)==0:
+            return
+        
         if cmd == "HELO_TWITTER_USER":
             screen_name = value[1:] if value[0] == "@" else value
             if not self.other_twitter_users.has_key(ip) or self.other_twitter_users[ip] != screen_name:
