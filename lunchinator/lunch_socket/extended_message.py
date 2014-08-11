@@ -35,7 +35,6 @@ class extMessage(object):
     
     def getCompleteness(self):
         completeFragments = 0
-        i = 0
         for f in self._fragments:
             if f:
                 completeFragments += 1

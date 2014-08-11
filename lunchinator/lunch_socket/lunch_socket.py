@@ -12,7 +12,7 @@ import itertools, time
 as well as splitting of long messages"""
 class lunchSocket(object):    
     LEGACY_MAX_LEN = 1024
-    EXT_MSG_VERSION = 1556
+    EXT_MSG_VERSION = 1660
     
     def __init__(self, peers):
         self._s = None
