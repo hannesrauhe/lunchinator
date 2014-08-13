@@ -1,18 +1,42 @@
-from lunchinator.lunch_datathread import sendFile, receiveFile
-from PyQt4.QtCore import QThread, pyqtSignal, QMutex, QTimer
+from lunchinator.lunch_datathread import sendFile, receiveFile,\
+    CanceledException
+from PyQt4.QtCore import QThread, pyqtSignal, QMutex, QTimer, pyqtSlot
 from lunchinator import log_info, log_exception
 import socket
 from functools import partial
+from lunchinator.utilities import formatException
 
 class DataThreadBase(QThread):
-    successfullyTransferred = pyqtSignal(QThread, object)
-    errorOnTransfer = pyqtSignal(QThread)
+    successfullyTransferred = pyqtSignal(QThread, object) # self, path
+    errorOnTransfer = pyqtSignal(QThread, object) # self, error message
+    progressChanged = pyqtSignal(int, int) # progress, max progress
+    transferCanceled = pyqtSignal(QThread)
+    
+    CHUNK_SIZE = 1024
         
     def __init__(self, parent, file_path, portOrSocket):
         super(DataThreadBase, self).__init__(parent)
         self.file_path = file_path
         self.portOrSocket = portOrSocket
         self.con = None
+        self._canceled = False
+        self._userData = None
+        
+    def _progressChanged(self, newVal, maxVal):
+        self.progressChanged.emit(newVal, maxVal)
+        
+    def getPath(self):
+        return self.file_path
+    
+    @pyqtSlot()
+    def cancelTransfer(self):
+        self._canceled = True
+        
+    def setUserData(self, data):
+        self._userData = data
+        
+    def getUserData(self):
+        return self._userData
 
 class DataSenderThread(DataThreadBase):
     def __init__(self, parent, receiver, pathOrData, tcp_port, isData = False):
@@ -23,7 +47,19 @@ class DataSenderThread(DataThreadBase):
         self.receiver = receiver
  
     def run(self):
-        sendFile(self.receiver, self.data if self.data != None else self.file_path, self.portOrSocket, lambda msecs : QThread.msleep(msecs), self.data != None)
+        try:
+            sendFile(self.receiver,
+                     self.data if self.data != None else self.file_path,
+                     self.portOrSocket,
+                     lambda msecs : QThread.msleep(msecs),
+                     self.data != None,
+                     self._progressChanged,
+                     lambda : self._canceled)
+            self.successfullyTransferred.emit(self, self.file_path)
+        except CanceledException:
+            self.transferCanceled.emit(self)
+        except:
+            self.errorOnTransfer.emit(self, formatException())
         
     def stop_server(self):
         pass
@@ -105,8 +141,6 @@ class DataReceiverThread(DataThreadBase):
         return port
     
     def run(self):
-        success = lambda finalPath : self.successfullyTransferred.emit(self, finalPath)
-        error = lambda : self.errorOnTransfer.emit(self)
         port = 0
         if type(self.portOrSocket) == int:
             self.inactiveSocketsMutex.lock()
@@ -131,7 +165,18 @@ class DataReceiverThread(DataThreadBase):
             finally:
                 self.inactiveSocketsMutex.unlock()
         log_info("Receiving file of size %d on port %d"%(self.size,port))
-        receiveFile(self.sender, self.file_path, self.size, self.portOrSocket, success, error)
+        try:
+            finalPath = receiveFile(self.sender,
+                                    self.file_path,
+                                    self.size,
+                                    self.portOrSocket,
+                                    self._progressChanged,
+                                    lambda : self._canceled)
+            self.successfullyTransferred.emit(self, finalPath)
+        except CanceledException:
+            self.transferCanceled.emit(self)
+        except:
+            self.errorOnTransfer.emit(self, formatException())
         
     def stop_server(self):
         pass

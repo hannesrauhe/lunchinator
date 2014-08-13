@@ -43,10 +43,12 @@ class DataReceiverThread(DataThreadBase):
  
     def run(self):
         try:
-            receiveFile(self.sender, self.file_path, self.size, self.tcp_port, self.success, self.error)
+            finalPath = receiveFile(self.sender, self.file_path, self.size, self.tcp_port)
+            self.success(finalPath)
             if self._successFunc != None:
                 self._successFunc()
         except:
+            self.error()
             if self._errorFunc != None:
                 self._errorFunc()
         

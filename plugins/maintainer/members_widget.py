@@ -271,11 +271,11 @@ class MembersWidget(QWidget):
         if len(logsAdded) > 0 or len(logsRenamed) > 0:
             self.updateLogList(logsAdded, logsRenamed)
     
-    @pyqtSlot(QThread)
-    def cb_log_transfer_error(self, _thread):
+    @pyqtSlot(QThread, object)
+    def cb_log_transfer_error(self, _thread, message):
         if not self.isVisible():
             return False
-        self.log_area.setText("Error while getting log")
+        self.log_area.setText("Error while getting log (%s)" % message)
         self.requestFinished()
         
     def get_selected_log_member(self):

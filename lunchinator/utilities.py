@@ -491,3 +491,42 @@ def formatTime(mTime):
     elif dt.date().year == datetime.today().date().year:
         return strftime("%b %d, %H:%M", mTime)
     return strftime("%b %d %Y, %H:%M", mTime)
+
+def revealFile(path):
+    if not os.path.exists(path):
+        log_error("Trying to reveal file", path, "which does not exist.")
+        return
+    try:
+        if getPlatform() == PLATFORM_MAC:
+            from AppKit import NSWorkspace
+            ws = NSWorkspace.sharedWorkspace()
+            ws.selectFile_inFileViewerRootedAtPath_(path, os.path.dirname(path))
+        elif getPlatform() == PLATFORM_WINDOWS:
+            subprocess.call(['explorer', '/select', path])
+        elif getPlatform() == PLATFORM_LINUX:
+            subprocess.call(['xdg-open', os.path.dirname(path)])
+    except:
+        log_exception("Could not reveal file")
+        
+def openFile(path):
+    if not os.path.exists(path):
+        log_error("Trying to open file", path, "which does not exist.")
+        return
+    try:
+        if getPlatform() == PLATFORM_MAC:
+            from AppKit import NSWorkspace
+            ws = NSWorkspace.sharedWorkspace()
+            ws.openFile_(path)
+        elif getPlatform() == PLATFORM_WINDOWS:
+            os.startfile(path)
+        elif getPlatform() == PLATFORM_LINUX:
+            subprocess.call(['xdg-open', path])
+    except:
+        log_exception("Could not open file")
+    
+def formatException():
+    exc_info = sys.exc_info()
+    typeName = u"Unknown Exception"
+    if exc_info[0] != None:
+        typeName = unicode(exc_info[0].__name__)
+    return u"%s: %s" % (typeName, unicode(exc_info[1]))

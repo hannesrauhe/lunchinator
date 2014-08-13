@@ -1,0 +1,9 @@
+[Core]
+Name = hannesrauhe.lunchinator.file_transfer
+Module = file_transfer
+
+[Documentation]
+Author = Cornelius Ratsch
+Version = 0.1
+Website = http://www.lunchinator.de
+Description = Lets you send files to other peers.

@@ -645,8 +645,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def successfullyReceivedFile(self, _thread, filePath):
         log_info("successfully received file %s" % filePath)
         
-    def errorOnTransfer(self, _thread):
-        log_error("Error receiving file")
+    def errorOnTransfer(self, _thread, message):
+        log_error("Error receiving file (%s)" % message)
     
     @pyqtSlot(object, int, object, int, object, object)
     def receiveFileSlot(self, addr, file_size, file_name, tcp_port, successFunc, errorFunc):
@@ -656,7 +656,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if successFunc:
             dr.successfullyTransferred.connect(lambda _thread, _path : successFunc())
         if errorFunc:
-            dr.errorOnTransfer.connect(lambda _thread : errorFunc())
+            dr.errorOnTransfer.connect(lambda _thread, _msg : errorFunc())
         dr.successfullyTransferred.connect(self.successfullyReceivedFile)
         dr.errorOnTransfer.connect(self.errorOnTransfer)
         dr.finished.connect(dr.deleteLater)

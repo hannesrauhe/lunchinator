@@ -2,7 +2,7 @@ import os, codecs, socket
 from copy import deepcopy
 from time import time
 from lunchinator import get_settings, log_exception, log_debug, log_info, get_notification_center,\
-    log_error
+    log_error, log_warning
 from lunchinator.utilities import getTimeDifference
 from lunchinator.logging_mutex import loggingMutex
 from lunchinator.peer_names import PeerNames
@@ -532,7 +532,10 @@ class LunchPeers(object):
         
         peerIPs = []
         #TODO change AF_INET when going to v6
-        for ip in set(i[4][0] for i in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)):
+        ownIPs = set(i[4][0] for i in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET))
+        if not ownIPs:
+            log_warning("Didn't find IPs for ourselves")
+        for ip in ownIPs:
             peerIPs.append(ip)
         if os.path.exists(p_file):
             with codecs.open(p_file, 'r', 'utf-8') as f:    
