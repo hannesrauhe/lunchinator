@@ -40,7 +40,7 @@ def _sendFile(con, receiver, path_or_data, tcp_port, sleep, is_data, progress_ca
                     con.sendall(chunk)
                     chunk = inFile.read(chunkSize)
             else:
-                maxProg = size / 1024
+                maxProg = size / 1024 + 1
                 sent = 0
                 progress_call(0, maxProg)
                 while True:
@@ -84,7 +84,7 @@ def _receiveFile(con, file_path, size, progress_call, canceled_call):
             progress_call = lambda _, __ : None
         
         received = 0
-        maxProg = size / 1024
+        maxProg = size / 1024 + 1
         progress_call(0, maxProg)
             
         length = size
