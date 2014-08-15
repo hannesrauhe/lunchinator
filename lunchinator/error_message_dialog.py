@@ -7,13 +7,23 @@ class ErrorMessageDialog(QDialog):
     def __init__(self, parent):
         super(ErrorMessageDialog, self).__init__(parent)
         
+        self._errorPixmap = None
+        self._warningPixmap = None
         try:
             from PyQt4.QtGui import QCommonStyle, QStyle
             style = QCommonStyle()
             self._errorPixmap = style.standardIcon(QStyle.SP_MessageBoxCritical).pixmap(14,14)
+            if self._errorPixmap.isNull():
+                self._errorPixmap = None
             self._warningPixmap = style.standardIcon(QStyle.SP_MessageBoxWarning).pixmap(14,14)
+            if self._warningPixmap.isNull():
+                self._warningPixmap = None
         except:
+            pass
+        
+        if self._errorPixmap is None:
             self._errorPixmap = QIcon(get_settings().get_resource("images", "error.png")).pixmap(14,14)
+        if self._warningPixmap is None:
             self._warningPixmap = QIcon(get_settings().get_resource("images", "warning.png")).pixmap(14,14)
             
         layout = QVBoxLayout(self)

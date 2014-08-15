@@ -15,6 +15,7 @@ from xml.etree import ElementTree
 from StringIO import StringIO
 from functools import partial
 from time import time
+from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -79,13 +80,23 @@ class ChatWidget(QWidget):
         self._otherName = otherName
         self._ownName = ownName
         
+        self._errIcon = None
+        self._warnIcon = None
         try:
             from PyQt4.QtGui import QCommonStyle, QStyle
             style = QCommonStyle()
             self._errIcon = style.standardIcon(QStyle.SP_MessageBoxCritical)
+            if self._errIcon.isNull():
+                self._errIcon = None
             self._warnIcon = style.standardIcon(QStyle.SP_MessageBoxWarning)
+            if self._warnIcon.isNull():
+                self._warnIcon = None
         except:
+            pass
+        
+        if self._errIcon is None:
             self._errIcon = QIcon(get_settings().get_resource("images", "error.png"))
+        if self._warnIcon is None:
             self._warnIcon = QIcon(get_settings().get_resource("images", "warning.png"))
         
         self._initMessageModel()
