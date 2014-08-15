@@ -1,12 +1,13 @@
-from PyQt4.QtGui import QDialog, QLabel, QVBoxLayout, QHBoxLayout,\
+from PyQt4.QtGui import QDialog, QLabel, QHBoxLayout,\
     QWidget, QPushButton, QStyle, QLineEdit, QCheckBox,\
     QFileDialog
 from PyQt4.Qt import Qt
 from lunchinator import convert_string
 from lunchinator.git import GitHandler
 import os
+from lunchinator.error_message_dialog import ErrorMessageDialog
 
-class AddRepoDialog(QDialog):
+class AddRepoDialog(ErrorMessageDialog):
     def __init__(self, parent):
         super(AddRepoDialog, self).__init__(parent)
         
@@ -15,8 +16,7 @@ class AddRepoDialog(QDialog):
         self._autoUpdate = False
         self._canAutoUpdate = False
         
-        layout = QVBoxLayout(self)
-        
+    def _initInputUI(self, layout):
         style = None
         try:
             from PyQt4.QtGui import QCommonStyle
@@ -65,40 +65,6 @@ class AddRepoDialog(QDialog):
         propertiesLayout.addWidget(self.autoUpdateCheckBox, 1, Qt.AlignLeft)
         
         layout.addLayout(propertiesLayout)
-                
-        errorLayout = QHBoxLayout()
-        errorLayout.setContentsMargins(0, 0, 0, 0)
-        if style != None:
-            self._errorIcon = QLabel(self)
-            self._errorIcon.setPixmap(style.standardIcon(QStyle.SP_MessageBoxWarning).pixmap(12,12))
-            self._errorIcon.setAlignment(Qt.AlignTop)
-            self._errorIcon.setVisible(False)
-            errorLayout.addWidget(self._errorIcon, 0, Qt.AlignLeft)
-        
-        self._errorLabel = QLabel(self)
-        self._errorLabel.setVisible(False)
-        errorLayout.addWidget(self._errorLabel, 1, Qt.AlignLeft)
-        layout.addLayout(errorLayout)
-        
-        buttonWidget = QWidget(self)
-        buttonLayout = QHBoxLayout(buttonWidget)
-        buttonLayout.setContentsMargins(0, 0, 0, 0)
-        
-        cancelButton = QPushButton("Cancel", self)
-        cancelButton.clicked.connect(self.reject)
-        cancelButton.setAutoDefault(False)
-        buttonLayout.addWidget(cancelButton)
-        
-        okButton = QPushButton("OK", self)
-        okButton.clicked.connect(self.checkOK)
-        okButton.setAutoDefault(False)
-        buttonLayout.addWidget(okButton)
-        
-        layout.addWidget(buttonWidget, 0, Qt.AlignRight)
-        
-        size = self.sizeHint()
-        self.setMaximumHeight(size.height())
-        self.setMinimumWidth(300)
         
     def _activeChanged(self, newState):
         self._active = newState == Qt.Checked
@@ -122,11 +88,6 @@ class AddRepoDialog(QDialog):
         if not self._canAutoUpdate:
             self.autoUpdateCheckBox.setChecked(False)
         
-    def _error(self, msg):
-        self._errorIcon.setVisible(True)
-        self._errorLabel.setText(msg)
-        self._errorLabel.setVisible(True)
-    
     def _setPath(self, path):
         self._path = convert_string(path)
         self.pathEdit.setText(path)
@@ -150,7 +111,7 @@ class AddRepoDialog(QDialog):
         self._autoUpdate = autoUpdate
         self.autoUpdateCheckBox.setChecked(autoUpdate)
         
-    def checkOK(self):
+    def _checkOK(self):
         if not os.path.isdir(self.getPath()):
             self._error("The given path does not exist or is not a directory.")
         else:
