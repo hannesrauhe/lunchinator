@@ -1,7 +1,9 @@
-from PyQt4.QtGui import QMainWindow
-from private_messages.chat_widget import ChatWidget
 from PyQt4.QtCore import pyqtSignal
-from lunchinator import get_notification_center, convert_string
+from PyQt4.QtGui import QMainWindow, QIcon
+
+from lunchinator import get_notification_center, convert_string, get_settings
+from private_messages.chat_widget import ChatWidget
+
 
 class ChatWindow(QMainWindow):
     windowClosing = pyqtSignal(object) # other's peer ID
@@ -12,6 +14,7 @@ class ChatWindow(QMainWindow):
         self._chatWidget = ChatWidget(self, ownName, otherName, ownPicFile, otherPicFile, otherID)
         self.setCentralWidget(self._chatWidget)
         self.setWindowTitle(otherName)
+        self.setWindowIcon(QIcon(get_settings().get_resource("images", "lunchinator_chat.png")))
         
         get_notification_center().connectDisplayedPeerNameChanged(self._displayedPeerNameChanged)
 
