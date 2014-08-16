@@ -57,7 +57,6 @@ class file_transfer(iface_gui_plugin):
         from file_transfer.file_transfer_widget import FileTransferWidget
         from file_transfer.file_transfer_handler import FileTransferHandler
         
-        self._gui = FileTransferWidget(parent, self)
         
         if canUseBackgroundQThreads():
             from PyQt4.QtCore import QThread
@@ -65,21 +64,34 @@ class file_transfer(iface_gui_plugin):
         else:
             self._handlerThread = None
             
-        self._handler = FileTransferHandler(self._gui, self.get_option(u"download_dir"))
+        self._handler = FileTransferHandler(self.get_option(u"download_dir"))
         if self._handlerThread is not None:
             self._handlerThread.moveToThread(self._handlerThread)
             self._handlerThread.start()
-            
-        self._gui.retry.connect(self._handler.retrySendFileToPeer)
-        self._gui.cancel.connect(self._handler.cancelOutgoingTransfer)
-        self._handler.startOutgoingTransfer.connect(self._gui.startOutgoingTransfer)
-        self._handler.outgoingTransferStarted.connect(self._gui.outgoingTransferStarted)
-        self._handler.outgoingTransferCanceled.connect(self._gui.outgoingTransferCanceled)
-        self._handler.incomingTransferStarted.connect(self._gui.incomingTransferStarted)
-            
+        
+        self._gui = FileTransferWidget(parent, self)
+        self._toolWindow = FileTransferWidget(parent, self, asWindow=True)
+        self._toolWindow.setWindowTitle("File Transfers")
+
+        for gui in (self._gui, self._toolWindow):        
+            gui.retry.connect(self._handler.retrySendFileToPeer)
+            gui.cancel.connect(self._handler.cancelOutgoingTransfer)
+            self._handler.startOutgoingTransfer.connect(gui.startOutgoingTransfer)
+            self._handler.outgoingTransferStarted.connect(gui.outgoingTransferStarted)
+            self._handler.outgoingTransferCanceled.connect(gui.outgoingTransferCanceled)
+            self._handler.incomingTransferStarted.connect(gui.incomingTransferStarted)
+        
         return self._gui
     
     def destroy_widget(self):
+        for gui in (self._gui, self._toolWindow):        
+            gui.retry.disconnect(self._handler.retrySendFileToPeer)
+            gui.cancel.disconnect(self._handler.cancelOutgoingTransfer)
+            self._handler.startOutgoingTransfer.disconnect(gui.startOutgoingTransfer)
+            self._handler.outgoingTransferStarted.disconnect(gui.outgoingTransferStarted)
+            self._handler.outgoingTransferCanceled.disconnect(gui.outgoingTransferCanceled)
+            self._handler.incomingTransferStarted.disconnect(gui.incomingTransferStarted)
+        
         self._handler.deactivate()
         if self._handlerThread is not None:
             self._handlerThread.quit()

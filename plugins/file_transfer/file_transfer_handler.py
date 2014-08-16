@@ -21,10 +21,9 @@ class FileTransferHandler(QObject):
     _sendFileToPeer = pyqtSignal(object, object)
     _downloadDirChanged = pyqtSignal(object)
     
-    def __init__(self, gui, downloadDir):
+    def __init__(self, downloadDir):
         super(FileTransferHandler, self).__init__()
         
-        self._gui = gui
         self._nextID = 0
         self._downloadDir = downloadDir
 

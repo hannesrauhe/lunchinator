@@ -250,39 +250,61 @@ class FileTransferWidget(QWidget):
     retry = pyqtSignal(object, object, int) # file path, peerID, transfer ID (forwarded from transfer widget)
     cancel = pyqtSignal(int) # transfer ID
     
-    def __init__(self, parent, delegate):
-        super(FileTransferWidget, self).__init__(parent)
+    def __init__(self, parent, delegate, asWindow=False):
+        super(FileTransferWidget, self).__init__(parent, Qt.Tool if asWindow else Qt.Widget)
         
         self._delegate = delegate
+        self._asWindow = asWindow
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(self._initTopView(), 0)
+        if not asWindow:
+            layout.addWidget(self._initTopView(), 0)
         layout.addWidget(self._initCentralView(), 1)
+        if asWindow:
+            layout.addWidget(self._initBottomView(), 0, Qt.AlignRight)
         
     def _initTopView(self):
         topWidget = QWidget(self)
         
-        self._sendFileButton = QToolButton(topWidget)
-        self._sendFileButton.setText(u"Send file to ")
-        self._sendFileButton.setToolButtonStyle(Qt.ToolButtonTextOnly)
-        self._sendFileButton.setPopupMode(QToolButton.InstantPopup)
-        menu = QMenu(self._sendFileButton)
+        sendFileButton = QToolButton(topWidget)
+        sendFileButton.setText(u"Send file to ")
+        sendFileButton.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        sendFileButton.setPopupMode(QToolButton.InstantPopup)
+        menu = QMenu(sendFileButton)
         menu.aboutToShow.connect(partial(self._fillPeersPopup, menu))
-        self._sendFileButton.setMenu(menu)
+        sendFileButton.setMenu(menu)
             
-        self._clearButton = QPushButton("Clear Inactive", topWidget)
-        self._clearButton.clicked.connect(self._clearFinished)
+        clearButton = QPushButton("Clear Inactive", topWidget)
+        clearButton.clicked.connect(self._clearFinished)
         
         layout = QHBoxLayout(topWidget)
         layout.setContentsMargins(10, 10, 10, 0)
-        layout.addWidget(self._sendFileButton, 1, Qt.AlignLeft)
-        layout.addWidget(self._clearButton, 0, Qt.AlignLeft)
+        layout.addWidget(sendFileButton, 1, Qt.AlignLeft)
+        layout.addWidget(clearButton, 0, Qt.AlignLeft)
         return topWidget
+
+    def _initBottomView(self):
+        bottomWidget = QWidget(self)
+        bottomLayout = QHBoxLayout(bottomWidget)
+        bottomLayout.setContentsMargins(0, 0, 0, 0)
+        clearButton = QPushButton("Clear Inactive", bottomWidget)
+        clearButton.clicked.connect(self._clearFinished)
+        bottomLayout.addWidget(clearButton, 0, Qt.AlignRight)
+        return bottomWidget
     
     def _initCentralView(self):
         self._transferList = DeleteKeyTreeWidget(self)
+        self._transferList.setObjectName(u"__transfer_list")
+        self._transferList.setFrameShape(QFrame.StyledPanel)
+        if getPlatform() == PLATFORM_MAC:
+            if self._asWindow:
+                self._transferList.setAttribute(Qt.WA_MacShowFocusRect, False)
+                self._transferList.setStyleSheet("QFrame#__transfer_list{border-width: 1px; border-top-style: none; border-right-style: none; border-bottom-style: solid; border-left-style: none; border-color:palette(mid)}");
+            else:
+                self._transferList.setStyleSheet("QFrame#__transfer_list{border-width: 1px; border-top-style: solid; border-right-style: none; border-bottom-style: none; border-left-style: none; border-color:palette(mid)}");
+            
         self._transferList.setColumnCount(1)
         self._transferList.setAlternatingRowColors(False)
         self._transferList.setHeaderHidden(True)
@@ -351,6 +373,9 @@ class FileTransferWidget(QWidget):
         widget = _TransferWidget(self._transferList, filePath, fileSize, peerID, transferID, down)
         widget.retry.connect(self._retry)
         self._transferList.setItemWidget(item, 0, widget)
+        
+        if self._asWindow:
+            self.show()
         return widget
         
     def _getOutgoingTransferItem(self, transferID):
