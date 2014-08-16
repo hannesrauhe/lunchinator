@@ -3,7 +3,7 @@ from PyQt4.QtGui import QWidget, QTreeWidget, QVBoxLayout, QLabel, QProgressBar,
     QPixmap, QFileIconProvider, QToolButton, QMenu
 from PyQt4.Qt import Qt
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, revealFile,\
-    openFile
+    openFile, formatSize
 from lunchinator import get_settings, get_peers, log_warning, log_error
 from PyQt4.QtCore import pyqtSlot, QVariant, QFileInfo, pyqtSignal, QThread
 import os
@@ -11,9 +11,10 @@ from functools import partial
 
 class _TransferWidget(QFrame):
     cancel = pyqtSignal()
+    cancelBeforeTransfer = pyqtSignal(int) # transfer ID
     retry = pyqtSignal(object, object, int) # file path, peerID, transfer ID
     
-    def __init__(self, parent, filePath, peerID, transferID, down):
+    def __init__(self, parent, filePath, fileSize, peerID, transferID, down):
         super(_TransferWidget, self).__init__(parent)
         
         self._filePath = filePath
@@ -22,10 +23,11 @@ class _TransferWidget(QFrame):
         self._transferring = True
         self._down = down
         self._success = False
+        self._connectedToThread = False
         
         self._initLayout(filePath)
         
-        self._setName(os.path.basename(filePath))
+        self._setName(os.path.basename(filePath), fileSize)
         self.reset()
         
     def _initLayout(self, filePath):
@@ -104,17 +106,17 @@ class _TransferWidget(QFrame):
     def getFilePath(self):
         return self._filePath
         
-    def _setName(self, name):
+    def _setName(self, name, size):
         if self._down:
-            text = u"%s \u2190 %s"
+            text = u"%s (%s) \u2190 %s"
         else:
-            text = u"%s \u2192 %s"
+            text = u"%s (%s) \u2192 %s"
         
         if get_peers() is not None:
             peerName = get_peers().getDisplayedPeerName(self._peerID)
         else:
             peerName = u"<unknown peer>"
-        self._nameLabel.setText(text % (name, peerName))
+        self._nameLabel.setText(text % (name, formatSize(size), peerName))
         
     def _setIcon(self, baseName):
         if baseName is None:
@@ -163,7 +165,10 @@ class _TransferWidget(QFrame):
     
     def _buttonClicked(self):
         if self._transferring:
-            self.cancel.emit()
+            if self._connectedToThread:
+                self.cancel.emit()
+            else:
+                self.cancelBeforeTransfer.emit(self._transferID)
         elif self._down:
             if self._success:
                 revealFile(self._filePath)
@@ -173,14 +178,16 @@ class _TransferWidget(QFrame):
             else:
                 self.retry.emit(self._filePath, self._peerID, self._transferID)
         
-    def connect(self, dataThread):        
+    def connectDataThread(self, dataThread):
+        self._connectedToThread = True   
         dataThread.progressChanged.connect(self.progressChanged)
         dataThread.errorOnTransfer.connect(self.transferError)
         dataThread.successfullyTransferred.connect(self.successfullyTransferred)
         dataThread.transferCanceled.connect(self.transferCanceled)
         self.cancel.connect(dataThread.cancelTransfer)
 
-    def disconnect(self, dataThread):
+    def disconnectDataThread(self, dataThread):
+        self._connectedToThread = False
         dataThread.progressChanged.disconnect(self.progressChanged)
         dataThread.errorOnTransfer.disconnect(self.transferError)
         dataThread.successfullyTransferred.disconnect(self.successfullyTransferred)
@@ -200,27 +207,30 @@ class _TransferWidget(QFrame):
         self._transferring = False
         self._success = True
         self._statusLabel.setText(u"Transfer finished successfully")
-        self.disconnect(thread)
+        self.disconnectDataThread(thread)
         self._checkButtonFunction()
     
     @pyqtSlot(object)    
     def transferError(self, thread, message):
         self._transferring = False
         self._statusLabel.setText(u"Error transferring file (%s)" % message)
-        self.disconnect(thread)
+        self.disconnectDataThread(thread)
         self._checkButtonFunction()
         
     @pyqtSlot(object)
     def transferCanceled(self, thread):
         self._transferring = False
         self._statusLabel.setText(u"Transfer canceled")
-        self.disconnect(thread)
+        self.disconnectDataThread(thread)
         self._checkButtonFunction()
         
-    def transferTimedOut(self):
+    def canceledBeforeTransfer(self, isTimeout):
         self._progress.setMaximum(100)
         self._transferring = False
-        self._statusLabel.setText(u"Transfer timed out")
+        if isTimeout:
+            self._statusLabel.setText(u"Transfer timed out")
+        else:
+            self._statusLabel.setText(u"Transfer canceled")
         self._checkButtonFunction()
 
 class DeleteKeyTreeWidget(QTreeWidget):
@@ -238,6 +248,7 @@ class FileTransferWidget(QWidget):
     _IS_OUTGOING = _PEER_ID_ROLE + 1
     
     retry = pyqtSignal(object, object, int) # file path, peerID, transfer ID (forwarded from transfer widget)
+    cancel = pyqtSignal(int) # transfer ID
     
     def __init__(self, parent, delegate):
         super(FileTransferWidget, self).__init__(parent)
@@ -330,14 +341,14 @@ class FileTransferWidget(QWidget):
     def _retry(self, filePath, peerID, transferID):
         self.retry.emit(filePath, peerID, transferID)
     
-    def _addTransfer(self, filePath, transferID, peerID, down):
+    def _addTransfer(self, filePath, fileSize, transferID, peerID, down):
         item = QTreeWidgetItem(self._transferList)
         item.setData(0, self._TRANSFER_ID_ROLE, QVariant(transferID))
         item.setData(0, self._PEER_ID_ROLE, QVariant(peerID))
         item.setData(0, self._IS_OUTGOING, QVariant(not down))
         
         self._transferList.addTopLevelItem(item)
-        widget = _TransferWidget(self._transferList, filePath, peerID, transferID, down)
+        widget = _TransferWidget(self._transferList, filePath, fileSize, peerID, transferID, down)
         widget.retry.connect(self._retry)
         self._transferList.setItemWidget(item, 0, widget)
         return widget
@@ -350,32 +361,36 @@ class FileTransferWidget(QWidget):
                 return item
         return None
         
-    @pyqtSlot(int, object, object, bool)
-    def startOutgoingTransfer(self, transferID, peerID, path, isRetry):
+    @pyqtSlot(int, object, object, int, bool)
+    def startOutgoingTransfer(self, transferID, peerID, path, size, isRetry):
+        widget = None
         if isRetry:
             item = self._getOutgoingTransferItem(transferID)
             if item is not None:
                 widget = self._transferList.itemWidget(item, 0)
                 widget.reset()
-                return
-        self._addTransfer(path, transferID, peerID, False)
+        if widget is None:
+            widget = self._addTransfer(path, size, transferID, peerID, False)
+        widget.cancelBeforeTransfer.connect(self.cancel)
     
     @pyqtSlot(int, object)
     def outgoingTransferStarted(self, transferID, dataThread):
         item = self._getOutgoingTransferItem(transferID)
         if item is not None:
             widget = self._transferList.itemWidget(item, 0)
-            widget.connect(dataThread)
+            widget.cancelBeforeTransfer.disconnect(self.cancel)
+            widget.connectDataThread(dataThread)
             
-    @pyqtSlot(int)
-    def outgoingTransferTimedOut(self, transferID):
+    @pyqtSlot(int, bool)
+    def outgoingTransferCanceled(self, transferID, isTimeout):
         item = self._getOutgoingTransferItem(transferID)
         if item is not None:
             widget = self._transferList.itemWidget(item, 0)
-            widget.transferTimedOut()
+            widget.cancelBeforeTransfer.disconnect(self.cancel)
+            widget.canceledBeforeTransfer(isTimeout)
     
-    @pyqtSlot(object, int, object, object)
-    def incomingTransferStarted(self, peerID, transferID, filePath, dataThread):
-        widget = self._addTransfer(filePath, transferID, peerID, True)
-        widget.connect(dataThread)
+    @pyqtSlot(object, int, object, int, object)
+    def incomingTransferStarted(self, peerID, transferID, filePath, fileSize, dataThread):
+        widget = self._addTransfer(filePath, fileSize, transferID, peerID, True)
+        widget.connectDataThread(dataThread)
     

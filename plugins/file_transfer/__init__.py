@@ -71,9 +71,10 @@ class file_transfer(iface_gui_plugin):
             self._handlerThread.start()
             
         self._gui.retry.connect(self._handler.retrySendFileToPeer)
+        self._gui.cancel.connect(self._handler.cancelOutgoingTransfer)
         self._handler.startOutgoingTransfer.connect(self._gui.startOutgoingTransfer)
         self._handler.outgoingTransferStarted.connect(self._gui.outgoingTransferStarted)
-        self._handler.outgoingTransferTimedOut.connect(self._gui.outgoingTransferTimedOut)
+        self._handler.outgoingTransferCanceled.connect(self._gui.outgoingTransferCanceled)
         self._handler.incomingTransferStarted.connect(self._gui.incomingTransferStarted)
             
         return self._gui

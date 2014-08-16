@@ -9,10 +9,10 @@ import itertools
 from time import time
 
 class FileTransferHandler(QObject):
-    startOutgoingTransfer = pyqtSignal(int, object, object, bool) # transfer ID, target peer ID, path, is retry
+    startOutgoingTransfer = pyqtSignal(int, object, object, int, bool) # transfer ID, target peer ID, path, file size, is retry
     outgoingTransferStarted = pyqtSignal(int, object) # transferID, data thread
-    outgoingTransferTimedOut = pyqtSignal(int) # transferID
-    incomingTransferStarted = pyqtSignal(object, int, object, object) # peer ID, transferID, name, data thread
+    outgoingTransferCanceled = pyqtSignal(int, bool) # transferID, is timeout
+    incomingTransferStarted = pyqtSignal(object, int, object, int, object) # peer ID, transferID, file path, file size, data thread
     
     # private signals
     _processSendRequest = pyqtSignal(object, object, object, object)
@@ -63,7 +63,7 @@ class FileTransferHandler(QObject):
                     timedOut.append(tID)
         for tID in timedOut:
             self._outgoing.pop(tID, None)
-            self.outgoingTransferTimedOut.emit(tID)
+            self.outgoingTransferCanceled.emit(tID, True)
     
     def _getNextID(self):
         nextID = self._nextID
@@ -172,7 +172,7 @@ class FileTransferHandler(QObject):
         self._incoming[(peerID, transferID)] = inThread
         inThread.start()
         
-        self.incomingTransferStarted.emit(peerID, transferID, filePath, inThread)
+        self.incomingTransferStarted.emit(peerID, transferID, filePath, size, inThread)
         
         answerDict = {u"id" : transferID,
                       u"port" : port}
@@ -276,7 +276,7 @@ class FileTransferHandler(QObject):
         
         self._outgoing[transferID] = (peerID, path, time())
         
-        self.startOutgoingTransfer.emit(transferID, peerID, path, isRetry)
+        self.startOutgoingTransfer.emit(transferID, peerID, path, os.path.getsize(path), isRetry)
         
         transferDict = {u"id" : transferID,
                         u"name" : os.path.basename(path),
@@ -292,3 +292,12 @@ class FileTransferHandler(QObject):
     @pyqtSlot(object, object, int)
     def retrySendFileToPeer(self, path, peerID, oldID):
         self._sendFileToPeerSlot(path, peerID, oldID)
+        
+    @pyqtSlot(int)
+    def cancelOutgoingTransfer(self, transferID):
+        data = self._outgoing.get(transferID, None)
+        if type(data) is tuple:
+            self._outgoing.pop(transferID, None)
+            self.outgoingTransferCanceled.emit(transferID, False)
+        
+    
