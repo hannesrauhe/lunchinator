@@ -221,7 +221,7 @@ class twitter_lunch(iface_called_plugin):
             message+=u" ("+unicode(member_info[u'name'])+u")"
         self.dthread.post(message)
         
-    def process_event(self,cmd,value,_,__):
+    def process_event(self,cmd,value,_,__,___):
         if cmd.startswith("HELO_REQUEST_PIC"):
             if cmd=="HELO_REQUEST_PIC_TWITTER":
                 self.dthread.add_screen_name(value)

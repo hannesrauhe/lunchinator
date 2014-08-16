@@ -19,7 +19,7 @@ class voter(iface_gui_plugin):
         self.w = voterWidget(parent, self.send_vote)            
         return self.w
     
-    def process_event(self, cmd, value, ip, member_info):
+    def process_event(self, cmd, value, ip, member_info, _prep):
         if cmd == "HELO_VOTE":
             if self.w is None:
                 log_error("Voter: Vote cannot be processed")

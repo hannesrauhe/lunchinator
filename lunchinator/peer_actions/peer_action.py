@@ -69,6 +69,10 @@ class PeerAction(object):
         """Must return True if getPrivacyCategories returns a list of categories."""
         return False
     
+    def preProcessMessageData(self, msgData):
+        """Allows the peer action to pre-process the message data."""
+        return msgData
+    
     def willIgnorePeerAction(self, _msgData):
         """Returns True if the action will not be processed regardless of the privacy settings.
         
@@ -100,6 +104,14 @@ class PeerAction(object):
         """
         from lunchinator.privacy import PrivacySettings
         return PrivacySettings.POLICY_NOBODY_EX
+    
+    def getConfirmationMessage(self, _peerID, _peerName, _msgData):
+        """Returns the message to be displayed on the confirmation dialog.
+        
+        If this method returns None, the default message will be
+        displayed.
+        """
+        return None
     
     ########## DON'T OVERRIDE ##########    
     def getPluginName(self):

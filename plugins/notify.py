@@ -139,5 +139,5 @@ class Notify(iface_called_plugin):
     def process_lunch_call(self,_msg,_ip,_member_info):
         drawAttention(self.options[u"audio_file"], self.options[u"open_optival_drive"])
 
-    def process_event(self,cmd,value,ip,member_info):
+    def process_event(self,cmd,value,ip,member_info,_prep):
         pass

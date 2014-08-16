@@ -39,7 +39,7 @@ class example_called(iface_called_plugin):
             
         '''if exceptions are thrown they will be caught and logged outside'''
     
-    def process_event(self,cmd,value,ip,member_info):
+    def process_event(self,cmd,value,ip,member_info,prep):
         '''messages that are exchanged between peers to inform 
         about preferred lunch time, avatars, etc can be processed in this method'''
         pass

@@ -566,7 +566,7 @@ class iface_called_plugin(iface_plugin):
     def process_lunch_call(self, msg, ip, member_info):
         pass
         
-    def process_event(self, cmd, value, ip, member_info):
+    def process_event(self, cmd, value, ip, member_info, preprocessedData=None):
         pass 
         
 class iface_gui_plugin(iface_plugin):
@@ -615,6 +615,6 @@ class iface_gui_plugin(iface_plugin):
     def process_lunch_call(self, msg, ip, member_info):
         pass
         
-    def process_event(self, cmd, value, ip, member_info):
+    def process_event(self, cmd, value, ip, member_info, preprocessedData=None):
         pass
     

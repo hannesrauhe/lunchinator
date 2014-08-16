@@ -12,8 +12,6 @@ class DataThreadBase(QThread):
     progressChanged = pyqtSignal(int, int) # progress, max progress
     transferCanceled = pyqtSignal(QThread)
     
-    CHUNK_SIZE = 1024
-        
     def __init__(self, parent, file_path, portOrSocket):
         super(DataThreadBase, self).__init__(parent)
         self.file_path = file_path

@@ -158,7 +158,7 @@ class private_messages(iface_gui_plugin):
     def get_peer_actions(self):
         return self._peerActions
         
-    def process_event(self, cmd, value, _ip, peerInfo):
+    def process_event(self, cmd, value, _ip, peerInfo, _prep):
         if not cmd.startswith(u"HELO_PM"):
             return
         

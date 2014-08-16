@@ -30,7 +30,7 @@ class maintainer(iface_gui_plugin):
     def add_menu(self,menu):
         pass
     
-    def process_event(self,cmd,value,ip,_member_info):
+    def process_event(self,cmd,value,ip,_member_info,_prep):
         if cmd.startswith("HELO_LOGFILE"):
             if self.w == None:
                 return

@@ -25,7 +25,7 @@ class twitter_status(iface_called_plugin):
     def process_lunch_call(self, _, __, member_info):
         pass
     
-    def process_event(self, cmd, value, ip, member_info):
+    def process_event(self, cmd, value, ip, member_info, _prep):
         if len(value)==0:
             return
         

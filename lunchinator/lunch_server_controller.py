@@ -2,10 +2,11 @@
 import sys
 from lunchinator import get_server, get_settings, log_info, get_notification_center,\
     log_debug, get_peers, log_exception, get_plugin_manager, convert_string,\
-    get_peer_actions, logs_debug
+    get_peer_actions, logs_debug, log_error
     
 from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
-from lunchinator.utilities import processPluginCall, getTimeDifference
+from lunchinator.utilities import processPluginCall, getTimeDifference,\
+    formatException
 from lunchinator.notification_center import NotificationCenter
 from time import localtime, strftime
 from lunchinator.peer_actions import PeerActions
@@ -89,13 +90,24 @@ class LunchServerController(object):
     def processEvent(self, cmd, value, addr, _eventTime, newPeer, fromQueue):
         """ process any non-message event """
         action = None
+        msgData = None
         if cmd.startswith(u"HELO"):
             prefix = cmd[5:]
             action = PeerActions.get().getPeerAction(prefix)
             
             peerID = get_peers().getPeerID(pIP=addr)
             if action is not None:
-                if action.willIgnorePeerAction(value):
+                if peerID is None:
+                    log_error(u"Could not get peer ID for IP", addr)
+                    return
+                
+                try:
+                    msgData = action.preProcessMessageData(value)
+                except:
+                    log_error("Error preprocessing data for peer action %s: %s" % (action.getName(), formatException()))
+                    return
+                
+                if action.willIgnorePeerAction(msgData):
                     if logs_debug():
                         log_debug("Ignore",
                                   "peer action", action.getPluginName(), ":", action.getName(),
@@ -104,11 +116,11 @@ class LunchServerController(object):
                     return
                 
                 if action.hasCategories():
-                    category = action.getCategoryFromMessage(value)
+                    category = action.getCategoryFromMessage(msgData)
                 else:
                     category = None
                 
-                shouldProcess = PeerActions.get().shouldProcessMessage(action, category, peerID, self.getMainGUI())
+                shouldProcess = PeerActions.get().shouldProcessMessage(action, category, peerID, self.getMainGUI(), msgData)
                 
                 if logs_debug():
                     log_debug("Accept" if shouldProcess else "Reject",
@@ -118,8 +130,8 @@ class LunchServerController(object):
                 
                 if not shouldProcess:
                     return
-                
-        processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info), newPeer, fromQueue, action)
+        
+        processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info, msgData), newPeer, fromQueue, action)
     
     def getMainGUI(self):
         return None

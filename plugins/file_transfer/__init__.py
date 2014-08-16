@@ -1,7 +1,8 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator.utilities import canUseBackgroundQThreads, getValidQtParent
+from lunchinator.utilities import canUseBackgroundQThreads, getValidQtParent,\
+    formatSize
 from lunchinator.peer_actions import PeerAction
-import os
+import os, json
 from PyQt4.Qt import QFileDialog
 from lunchinator import convert_string
 
@@ -17,6 +18,22 @@ class _TransferFileAction(PeerAction):
         
     def getMessagePrefix(self):
         return "FT"
+    
+    def preProcessMessageData(self, msgData):
+        try:
+            transferDict = json.loads(msgData)
+            
+            if not type(transferDict) is dict:
+                raise TypeError("transferDict is no dict.")
+            return transferDict
+        except:
+            raise ValueError("Could not parse transfer dict.")
+    
+    def getConfirmationMessage(self, _peerID, peerName, msgData):
+        size = msgData.get(u"size", -1)
+        name = msgData.get(u"name", u"<unknown name>")
+        
+        return u"%s wants to send you the file \"%s\" (%s)." % (peerName, name, formatSize(size))
 
 class file_transfer(iface_gui_plugin):
     VERSION_INITIAL = 0
@@ -81,7 +98,7 @@ class file_transfer(iface_gui_plugin):
     def get_peer_actions(self):
         return [self._sendFileAction]
         
-    def process_event(self, cmd, value, peerIP, peerInfo):
+    def process_event(self, cmd, value, peerIP, peerInfo, preprocessedData=None):
         if not cmd.startswith(u"HELO_FT"):
             return
         
@@ -89,7 +106,7 @@ class file_transfer(iface_gui_plugin):
         
         subcmd = cmd[7:]
         if subcmd == u"":
-            self._handler.processSendRequest(peerID, peerIP, value)
+            self._handler.processSendRequest(peerID, peerIP, value, preprocessedData)
         elif subcmd == u"_ACK":
             self._handler.processAck(peerID, peerIP, value)
         elif subcmd == u"_CANCEL":

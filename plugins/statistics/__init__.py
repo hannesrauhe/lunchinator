@@ -41,7 +41,7 @@ class statistics(iface_called_plugin):
         else:
             log_warning("Statistics: DB not ready -- cannot process lunch_call")
     
-    def process_event(self,cmd,value,ip,_member_info):
+    def process_event(self,cmd,value,ip,_member_info,_prep):
         if self.is_db_ready():
             self.specialized_db_conn().insert_call(cmd, value, ip)
         else:

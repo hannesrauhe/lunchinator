@@ -13,19 +13,20 @@ class PrivacyConfirmationDialog(QDialog):
     SCOPE_EVERYONE_CATEGORY = 2
     SCOPE_EVERYONE = 3
     
-    def __init__(self, parent, title, message, peerName, peerID, action, category=PrivacySettings.NO_CATEGORY):
+    def __init__(self, parent, title, peerName, peerID, action, category, msgData):
         super(PrivacyConfirmationDialog, self).__init__(parent)
         
         self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
         
         self._peerID = peerID
+        self._peerName = peerName
         self._action = action
         self._category = category if category is not None else PrivacySettings.NO_CATEGORY
         self._useCategories = self._action.usesPrivacyCategories()
         
         layout = QVBoxLayout(self)
         
-        messageLabel = QLabel(message, self)
+        messageLabel = QLabel(self._createMessage(msgData), self)
         messageLabel.setWordWrap(True)
 
         policyWidget = self._initPolicyWidget()
@@ -42,6 +43,19 @@ class PrivacyConfirmationDialog(QDialog):
         self.setMaximumHeight(size.height())
         
         self._setPolicy(0)
+        
+    def _createMessage(self, msgData):
+        message = self._action.getConfirmationMessage(self._peerID, self._peerName, msgData)
+        if message is None:
+            # create default message
+            if self._action.usesPrivacyCategories():
+                if self._category == PrivacySettings.NO_CATEGORY:
+                    message = "%s wants to perform the following action: %s (uncategorized)" % (self._peerName, self._action.getName())
+                else:
+                    message = "%s wants to perform the following action: %s, in category %s" % (self._peerName, self._action.getName(), self._category)
+            else:
+                message = "%s wants to perform the following action: %s" % (self._peerName, self._action.getName())
+        return message
         
     def _initPolicyWidget(self):
         policyWidget = QWidget(self)

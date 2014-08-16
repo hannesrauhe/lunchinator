@@ -530,3 +530,14 @@ def formatException():
     if exc_info[0] != None:
         typeName = unicode(exc_info[0].__name__)
     return u"%s: %s" % (typeName, unicode(exc_info[1]))
+
+def formatSize(num):
+    num = float(num)
+    if num < 1024 and num > -1024:
+        return u"%3.0f\u2009%s" % (num, u"bytes")
+    num /= 1024.0
+    for x in [u'KiB', u'MiB', u'GiB']:
+        if num < 1024.0 and num > -1024.0:
+            return u"%3.1f\u2009%s" % (num, x)
+        num /= 1024.0
+    return u"%3.1f\u2009%s" % (num, u'TB')

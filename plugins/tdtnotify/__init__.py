@@ -41,7 +41,7 @@ class tdtnotify(iface_called_plugin):
     def process_lunch_call(self, msg, ip, member_info):
         pass
         
-    def process_event(self, cmd, _value, ip, _peerInfo):
+    def process_event(self, cmd, _value, ip, _peerInfo, _prep):
         if cmd == "HELO_TDTNOTIFY_NEW_PIC":
             if not get_peers().isMe(pIP=ip):
                 # somebody found a new pic -> search immediately

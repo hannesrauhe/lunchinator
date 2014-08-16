@@ -7,6 +7,7 @@ from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
     DataThreadBase
 import itertools
 from time import time
+
 class FileTransferHandler(QObject):
     startOutgoingTransfer = pyqtSignal(int, object, object, bool) # transfer ID, target peer ID, path, is retry
     outgoingTransferStarted = pyqtSignal(int, object) # transferID, data thread
@@ -14,7 +15,7 @@ class FileTransferHandler(QObject):
     incomingTransferStarted = pyqtSignal(object, int, object, object) # peer ID, transferID, name, data thread
     
     # private signals
-    _processSendRequest = pyqtSignal(object, object, object)
+    _processSendRequest = pyqtSignal(object, object, object, object)
     _processCancel = pyqtSignal(object, object)
     _processAck = pyqtSignal(object, object, object)
     _sendFileToPeer = pyqtSignal(object, object)
@@ -122,19 +123,20 @@ class FileTransferHandler(QObject):
     ############### PUBLIC INTERFACE ################
     
     # someone wants to send me a file
-    def processSendRequest(self, peerID, peerIP, value):
-        self._processSendRequest.emit(peerID, peerIP, value)
-    @pyqtSlot(object, object, object)
-    def _processSendRequestSlot(self, peerID, peerIP, value):
-        try:
-            transferDict = json.loads(value)
-            
-            if not type(transferDict) is dict:
-                log_error("transferDict is no dict.")
+    def processSendRequest(self, peerID, peerIP, value, preprocessed):
+        self._processSendRequest.emit(peerID, peerIP, value, preprocessed)
+    @pyqtSlot(object, object, object, object)
+    def _processSendRequestSlot(self, peerID, peerIP, value, transferDict):
+        if transferDict is None:
+            try:
+                transferDict = json.loads(value)
+                
+                if not type(transferDict) is dict:
+                    log_error("transferDict is no dict.")
+                    return
+            except:
+                log_exception("Could not parse transfer dict.")
                 return
-        except:
-            log_exception("Could not parse transfer dict.")
-            return
         
         if not u"id" in transferDict:
             log_error("No transfer ID in transfer dict. Cannot accept request")

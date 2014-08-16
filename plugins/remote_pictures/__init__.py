@@ -188,7 +188,7 @@ class remote_pictures(iface_gui_plugin):
         if self._handler is not None:
             self._handler.checkCategory(cat)
             
-    def process_event(self, cmd, value, ip, _info):
+    def process_event(self, cmd, value, ip, _info, _prep):
         if cmd=="HELO_REMOTE_PIC":
             if self._handler is not None:
                 self._handler.processRemotePicture(value, ip)
