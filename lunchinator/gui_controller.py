@@ -636,9 +636,10 @@ class LunchinatorGuiController(QObject, LunchServerController):
         addr = convert_string(addr)
         if isData:
             fileToSend = str(fileToSend)
+            ds = DataSenderThread.sendData(addr, other_tcp_port, fileToSend, parent=self)
         else:
             fileToSend = str(fileToSend).decode("utf-8")
-        ds = DataSenderThread(self, addr, fileToSend, other_tcp_port, isData)
+            ds = DataSenderThread.sendSingleFile(addr, other_tcp_port, fileToSend, parent=self)
         ds.finished.connect(ds.deleteLater)
         ds.start()
         
@@ -652,7 +653,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def receiveFileSlot(self, addr, file_size, file_name, tcp_port, successFunc, errorFunc):
         addr = convert_string(addr)
         file_name = convert_string(file_name)
-        dr = DataReceiverThread(self, addr, file_size, file_name, tcp_port, category="avatar%s" % addr)
+        dr = DataReceiverThread.receiveSingleFile(addr, file_name, file_size, tcp_port, "avatar%s" % addr, parent=self)
         if successFunc:
             dr.successfullyTransferred.connect(lambda _thread, _path : successFunc())
         if errorFunc:

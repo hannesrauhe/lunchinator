@@ -14,7 +14,7 @@ class _TransferFileAction(PeerAction):
         return u"FT_v" in peerInfo
     
     def performAction(self, peerID, _peerInfo, parentWidget):
-        self.getPluginObject().sendFileToPeer(peerID, parentWidget)
+        self.getPluginObject().chooseAndSendFilesToPeer(peerID, parentWidget)
         
     def getMessagePrefix(self):
         return "FT"
@@ -31,9 +31,18 @@ class _TransferFileAction(PeerAction):
     
     def getConfirmationMessage(self, _peerID, peerName, msgData):
         size = msgData.get(u"size", -1)
-        name = msgData.get(u"name", u"<unknown name>")
+        numFiles = msgData.get(u"count", 1)
         
-        return u"%s wants to send you the file \"%s\" (%s)." % (peerName, name, formatSize(size))
+        if numFiles is 1:
+            name = msgData.get(u"name", u"")
+            if name == u"":
+                name = u"<unknown name>"
+            return u"%s wants to send you the file \"%s\" (%s)." % (peerName, name, formatSize(size))
+        else:
+            return u"%s wants to send you %d files with a total size of %s." % (peerName, numFiles, formatSize(size))
+
+    def sendFilesToPeer(self, files, peerID):
+        self.getPluginObject().sendFilesToPeer(files, peerID)
 
 class file_transfer(iface_gui_plugin):
     VERSION_INITIAL = 0
@@ -41,7 +50,9 @@ class file_transfer(iface_gui_plugin):
     
     def __init__(self):
         super(file_transfer, self).__init__()
-        self.options = [((u"download_dir", u"Save received files in directory", self._downloadDirChanged), os.path.expanduser("~"))]
+        self.options = [((u"download_dir", u"Save received files in directory", self._downloadDirChanged), os.path.expanduser("~")),
+                        ((u"overwrite", u"Overwrite existing files", self._overwriteChanged), False),
+                        ((u"compression", u"Use compression when sending:", self._compressionChanged, (u"No", u"GZip", u"BZip2")), u"No")]
     
     def get_displayed_name(self):
         return u"File Transfer"
@@ -57,14 +68,15 @@ class file_transfer(iface_gui_plugin):
         from file_transfer.file_transfer_widget import FileTransferWidget
         from file_transfer.file_transfer_handler import FileTransferHandler
         
-        
         if canUseBackgroundQThreads():
             from PyQt4.QtCore import QThread
             self._handlerThread = QThread()
         else:
             self._handlerThread = None
             
-        self._handler = FileTransferHandler(self.get_option(u"download_dir"))
+        self._handler = FileTransferHandler(self.get_option(u"download_dir"),
+                                            self.get_option(u"overwrite"),
+                                            self.get_option(u"compression"))
         if self._handlerThread is not None:
             self._handlerThread.moveToThread(self._handlerThread)
             self._handlerThread.start()
@@ -128,14 +140,23 @@ class file_transfer(iface_gui_plugin):
     def getSendFileAction(self):
         return self._sendFileAction
             
-    def sendFileToPeer(self, peerID, parent):
-        selectedFile = QFileDialog.getOpenFileName(parent, caption="Choose a file to upload")
-        selectedFile = convert_string(selectedFile)
-        if selectedFile:
-            self._handler.sendFileToPeer(selectedFile, peerID)
+    def chooseAndSendFilesToPeer(self, peerID, parent):
+        selectedFiles = QFileDialog.getOpenFileNames(parent, u"Chooses files to upload")
+        self._handler.sendFilesToPeer([convert_string(f) for f in selectedFiles], peerID)
+        
+    def sendFilesToPeer(self, toSend, peerID):
+        self._handler.sendFilesToPeer([convert_string(f) for f in toSend], peerID)
         
     def _downloadDirChanged(self, _setting, newVal):
         self._handler.downloadDirChanged(newVal)
+        return newVal
+    
+    def _overwriteChanged(self, _setting, newVal):
+        self._handler.overwriteChanged(newVal)
+        return newVal
+    
+    def _compressionChanged(self, _setting, newVal):
+        self._handler.compressionChanged(newVal)
         return newVal
 
 if __name__ == '__main__':

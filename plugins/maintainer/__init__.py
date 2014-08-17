@@ -51,7 +51,7 @@ class maintainer(iface_gui_plugin):
             else:
                 file_name="%s/tmp.log" % logDir
             
-            dr = DataReceiverThread(self.w, ip,file_size,file_name,tcp_port,category="log%s"%ip)
+            dr = DataReceiverThread.receiveSingleFile(ip, file_name, file_size, tcp_port, "log%s"%ip, parent=self.w)
             dr.successfullyTransferred.connect(self.w.membersWidget.cb_log_transfer_success)
             dr.errorOnTransfer.connect(self.w.membersWidget.cb_log_transfer_error)
             dr.finished.connect(dr.deleteLater)

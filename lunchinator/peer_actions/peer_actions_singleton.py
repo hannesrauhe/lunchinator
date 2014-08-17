@@ -117,6 +117,14 @@ class PeerActions(object):
         with self._lock:
             if msgPrefix in self._msgPrefixes:
                 return self._msgPrefixes[msgPrefix]
+            
+    def getPeerActionByName(self, pluginName, actionName):
+        with self._lock:
+            actions = self._peerActions.get(pluginName, None)
+            if actions is not None:
+                for action in actions:
+                    if action.getName() == actionName:
+                        return action
         
     def shouldProcessMessage(self, action, category, peerID, mainGUI, msgData):
         if category is None:

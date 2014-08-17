@@ -22,6 +22,9 @@ class _LoggingMutex(object):
     def exitMutex(self, *_args, **_kwargs):
         raise NotImplementedError
 
+    def lock(self):
+        self.acquire()
+
     def acquire(self):
         if self.currentThreadID() == self.currentThread:
             raise Exception("Requesting lock from the same thread")
@@ -31,6 +34,9 @@ class _LoggingMutex(object):
     
     def _acquire(self):
         raise NotImplementedError
+    
+    def unlock(self):
+        self.release()
     
     def release(self):
         self.currentThread = None

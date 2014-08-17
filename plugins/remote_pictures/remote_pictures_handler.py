@@ -10,7 +10,7 @@ from cStringIO import StringIO
 from functools import partial
 from PyQt4.QtCore import QObject, Qt, pyqtSignal, pyqtSlot
 from PyQt4.QtGui import QImage
-from lunchinator.utilities import displayNotification
+from lunchinator.utilities import displayNotification, sanitizeForFilename
 from urlparse import urlparse
 from lunchinator.privacy import PrivacySettings
 import string
@@ -82,8 +82,7 @@ class RemotePicturesHandler(QObject):
         return picDir
     
     def _createPictureFile(self, category, ext='.jpg'):
-        valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
-        prefix = ''.join(c for c in category if c in valid_chars)
+        prefix = sanitizeForFilename(category)
         return tempfile.NamedTemporaryFile(suffix=ext, prefix=prefix, dir=self._getPicturesDirectory(), delete=False)
     
     def _createThumbnail(self, inFile, inPath, inURL, category):

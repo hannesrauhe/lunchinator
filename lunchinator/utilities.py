@@ -6,6 +6,8 @@ from lunchinator import log_exception, log_warning, log_debug, \
 import locale
 import platform
 from tempfile import NamedTemporaryFile
+import itertools
+import string
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -541,3 +543,21 @@ def formatSize(num):
             return u"%3.1f\u2009%s" % (num, x)
         num /= 1024.0
     return u"%3.1f\u2009%s" % (num, u'TB')
+
+def getUniquePath(defaultPath):
+    if not os.path.exists(defaultPath):
+        return defaultPath
+    
+    # have to make it unique
+    name, ext = os.path.splitext(defaultPath)
+    for i in itertools.count(2):
+        newPath = "%s %d%s" % (name, i, ext)
+        if not os.path.exists(newPath):
+            return newPath
+
+_validFilenameChars = None
+def sanitizeForFilename(s):
+    global _validFilenameChars
+    if _validFilenameChars is None:
+        _validFilenameChars = set("-_.() %s%s" % (string.ascii_letters, string.digits))
+    return ''.join(c for c in s if c in _validFilenameChars)

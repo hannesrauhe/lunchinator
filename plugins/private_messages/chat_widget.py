@@ -8,6 +8,7 @@ from lunchinator import convert_string, get_settings, get_notification_center,\
 from lunchinator.history_line_edit import HistoryTextEdit
 from lunchinator.peer_actions.peer_action_utils import showPeerActionsPopup,\
     initializePeerActionsMenu
+from lunchinator.peer_actions import PeerActions
 from private_messages.chat_messages_view import ChatMessagesView
 from private_messages.chat_messages_model import ChatMessagesModel
 
@@ -15,7 +16,6 @@ from xml.etree import ElementTree
 from StringIO import StringIO
 from functools import partial
 from time import time
-from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -133,6 +133,48 @@ class ChatWidget(QWidget):
             self._setOffline(not get_peers().isPeerID(pID=self._otherID))
         else:
             self._setOffline(True)
+            
+        self.setAcceptDrops(True)
+        
+    def _canSendFilesToOther(self):
+        peerInfo = get_peers().getPeerInfo(pID=self._otherID)
+        if peerInfo is None:
+            return False
+        action = PeerActions.get().getPeerActionByName(u"hannesrauhe.lunchinator.file_transfer", u"Send File")
+        if action is None or not action.appliesToPeer(self._otherID, peerInfo):
+            return False
+        return True    
+    
+    def dragEnterEvent(self, event):
+        if not self._canSendFilesToOther():
+            event.ignore()
+            return
+        
+        if event.mimeData().hasUrls() and int(event.possibleActions()) & Qt.CopyAction:
+            for url in event.mimeData().urls():
+                if url.isLocalFile():
+                    event.setDropAction(Qt.CopyAction)
+                    event.accept()
+                    return
+        event.ignore()
+        
+    def dropEvent(self, event):
+        if not self._canSendFilesToOther():
+            event.ignore()
+            return
+        
+        if event.mimeData().hasUrls() and int(event.possibleActions()) & Qt.CopyAction:
+            files = []
+            for url in event.mimeData().urls():
+                if url.isLocalFile():
+                    files.append(convert_string(url.toLocalFile()))
+            
+            if len(files) > 0:        
+                action = PeerActions.get().getPeerActionByName(u"hannesrauhe.lunchinator.file_transfer", u"Send File")
+                action.sendFilesToPeer(files, self._otherID)
+                event.accept()
+                return
+        event.ignore()
         
     def _setOffline(self, offline):
         if self._offline == offline:
