@@ -466,7 +466,7 @@ class lunch_server(object):
             if newPeer:
                 self._enqueue_event(data, ip, eventTime)
                 
-            self._handle_incoming_event(ip, cmd, value, newPeer, fromQueue)
+            self._handle_core_event(ip, cmd, value, newPeer, fromQueue)
             # now it's the plugins' turn:
             self.controller.processEvent(cmd, value, ip, eventTime, newPeer, fromQueue)
         except:
@@ -530,7 +530,7 @@ class lunch_server(object):
             return True
         return False   
       
-    def _handle_incoming_event(self, ip, cmd, value, newPeer, _fromQueue):
+    def _handle_core_event(self, ip, cmd, value, newPeer, _fromQueue):
         # todo: maybe from here on this should be in plugins?
         
         # I don't see any reason to process these events for unknown peers.

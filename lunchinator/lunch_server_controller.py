@@ -93,6 +93,8 @@ class LunchServerController(object):
         """ process any non-message event """
         action = None
         msgData = None
+        
+        #TODO: it this check necessary?
         if cmd.startswith(u"HELO"):
             prefix = cmd[5:]
             action = PeerActions.get().getPeerAction(prefix)
