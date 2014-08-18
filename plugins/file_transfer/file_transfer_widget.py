@@ -360,6 +360,7 @@ class FileTransferWidget(QWidget):
         self._transferList.setSelectionMode(QTreeWidget.SingleSelection)
         self._transferList.itemDoubleClicked.connect(self._itemDoubleClicked)
         self._transferList.deletePressed.connect(self._deletePressed)
+        self._transferList.setVerticalScrollMode(QTreeWidget.ScrollPerPixel)
         
         return self._transferList
     
