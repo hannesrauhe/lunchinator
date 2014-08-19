@@ -93,7 +93,8 @@ class private_messages(iface_gui_plugin):
     
     def __init__(self):
         super(private_messages, self).__init__()
-        self.options = [((u"prev_messages", u"Number of previous messages to display"), 5)]
+        self.options = [((u"prev_messages", u"Number of previous messages to display"), 5),
+                        ((u"enable_markdown", u"Enable Markdown annotations", self._enableMarkdownChanged), False)]
         self.hidden_options = {u"ack_timeout" : 3, # seconds until message delivery is marked as timed out
                                u"next_msgid" : -1} # next free message ID. -1 = not initialized
         
@@ -148,6 +149,10 @@ class private_messages(iface_gui_plugin):
         for chatWindow in self._openChats.values():
             chatWindow.close()
         iface_gui_plugin.destroy_widget(self)
+        
+    def _enableMarkdownChanged(self, _setting, newVal):
+        for chatWindow in self._openChats.values():
+            chatWindow.getChatWidget().setMarkdownEnabled(newVal)
     
     def extendsInfoDict(self):
         return True
@@ -196,7 +201,6 @@ class private_messages(iface_gui_plugin):
             errorMsg = None
         
         if otherID in self._openChats:
-            from private_messages.chat_widget import ChatWidget
             chatWindow = self._openChats[otherID]
             chatWindow.getChatWidget().addOwnMessage(msgID, recvTime, msgHTML, msgTime, status, errorMsg)
     
@@ -210,6 +214,8 @@ class private_messages(iface_gui_plugin):
     def _openChat(self, myName, otherName, myAvatar, otherAvatar, otherID):
         from private_messages.chat_window import ChatWindow
         newWindow = ChatWindow(None, myName, otherName, myAvatar, otherAvatar, otherID)
+        newWindow.getChatWidget().setMarkdownEnabled(self.get_option(u"enable_markdown"))
+        
         newWindow.windowClosing.connect(self._chatClosed)
         newWindow.getChatWidget().sendMessage.connect(self._messagesHandler.sendMessage)
         newWindow.getChatWidget().typing.connect(partial(self._messagesHandler.sendTyping, otherID))

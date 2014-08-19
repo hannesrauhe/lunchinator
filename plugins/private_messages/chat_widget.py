@@ -4,7 +4,7 @@ from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
 from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp, QTimer
 
 from lunchinator import convert_string, get_settings, get_notification_center,\
-    get_peers
+    get_peers, log_error
 from lunchinator.history_line_edit import HistoryTextEdit
 from lunchinator.peer_actions.peer_action_utils import showPeerActionsPopup,\
     initializePeerActionsMenu
@@ -16,6 +16,8 @@ from xml.etree import ElementTree
 from StringIO import StringIO
 from functools import partial
 from time import time
+from lunchinator.utilities import formatException
+from private_messages.index_set import IndexSet
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -29,10 +31,11 @@ class ChatWidget(QWidget):
         [A-Za-z0-9\.\-]+
         \.[A-Za-z]+
       )
+      (?::\d+)?
       (
         (?:\/[\+~%\/\.\w\-]*)
-        ?\??(?:[\-\+=&;%@\.\w]*) 
-        #?(?:[\.\!\/\\\w]*)
+        ?\??(?:[\-\+=&;%@\.\w]*)
+        #?(?:[\.\!\/\\w]*)
       )?
     )
     """.replace("\n", "").replace(" ", "")
@@ -47,8 +50,11 @@ class ChatWidget(QWidget):
     )
     """.replace("\n", "").replace(" ", "")
     
-    _URI_MATCHER=QRegExp(_URI_REGEX)
-    _MAIL_MATCHER=QRegExp(_MAIL_REGEX)
+    _MD_LINK_REGEX="\[[^]]+\]\([^)]+\)"
+    
+    _URI_MATCHER = QRegExp(_URI_REGEX)
+    _MAIL_MATCHER = QRegExp(_MAIL_REGEX)
+    _MD_LINK_MATCHER = QRegExp(_MD_LINK_REGEX)
     _TIME_ROW_INTERVAL = 10*60 # once every 10 minutes
 
     sendMessage = pyqtSignal(object, object) # peer ID, message HTML
@@ -65,6 +71,8 @@ class ChatWidget(QWidget):
         self._lastTimeRow = 0
         self._textChanged = False
         self._keepEntryText = False
+        self._markdownEnabled = False
+        self._md = None
         
         self._typingTimer = QTimer(self)
         self._typingTimer.timeout.connect(self._checkTyping)
@@ -135,6 +143,9 @@ class ChatWidget(QWidget):
             self._setOffline(True)
             
         self.setAcceptDrops(True)
+        
+    def setMarkdownEnabled(self, en):
+        self._markdownEnabled = en
         
     def _canSendFilesToOther(self):
         peerInfo = get_peers().getPeerInfo(pID=self._otherID)
@@ -448,9 +459,30 @@ class ChatWidget(QWidget):
         else:
             self._statusLabel.setVisible(False)
         
+    def _getMD(self):
+        if self._md is None:
+            try:
+                from markdown import Markdown
+                self._md = Markdown(extensions=['extra'])
+            except ImportError:
+                log_error("Cannot enable Markdown (%s)" % formatException)
+                raise
+        return self._md
+        
     def eventTriggered(self):
-        self._detectHyperlinks()
-        text = self._cleanHTML(convert_string(self.entry.toHtml()))
+        text = None
+        if self._markdownEnabled:
+            try:
+                md = self._getMD()
+                text = self._detectHyperlinks(True)
+                text = md.convert(text)
+                print text
+            except ImportError:
+                pass
+        if text is None:
+            # fallback to default method
+            self._detectHyperlinks()
+            text = self._cleanHTML(convert_string(self.entry.toHtml()))
         self.sendMessage.emit(self._otherID, text)
         self._delivering = True
         self._checkEntryState()
@@ -466,30 +498,76 @@ class ChatWidget(QWidget):
             sio = StringIO()
             ElementTree.ElementTree(p).write(sio, "utf-8")
             cleaned += sio.getvalue().replace('<br />', '').decode("utf-8")
+            
         return cleaned
 
-    def _insertAnchors(self, cursor, plainText, matcher, hrefFunc):
+    def _iterMatchedRanges(self, matcher, text):
         pos = 0
         while pos != -1:
-            pos = matcher.indexIn(plainText, pos)
+            pos = matcher.indexIn(text, pos)
             if pos == -1:
                 break
             
-            cursor.setPosition(pos);
-            cursor.setPosition(pos + matcher.matchedLength(), QTextCursor.KeepAnchor)
+            yield pos, pos + matcher.matchedLength(), matcher
+            
+            pos += matcher.matchedLength()
 
+    def _insertAnchors(self, cursor, plainText, matcher, hrefFunc):
+        for start, end, matcher in self._iterMatchedRanges(matcher, plainText):
+            cursor.setPosition(start);
+            cursor.setPosition(end, QTextCursor.KeepAnchor)
+    
             fmt = QTextCharFormat()
             fmt.setAnchor(True)
             fmt.setAnchorHref(hrefFunc(matcher.cap()))
             cursor.mergeCharFormat(fmt)
             
-            pos += matcher.matchedLength()
-        
-    def _detectHyperlinks(self):
+    def _findPlainLinks(self, plainText, matcher, hrefFunc, mdLinks):
+        newLinks = []
+        for start, end, matcher in self._iterMatchedRanges(matcher, plainText):
+            if start in mdLinks:
+                # is already a markdown link
+                continue
+            newLinks.append((start, end, hrefFunc(matcher.cap())))
+        return newLinks
+            
+    def _detectHyperlinks(self, toMarkdown=False):
         cursor = QTextCursor(self.entry.document())
         plainText = self.entry.toPlainText()
-        self._insertAnchors(cursor, plainText, self._URI_MATCHER, lambda uri : u"http://" + convert_string(uri) if uri.startsWith(u"www.") else uri)
-        self._insertAnchors(cursor, plainText, self._MAIL_MATCHER, lambda mail : u"mailto:" + convert_string(mail))
+        
+        makeURL = lambda uri : u"http://" + convert_string(uri) if uri.startsWith(u"www.") else uri
+        makeMail = lambda mail : u"mailto:" + convert_string(mail)
+        if toMarkdown:
+            # find markdown links
+            mdLinks = IndexSet()
+            for start, end, _matcher in self._iterMatchedRanges(self._MD_LINK_MATCHER, plainText):
+                mdLinks.addRange(start, end)
+            
+            # replace plain links with markdown links
+            plainLinks = self._findPlainLinks(plainText,
+                                              self._URI_MATCHER,
+                                              makeURL,
+                                              mdLinks)
+            plainLinks += self._findPlainLinks(plainText,
+                                               self._MAIL_MATCHER,
+                                               makeMail,
+                                               mdLinks)
+            plainLinks = sorted(plainLinks, key=lambda aTup : aTup[0])
+            
+            plainText = convert_string(plainText)
+            for start, end, linkTarget in reversed(plainLinks):
+                mdLink = "[%s](%s)" % (plainText[start:end], linkTarget)
+                plainText = plainText[:start] + mdLink + plainText[end:]
+            return plainText    
+        else:
+            self._insertAnchors(cursor,
+                                plainText,
+                                self._URI_MATCHER,
+                                makeURL)
+            self._insertAnchors(cursor,
+                                plainText,
+                                self._MAIL_MATCHER,
+                                makeMail)
         
     def sizeHint(self):
         sizeHint = QWidget.sizeHint(self)
@@ -502,6 +580,8 @@ if __name__ == '__main__':
         ownIcon = get_settings().get_resource("images", "me.png")
         otherIcon = get_settings().get_resource("images", "lunchinator.png")
         tw = ChatWidget(window, "Me", "Other Guy", ownIcon, otherIcon, "ID")
+        tw.setMarkdownEnabled(False)
+        
         tw.addOwnMessage(0, time(),
                          "foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten",
                          time(),

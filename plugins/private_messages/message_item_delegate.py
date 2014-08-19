@@ -7,7 +7,7 @@ from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
 import webbrowser
 from PyQt4.Qt import QWidget
 from private_messages.chat_messages_model import ChatMessagesModel
-from lunchinator import log_warning
+from lunchinator import log_warning, convert_string
 from lunchinator.utilities import formatTime
 from time import localtime
 
@@ -293,7 +293,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         # Get the link at the mouse position
         pos = event.pos()
         messageRect = self._getMessageRect(option, self.mouseOverDocument, modelIndex)
-        anchor = self.mouseOverDocument.documentLayout().anchorAt(QPointF(pos) - QPointF(messageRect.topLeft()))
+        anchor = convert_string(self.mouseOverDocument.documentLayout().anchorAt(QPointF(pos) - QPointF(messageRect.topLeft())))
         if anchor == "":
             if messageRect.contains(pos):
                 self.parent().setCursor(Qt.IBeamCursor)
@@ -302,6 +302,8 @@ class MessageItemDelegate(QStyledItemDelegate):
         else:
             self.parent().setCursor(Qt.PointingHandCursor)               
             if event.type() == QEvent.MouseButtonRelease:
+                if anchor.startswith(u"www."):
+                    anchor = u"http://" + anchor
                 webbrowser.open(anchor)
                 return True 
         return False
