@@ -1,6 +1,7 @@
 from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView,\
     QSplitter, QTextDocument, QStandardItemModel, QSortFilterProxyModel,\
-    QLineEdit, QVBoxLayout, QPushButton, QFrame, QToolButton, QMenu, QCursor
+    QLineEdit, QVBoxLayout, QPushButton, QFrame, QToolButton, QMenu,\
+    QStandardItem
 from lunchinator import get_peers, log_warning,\
     convert_string
 from lunchinator.table_models import TableModelBase
@@ -32,27 +33,32 @@ class ChatHistoryModel(QStandardItemModel):
 
         self.setHorizontalHeaderLabels([u"Sender", u"Send Time", u"Text"])
         
-        self.insertRows(0, len(rows));
-    
         partnerName = get_peers().getDisplayedPeerName(pID=partnerID)
         doc = QTextDocument()
-        for i, row in enumerate(rows):
+        for row in rows:
             # sender
-            index = self.index(i, 0);
+            item1 = self._createItem()
             if row[ChatMessagesStorage.MSG_IS_OWN_MESSAGE_COL] != 0:
-                self.setData(index, QVariant(u"You"))
+                item1.setData(QVariant(u"You"), Qt.DisplayRole)
             else:
-                self.setData(index, partnerName)
+                item1.setData(partnerName, Qt.DisplayRole)
                 
             # time
-            index = self.index(i, 1)
+            item2 = self._createItem()
             mTime = localtime(row[ChatMessagesStorage.MSG_TIME_COL])
-            self.setData(index, QVariant(formatTime(mTime)))
+            item2.setData(QVariant(formatTime(mTime)), Qt.DisplayRole)
             
             # message
-            index = self.index(i, 2)
+            item3 = self._createItem()
             doc.setHtml(row[ChatMessagesStorage.MSG_TEXT_COL])
-            self.setData(index, QVariant(doc.toPlainText()));  
+            item3.setData(QVariant(doc.toPlainText()), Qt.DisplayRole);
+            
+            self.appendRow([item1, item2, item3])
+    
+    def _createItem(self):
+        item = QStandardItem()
+        item.setEditable(False)
+        return item
         
 class ChatHistoryWidget(QWidget):
     def __init__(self, delegate, parent):
