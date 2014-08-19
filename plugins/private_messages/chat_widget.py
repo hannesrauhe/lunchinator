@@ -476,7 +476,6 @@ class ChatWidget(QWidget):
                 md = self._getMD()
                 text = self._detectHyperlinks(True)
                 text = md.convert(text)
-                print text
             except ImportError:
                 pass
         if text is None:
