@@ -213,6 +213,7 @@ class iface_plugin(IPlugin):
             
     def _set_option(self, o, new_v, convert, hidden, **kwargs):
         if not self.has_option(o, hidden):
+            print "don't have"
             return
         v = self._getOptionValue(o, hidden)
         if convert:
@@ -221,7 +222,8 @@ class iface_plugin(IPlugin):
             new_v = self._callOptionCallback(o, new_v, **kwargs)
             new_v = self._storeOptionValue(o, new_v)
             self._setOptionValue(o, new_v, hidden, **kwargs)
-        self._displayOptionValue(o, new_v)
+        if not hidden:
+            self._displayOptionValue(o, new_v)
         
     """ Protected members """
     
