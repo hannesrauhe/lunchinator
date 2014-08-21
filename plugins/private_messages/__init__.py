@@ -99,13 +99,13 @@ class private_messages(iface_gui_plugin):
                                u"next_msgid" : -1} # next free message ID. -1 = not initialized
         
         self._storage = None
-        self._lock = loggingMutex("Private Messages", logging=get_settings().get_verbose())
         
     def get_displayed_name(self):
         return u"Chat"
         
     def activate(self):
         iface_gui_plugin.activate(self)
+        self._lock = loggingMutex("Private Messages", logging=get_settings().get_verbose())
         sendMessageAction = _SendMessageAction()
         self._openChatAction = _OpenChatAction(sendMessageAction)
         self._peerActions = [self._openChatAction, _BlockAction(sendMessageAction), sendMessageAction]
