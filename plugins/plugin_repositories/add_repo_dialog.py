@@ -165,8 +165,7 @@ class AddRepoDialog(ErrorMessageDialog):
             self._info(u"Cloning repository...")
             self._setWorking(True)
             url = convert_string(self._urlEdit.text())
-            clone = AsyncCall(self, self._clone, self._cloneSuccess, self._cloneError)
-            AsyncCall(self, self._checkURL, clone, self._cloneError)(url)
+            AsyncCall(self, self._checkAndClone, self._cloneSuccess, self._cloneError)(url)
 
     def closeEvent(self, event):
         if self._closeable:
@@ -174,13 +173,10 @@ class AddRepoDialog(ErrorMessageDialog):
         else:
             event.ignore()
 
-    def _checkURL(self, url):
-        url = convert_string(url)
+    def _checkAndClone(self, url):
         if not GitHandler.isGitURL(url):
             raise ValueError(u"The given URL does not exist or is no Git repository.")
-        return url
 
-    def _clone(self, url):
         targetDir = get_settings().get_config(GitHandler.extractRepositoryNameFromURL(url))
         targetDir = getUniquePath(targetDir)
         GitHandler.clone(url, targetDir)
