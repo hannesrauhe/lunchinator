@@ -4,7 +4,7 @@ from lunchinator import get_server, get_settings, log_info, get_notification_cen
     log_debug, get_peers, log_exception, get_plugin_manager, convert_string,\
     get_peer_actions, logs_debug, log_error
     
-from lunchinator.lunch_datathread_threading import DataReceiverThread, DataSenderThread
+from lunchinator.datathread.dt_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall, getTimeDifference,\
     formatException
 from lunchinator.notification_center import NotificationCenter

@@ -6,7 +6,7 @@ from lunchinator import get_server, get_settings, convert_string, log_warning,\
     log_exception, log_debug, getLogLineTime, get_peers, get_notification_center
 import os, sip, codecs, copy, shutil, contextlib, tarfile
 from datetime import datetime
-from lunchinator.lunch_datathread_qt import DataReceiverThread
+from lunchinator.datathread.dt_qthread import DataReceiverThread
 from lunchinator.table_models import TableModelBase
 
 class DropdownModel(TableModelBase):

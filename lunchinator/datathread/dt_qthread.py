@@ -1,4 +1,4 @@
-from lunchinator.lunch_datathread import DataSenderThreadBase, DataReceiverThreadBase, CanceledException,\
+from lunchinator.datathread.base import DataSenderThreadBase, DataReceiverThreadBase, CanceledException,\
     IncompleteTransfer
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot
 from lunchinator.utilities import formatException

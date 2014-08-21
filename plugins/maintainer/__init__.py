@@ -34,7 +34,7 @@ class maintainer(iface_gui_plugin):
         if cmd.startswith("HELO_LOGFILE"):
             if self.w == None:
                 return
-            from lunchinator.lunch_datathread_qt import DataReceiverThread
+            from lunchinator.datathread.dt_qthread import DataReceiverThread
             #someone will send me his logfile on tcp
             values = value.split()
             file_size=int(values[0])

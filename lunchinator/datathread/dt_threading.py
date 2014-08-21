@@ -1,6 +1,6 @@
 from threading import Thread
 from lunchinator import log_info, log_error
-from lunchinator.lunch_datathread import DataSenderThreadBase,\
+from lunchinator.datathread.base import DataSenderThreadBase,\
     DataReceiverThreadBase
 from lunchinator.utilities import formatException
 

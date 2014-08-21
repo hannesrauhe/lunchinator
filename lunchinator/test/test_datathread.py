@@ -1,5 +1,5 @@
 import sys, os
-from lunchinator.lunch_datathread import DataSenderThreadBase, DataReceiverThreadBase,\
+from lunchinator.datathread.base import DataSenderThreadBase, DataReceiverThreadBase,\
     DataThreadBase
 from tempfile import NamedTemporaryFile, mkdtemp
 import string

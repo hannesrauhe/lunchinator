@@ -3,9 +3,9 @@ import os
 from lunchinator import get_server, log_exception, log_error, log_warning,\
     log_debug, get_peers
 import json
-from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
+from lunchinator.datathread.dt_qthread import DataReceiverThread, DataSenderThread
 from time import time
-from lunchinator.lunch_datathread import DataThreadBase
+from lunchinator.datathread.base import DataThreadBase
 from lunchinator.utilities import sanitizeForFilename, getUniquePath
 
 class FileTransferHandler(QObject):

@@ -9,7 +9,7 @@ from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplicatio
     Qt
 from PyQt4 import QtCore
 from functools import partial
-from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
+from lunchinator.datathread.dt_qthread import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog

@@ -1,4 +1,4 @@
-__all__ = ["gui_general", "lunch_settings", "lunch_server", "iface_plugins", "lunch_datathread"]
+__all__ = ["gui_general", "lunch_settings", "lunch_server", "iface_plugins"]
 
 import sys, os
 import logging, logging.handlers, time

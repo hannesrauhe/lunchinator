@@ -20,7 +20,7 @@ class ErrorMessageDialog(QDialog):
                 self._warningPixmap = None
         except:
             pass
-        
+
         if self._errorPixmap is None:
             self._errorPixmap = QIcon(get_settings().get_resource("images", "error.png")).pixmap(14,14)
         if self._warningPixmap is None:
