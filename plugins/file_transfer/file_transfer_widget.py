@@ -223,7 +223,10 @@ class _TransferWidget(QFrame):
         self._setCurrentFile(nameOrPath)
         
     def connectDataThread(self, dataThread):
-        self._connectedToThread = True   
+        if not dataThread.isRunning():
+            self.transferError(dataThread, u"Transfer didn't start.")
+            return
+        self._connectedToThread = True
         dataThread.progressChanged.connect(self.progressChanged)
         dataThread.errorOnTransfer.connect(self.transferError)
         dataThread.successfullyTransferred.connect(self.successfullyTransferred)
@@ -232,13 +235,14 @@ class _TransferWidget(QFrame):
         self.cancel.connect(dataThread.cancelTransfer)
 
     def disconnectDataThread(self, dataThread):
-        self._connectedToThread = False   
-        dataThread.progressChanged.disconnect(self.progressChanged)
-        dataThread.errorOnTransfer.disconnect(self.transferError)
-        dataThread.successfullyTransferred.disconnect(self.successfullyTransferred)
-        dataThread.transferCanceled.disconnect(self.transferCanceled)
-        dataThread.nextFile.disconnect(self.nextFile)
-        self.cancel.disconnect(dataThread.cancelTransfer)
+        if self._connectedToThread:
+            self._connectedToThread = False   
+            dataThread.progressChanged.disconnect(self.progressChanged)
+            dataThread.errorOnTransfer.disconnect(self.transferError)
+            dataThread.successfullyTransferred.disconnect(self.successfullyTransferred)
+            dataThread.transferCanceled.disconnect(self.transferCanceled)
+            dataThread.nextFile.disconnect(self.nextFile)
+            self.cancel.disconnect(dataThread.cancelTransfer)
     
     @pyqtSlot(int, int)
     def progressChanged(self, newVal, maxVal):
@@ -259,11 +263,15 @@ class _TransferWidget(QFrame):
     
     @pyqtSlot(object)    
     def transferError(self, thread, message):
+        if not self._transferring:
+            return
         self._transferring = False
         self._statusLabel.setText(u"Error transferring file (%s)" % message)
         self.disconnectDataThread(thread)
         self._checkButtonFunction()
-        
+        if self._progress.maximum() == 0:
+            self._progress.setMaximum(100)
+    
     @pyqtSlot(object)
     def transferCanceled(self, thread):
         self._transferring = False

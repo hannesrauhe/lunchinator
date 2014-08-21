@@ -1,17 +1,11 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import log_exception, get_settings, log_error, convert_string,\
-    log_warning, get_server, log_debug, get_peers, get_notification_center
-import urllib2,sys,tempfile,csv,contextlib,os,socket
-from lunchinator.utilities import getValidQtParent, displayNotification,\
-    canUseBackgroundQThreads
-from lunchinator.download_thread import DownloadThread
+from lunchinator import log_error, get_server, get_notification_center
+from lunchinator.utilities import canUseBackgroundQThreads
 from StringIO import StringIO
-from functools import partial
-from tempfile import NamedTemporaryFile
-from urlparse import urlparse
 from lunchinator.peer_actions import PeerAction
 from lunchinator.privacy import PrivacySettings
 from remote_pictures.remote_pictures_dialog import RemotePicturesDialog
+import contextlib, csv
     
 class _RemotePictureAction(PeerAction):
     def getName(self):

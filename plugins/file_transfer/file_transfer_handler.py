@@ -235,8 +235,8 @@ class FileTransferHandler(QObject):
         outThread.finished.connect(outThread.deleteLater)
         outThread.setUserData((peerID, transferID))
         self._outgoing[transferID] = outThread
-        self.outgoingTransferStarted.emit(transferID, outThread)
         outThread.start()
+        self.outgoingTransferStarted.emit(transferID, outThread)
     
     def processCancel(self, peerID, value):
         self._processCancel.emit(peerID, value)
@@ -322,7 +322,7 @@ class FileTransferHandler(QObject):
         
     @pyqtSlot(object, object, int)
     def retrySendFileToPeer(self, toSend, peerID, oldID):
-        self._sendFileToPeerSlot(toSend, peerID, oldID)
+        self._sendFilesToPeerSlot(toSend, peerID, oldID)
         
     @pyqtSlot(int)
     def cancelOutgoingTransfer(self, transferID):
