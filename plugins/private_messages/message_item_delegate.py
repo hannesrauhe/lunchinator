@@ -56,7 +56,7 @@ class EditorWidget(QWidget):
         self._itemEditor = itemEditor
             
 class MessageItemDelegate(QStyledItemDelegate):
-    def __init__(self, parentView):
+    def __init__(self, parentView, column=None, margin=50):
         super(MessageItemDelegate, self).__init__(parentView)
 
         # We need that to receive mouse move events in editorEvent
@@ -73,6 +73,8 @@ class MessageItemDelegate(QStyledItemDelegate):
         self.lastTextPos = QPoint(0, 0)
         self._editIndex = None
         self._editor = None
+        self._column = column
+        self._margin = margin
         
         ownGradient = QLinearGradient(0, 0, 0, 10)
         ownGradient.setColorAt(0, QColor(229, 239, 254))
@@ -133,7 +135,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         pass
     
     def _preferredMessageWidth(self, textRectWidth):
-        return textRectWidth - 50
+        return textRectWidth - self._margin
     
     def _getMessageRect(self, option, doc, modelIndex, relativeToItem=False):
         rightAligned = modelIndex.data(ChatMessagesModel.OWN_MESSAGE_ROLE).toBool()
@@ -186,6 +188,9 @@ class MessageItemDelegate(QStyledItemDelegate):
         painter.restore()
     
     def paint(self, painter, option1, modelIndex):
+        if self._column is not None and modelIndex.column() != self._column:
+            return super(MessageItemDelegate, self).paint(painter, option1, modelIndex)
+        
         option = QStyleOptionViewItemV4(option1)
         self.initStyleOption(option, modelIndex)
         
@@ -193,7 +198,7 @@ class MessageItemDelegate(QStyledItemDelegate):
             # this is a time item
             self._paintTime(painter, option, modelIndex)
             return
-        
+
         text = QString(option.text)
         if not text:
             option1.decorationAlignment = Qt.AlignLeft
@@ -276,6 +281,8 @@ class MessageItemDelegate(QStyledItemDelegate):
         return messageRect.contains(eventPos)
 
     def editorEvent(self, event, _model, option_, modelIndex):
+        if self._column and modelIndex.column() != self._column:
+            return False
         option = QStyleOptionViewItemV4(option_)
         self.initStyleOption(option, modelIndex)
         text = QString(option.text)

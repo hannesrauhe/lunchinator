@@ -143,7 +143,8 @@ class private_messages(iface_gui_plugin):
     def create_widget(self, parent):
         from private_messages.chat_history_view import ChatHistoryWidget
         self._openChats = {} # mapping peer ID -> ChatDockWidget
-        return ChatHistoryWidget(self, parent)
+        self._history = ChatHistoryWidget(self, parent)
+        return self._history
     
     def destroy_widget(self):
         for chatWindow in self._openChats.values():
@@ -302,6 +303,32 @@ class private_messages(iface_gui_plugin):
                                 chatWindow.getChatWidget().getOtherIconPath())
 
 if __name__ == '__main__':
+    from private_messages.chat_history_view import ChatHistoryModel
+    from private_messages.message_item_delegate import MessageItemDelegate
+    from PyQt4.QtGui import QTreeView
+    
     pm = private_messages()
+    
+    
+    
+    def addRow():
+        row = [u"",
+               0,
+               True,
+               0,
+               0,
+               u"sadfklsakdjflkj slkjf laksjd flk jsadlkf jalsd jfl jsalkd jflk jsadl fjlk sajdlkf jlksa jdfl jsadf jl<br>lsakdjflkjsalkdjf lksajdf",
+               0]
+        
+        roq = [u"",
+               0,
+               False,
+               0,
+               0,
+               u"0 jlksa jdfl jsadf jl<br>lsakdjflkjsalkdjf lksajdf",
+               0]
+        historyModel = ChatHistoryModel("", [row, roq])
+        pm._history._historyTable.setModel(historyModel)
+        
     pm.hasConfigOption = lambda _ : False
-    pm.run_in_window()
+    pm.run_in_window(addRow)

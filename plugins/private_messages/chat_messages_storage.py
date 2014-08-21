@@ -1,5 +1,4 @@
-from lunchinator.logging_mutex import loggingMutex
-from lunchinator import get_settings, get_db_connection, log_warning, log_error
+from lunchinator import get_db_connection, log_warning, log_error
 from private_messages.chat_messages_model import ChatMessagesModel
 
 class InconsistentIDError(Exception):
