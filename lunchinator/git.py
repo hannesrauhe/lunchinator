@@ -1,18 +1,23 @@
 import subprocess
 import os
-from lunchinator import log_debug, log_warning, log_exception
+from lunchinator import log_debug
+from tempfile import NamedTemporaryFile, mkdtemp
 
 class GitHandler(object):
     UP_TO_DATE_REASON = "Repository is up-to-date"
     
     @classmethod
-    def runGitCommand(cls, args, path=None, quiet=True):
+    def runGitCommand(cls, args, path=None, quiet=True, isStaticCommand=False):
         """Runs a git command and returns a triple (return code, stdout output, stderr output)"""
-        if path == None:
+        if path is None and not isStaticCommand:
             from lunchinator import get_settings
             path = get_settings().get_main_package_path()
          
-        call = ["git", "--no-pager", "--git-dir=" + path + "/.git", "--work-tree=" + path]
+        if not isStaticCommand:
+            call = ["git", "--no-pager", "--git-dir=" + path + "/.git", "--work-tree=" + path]
+        else:
+            call = ["git", "--no-pager"]
+            
         call = call + args
          
         fh = subprocess.PIPE    
@@ -25,15 +30,15 @@ class GitHandler(object):
         return retCode, pOut, pErr
 
     @classmethod
-    def getGitCommandResult(cls, args, path=None, quiet=True):
+    def getGitCommandResult(cls, args, path=None, quiet=True, isStaticCommand=False):
         """Runs a git command and returns the return code."""
-        retCode, _, __ = cls.runGitCommand(args, path, quiet)
+        retCode, _, __ = cls.runGitCommand(args, path, quiet, isStaticCommand)
         return retCode
     
     @classmethod
-    def getGitCommandOutput(cls, args, path=None):
+    def getGitCommandOutput(cls, args, path=None, isStaticCommand=False):
         """Runs a git command and returns the stdout output."""
-        _retCode, pOut, _pErr = cls.runGitCommand(args, path, quiet=False)
+        _retCode, pOut, _pErr = cls.runGitCommand(args, path, quiet=False, isStaticCommand=isStaticCommand)
         return pOut.strip()
     
     @classmethod
@@ -48,6 +53,10 @@ class GitHandler(object):
         except:
             # seems git is not available
             return None
+        
+    @classmethod
+    def isGitURL(cls, url):
+        return cls.getGitCommandResult(["ls-remote", url], isStaticCommand=True) == 0
 
     @classmethod
     def getCommitCount(cls, path=None):
@@ -145,3 +154,23 @@ class GitHandler(object):
     def pull(cls, path=None):
         """Pulls a git repository. Does not check prerequisites!"""
         return cls.runGitCommand(["pull"], path)
+    
+    @classmethod
+    def extractRepositoryNameFromURL(cls, url):
+        if url.endswith(u"/.git"):
+            url = url[:-5]
+        elif url.endswith(u".git"):
+            url = url[:-4]
+        try:
+            firstChar = url.rfind(u"/") + 1
+        except IndexError:
+            firstChar = 0
+        url = url[firstChar:]
+        if u":" in url:
+            url = url[url.index(u":") + 1:]
+        return url
+        
+    @classmethod
+    def clone(cls, url, targetDir):
+        return cls.getGitCommandResult(["clone", url, targetDir], isStaticCommand=True)
+        

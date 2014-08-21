@@ -26,7 +26,7 @@ class PluginRepositoriesGUI(QWidget):
         self._initModel()
         self._reposTable.setModel(self._reposModel)
         
-        self._reposTable.setSelectionMode(QTreeView.MultiSelection)
+        self._reposTable.setSelectionMode(QTreeView.ExtendedSelection)
         self._reposTable.selectionModel().selectionChanged.connect(self._selectionChanged)
         
         layout.addWidget(self._reposTable)
