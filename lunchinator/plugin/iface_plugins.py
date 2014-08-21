@@ -490,7 +490,7 @@ class iface_plugin(IPlugin):
     """ Used for testing """
     
     @classmethod
-    def prepare_application(cls, factory):
+    def prepare_application(cls, beforeCreate, factory):
         from PyQt4.QtGui import QApplication, QMainWindow
         from lunchinator import setLoggingLevel, get_settings
         from lunchinator.utilities import setValidQtParent
@@ -498,6 +498,9 @@ class iface_plugin(IPlugin):
         get_settings().set_verbose(True)
         setLoggingLevel(logging.DEBUG)    
         app = QApplication(sys.argv)
+        
+        beforeCreate()
+        
         window = QMainWindow()
         
         setValidQtParent(window)
@@ -515,7 +518,7 @@ class iface_plugin(IPlugin):
         return self.create_options_widget(parent)
     
     def run_options_widget(self):
-        _window, app = iface_general_plugin.prepare_application(self._init_run_options_widget)
+        _window, app = iface_general_plugin.prepare_application(self.activate, self._init_run_options_widget)
         return app.exec_()
                     
 class db_for_plugin_iface(object):
@@ -589,12 +592,13 @@ class iface_gui_plugin(iface_plugin):
     
     @classmethod
     def run_standalone(cls, factory):
-        _window, app = cls.prepare_application(factory)
+        _window, app = cls.prepare_application(lambda : None, factory)
         sys.exit(app.exec_())
         
-    def run_in_window(self):
-        _window, app = iface_gui_plugin.prepare_application(lambda window : self.create_widget(window))
-        self.activate()
+    def run_in_window(self, callAfterCreate=None):
+        _window, app = iface_gui_plugin.prepare_application(self.activate, lambda window : self.create_widget(window))
+        if callAfterCreate:
+            callAfterCreate()
         sys.exit(app.exec_())
         
     def processes_events_immediately(self):
