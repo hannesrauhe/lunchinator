@@ -2,9 +2,8 @@ from lunchinator import log_exception, log_error, get_settings
 from lunchinator.utilities import getUniquePath
 from lunchinator.logging_mutex import loggingMutex
 
-import contextlib, os, tarfile, socket
+import contextlib, os, tarfile, socket, errno, time
 from cStringIO import StringIO
-import time
 from functools import partial
 
 class CanceledException(Exception):
@@ -447,7 +446,12 @@ class DataReceiverThreadBase(DataThreadBase):
         while remaining > 0:
             if self._canceled:
                 raise CanceledException()
-            rec = read(min(chunkSize, remaining))
+            try:
+                rec = read(min(chunkSize, remaining))
+            except socket.error as e:
+                if e.errno == errno.EINTR:
+                    continue
+                raise
             outFile.write(rec)
             remaining -= len(rec)
             offset += len(rec)
@@ -583,7 +587,19 @@ class DataReceiverThreadBase(DataThreadBase):
                 s.bind(("", self._portOrSocket)) 
                 s.settimeout(30.0)
                 s.listen(1)
-            con, addr = s.accept()
+            retry = True
+            while retry:
+                try:
+                    con, addr = s.accept()
+                    retry = False
+                except socket.error as e:
+                    if e.errno == errno.EINTR:
+                        retry = True
+                    else:
+                        raise
+                except:
+                    raise
+            
             con.settimeout(30.0)
             if addr[0] == self._otherIP:
                 self._receiveFiles(con, numFiles, totalSize, useTarstream, compression)
