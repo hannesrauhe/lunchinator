@@ -156,6 +156,12 @@ class FileTransferHandler(QObject):
         name = transferDict.get(u"name", None)
         numFiles = transferDict.get(u"count", 1)
         
+        if not os.path.exists(self._downloadDir):
+            os.makedirs(self._downloadDir)
+        elif not os.path.isdir(self._downloadDir):
+            log_error("Download path %s is no directory. Cannot accept file.")
+            return
+        
         if numFiles > 1:
             peerName = get_peers().getDisplayedPeerName(pID=peerID)
             if peerName:

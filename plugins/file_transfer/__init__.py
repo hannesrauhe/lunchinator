@@ -50,9 +50,9 @@ class file_transfer(iface_gui_plugin):
     
     def __init__(self):
         super(file_transfer, self).__init__()
-        self.options = [((u"download_dir", u"Save received files in directory", self._downloadDirChanged), os.path.expanduser("~")),
+        self.options = [((u"download_dir", u"Save received files in directory", self._downloadDirChanged), os.path.join(os.path.expanduser("~"), "Downloads")),
                         ((u"overwrite", u"Overwrite existing files", self._overwriteChanged), False),
-                        ((u"compression", u"Use compression when sending:", self._compressionChanged, (u"No", u"GZip", u"BZip2")), u"No")]
+                        ((u"compression", u"Use compression when sending", self._compressionChanged, (u"No", u"GZip", u"BZip2")), u"No")]
     
     def get_displayed_name(self):
         return u"File Transfer"
