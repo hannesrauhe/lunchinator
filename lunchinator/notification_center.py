@@ -413,6 +413,17 @@ class NotificationCenter(object):
     @_emitFunc
     def emitPrivacySettingsDiscarded(self, pluginName, actionName):
         pass
+    
+    """Emitted when modifications to privacy settings are discarded."""    
+    @_connectFunc
+    def connectErrorOccurred(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectErrorOccurred(self, callback):
+        pass
+    @_emitFunc
+    def emitErrorOccurred(self, logLevel, logMessage):
+        pass
 
 if __name__ == '__main__':
     def _testCallback(a, b, c):

@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from lunchinator.log.error_notification_handler import ErrorNotificationHandler
 
 class _log_formatter (logging.Formatter):
     LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
@@ -14,7 +15,7 @@ class _log_formatter (logging.Formatter):
         s = "%s,%03d" % (t, record.msecs)
         return s
 
-class _lunchinatorLogger:
+class _lunchinatorLogger(object):
     lunch_logger = None
     streamHandler = None
     logfileHandler = None
@@ -46,6 +47,10 @@ class _lunchinatorLogger:
                         cls.logfileHandler.doRollover()
                 except IOError:
                     cls.lunch_logger.error("Could not initialize log file.")
+            
+            errorHandler = ErrorNotificationHandler()
+            errorHandler.setLevel(logging.ERROR)
+            cls.lunch_logger.addHandler(errorHandler)
             
             yapsi_logger = logging.getLogger('yapsy')
             yapsi_logger.setLevel(logging.WARNING)
