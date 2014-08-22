@@ -82,6 +82,14 @@ class _lunchinatorLogger(object):
         cls.notificationHandler.setLevel(newLevel)
         if cls.logfileHandler:
             cls.logfileHandler.setLevel(newLevel)
+        
+    @classmethod    
+    def getCachedRecords(cls):
+        return cls.notificationHandler.getCachedRecords()
+    
+    @classmethod
+    def setCacheSize(cls, size):
+        cls.notificationHandler.setCacheSize(size)
 
 def initializeLogger(path=None):
     logging.setLoggerClass(_UnicodeLogger)
@@ -95,6 +103,12 @@ def logsDebug():
 
 def setLoggingLevel(newLevel):
     _lunchinatorLogger.setLevel(newLevel)
+    
+def getCachedLogRecords():
+    return _lunchinatorLogger.getCachedRecords()
+
+def setLogCacheSize(size):
+    _lunchinatorLogger.setCacheSize(size)
     
 def getLogLineTime(logLine):
     from datetime import datetime

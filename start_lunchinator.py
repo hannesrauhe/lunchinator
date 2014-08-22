@@ -14,6 +14,5 @@ if __name__ == '__main__':
             from PyQt4.QtGui import QApplication, QMessageBox
             app = QApplication(sys.argv)
             QMessageBox.critical(None, "Lunchinator Critical Error", msg)
-            app.exec_()
         except:
             print msg

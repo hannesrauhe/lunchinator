@@ -3,11 +3,12 @@ from PyQt4.QtGui import QVBoxLayout, QTreeView, QStandardItemModel,\
     QTextOption, QLabel, QSplitter, QWidget
 from PyQt4.QtCore import Qt, QVariant
 from lunchinator import get_notification_center, convert_string
+from lunchinator.log import getCachedLogRecords
 from lunchinator.log.logging_slot import loggingSlot
+from lunchinator.utilities import formatException
 import os, logging, traceback
 from StringIO import StringIO
 from time import strftime, localtime
-from lunchinator.utilities import formatException
 
 class ConsoleWidget(QWidget):
     _RECORD_ROLE = Qt.UserRole + 1
@@ -16,6 +17,7 @@ class ConsoleWidget(QWidget):
         super(ConsoleWidget, self).__init__(parent)
         
         self._errorColor = QVariant(QColor(180, 0, 0))
+        self._warningColor = QVariant(QColor(170, 100, 0))
         self._records = []
         
         self._initModel()
@@ -88,12 +90,16 @@ class ConsoleWidget(QWidget):
         self._logModel = QStandardItemModel(self)
         self._logModel.setColumnCount(4)
         self._logModel.setHorizontalHeaderLabels([u"Time", u"Level", u"Message", u"Source"])
+        for record in getCachedLogRecords():
+            self._addLogMessage(record)
     
     def _createItem(self, text, error, toolTip=None):
         item = QStandardItem()
         item.setEditable(False)
         item.setText(text)
-        if error:
+        if error is 1:
+            item.setData(self._warningColor, Qt.ForegroundRole)
+        elif error is 2:
             item.setData(self._errorColor, Qt.ForegroundRole)
         if toolTip is None:
             toolTip = text
@@ -111,7 +117,7 @@ class ConsoleWidget(QWidget):
         dirname = os.path.dirname(record.pathname)
         source = u"%s:%d" % (os.path.join(os.path.basename(dirname), os.path.basename(record.pathname)), record.lineno)
         fullsource = u"%s:%d" % (record.pathname, record.lineno)
-        error = record.levelno == logging.ERROR
+        error = 1 if record.levelno == logging.WARNING else 2 if record.levelno == logging.ERROR else 0
         self._logModel.appendRow([self._createItem(strftime("%H:%M:%S", localtime(record.created)), error),
                                   self._createItem(record.levelname, error),
                                   self._createItem(msg, error),

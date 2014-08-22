@@ -141,6 +141,7 @@ class lunch_settings(object):
         self._mute_timeout = 30
         self._verbose = False
         self._logging_level = u"ERROR"
+        self._log_cache_size = 100
         self._group_plugins = False
         self._default_db_connection = u"Standard"
         self._available_db_connections = u"Standard"  # list separated by ;; (like yapsy)
@@ -541,6 +542,14 @@ class lunch_settings(object):
             setLoggingLevel(logging.INFO)
         elif self._logging_level == u"DEBUG":
             setLoggingLevel(logging.DEBUG)
+        
+    def get_log_cache_size(self):
+        return self._log_cache_size
+    @hidden_setting()
+    def set_log_cache_size(self, newValue):
+        from lunchinator.log.lunch_logger import setLogCacheSize
+        self._log_cache_size = newValue
+        setLogCacheSize(newValue)
         
     def set_verbose(self, verbose):
         """Set True to override logging level"""
