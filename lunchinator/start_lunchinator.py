@@ -6,7 +6,7 @@ import platform, sys, subprocess, os, re, logging, signal
 from functools import partial
 from optparse import OptionParser
 from lunchinator import log_info, log_error, get_settings,\
-    get_server, log_exception, initialize_logger, MAIN_CONFIG_DIR
+    get_server, log_exception, MAIN_CONFIG_DIR, initializeLogger
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
 from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS, restart
 from lunchinator import setLoggingLevel
@@ -161,24 +161,25 @@ def startLunchinator():
         get_settings().set_verbose(True)
         setLoggingLevel(logging.DEBUG)
     usePlugins = options.noPlugins
+    defaultLogPath = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
     if options.exitWithStopCode:
         sys.exit(EXIT_CODE_STOP)
     elif options.lunchCall or options.message != None:
-        initialize_logger()
+        initializeLogger()
         get_settings().set_plugins_enabled(False)
         get_server().set_has_gui(False)
         sendMessage(options.message, options.client)
     elif options.stop:
-        initialize_logger()
+        initializeLogger()
         get_settings().set_plugins_enabled(False)
         get_server().set_has_gui(False)
         get_server().stop_server(stop_any=True)
         print "Sent stop command to local lunchinator"
     elif options.installDep:
-        initialize_logger()
+        initializeLogger()
         installDependencies()
     elif options.cli:
-        initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))
+        initializeLogger(defaultLogPath)
         usePlugins = checkDependencies(usePlugins)
             
         retCode = 1
@@ -194,7 +195,7 @@ def startLunchinator():
         finally:
             sys.exit(retCode)
     elif options.noGui:
-        initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))
+        initializeLogger(defaultLogPath)
         usePlugins = checkDependencies(usePlugins)
         
     #    sys.settrace(trace)
@@ -207,7 +208,7 @@ def startLunchinator():
     else:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         
-        initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))    
+        initializeLogger(defaultLogPath)    
         log_info("We are on",platform.system(),platform.release(),platform.version())
         try:
             from PyQt4.QtCore import QThread

@@ -3,61 +3,9 @@ __all__ = ["gui_general", "lunch_settings", "lunch_server", "iface_plugins"]
 import sys, os
 import logging, logging.handlers, time
 from datetime import datetime
+from lunchinator.log import getLogger, initializeLogger, setLoggingLevel
 
 MAIN_CONFIG_DIR = unicode(os.path.join(os.getenv("HOME"), ".lunchinator") if os.getenv("HOME") else os.path.join(os.getenv("USERPROFILE"), ".lunchinator"))
-        
-class _log_formatter (logging.Formatter):
-    LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
-    TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-    def __init__(self):
-        logging.Formatter.__init__(self, self.LOG_FORMAT)
-        
-    def formatTime(self, record, _datefmt=None):
-        ct = self.converter(record.created)
-        t = time.strftime(self.TIME_FORMAT, ct)
-        s = "%s,%03d" % (t, record.msecs)
-        return s
-
-class _lunchinator_logger:
-    lunch_logger = None
-    streamHandler = None
-    logfileHandler = None
-     
-    @classmethod
-    def get_singleton_logger(cls, path=None):
-        if cls.lunch_logger == None:
-            if not os.path.exists(MAIN_CONFIG_DIR):
-                os.makedirs(MAIN_CONFIG_DIR)
-            
-            cls.lunch_logger = logging.getLogger("LunchinatorLogger")
-            cls.lunch_logger.setLevel(logging.DEBUG)
-            
-            cls.streamHandler = logging.StreamHandler()
-            cls.streamHandler.setFormatter(logging.Formatter("[%(levelname)7s] %(message)s"))
-            cls.lunch_logger.addHandler(cls.streamHandler)
-            
-            if path:
-                try:
-                    cls.logfileHandler = logging.handlers.RotatingFileHandler(path, 'a', 0, 9)
-                    cls.logfileHandler.setFormatter(_log_formatter())
-                    cls.logfileHandler.setLevel(logging.DEBUG)
-                    
-                    cls.lunch_logger.addHandler(cls.logfileHandler)
-                    
-                    if os.path.getsize(path) > 0:
-                        cls.logfileHandler.doRollover()
-                except IOError:
-                    cls.lunch_logger.error("Could not initialize log file.")
-            
-            yapsi_logger = logging.getLogger('yapsy')
-            yapsi_logger.setLevel(logging.WARNING)
-            yapsi_logger.addHandler(cls.logfileHandler)
-            yapsi_logger.addHandler(cls.streamHandler)
-            
-        return cls.lunch_logger
-
-def initialize_logger(path=None):
-    _lunchinator_logger.get_singleton_logger(path)
 
 def convert_string(string):
     if string is None:
@@ -74,9 +22,6 @@ def convert_raw(string):
     elif type(string) == unicode:
         return string.decode('utf-8')
     return str(string)
-
-def _get_logger():
-    return _lunchinator_logger.get_singleton_logger()
 
 def getLogLineTime(logLine):
     logLineWords = logLine.split()
@@ -95,37 +40,30 @@ def getLogLineTime(logLine):
     except:
         log_exception()
         return None
-
-def setLoggingLevel(newLevel):
-    # ensure logger is initialized
-    _get_logger()
-    _lunchinator_logger.streamHandler.setLevel(newLevel)
-    if _lunchinator_logger.logfileHandler:
-        _lunchinator_logger.logfileHandler.setLevel(newLevel)
     
 def _generate_string(*s):
     return u" ".join(x if type(x) in (str, unicode) else str(x) for x in s)
 
 def log_exception(*s):
-    _get_logger().exception(_generate_string(*s))
+    getLogger().exception(_generate_string(*s))
     
 def log_critical(*s):
-    _get_logger().critical(_generate_string(*s))
+    getLogger().critical(_generate_string(*s))
     
 def log_error(*s):
-    _get_logger().error(_generate_string(*s))
+    getLogger().error(_generate_string(*s))
     
 def log_warning(*s):
-    _get_logger().warn(_generate_string(*s))
+    getLogger().warn(_generate_string(*s))
     
 def log_info(*s):
-    _get_logger().info(_generate_string(*s))
+    getLogger().info(_generate_string(*s))
     
 def log_debug(*s):
-    _get_logger().debug(_generate_string(*s))
+    getLogger().debug(_generate_string(*s))
     
 def logs_debug():
-    return _get_logger().isEnabledFor(logging.DEBUG)
+    return getLogger().isEnabledFor(logging.DEBUG)
 
 from lunchinator.notification_center import NotificationCenter
 def get_notification_center():
