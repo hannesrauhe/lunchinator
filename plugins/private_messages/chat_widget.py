@@ -3,15 +3,16 @@ from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
     QLabel, QPixmap, QTextCharFormat, QTextCursor, QToolButton, QMenu
 from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp, QTimer
 
+from private_messages.chat_messages_view import ChatMessagesView
+from private_messages.chat_messages_model import ChatMessagesModel
 from lunchinator import convert_string, get_settings, get_notification_center,\
     get_peers
-from lunchinator.log import getLogger
+from lunchinator.log import getLogger, loggingFunc
+from lunchinator.log.logging_slot import loggingSlot
 from lunchinator.history_line_edit import HistoryTextEdit
 from lunchinator.peer_actions.peer_action_utils import showPeerActionsPopup,\
     initializePeerActionsMenu
 from lunchinator.peer_actions import PeerActions
-from private_messages.chat_messages_view import ChatMessagesView
-from private_messages.chat_messages_model import ChatMessagesModel
 
 from xml.etree import ElementTree
 from StringIO import StringIO
@@ -322,6 +323,7 @@ class ChatWidget(QWidget):
     def _initMessageTable(self):
         self.table = ChatMessagesView(self._model, self)
         
+    @loggingSlot()
     def _textChangedSlot(self):
         if not self.entry.isEnabled() or self.entry.document().isEmpty():
             self._textChanged = False
@@ -337,6 +339,7 @@ class ChatWidget(QWidget):
         else:
             self._textChanged = True
             
+    @loggingSlot()
     def _checkTyping(self):
         curTime = time()
         if self._textChanged:
@@ -359,12 +362,14 @@ class ChatWidget(QWidget):
         if not self._offline:
             self.cleared.emit()
             
+    @loggingSlot()
     def otherIsTyping(self):
         if not self._otherWasTyping:
             self._otherWasTyping = True
             self.setStatus(self.getOtherName() + " is typing a message...")
         self._lastTimePartnerTyped = time()
-        
+    
+    @loggingSlot()
     def otherCleared(self):
         self._otherWasTyping = False
         self.setStatus(None)
@@ -384,6 +389,7 @@ class ChatWidget(QWidget):
             self.addTimeRow(msgTime)
             self._lastTimeRow = msgTime
         
+    @loggingFunc
     def addOwnMessage(self, msgID, recvTime, msg, msgTime, messageState=None, toolTip=None):
         self._checkTime(msgTime)
         self._model.addOwnMessage(msgID, recvTime, msg, msgTime, messageState, toolTip)
@@ -469,7 +475,8 @@ class ChatWidget(QWidget):
                 getLogger().error("Cannot enable Markdown (%s)", formatException)
                 raise
         return self._md
-        
+    
+    @loggingSlot()        
     def eventTriggered(self):
         text = None
         if self._markdownEnabled:

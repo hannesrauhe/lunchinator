@@ -1,11 +1,12 @@
-import os
-from functools import partial
+from plugin_repositories.plugin_repositories_gui import PluginRepositoriesGUI
 from lunchinator import convert_string, get_notification_center, get_settings
 from lunchinator.plugin import iface_general_plugin
 from lunchinator.utilities import getValidQtParent
 from lunchinator.git import GitHandler
 from lunchinator.callables import AsyncCall
-from plugin_repositories.plugin_repositories_gui import PluginRepositoriesGUI
+from lunchinator.log.logging_func import loggingFunc
+import os
+from functools import partial
     
 class plugin_repositories(iface_general_plugin):
     def __init__(self):
@@ -51,6 +52,7 @@ class plugin_repositories(iface_general_plugin):
     def _needsRestart(self):
         self._restartRequired = True
     
+    @loggingFunc
     def _addRepository(self):
         from plugin_repositories.add_repo_dialog import AddRepoDialog
         dialog = AddRepoDialog(self._ui)
@@ -63,9 +65,11 @@ class plugin_repositories(iface_general_plugin):
             self._needsRestart()
             self._modified = True
     
+    @loggingFunc
     def _itemChanged(self, _item):
         self._modified = True
         
+    @loggingFunc
     def _rowsRemoved(self, _parent, _start, _end):
         self._modified = True
         self._needsRestart()
@@ -77,6 +81,7 @@ class plugin_repositories(iface_general_plugin):
             if os.path.isdir(path):
                 self._ui.appendRepository(path, active, auto_update)
         
+    @loggingFunc
     def _processUpdates(self, aTuple=None):
         if self._ui != None:
             if aTuple:
@@ -87,6 +92,7 @@ class plugin_repositories(iface_general_plugin):
             self._ui.updateStatusItems(outdated, upToDate)
             self._setStatus(None)
         
+    @loggingFunc
     def _checkForUpdates(self):
         if self._ui.getTable().model().rowCount() == 0:
             return
@@ -112,6 +118,7 @@ class plugin_repositories(iface_general_plugin):
                     upToDate[path] = reason
         return outdated, upToDate
 
+    @loggingFunc
     def _checkingError(self, msg):
         self._setStatus("Error: " + msg)
         

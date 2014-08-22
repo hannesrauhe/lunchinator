@@ -2,12 +2,13 @@ import subprocess, sys, os, contextlib, json, shutil, socket, time
 from datetime import datetime, timedelta 
 from time import mktime, strftime
 from lunchinator import get_settings
-from lunchinator.log import getLogger
+from lunchinator.log import getLogger, loggingFunc
 import locale
 import platform
 from tempfile import NamedTemporaryFile
 import itertools
 import string
+import errno
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -76,6 +77,11 @@ def displayNotification(name, msg, icon=None):
             getLogger().debug(call)
             try:
                 subprocess.call(call, stdout=fh, stderr=fh)
+            except OSError as e:
+                if e.errno == errno.EINVAL:
+                    getLogger().warning("Ignoring invalid value on Mac")
+                else:
+                    raise
             except:
                 getLogger().exception("Error calling %s", call)
         elif myPlatform == PLATFORM_WINDOWS:
@@ -434,9 +440,9 @@ def restartWithCommands(commands):
     else:
         sys.exit(0)
     
+@loggingFunc
 def restart():
     """Restarts the Lunchinator"""
-    
     #on Windows with pyinstaller we use this special handling for now
     if getPlatform()==PLATFORM_WINDOWS:  
         frozen = getattr(sys, 'frozen', '')

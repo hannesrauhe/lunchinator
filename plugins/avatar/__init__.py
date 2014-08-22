@@ -2,7 +2,7 @@ from lunchinator.plugin import iface_general_plugin
 from avatar.l_avatar import l_avatar
 import mimetypes
 from lunchinator import get_server, get_settings, convert_string
-from lunchinator.log import getLogger
+from lunchinator.log import getLogger, loggingFunc
 from functools import partial
 import os
 
@@ -32,6 +32,7 @@ class avatar(iface_general_plugin):
     def parentWindow(self, w):
         return w if w.parentWidget() == None else self.parentWindow(w.parentWidget())
     
+    @loggingFunc
     def _chooseFile(self):  
         from PyQt4.QtGui import QSortFilterProxyModel, QFileDialog
         class FileFilterProxyModel(QSortFilterProxyModel):

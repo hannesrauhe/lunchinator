@@ -4,10 +4,11 @@ from PyQt4.QtGui import QDialog, QLabel, QHBoxLayout,\
 from PyQt4.Qt import Qt
 from lunchinator import convert_string, get_settings
 from lunchinator.git import GitHandler
-import os
 from lunchinator.error_message_dialog import ErrorMessageDialog
 from lunchinator.callables import AsyncCall
 from lunchinator.utilities import getUniquePath
+from lunchinator.log.logging_slot import loggingSlot
+import os
 
 class AddRepoDialog(ErrorMessageDialog):
     _WORKING_COPY = 0
@@ -110,6 +111,7 @@ class AddRepoDialog(ErrorMessageDialog):
     def _autoUpdateChanged(self, newState):
         self._autoUpdate = newState == Qt.Checked
         
+    @loggingSlot()
     def _browse(self):
         fd = QFileDialog(self)
         fd.setOptions(QFileDialog.ShowDirsOnly)
@@ -153,6 +155,7 @@ class AddRepoDialog(ErrorMessageDialog):
         self._tabs.setEnabled(not w)
         self._setButtonsEnabled(not w)
     
+    @loggingSlot()
     def _checkOK(self):
         if self._tabs.currentIndex() == self._WORKING_COPY:
             if not os.path.isdir(self.getPath()):
@@ -182,12 +185,14 @@ class AddRepoDialog(ErrorMessageDialog):
         GitHandler.clone(url, targetDir)
         return targetDir
         
+    @loggingSlot(object)
     def _cloneSuccess(self, path):
         self._setWorking(False)
         self.setResult(self.Accepted)
         self._path = path
         self.close()
         
+    @loggingSlot(object)
     def _cloneError(self, msg):
         self._setWorking(False)
         self._error(msg)

@@ -1,6 +1,7 @@
-from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QTimer
+from PyQt4.QtCore import QObject, pyqtSignal, QTimer, pyqtSlot
 from lunchinator import get_server, get_peers
 from lunchinator.log import getLogger
+from lunchinator.log.logging_slot import loggingSlot
 from lunchinator.datathread.dt_qthread import DataReceiverThread, DataSenderThread
 from lunchinator.datathread.base import DataThreadBase
 from lunchinator.utilities import sanitizeForFilename, getUniquePath
@@ -68,7 +69,7 @@ class FileTransferHandler(QObject):
         elif comp == "bip2":
             self._compression = "bzip2"
         
-    @pyqtSlot()
+    @loggingSlot()
     def _cleanup(self):
         timedOut = []
         for tID, data in self._outgoing.iteritems():
@@ -85,11 +86,11 @@ class FileTransferHandler(QObject):
         self._nextID += 1
         return nextID
     
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _errorDownloading(self, thread, _message):
         self._removeDownload(thread)
             
-    @pyqtSlot(object)
+    @loggingSlot(object)
     def _transferCanceled(self, thread):
         peerID, transferID = thread.getUserData()
         sendCancel = False
@@ -109,13 +110,13 @@ class FileTransferHandler(QObject):
             get_server().call("HELO_FT_CANCEL %s" % json.dumps(cancelDict), peerIDs=[peerID])
     
     @pyqtSlot(object)
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _removeUpload(self, thread, _msg=None):
         _, transferID = thread.getUserData()
         self._outgoing.pop(transferID, None)
         
     @pyqtSlot(object)
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _removeDownload(self, thread, _path=None):
         peerID, transferID = thread.getUserData()
         self._incoming.pop((peerID, transferID), None)
@@ -125,7 +126,7 @@ class FileTransferHandler(QObject):
     # someone wants to send me a file
     def processSendRequest(self, peerID, peerIP, value, preprocessed):
         self._processSendRequest.emit(peerID, peerIP, value, preprocessed)
-    @pyqtSlot(object, object, object, object)
+    @loggingSlot(object, object, object, object)
     def _processSendRequestSlot(self, peerID, peerIP, value, transferDict):
         if transferDict is None:
             try:
@@ -192,7 +193,7 @@ class FileTransferHandler(QObject):
     
     def processAck(self, peerID, peerIP, value):
         self._processAck.emit(peerID, peerIP, value)
-    @pyqtSlot(object, object, object)
+    @loggingSlot(object, object, object)
     def _processAckSlot(self, peerID, peerIP, value):
         try:
             answerDict = json.loads(value)
@@ -239,7 +240,7 @@ class FileTransferHandler(QObject):
     
     def processCancel(self, peerID, value):
         self._processCancel.emit(peerID, value)
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _processCancelSlot(self, peerID, value):
         try:
             cancelDict = json.loads(value)
@@ -278,7 +279,7 @@ class FileTransferHandler(QObject):
     
     def sendFilesToPeer(self, toSend, peerID):
         self._sendFilesToPeer.emit(toSend, peerID)
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _sendFilesToPeerSlot(self, toSend, peerID, transferID=None):
         if transferID is None:
             isRetry = False
@@ -303,27 +304,27 @@ class FileTransferHandler(QObject):
         
     def downloadDirChanged(self, newDir):
         self._downloadDirChanged.emit(newDir)
-    @pyqtSlot(object)
+    @loggingSlot(object)
     def _downloadDirChangedSlot(self, newDir):
         self._downloadDir = newDir
         
     def overwriteChanged(self, overwrite):
         self._overwriteChanged.emit(overwrite)
-    @pyqtSlot(bool)
+    @loggingSlot(bool)
     def _overwriteChangedSlot(self, overwrite):
         self._overwrite = overwrite
         
     def compressionChanged(self, comp):
         self._compressionChanged.emit(comp)
-    @pyqtSlot(object)
+    @loggingSlot(object)
     def _compressionChangedSlot(self, comp):
         self._setCompression(comp)
         
-    @pyqtSlot(object, object, int)
+    @loggingSlot(object, object, int)
     def retrySendFileToPeer(self, toSend, peerID, oldID):
         self._sendFilesToPeerSlot(toSend, peerID, oldID)
         
-    @pyqtSlot(int)
+    @loggingSlot(int)
     def cancelOutgoingTransfer(self, transferID):
         data = self._outgoing.get(transferID, None)
         if type(data) is tuple:

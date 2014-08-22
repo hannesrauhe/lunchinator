@@ -1,6 +1,6 @@
 from lunchinator.plugin import iface_gui_plugin
 from lunchinator import get_server, get_notification_center
-from lunchinator.log import getLogger
+from lunchinator.log import getLogger, loggingFunc
 from lunchinator.utilities import canUseBackgroundQThreads
 from StringIO import StringIO
 from lunchinator.peer_actions import PeerAction
@@ -218,5 +218,6 @@ class remote_pictures(iface_gui_plugin):
                 writer.writerow(data)
                 get_server().call("HELO_REMOTE_PIC " + strOut.getvalue(), peerIDs=[peerID])
     
+    @loggingFunc
     def _privacySettingsChanged(self):
         get_notification_center().emitPrivacySettingsChanged(self._rpAction.getPluginName(), self._rpAction.getName())

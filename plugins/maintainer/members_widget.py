@@ -1,9 +1,11 @@
-from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTreeWidget, QComboBox, QSplitter, QTextEdit, QTreeWidgetItem
-from PyQt4.QtCore import Qt, QVariant, pyqtSlot, QTimer, QStringList, QThread
+from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTreeWidget, QComboBox, QSplitter, QTextEdit, QTreeWidgetItem,\
+    QItemSelection
+from PyQt4.QtCore import Qt, QVariant, QTimer, QStringList, QThread
 
-from lunchinator.history_line_edit import HistoryLineEdit
 from lunchinator import get_server, get_settings, convert_string, get_peers, get_notification_center
+from lunchinator.history_line_edit import HistoryLineEdit
 from lunchinator.log import getLogger, getLogLineTime
+from lunchinator.log.logging_slot import loggingSlot
 from lunchinator.datathread.dt_qthread import DataReceiverThread
 from lunchinator.table_models import TableModelBase
 
@@ -226,7 +228,7 @@ class MembersWidget(QWidget):
         self.requestLogsButton.setEnabled(True)
         self.dropdown_members.setEnabled(True)
     
-    @pyqtSlot(QThread, object)
+    @loggingSlot(QThread, object)
     def cb_log_transfer_success(self, thread, path):
         path = convert_string(path)
         
@@ -273,7 +275,7 @@ class MembersWidget(QWidget):
         if len(logsAdded) > 0 or len(logsRenamed) > 0:
             self.updateLogList(logsAdded, logsRenamed)
     
-    @pyqtSlot(QThread, object)
+    @loggingSlot(QThread, object)
     def cb_log_transfer_error(self, _thread, message):
         if not self.isVisible():
             return False
@@ -300,13 +302,14 @@ class MembersWidget(QWidget):
         else:
             self.log_area.setText("No Member selected!")
             
-    @pyqtSlot()
+    @loggingSlot()
     def requestLogClicked(self):
         self.requestLogsButton.setEnabled(False)
         self.dropdown_members.setEnabled(False)
         self.updateLogList([(0, None)])
         self.request_log()
             
+    @loggingSlot()
     def request_update(self):
         member = self.get_selected_log_member()
         if member != None:
@@ -349,7 +352,7 @@ class MembersWidget(QWidget):
         item.setData(0, Qt.UserRole, logFile)
         item.setData(0, Qt.DisplayRole, QVariant(text))
     
-    @pyqtSlot()
+    @loggingSlot()
     def clearLogs(self):
         for aLogFile in self.listLogFilesForMember(self.get_selected_log_member()):
             os.remove(aLogFile)
@@ -436,10 +439,12 @@ class MembersWidget(QWidget):
             fcontent = "Error reading file: %s"%str(e)
         return fcontent
     
-    def displaySelectedLogfile(self):
+    @loggingSlot(QItemSelection, QItemSelection)
+    def displaySelectedLogfile(self, _new, _old):
         self.log_area.setText(self.getSelectedLogContent())
-        
-    def memberSelectionChanged(self):
+    
+    @loggingSlot(int)
+    def memberSelectionChanged(self, _new=None):
         self.updateLogList()
         isMemberSelected = self.get_selected_log_member() != None
         self.sendMessageButton.setEnabled(isMemberSelected)
@@ -447,6 +452,7 @@ class MembersWidget(QWidget):
         self.requestLogsButton.setEnabled(isMemberSelected)
         self.updateMemberInformation()
         
+    @loggingSlot(object)
     def sendMessageToMember(self, lineEdit):
         selectedMember = self.get_selected_log_member()
         if selectedMember != None:

@@ -4,6 +4,8 @@ from lunchinator import get_server, get_notification_center, get_peers,\
 from lunchinator.utilities import msecUntilNextMinute
 from functools import partial
 from lunchinator.peer_actions import peer_action_utils
+from lunchinator.log.logging_slot import loggingSlot
+from PyQt4.QtCore import QPoint
     
 class members_table(iface_gui_plugin):
     def __init__(self):
@@ -100,12 +102,14 @@ class members_table(iface_gui_plugin):
         
         self.membersModel.externalRowUpdated(peerID, infoDict)
     
+    @loggingSlot()
     def _startSyncedTimer(self):
         self.membersModel.updateLunchTimeColumn()
         self._lunchTimeColumnTimer.timeout.disconnect(self._startSyncedTimer)
         self._lunchTimeColumnTimer.timeout.connect(self.membersModel.updateLunchTimeColumn)
         self._lunchTimeColumnTimer.start(60000)
 
+    @loggingSlot(QPoint)
     def _showContextMenu(self, point):
         from PyQt4.QtGui import QMenu, QCursor
         index = self.membersTable.getTable().indexAt(point)

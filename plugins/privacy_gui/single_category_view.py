@@ -1,11 +1,12 @@
 from PyQt4.QtGui import QWidget, QHBoxLayout, QLabel, QComboBox, QTreeView,\
-    QVBoxLayout, QFrame, QCheckBox, QSortFilterProxyModel
+    QVBoxLayout, QFrame, QCheckBox, QSortFilterProxyModel, QStandardItem
 from PyQt4.QtCore import Qt, QVariant
 from lunchinator.table_models import TableModelBase
 from lunchinator import get_peers, get_notification_center,\
     convert_string
 from lunchinator.log import getLogger
 from lunchinator.privacy.privacy_settings import PrivacySettings
+from lunchinator.log.logging_slot import loggingSlot
 
 class PeerModel(TableModelBase):
     def __init__(self, data, tristate):
@@ -166,6 +167,7 @@ class SingleCategoryView(QWidget):
         self._askForConfirmationBox.stateChanged.connect(self._askForConfirmationChanged)
         return self._askForConfirmationBox
     
+    @loggingSlot(QStandardItem)
     def _peerDataChanged(self, item):
         if not self._resetting:
             PrivacySettings.get().addException(self._action,
@@ -176,10 +178,12 @@ class SingleCategoryView(QWidget):
                                                applyImmediately=False,
                                                categoryPolicy=self._getCategoryPolicy())
     
+    @loggingSlot(int)
     def _askForConfirmationChanged(self, newState):
         if not self._resetting:
             PrivacySettings.get().setAskForConfirmation(self._action, self._category, newState == Qt.Checked, applyImmediately=False, categoryPolicy=self._getCategoryPolicy())
         
+    @loggingSlot(int)
     def _modeChanged(self, newMode, notify=True, resetModel=True):
         self._resetting = True
         if newMode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX, PrivacySettings.POLICY_PEER_EXCEPTION):

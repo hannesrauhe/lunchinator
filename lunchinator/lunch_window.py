@@ -2,6 +2,7 @@ from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplic
 from PyQt4.QtCore import Qt, QSettings, QVariant, QEvent, pyqtSignal
 from lunchinator import get_settings, convert_string, get_plugin_manager, get_notification_center
 from lunchinator.log import getLogger
+from lunchinator.log.logging_slot import loggingSlot
 import sys
 from StringIO import StringIO
 import traceback
@@ -144,7 +145,8 @@ class LunchinatorWindow(QMainWindow):
         self.locked = False
         for aDockWidget in self.pluginNameToDockWidget.values():
             aDockWidget.setFeatures(aDockWidget.features() | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
-            
+    
+    @loggingSlot()
     def _dockWidgetClosed(self, pluginName):
         get_plugin_manager().deactivatePluginByName(pluginName, "gui")
             

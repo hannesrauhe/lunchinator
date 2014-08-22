@@ -3,6 +3,7 @@ from lunchinator.utilities import getGPG, getValidQtParent
 from lunchinator.download_thread import DownloadThread
 from lunchinator import get_settings
 from lunchinator.log import getLogger
+from lunchinator.log.logging_func import loggingFunc
 import os, contextlib, json
 
 class GPGUpdateHandler(AppUpdateHandler):
@@ -24,6 +25,7 @@ class GPGUpdateHandler(AppUpdateHandler):
     def canCheckForUpdate(self):
         return True
         
+    @loggingFunc
     def checkForUpdate(self):
         if not self._has_gpg():
             # user clicked on "Install GPG"
@@ -56,7 +58,8 @@ class GPGUpdateHandler(AppUpdateHandler):
             self.checkForUpdate()
         else:
             self._setStatus("GPG not installed or not working properly.")
-            
+        
+    @loggingFunc    
     def _downloadProgressChanged(self, _t, prog):
         if self._ui != None:
             self._ui.setProgress(prog)
@@ -107,6 +110,7 @@ class GPGUpdateHandler(AppUpdateHandler):
         if self._version_info != None:
             return self._version_info[u"Version String"] if u"Version String" in self._version_info else self._version_info["Commit Count"]
         
+    @loggingFunc
     def _versionInfoDownloaded(self, thread):
         try:
             signedString = thread.getResult()
@@ -173,6 +177,7 @@ class GPGUpdateHandler(AppUpdateHandler):
         else:
             self._setStatus("No new version available")
             
+    @loggingFunc
     def _installerDownloaded(self, thread):
         try:
             # close the file object that keeps the downloaded data
@@ -182,6 +187,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             
         self._checkHash()
     
+    @loggingFunc
     def _errorDownloading(self):
         self._setStatus("Download failed", True)
         

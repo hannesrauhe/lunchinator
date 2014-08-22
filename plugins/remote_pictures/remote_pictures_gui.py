@@ -1,17 +1,20 @@
-import sys
+from remote_pictures.remote_pictures_storage import RemotePicturesStorage
+from remote_pictures.remote_pictures_category_model import CategoriesModel
 from lunchinator import convert_string, get_peers
 from lunchinator.log import getLogger
+from lunchinator.resizing_image_label import ResizingWebImageLabel
+from lunchinator.utilities import formatTime
+from lunchinator.log.logging_slot import loggingSlot
+
 from PyQt4.QtGui import QStackedWidget, QListView, QWidget, QHBoxLayout, \
     QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy, QSortFilterProxyModel, \
     QFrame
-from PyQt4.QtCore import QTimer, QSize, Qt, pyqtSlot, pyqtSignal, QModelIndex
-from lunchinator.resizing_image_label import ResizingWebImageLabel
+from PyQt4.QtCore import QTimer, QSize, Qt, pyqtSignal, QModelIndex
+
+import sys, os
 from functools import partial
-from remote_pictures.remote_pictures_category_model import CategoriesModel
-import os
-from remote_pictures.remote_pictures_storage import RemotePicturesStorage
-from lunchinator.utilities import formatTime
 from time import localtime
+from lunchinator.log.logging_func import loggingFunc
 
 class RemotePicturesGui(QStackedWidget):
     openCategory = pyqtSignal(object) # category
@@ -114,20 +117,22 @@ class RemotePicturesGui(QStackedWidget):
         self.minOpacityChanged.connect(w.setMinOpacity)
         self.maxOpacityChanged.connect(w.setMaxOpacity)
 
-    @pyqtSlot(QModelIndex)
+    @loggingSlot(QModelIndex)
     def _itemDoubleClicked(self, index):
         index = self.sortProxy.mapToSource(index)
         item = self.categoryModel.item(index.row())
         cat = item.data(CategoriesModel.CAT_ROLE).toString()
         self.openCategory.emit(cat)
         
+    @loggingSlot()
     def _displayNextImage(self):
         self.displayNext.emit(self.currentCategory, self.curPicIndex)
-        
+    
+    @loggingSlot()
     def _displayPreviousImage(self):
         self.displayPrev.emit(self.currentCategory, self.curPicIndex)
     
-    @pyqtSlot(object, int, list, bool, bool)
+    @loggingSlot(object, int, list, bool, bool)
     def displayImage(self, cat, picID, picRow, hasPrev, hasNext):
         cat = convert_string(cat)
         picURL = convert_string(picRow[RemotePicturesStorage.PIC_URL_COL])
@@ -174,7 +179,7 @@ class RemotePicturesGui(QStackedWidget):
     def destroyWidget(self):
         pass
     
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def pictureDownloadedSlot(self, url, picData):
         if self.currentCategory is not None:
             self.pictureDownloaded.emit(self.currentCategory, url, picData)
@@ -203,19 +208,22 @@ class HiddenWidgetBase(object):
         except:
             getLogger().debug(u"Could not enable opacity effects. %s: %s", sys.exc_info()[0].__name__, unicode(sys.exc_info()[1]))
         
+    @loggingFunc
     def setMinOpacity(self, newVal):
         self.minOpacity = newVal
         self.incr = (self.maxOpacity - self.minOpacity) / self.NUM_STEPS
         if self.fadingEnabled and not self.timer.isActive():
             self.timer.start(self.INTERVAL)
     
+    @loggingFunc
     def setMaxOpacity(self, newVal):
         self.maxOpacity = newVal
         self.incr = (self.maxOpacity - self.minOpacity) / self.NUM_STEPS
         if self.fadingEnabled and not self.timer.isActive():
             self.timer.start(self.INTERVAL)
         
-    def showTemporarily(self, _=None):
+    @loggingFunc
+    def showTemporarily(self):
         if self.good:
             self.fadingEnabled = False
             self.fadeIn = False
@@ -227,6 +235,7 @@ class HiddenWidgetBase(object):
         self.fadingEnabled = True
         self.timer.start(self.INTERVAL * 1.5)
     
+    @loggingFunc
     def _fade(self):
         if self.fadeIn:
             desOp = self.maxOpacity

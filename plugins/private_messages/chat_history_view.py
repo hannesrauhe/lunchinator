@@ -5,11 +5,13 @@ from lunchinator import get_peers,  convert_string
 from lunchinator.log import getLogger
 from lunchinator.table_models import TableModelBase
 from lunchinator.utilities import formatTime, getPlatform, PLATFORM_MAC
+from lunchinator.log.logging_slot import loggingSlot
+from lunchinator.log.logging_func import loggingFunc
 
 from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView,\
     QSplitter, QStandardItemModel, QSortFilterProxyModel,\
     QLineEdit, QVBoxLayout, QPushButton, QFrame, QToolButton, QMenu,\
-    QStandardItem
+    QStandardItem, QItemSelection
 from PyQt4.QtCore import Qt, QVariant
 
 from time import localtime
@@ -193,6 +195,7 @@ class ChatHistoryWidget(QWidget):
         historyModel = ChatHistoryModel(partnerID, rows)
         self._sortFilterModel.setSourceModel(historyModel)
 
+    @loggingFunc
     def _fillPeersPopup(self, menu):
         menu.clear()
         
@@ -214,6 +217,7 @@ class ChatHistoryWidget(QWidget):
         
         self._delegate.getOpenChatAction().performAction(peerID, peerInfo, self)
 
+    @loggingSlot()
     def _updatePeers(self):
         if get_peers() is None:
             return
@@ -231,6 +235,7 @@ class ChatHistoryWidget(QWidget):
             else:
                 self._peerModel.externalRowAppended(pID, peerInfo)
                 
+    @loggingSlot(QItemSelection, QItemSelection)
     def _displayHistory(self, newSelection, _oldSelection):
         if len(newSelection.indexes()) > 0:
             index = iter(newSelection.indexes()).next()
@@ -241,6 +246,7 @@ class ChatHistoryWidget(QWidget):
             self._sortFilterModel.setSourceModel(None)
             self._clearButton.setEnabled(False)
             
+    @loggingSlot()
     def _clearSelected(self):
         if not self._peerList.selectionModel().hasSelection():
             return

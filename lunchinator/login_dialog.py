@@ -1,6 +1,7 @@
 from PyQt4.QtGui import QLineEdit, QDialog, QGridLayout, QLabel, QDialogButtonBox, QSizePolicy
 from PyQt4.QtCore import Qt 
 from lunchinator import convert_string
+from lunchinator.log.logging_slot import loggingSlot
 
 class LoginDialog(QDialog):
     def __init__(self, parent, description = "Please enter your login information:", loginText = "Login:", passwordText = "Password:"):
@@ -49,6 +50,7 @@ class LoginDialog(QDialog):
         #self.setMinimumWidth(400)
         self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         
+    @loggingSlot()
     def slotAcceptLogin(self):
         self._username = convert_string(self.editUserName.text())
         self._password = convert_string(self.editPassword.text())

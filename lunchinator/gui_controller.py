@@ -11,11 +11,12 @@ from lunchinator.utilities import getPlatform, PLATFORM_MAC, PLATFORM_WINDOWS,\
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 from lunchinator.notification_center_qt import NotificationCenterQt
 from lunchinator.notification_center import NotificationCenter
+from lunchinator.log.logging_slot import loggingSlot
 
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QSystemTrayIcon,\
     QIcon, QCursor, QDialog
-from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject,\
-    QCoreApplication, QTimer, Qt
+from PyQt4.QtCore import QThread, pyqtSignal, QObject,\
+    QCoreApplication, QTimer, Qt, pyqtSlot
 from PyQt4 import QtCore
 
 from functools import partial
@@ -165,6 +166,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.statusicon.show()
         return True
         
+    @loggingSlot(int)
     def trayActivated(self, reason):
         if getPlatform() == PLATFORM_MAC:
             # Trigger is sent even though the context menu is shown.
@@ -232,6 +234,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def call(self, msg, peerIDs, peerIPs):
         self._performCall.emit(msg, peerIDs, peerIPs)
         
+    @loggingSlot()
     def serverFinishedUnexpectedly(self):
         self.serverThread = None
         self.quit(EXIT_CODE_ERROR)
@@ -447,13 +450,17 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         return menu
     
+    @loggingSlot()
     def _startSyncedTimer(self):
         self._updateMemberStatus()
         self.memberStatusUpdateTimer.timeout.disconnect(self._startSyncedTimer)
         self.memberStatusUpdateTimer.timeout.connect(self._updateMemberStatus)
         self.memberStatusUpdateTimer.start(60000)
     
-    def _updateMemberStatus(self):
+    @pyqtSlot()
+    @pyqtSlot(object)
+    @loggingSlot(object, object)
+    def _updateMemberStatus(self, _pID=None, _pInfo=None):
         peers = get_server().getLunchPeers()
         readyMembers = peers.getReadyMembers()
         notReadyMembers = peers.getMembers() - readyMembers
@@ -500,50 +507,53 @@ class LunchinatorGuiController(QObject, LunchServerController):
                   
     """---------------------- SLOTS ------------------------------"""
     
-    @pyqtSlot()
+    @loggingSlot()
     def initDoneSlot(self):
         pass
     
-    @pyqtSlot(object, set, set)
+    @loggingSlot(object, set, set)
     def performCallSlot(self, msg, peerIDs, peerIPs):
         get_server().perform_call(msg, peerIDs, peerIPs)
     
-    @pyqtSlot()
+    @loggingSlot()
     def updateRequested(self):
         self.quit(EXIT_CODE_UPDATE)
     
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _pluginActivated(self, pluginName, _category):
         pluginName = convert_string(pluginName)
         if pluginName in self.pluginNameToMenuAction:
             anAction = self.pluginNameToMenuAction[pluginName]
             anAction.setChecked(True)
             
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _pluginDeactivated(self, pluginName, _category):
         pluginName = convert_string(pluginName)
         if pluginName in self.pluginNameToMenuAction:
             anAction = self.pluginNameToMenuAction[pluginName]
             anAction.setChecked(False)
 
-    @pyqtSlot(object, object, bool)
+    @loggingSlot(object, object, bool)
     def toggle_plugin(self, p_name, p_cat, new_state):
-        p_cat = convert_string(p_cat)
-        p_name = convert_string(p_name)
-        
-        if new_state:
-            get_plugin_manager().activatePluginByName(p_name, p_cat)
-        else:
-            get_plugin_manager().deactivatePluginByName(p_name, p_cat)
+        try:
+            p_cat = convert_string(p_cat)
+            p_name = convert_string(p_name)
+            
+            if new_state:
+                get_plugin_manager().activatePluginByName(p_name, p_cat)
+            else:
+                get_plugin_manager().deactivatePluginByName(p_name, p_cat)
+        except:
+            getLogger().exception("Error toggling plugin")
     
-    @pyqtSlot(object, QObject)
+    @loggingSlot(object, QObject)
     def sendMessageClicked(self, message, text):
         if message != None:
             get_server().call_all_members(convert_string(message))
         else:
             get_server().call_all_members(text)
         
-    @pyqtSlot(QLineEdit)
+    @loggingSlot(QLineEdit)
     def addHostClicked(self, hostn):
         try:
             ip = socket.gethostbyname(hostn.strip())
@@ -553,12 +563,12 @@ class LunchinatorGuiController(QObject, LunchServerController):
             d.exec_()
             
     @pyqtSlot(bool)
-    @pyqtSlot()
+    @loggingSlot()
     def quitClicked(self, _=None):
         self.quit()
 
     @pyqtSlot(bool)
-    @pyqtSlot()
+    @loggingSlot()
     def openWindowClicked(self, _=None):    
         if self.mainWindow == None:
             getLogger().error("mainWindow is not initialized")
@@ -567,7 +577,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.mainWindow.raise_()
         self.mainWindow.activateWindow()
             
-    @pyqtSlot()
+    @loggingSlot()
     def changeNextLunchTime(self, begin = None, end = None):
         if begin == None:
             if self.mainWindow == None:
@@ -596,12 +606,13 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         get_server().call_info()
             
+    @loggingSlot()
     def _resetNextLunchTime(self):
         get_settings().set_next_lunch_time(None, None)
         get_server().call_info()
             
     @pyqtSlot(bool)
-    @pyqtSlot()
+    @loggingSlot()
     def openSettingsClicked(self, _=None):
         if self.mainWindow == None:
             getLogger().error("mainWindow not specified")
@@ -616,7 +627,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.settingsWindow.raise_()
         self.settingsWindow.activateWindow()
 
-    @pyqtSlot()        
+    @loggingSlot()        
     def settingsDialogAction(self, saved):
         if not get_settings().get_plugins_enabled():
             return
@@ -633,7 +644,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         get_server().call_info()      
 
-    @pyqtSlot(object, bytearray, int, bool)
+    @loggingSlot(object, bytearray, int, bool)
     def sendFileSlot(self, addr, fileToSend, other_tcp_port, isData):
         addr = convert_string(addr)
         if isData:
@@ -645,13 +656,15 @@ class LunchinatorGuiController(QObject, LunchServerController):
         ds.finished.connect(ds.deleteLater)
         ds.start()
         
+    @loggingSlot(QThread, object)
     def successfullyReceivedFile(self, _thread, filePath):
         getLogger().info("successfully received file %s", filePath)
         
+    @loggingSlot(QThread, object)
     def errorOnTransfer(self, _thread, message):
         getLogger().error("Error receiving file (%s)", message)
     
-    @pyqtSlot(object, int, object, int, object, object)
+    @loggingSlot(object, int, object, int, object, object)
     def receiveFileSlot(self, addr, file_size, file_name, tcp_port, successFunc, errorFunc):
         addr = convert_string(addr)
         file_name = convert_string(file_name)
@@ -665,14 +678,14 @@ class LunchinatorGuiController(QObject, LunchServerController):
         dr.finished.connect(dr.deleteLater)
         dr.start()
         
-    @pyqtSlot(object, object, object, float, bool, bool)
+    @loggingSlot(object, object, object, float, bool, bool)
     def processEventSlot(self, cmd, value, addr, eventTime, newPeer, fromQueue):
         cmd = convert_string(cmd)
         value = convert_string(value)
         addr = convert_string(addr)
         super(LunchinatorGuiController, self).processEvent(cmd, value, addr, eventTime, newPeer, fromQueue)
      
-    @pyqtSlot(object, object, float, bool, bool)
+    @loggingSlot(object, object, float, bool, bool)
     def processMessageSlot(self, msg, addr, eventTime, newPeer, fromQueue):
         msg = convert_string(msg)
         addr = convert_string(addr)

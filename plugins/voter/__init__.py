@@ -2,6 +2,7 @@ from lunchinator.plugin import iface_gui_plugin
 from lunchinator import get_server, get_settings, get_peers, convert_string
 from lunchinator.log import getLogger
 from lunchinator.utilities import displayNotification
+from lunchinator.log.logging_slot import loggingSlot
 from PyQt4.QtGui import QTreeView, QWidget, QSortFilterProxyModel, QSizePolicy, QTableWidgetItem, QPushButton, QPalette, QColor
 from PyQt4.QtCore import Qt, QTime
 from ui_voter import Ui_Voter
@@ -76,11 +77,13 @@ class voterWidget(QWidget):
         self.ui.tableWidget.clearContents()
         self.ui.tableWidget.setRowCount(0)
         
+    @loggingSlot()
     def vote_clicked(self):
         currentText = convert_string(self.ui.comboBox.currentText())
         if currentText:
             self.send_vote(currentText, self.ui.timeEdit.time())
         
+    @loggingSlot(int, int)
     def tablevote_clicked(self, row, column):
         vote_place = self.ui.tableWidget.item(row, 0).text()
         vote_time = self.ui.tableWidget.item(row, 1).text()

@@ -6,6 +6,7 @@ from lunchinator import get_settings, get_plugin_manager,\
 from lunchinator.log import getLogger
 from lunchinator.ComboTabWidget import ComboTabWidget
 from bisect import bisect_left
+from lunchinator.log.logging_slot import loggingSlot
 
 class _SettingsWidgetContainer(QWidget):
     def __init__(self, pluginName, pluginObject, parent):
@@ -163,17 +164,21 @@ class LunchinatorSettingsDialog(QDialog):
             size = self.size()
             self.setMinimumSize(size.width(), size.height())
         
+    @loggingSlot()
     def applyPressed(self):
         self.save.emit()
         
+    @loggingSlot()
     def discardPressed(self):
         self.discard.emit()
         
+    @loggingSlot()
     def savePressed(self):
         self.setResult(QDialog.Accepted)
         self.save.emit()
         self.setVisible(False)
         
+    @loggingSlot()
     def cancelPressed(self):
         self.setResult(QDialog.Rejected)
         self.discard.emit()

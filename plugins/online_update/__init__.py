@@ -16,6 +16,7 @@ from lunchinator.utilities import getValidQtParent, displayNotification, \
     getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, PLATFORM_LINUX, which,\
     getApplicationBundle, restartWithCommands
 from lunchinator.commands import Commands
+from lunchinator.log.logging_func import loggingFunc
     
 import urllib2, sys, os, contextlib, subprocess, json, tempfile
 from functools import partial
@@ -88,11 +89,13 @@ class online_update(iface_general_plugin):
         self._ui.installUpdates.disconnect(self.installUpdates)
         iface_general_plugin.destroy_options_widget(self)
         
+    @loggingFunc
     def checkForUpdate(self):
         if self._appUpdateHandler.canCheckForUpdate():
             self._appUpdateHandler.checkForUpdate()
         self._repoUpdateHandler.checkForUpdates()
         
+    @loggingFunc
     def installUpdates(self):
         commands = Commands()
         

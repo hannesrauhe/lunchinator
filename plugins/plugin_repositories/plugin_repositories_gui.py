@@ -1,9 +1,10 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QLabel, QPushButton, \
                         QTreeView, QHBoxLayout, QStandardItemModel, QColor,\
-    QStandardItem
+                        QStandardItem, QItemSelection
 from PyQt4.QtCore import pyqtSignal, Qt
 from lunchinator import get_settings, convert_string
 from lunchinator.git import GitHandler
+from lunchinator.log.logging_slot import loggingSlot
     
 class PluginRepositoriesGUI(QWidget):
     PATH_COLUMN = 1
@@ -33,12 +34,12 @@ class PluginRepositoriesGUI(QWidget):
 
         buttonLayout = QHBoxLayout()    
         addButton = QPushButton("Add...")
-        addButton.clicked.connect(self.addRepository.emit)
+        addButton.clicked.connect(self.addRepository)
         self._removeButton = QPushButton("Remove")
         self._removeButton.setEnabled(False)
         self._removeButton.clicked.connect(self._removeSelected)
         refreshButton = QPushButton("Check Status")
-        refreshButton.clicked.connect(self.checkForUpdates.emit)
+        refreshButton.clicked.connect(self.checkForUpdates)
         buttonLayout.addWidget(addButton)
         buttonLayout.addWidget(self._removeButton)
         buttonLayout.addWidget(refreshButton)
@@ -119,10 +120,12 @@ class PluginRepositoriesGUI(QWidget):
     def getTable(self):
         return self._reposTable
     
+    @loggingSlot(QItemSelection, QItemSelection)
     def _selectionChanged(self, _sel, _desel):
         selection = self._reposTable.selectionModel().selectedRows()
         self._removeButton.setEnabled(len(selection) > 0)
         
+    @loggingSlot()
     def _removeSelected(self):
         selection = self._reposTable.selectionModel().selectedRows()
         for index in selection:

@@ -2,9 +2,11 @@ from lunchinator.table_models import TableModelBase
 from lunchinator.peer_actions.peer_actions_singleton import PeerActions
 from privacy_gui.multiple_categories_view import MultipleCategoriesView
 from privacy_gui.single_category_view import SingleCategoryView
-from PyQt4.QtGui import QWidget, QVBoxLayout, QTreeView, QFrame, QSplitter
+from PyQt4.QtGui import QWidget, QVBoxLayout, QTreeView, QFrame, QSplitter,\
+    QItemSelection
 from PyQt4.QtCore import Qt, QVariant
 from lunchinator import get_notification_center
+from lunchinator.log.logging_slot import loggingSlot
 
 class PeerActionsModel(TableModelBase):
     ACTION_ROLE = TableModelBase.SORT_ROLE + 1
@@ -115,6 +117,7 @@ class PrivacyGUI(QWidget):
             child.widget().deleteLater()
             child = layout.takeAt(0)
             
+    @loggingSlot(QItemSelection, QItemSelection)
     def _displaySettings(self, newSelection, _oldSelection=None):
         self._clearSettingsWidget()
         if len(newSelection.indexes()) > 0:

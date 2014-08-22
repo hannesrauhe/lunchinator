@@ -1,7 +1,8 @@
 from lunchinator.plugin import iface_gui_plugin
-import urllib2, contextlib
 from lunchinator.callables import AsyncCall
 from lunchinator.utilities import getValidQtParent
+from lunchinator.log import loggingFunc
+import urllib2, contextlib
     
 class lunch_menu(iface_gui_plugin):
     def __init__(self):
@@ -38,9 +39,11 @@ class lunch_menu(iface_gui_plugin):
         resp = urllib2.urlopen(self.options["url"])
         return resp.read()
     
+    @loggingFunc
     def _updateText(self, txt):
         self._textview.setPlainText(txt)
         
+    @loggingFunc
     def _errorDownloadingText(self, msg):
         self._textview.setPlainText("Error downloading text: " + msg)
     

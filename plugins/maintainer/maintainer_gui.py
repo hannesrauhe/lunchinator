@@ -1,8 +1,9 @@
 from lunchinator import get_peers, get_notification_center, convert_string
 from lunchinator.table_models import TableModelBase
+from lunchinator.log.logging_slot import loggingSlot
 from PyQt4.QtGui import QTreeView, QTabWidget, QSortFilterProxyModel, QSizePolicy,\
     QStandardItem
-from PyQt4.QtCore import Qt, pyqtSlot, QVariant
+from PyQt4.QtCore import Qt, QVariant
 from maintainer.members_widget import MembersWidget
 
 class ExtendedMembersModel(TableModelBase):
@@ -31,7 +32,7 @@ class ExtendedMembersModel(TableModelBase):
         
         return cmp(x, y)
         
-    @pyqtSlot(dict)
+    @loggingSlot(dict)
     def updateModel(self, peerID, infoDict, update=False, prepend=False):
         # update columns labels
         

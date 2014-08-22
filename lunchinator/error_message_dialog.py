@@ -2,6 +2,7 @@ from PyQt4.QtGui import QDialog, QLabel, QVBoxLayout, QHBoxLayout,\
     QDialogButtonBox, QIcon
 from PyQt4.Qt import Qt
 from lunchinator import get_settings
+from lunchinator.log.logging_slot import loggingSlot
 
 class ErrorMessageDialog(QDialog):
     def __init__(self, parent):
@@ -79,7 +80,8 @@ class ErrorMessageDialog(QDialog):
             
     def _initInputUI(self, layout):
         raise NotImplementedError()
-                
+    
+    @loggingSlot()
     def _checkOK(self):
         raise NotImplementedError()
 

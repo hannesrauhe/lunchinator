@@ -9,7 +9,7 @@ from lunchinator import get_settings, get_server, MAIN_CONFIG_DIR
 from lunchinator.log import getLogger, initializeLogger, setLoggingLevel
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
 from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS, restart
-    
+
 def parse_args():
     usage = "usage: %prog [options]"
     optionParser = OptionParser(usage = usage)
@@ -218,7 +218,15 @@ def startLunchinator():
         from lunchinator.gui_controller import LunchinatorGuiController
         from PyQt4.QtGui import QApplication
         
-        app = QApplication(sys.argv)
+        class LunchApplication(QApplication):
+            def notify(self, obj, event):
+                try:
+                    return QApplication.notify(self, obj, event)
+                except:
+                    getLogger().exception("C++ Error")
+                    return False
+                        
+        app = LunchApplication(sys.argv)
         usePlugins = checkDependencies(usePlugins, gui=True)
 
         get_settings().set_plugins_enabled(usePlugins)

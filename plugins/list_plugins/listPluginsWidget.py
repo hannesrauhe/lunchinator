@@ -3,6 +3,7 @@ from PyQt4.Qt import QWidget, QListWidgetItem
 from PyQt4.QtCore import Qt
 from lunchinator import get_plugin_manager, get_notification_center,\
     get_server
+from lunchinator.log.logging_slot import loggingSlot
 
 class listPluginsWidget(QWidget):
     def __init__(self, parent):
@@ -65,7 +66,8 @@ class listPluginsWidget(QWidget):
         self.create_plugin_view(self.ui.showAllCheckBox.checkState()==Qt.Checked)
         self.ui.pluginView.setCurrentRow(r)        
             
-    def plugin_selected(self, current, old):
+    @loggingSlot(QListWidgetItem, QListWidgetItem)
+    def plugin_selected(self, current, _old):
         if current == None:
             return
         p = self.p_info[str(current.toolTip())]
@@ -84,18 +86,21 @@ class listPluginsWidget(QWidget):
             self.ui.requirementsView.setDisabled(False)
             self.ui.installReqButton.setDisabled(False)
             
+    @loggingSlot()
     def install_req_clicked(self):
         plug = self.ui.pluginView.currentItem()
         reqs = self.p_info[str(plug.toolTip())]["requirements"]
         from utilities import installPipDependencyWindows
         installPipDependencyWindows(reqs)
         
+    @loggingSlot(bool)
     def show_all_toggled(self, value):
         r = self.ui.pluginView.currentRow()
         self.ui.pluginView.clear()
         self.create_plugin_view(value)
         self.ui.pluginView.setCurrentRow(r)
         
+    @loggingSlot(QListWidgetItem)
     def activate_plugin_toggled(self, item):
         p_name = str(item.toolTip())
         if item.checkState()==Qt.Checked and not self.p_info[p_name]["activated"]:

@@ -4,12 +4,13 @@ from lunchinator.log import getLogger
 from lunchinator.peer_actions import PeerAction
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
     displayNotification, canUseBackgroundQThreads
-import os
+from lunchinator.privacy.privacy_settings import PrivacySettings
+from lunchinator.log.logging_func import loggingFunc
 from lunchinator.logging_mutex import loggingMutex
+import os
 import sys
 from time import time
 from functools import partial
-from lunchinator.privacy.privacy_settings import PrivacySettings
 
 class _SendMessageAction(PeerAction):
     def getName(self):
@@ -192,6 +193,7 @@ class private_messages(iface_gui_plugin):
                     self._storage = ChatMessagesStorage()
         return self._storage
     
+    @loggingFunc
     def _displayOwnMessage(self, otherID, msgID, recvTime, msgHTML, msgTime, status, errorMsg):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
@@ -240,6 +242,7 @@ class private_messages(iface_gui_plugin):
                                                           row[ChatMessagesStorage.MSG_RECV_TIME_COL])
         return self._activateChat(newWindow)
         
+    @loggingFunc
     def _chatClosed(self, pID):
         pID = convert_string(pID)
         if pID in self._openChats:
@@ -269,6 +272,7 @@ class private_messages(iface_gui_plugin):
         
         return self._openChat(myName, otherName, myAvatar, otherAvatar, pID)
 
+    @loggingFunc
     def _delayedDelivery(self, otherID, msgID, recvTime, error, errorMessage):
         otherID = convert_string(otherID)
         errorMessage = convert_string(errorMessage)
@@ -277,12 +281,14 @@ class private_messages(iface_gui_plugin):
             chatWindow = self._openChats[otherID]
             chatWindow.getChatWidget().delayedDelivery(msgID, recvTime, error, errorMessage)
 
+    @loggingFunc
     def _messageIDChanged(self, otherID, oldID, newID):
         otherID = convert_string(otherID)
         if otherID in self._openChats:
             chatWindow = self._openChats[otherID]
             chatWindow.getChatWidget().messageIDChanged(oldID, newID)
 
+    @loggingFunc
     def _displayMessage(self, otherID, msgHTML, msgTime, msgDict):
         try:
             recvTime = time()

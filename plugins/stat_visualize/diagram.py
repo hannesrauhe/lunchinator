@@ -1,8 +1,10 @@
 import time, math
 from lunchinator.log import getLogger
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QString
 from PyQt4.QtGui import QGridLayout, QLabel, QSpinBox, QLineEdit
+from lunchinator.log.logging_slot import loggingSlot
+from lunchinator import convert_string
 
 class statTimelineTab(QtGui.QWidget):
     def __init__(self, parent, connPlugin):
@@ -22,6 +24,7 @@ class statTimelineWidget(QtGui.QWidget):
         self.connPlugin = connPlugin
         self.scale = 1
 
+    @loggingSlot(int)
     def setScale(self, i):
         self.scale = i
         self.update()
@@ -120,6 +123,7 @@ class statSwarmWidget(QtGui.QWidget):
         self.query_unbuffer = time.time()
         
         
+    @loggingSlot(int)
     def setPeriod(self, i):
         self.period = i
         self.update()
@@ -127,8 +131,9 @@ class statSwarmWidget(QtGui.QWidget):
     def getPeriod(self):
         return self.period
     
+    @loggingSlot(object)
     def setmType(self, i):
-        self.mtype = i
+        self.mtype = convert_string(i)
         self.update()
         
     def getmType(self):

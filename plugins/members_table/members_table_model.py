@@ -7,6 +7,7 @@ import time
 from datetime import datetime
 from PyQt4.QtCore import Qt, QVariant
 from PyQt4.QtGui import QColor, QBrush
+from lunchinator.log.logging_slot import loggingSlot
 
 class MembersTableModel(TableModelBase):
     _NAME_KEY = u'name'
@@ -83,6 +84,7 @@ class MembersTableModel(TableModelBase):
     def _dataForKey(self, key):
         return self.dataSource.getPeerInfo(pID=key)
         
+    @loggingSlot()
     def updateLunchTimeColumn(self):
         self.updateColumn(self.LUNCH_TIME_COL_INDEX)
         

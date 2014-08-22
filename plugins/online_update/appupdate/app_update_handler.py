@@ -92,7 +92,7 @@ class AppUpdateHandler(object):
     def canCheckForUpdate(self):
         """Returns True if this handler can check for updates."""
         return False
-            
+    
     def checkForUpdate(self):
         """Checks for updates.
         

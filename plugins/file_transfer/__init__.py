@@ -142,7 +142,8 @@ class file_transfer(iface_gui_plugin):
             
     def chooseAndSendFilesToPeer(self, peerID, parent):
         selectedFiles = QFileDialog.getOpenFileNames(parent, u"Chooses files to upload")
-        self._handler.sendFilesToPeer([convert_string(f) for f in selectedFiles], peerID)
+        if len(selectedFiles) > 0:
+            self._handler.sendFilesToPeer([convert_string(f) for f in selectedFiles], peerID)
         
     def sendFilesToPeer(self, toSend, peerID):
         self._handler.sendFilesToPeer([convert_string(f) for f in toSend], peerID)

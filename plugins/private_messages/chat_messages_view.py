@@ -2,6 +2,7 @@ from PyQt4.QtGui import QTreeView, QHeaderView, QFrame, QAbstractItemDelegate,\
     QPalette, QColor
 from PyQt4.QtCore import Qt, QSize
 from private_messages.message_item_delegate import MessageItemDelegate
+from lunchinator.log.logging_slot import loggingSlot
 
 class ChatMessagesView(QTreeView):
     def __init__(self, model, parent):
@@ -39,9 +40,11 @@ class ChatMessagesView(QTreeView):
         self._scrollToEnd = True
         self._scrollMax = 0
         
+    @loggingSlot(int)
     def _scrollValueChanged(self, val):
         self._scrollToEnd = val >= self._scrollMax
         
+    @loggingSlot(int, int)
     def _scrollRangeChanged(self, _minV, maxV):
         self._scrollMax = maxV
         if self._scrollToEnd:

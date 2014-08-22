@@ -1,7 +1,8 @@
 from PyQt4.QtGui import QImage, QPixmap, QLabel, QSizePolicy
-from PyQt4.QtCore import Qt, QSize, QThread, pyqtSlot, QTimer, pyqtSignal
+from PyQt4.QtCore import Qt, QSize, QThread, QTimer, pyqtSignal
 from lunchinator.log import getLogger
 from lunchinator.download_thread import DownloadThread
+from lunchinator.log.logging_slot import loggingSlot
 
 class ResizingImageLabel(QLabel):
     def __init__(self,parent,smooth_scaling,sizeHint = None):
@@ -89,7 +90,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
         self.pic_url = None
         self.update()
             
-    @pyqtSlot(QThread, object)
+    @loggingSlot(QThread, object)
     def downloadFinished(self, thread, url):
         self.imageDownloaded.emit(url, thread.getResult())
         qtimage = QImage()
@@ -97,7 +98,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
         self.setRawPixmap(QPixmap.fromImage(qtimage))
         thread.close()
             
-    @pyqtSlot(QThread, object)
+    @loggingSlot(QThread, object)
     def errorDownloading(self, _thread, url):
         getLogger().error("Error downloading webcam image from %s", url)
         
@@ -105,6 +106,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
         self.update()
         return super(ResizingWebImageLabel, self).showEvent(event)
             
+    @loggingSlot()
     def update(self):
         if not self.isVisible():
             return

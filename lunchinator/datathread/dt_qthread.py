@@ -1,9 +1,10 @@
 from lunchinator.datathread.base import DataSenderThreadBase, DataReceiverThreadBase, CanceledException,\
     IncompleteTransfer
-from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot
+from PyQt4.QtCore import QThread, pyqtSignal
 from lunchinator.utilities import formatException
 from lunchinator.log import getLogger
 import socket
+from lunchinator.log.logging_slot import loggingSlot
 
 class DataSenderThread(QThread, DataSenderThreadBase):
     successfullyTransferred = pyqtSignal(QThread) # self
@@ -23,7 +24,7 @@ class DataSenderThread(QThread, DataSenderThreadBase):
         super(DataSenderThread, self)._nextFile(path, fileSize)
         self.nextFile.emit(path, fileSize)
     
-    @pyqtSlot()
+    @loggingSlot()
     def cancelTransfer(self):
         self._cancel()
         
@@ -56,7 +57,7 @@ class DataReceiverThread(QThread, DataReceiverThreadBase):
         QThread.__init__(self, parent)
         DataReceiverThreadBase.__init__(self, senderIP, portOrSocket, targetPath, overwrite, sendDict, category)
     
-    @pyqtSlot()
+    @loggingSlot()
     def cancelTransfer(self):
         self._cancel()
         

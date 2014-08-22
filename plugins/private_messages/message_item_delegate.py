@@ -8,11 +8,12 @@ from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QTextDocume
     QBrush, QColor, QLinearGradient, QPainter,\
     QTextEdit, QFrame, QSizePolicy, QIcon, QFont
 from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
-    QRectF, QSizeF, pyqtSignal, QModelIndex, QMetaType, pyqtSlot
+    QRectF, QSizeF, pyqtSignal, QModelIndex, QMetaType
 from PyQt4.Qt import QWidget
 
 import webbrowser
 from time import localtime
+from lunchinator.log.logging_slot import loggingSlot
 
 class ItemEditor(QTextEdit):
     def __init__(self, text, width, parent):
@@ -97,7 +98,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         
         self._rowHeights = {}
         
-    @pyqtSlot()
+    @loggingSlot()
     def unsetParentCursor(self):
         self.parent().unsetCursor()
         
@@ -107,6 +108,7 @@ class MessageItemDelegate(QStyledItemDelegate):
     def getEditIndex(self):
         return self._editIndex
         
+    @loggingSlot(QWidget, int)
     def editorClosing(self, _editor, _hint):
         self._editor = None
         self.setEditIndex(None)

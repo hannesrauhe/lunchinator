@@ -5,6 +5,7 @@ from privacy_gui.single_category_view import SingleCategoryView
 from lunchinator.privacy.privacy_settings import PrivacySettings
 from lunchinator import get_notification_center, convert_string
 from lunchinator.log import getLogger
+from lunchinator.log.logging_slot import loggingSlot
 from itertools import izip
 
 class MultipleCategoriesView(QWidget):
@@ -130,6 +131,7 @@ class MultipleCategoriesView(QWidget):
         self._currentSingleViews[None] = w
         self._settingsWidget.layout().addWidget(w)
         
+    @loggingSlot(int)
     def _modeChanged(self, newMode, notify=True):
         if newMode == self._mode and newMode == PrivacySettings.POLICY_BY_CATEGORY:
             self._updateCategoryView()

@@ -1,11 +1,13 @@
 from PyQt4.QtGui import QStandardItemModel, QImage, QIcon, QPixmap,\
     QStandardItem
-from PyQt4.QtCore import Qt, QSize, QVariant, pyqtSignal, pyqtSlot
+from PyQt4.QtCore import Qt, QSize, QVariant, pyqtSignal
 from lunchinator.callables import AsyncCall
-from functools import partial
 from lunchinator import convert_string
-import os
 from lunchinator.privacy import PrivacySettings
+from lunchinator.log.logging_slot import loggingSlot
+from lunchinator.log import loggingFunc
+import os
+from functools import partial
 
 class CategoriesModel(QStandardItemModel):
     SORT_ROLE = Qt.UserRole + 1
@@ -27,6 +29,7 @@ class CategoriesModel(QStandardItemModel):
         image = QImage(imagePath)
         return image.scaled(QSize(thumbnailSize, thumbnailSize), Qt.KeepAspectRatio, Qt.SmoothTransformation), adding
         
+    @loggingFunc
     def _setThumbnail(self, item, cat, aTuple):
         image, adding = aTuple
         icon = QIcon(QPixmap.fromImage(image))
@@ -46,7 +49,7 @@ class CategoriesModel(QStandardItemModel):
             return self._categoryIcons[cat]
         return None
         
-    @pyqtSlot(object, object, int)
+    @loggingSlot(object, object, int)
     def addCategory(self, cat, thumbnailPath, thumbnailSize):
         cat = convert_string(cat)
         thumbnailPath = convert_string(thumbnailPath)

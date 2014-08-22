@@ -71,9 +71,8 @@ class Ui_Voter(object):
         self.gridLayout.addWidget(self.comboBox, 0, 1, 1, 1)
 
         self.retranslateUi(Voter)
-        QtCore.QObject.connect(self.pushButton, QtCore.SIGNAL(_fromUtf8("clicked()")), Voter.vote_clicked)
-        QtCore.QObject.connect(self.tableWidget, QtCore.SIGNAL(_fromUtf8("cellClicked(int,int)")), Voter.tablevote_clicked)
-        QtCore.QMetaObject.connectSlotsByName(Voter)
+        self.pushButton.clicked.connect(Voter.vote_clicked)
+        self.tableWidget.cellClicked.connect(Voter.tablevote_clicked)
 
     def retranslateUi(self, Voter):
         Voter.setWindowTitle(_translate("Voter", "Form", None))

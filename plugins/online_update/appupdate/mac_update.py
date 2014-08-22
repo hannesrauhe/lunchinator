@@ -5,6 +5,7 @@ from lunchinator.shell_thread import ShellThread
 from lunchinator.download_thread import DownloadThread
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
     getApplicationBundle
+from lunchinator.log.logging_func import loggingFunc
 import os, tempfile
 from functools import partial
 from xml.etree import ElementTree
@@ -97,9 +98,11 @@ class MacUpdateHandler(GPGUpdateHandler):
                 self._updateCheckButtonText()
                 self._ui.setInteractive(True)
         
+    @loggingFunc
     def _install_gpg_finished(self, phase, dt, _):
         self.install_gpg(phase + 1, dt)
         
+    @loggingFunc
     def _install_gpg_failed(self, phase, dt, _url):
         dt.close()
         if phase == 0:

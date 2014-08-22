@@ -4,7 +4,8 @@ from private_messages.chat_messages_storage import InconsistentIDError,\
 from lunchinator import convert_string, get_server, get_peers,\
     get_notification_center, get_settings
 from lunchinator.log import getLogger
-from PyQt4.QtCore import pyqtSignal, pyqtSlot, QTimer, QObject
+from lunchinator.log.logging_slot import loggingSlot
+from PyQt4.QtCore import pyqtSignal, QTimer, QObject
 import json
 from time import time
         
@@ -59,7 +60,7 @@ class ChatMessagesHandler(QObject):
     def getNextMessageIDForStorage(self):
         return self._nextMessageID
         
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _peerAppended(self, peerID, _infoDict):
         peerID = convert_string(peerID)
         self._resendUndeliveredMessages(curTime=None, partner=peerID, force=True)
@@ -85,7 +86,7 @@ class ChatMessagesHandler(QObject):
                 msgHTML = msgTuple[ChatMessagesStorage.MSG_TEXT_COL]
                 self.sendMessage(otherID, msgHTML, msgID, msgTime)
     
-    @pyqtSlot()
+    @loggingSlot()
     def _cleanup(self):
         curTime = time()
         
@@ -170,7 +171,7 @@ class ChatMessagesHandler(QObject):
      
     def processAck(self, ackPeerID, valueJSON, error=False):
         self._processAck.emit(ackPeerID, valueJSON, error)
-    @pyqtSlot(object, object, bool)
+    @loggingSlot(object, object, bool)
     def _processAckSlot(self, ackPeerID, valueJSON, error):
         ackPeerID = convert_string(ackPeerID)
         valueJSON = convert_string(valueJSON)
@@ -227,7 +228,7 @@ class ChatMessagesHandler(QObject):
         
     def processMessage(self, otherID, msgDictJSON):
         self._processMessage.emit(otherID, msgDictJSON)
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _processMessageSlot(self, otherID, msgDictJSON):
         otherID = convert_string(otherID)
         msgDictJSON = convert_string(msgDictJSON)
@@ -282,7 +283,7 @@ class ChatMessagesHandler(QObject):
         
     def receivedSuccessfully(self, otherID, msgHTML, msgTime, msgDict, recvTime):
         self._receivedSuccessfully.emit(otherID, msgHTML, msgTime, msgDict, recvTime)
-    @pyqtSlot(object, object, float, object, float)
+    @loggingSlot(object, object, float, object, float)
     def _receivedSuccessfullySlot(self, otherID, msgHTML, msgTime, msgDict, recvTime):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
@@ -294,7 +295,7 @@ class ChatMessagesHandler(QObject):
         
     def errorReceivingMessage(self, otherID, msgDict, errorMsg):
         self._errorReceivingMessage.emit(otherID, msgDict, errorMsg)
-    @pyqtSlot(object, object, object)
+    @loggingSlot(object, object, object)
     def _errorReceivingMessageSlot(self, otherID, msgDict, errorMsg):
         otherID = convert_string(otherID)
         errorMsg = convert_string(errorMsg)
@@ -337,7 +338,7 @@ class ChatMessagesHandler(QObject):
     
     ############### PUBLIC SLOTS #################
     
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def sendMessage(self, otherID, msgHTML, msgID=None, msgTime=None, isNoResend=False):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
@@ -371,12 +372,12 @@ class ChatMessagesHandler(QObject):
                                       msgHTML,
                                       isResend)
 
-    @pyqtSlot(object)
+    @loggingSlot(object)
     def sendTyping(self, otherID):
         otherID = convert_string(otherID)
         get_server().call("HELO_PM_TYPING 0", peerIDs=[otherID])
         
-    @pyqtSlot(object)
+    @loggingSlot(object)
     def sendCleared(self, otherID):
         otherID = convert_string(otherID)
         get_server().call("HELO_PM_CLEARED 0", peerIDs=[otherID])

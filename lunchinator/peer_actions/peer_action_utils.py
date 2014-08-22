@@ -1,7 +1,8 @@
 from lunchinator import get_peers, get_peer_actions
-from lunchinator.log import getLogger
-from functools import partial
 from lunchinator.peer_actions.peer_actions_singleton import PeerActions
+from lunchinator.log import getLogger
+from lunchinator.log import loggingFunc
+from functools import partial
 
 def _fillPeerActionsMenu(popupMenu, peerID, filterFunc, parentWidget):
     peerInfo = get_peers().getPeerInfo(pID=peerID)
@@ -40,6 +41,7 @@ def _fillPeerActionsMenu(popupMenu, peerID, filterFunc, parentWidget):
                     popupMenu.addAction(action.getDisplayedName(peerID), partial(action.performAction, peerID, peerInfo, parentWidget))
     return popupMenu
 
+@loggingFunc
 def initializePeerActionsMenu(menu, peerID, filterFunc, parentWidget):
     menu.clear()
     if get_peers() == None:
@@ -50,6 +52,7 @@ def initializePeerActionsMenu(menu, peerID, filterFunc, parentWidget):
         _fillPeerActionsMenu(menu, peerID, filterFunc, parentWidget)
     return menu
 
+@loggingFunc
 def showPeerActionsPopup(peerID, filterFunc, parent):
     from PyQt4.QtGui import QMenu, QCursor
     if get_peers() == None:

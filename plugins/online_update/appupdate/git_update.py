@@ -1,9 +1,9 @@
 from online_update.appupdate.app_update_handler import AppUpdateHandler
+from lunchinator import get_settings, get_server
 from lunchinator.git import GitHandler
 from lunchinator.callables import AsyncCall
 from lunchinator.utilities import getValidQtParent
-from __builtin__ import True
-from lunchinator import get_settings, get_server
+from lunchinator.log.logging_func import loggingFunc
 
 class GitUpdateHandler(AppUpdateHandler):
     """Used if Lunchinator is run directly from git."""
@@ -25,7 +25,8 @@ class GitUpdateHandler(AppUpdateHandler):
         
     def canCheckForUpdate(self):
         return get_server().has_gui()
-        
+    
+    @loggingFunc
     def checkForUpdate(self):
         self._setStatus("Checking for update...")
         AsyncCall(getValidQtParent(),
@@ -33,6 +34,7 @@ class GitUpdateHandler(AppUpdateHandler):
                   self._checkUpdateSuccess,
                   self._checkUpdateError)(returnReason=True)
         
+    @loggingFunc
     def _checkUpdateSuccess(self, tup):
         needsPull, reason = tup
         if needsPull:
@@ -41,6 +43,7 @@ class GitUpdateHandler(AppUpdateHandler):
         else:
             self._setStatus(u"No update: " + reason)
             
+    @loggingFunc
     def _checkUpdateError(self, msg=None):
         st = u"Checking for update failed"
         if msg:

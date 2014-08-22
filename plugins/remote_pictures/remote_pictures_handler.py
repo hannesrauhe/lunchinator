@@ -1,13 +1,14 @@
 from remote_pictures.remote_pictures_storage import RemotePicturesStorage
 from remote_pictures.remote_pictures_category_model import CategoriesModel
 from lunchinator import get_settings, convert_string, get_peers, convert_raw
-from lunchinator.log import getLogger
+from lunchinator.log import getLogger, loggingFunc
+from lunchinator.log.logging_slot import loggingSlot
 from lunchinator.callables import AsyncCall
 from lunchinator.download_thread import DownloadThread
 from lunchinator.privacy import PrivacySettings
 from lunchinator.utilities import displayNotification, sanitizeForFilename
 
-from PyQt4.QtCore import QObject, Qt, pyqtSignal, pyqtSlot
+from PyQt4.QtCore import QObject, Qt, pyqtSignal, QThread
 from PyQt4.QtGui import QImage
 
 import csv, tempfile, os, urllib2, contextlib
@@ -48,7 +49,7 @@ class RemotePicturesHandler(QObject):
     
     def loadPictures(self):
         self._loadPictures.emit()
-    @pyqtSlot()
+    @loggingSlot()
     def _loadPicturesSlot(self):
         categories = self._storage.getCategories(alsoEmpty=False)
         for row in categories:
@@ -115,6 +116,7 @@ class RemotePicturesHandler(QObject):
             getLogger().exception("Error trying to create thumbnail for category")
             return None, inFile, category
             
+    @loggingSlot(object)
     def _addCategoryAndCloseFile(self, aTuple):
         """Called synchronously, with result of _createThumbnail"""
         thumbnailPath, imageFile, category = aTuple
@@ -143,19 +145,19 @@ class RemotePicturesHandler(QObject):
 
     def thumbnailSizeChanged(self, newValue):
         self._thumbnailSizeChanged.emit(newValue)
-    @pyqtSlot(int)
+    @loggingSlot(int)
     def _thumbnailSizeChangedSlot(self, newValue):
         self._thumbnailSize = newValue
         
     def storeLocallyChanged(self, newValue):
         self._storeLocallyChanged.emit(newValue)
-    @pyqtSlot(int)
+    @loggingSlot(int)
     def _storeLocallyChangedSlot(self, newValue):
         self._storeLocally = newValue
 
     def checkCategory(self, cat):
         self._checkCategory.emit(cat)
-    @pyqtSlot(object)
+    @loggingSlot(object)
     def _checkCategorySlot(self, cat):
         cat = convert_string(cat)
         if not self._storage.hasCategory(cat):
@@ -201,10 +203,12 @@ class RemotePicturesHandler(QObject):
                                     self._storage.hasNext(category, picID))
         self._storage.seenPicture(picID)
         
+    @loggingSlot(QThread, object)
     def _errorDownloadingPicture(self, thread, url):
         getLogger().error("Error downloading picture from url %s", convert_string(url))
         thread.deleteLater()
         
+    @loggingFunc
     def _downloadedPicture(self, category, description, sender, thread, url):
         name = "New Remote Picture"
         if category != None:
@@ -241,7 +245,7 @@ class RemotePicturesHandler(QObject):
         
     def processRemotePicture(self, value, ip):
         self._processRemotePicture.emit(value, ip)
-    @pyqtSlot(str, object)
+    @loggingSlot(str, object)
     def _processRemotePictureSlot(self, value, ip):
         value = convert_raw(value)
         ip = convert_string(ip)
@@ -269,7 +273,7 @@ class RemotePicturesHandler(QObject):
 
     ################# PUBLIC SLOTS ##################
         
-    @pyqtSlot(object)   
+    @loggingSlot(object)   
     def openCategory(self, category):
         category = convert_string(category)
         if not self._storage.hasCategory(category):
@@ -278,17 +282,17 @@ class RemotePicturesHandler(QObject):
         
         self._displayImage(category, self._storage.getLatestPicture(category))
     
-    @pyqtSlot(object, int)
+    @loggingSlot(object, int)
     def displayPrev(self, cat, curID):
         cat = convert_string(cat)
         self._displayImage(cat, self._storage.getPreviousPicture(cat, curID))
     
-    @pyqtSlot(object, int)
+    @loggingSlot(object, int)
     def displayNext(self, cat, curID):
         cat = convert_string(cat)
         self._displayImage(cat, self._storage.getNextPicture(cat, curID))    
 
-    @pyqtSlot(object, object, object)
+    @loggingSlot(object, object, object)
     def pictureDownloaded(self, category, url, picData):
         if self._storeLocally:
             ext = os.path.splitext(urlparse(url.encode('utf-8')).path)[1]

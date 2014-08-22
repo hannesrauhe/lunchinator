@@ -7,6 +7,7 @@ from PyQt4.QtCore import QTimer, Qt
 from lunchinator import get_server, get_peers, get_notification_center
 from lunchinator.log import getLogger
 from lunchinator.lunch_button import LunchButton
+from lunchinator.log.logging_slot import loggingSlot
 from time import time, strftime
             
 class SimpleViewWidget(QWidget):   
@@ -59,6 +60,7 @@ class SimpleViewWidget(QWidget):
         
         return self.colorMap[peerID]
             
+    @loggingSlot()
     def updateWidgets(self):
         if not self.isVisible():
             return True        

@@ -2,6 +2,7 @@ from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QComboBox, QWidget, QGridLayout, QLabel, QStackedWidget, QPushButton
 from copy import deepcopy
 from lunchinator import get_plugin_manager
+from lunchinator.log.logging_slot import loggingSlot
 
 class DbConnOptions(QWidget):
     def __init__(self, parent, conn_properties):        
@@ -90,12 +91,14 @@ class DbConnOptions(QWidget):
             self.conn_details.setEnabled(True)
             self.warningLbl.setVisible(False)
         
+    @loggingSlot(int)
     def type_changed(self, index):
         self.conn_details.setCurrentIndex(index)
         self.store_conn_details()
         self.fill_conn_details()
         
-    def name_changed(self, index):
+    @loggingSlot(int)
+    def name_changed(self, _index):
         type_name = self.conn_properties[str(self.nameCombo.currentText())]["plugin_type"]
         type_index = self.typeCombo.findText(type_name)
         if type_index == self.typeCombo.currentIndex():
@@ -104,6 +107,7 @@ class DbConnOptions(QWidget):
         else:
             self.typeCombo.setCurrentIndex(type_index)
             
+    @loggingSlot()
     def new_conn(self):
         new_conn_name = "Conn %d" % len(self.conn_properties)
         self.conn_properties[new_conn_name] = {"plugin_type" : str(self.typeCombo.currentText()) }

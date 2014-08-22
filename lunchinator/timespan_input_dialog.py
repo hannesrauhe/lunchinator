@@ -4,6 +4,7 @@ from PyQt4.QtCore import QTime
 from lunchinator.lunch_settings import lunch_settings
 from lunchinator.utilities import getTimeDifference
 from lunchinator.error_message_dialog import ErrorMessageDialog
+from lunchinator.log.logging_slot import loggingSlot
 
 class TimespanInputDialog(ErrorMessageDialog):
     def __init__(self, parent, title, message, initialBegin, initialEnd, checkBeforeNow=True):
@@ -44,6 +45,7 @@ class TimespanInputDialog(ErrorMessageDialog):
         
         layout.addWidget(inputWidget, 0, Qt.AlignLeft)
         
+    @loggingSlot()
     def _checkOK(self):
         if self.getEndTime() < self.getBeginTime():
             self._error(u"End time is before begin time.")

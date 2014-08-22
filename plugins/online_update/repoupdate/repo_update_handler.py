@@ -1,6 +1,7 @@
-from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator import get_settings, get_notification_center, get_server
+from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator.callables import AsyncCall
+from lunchinator.log.logging_func import loggingFunc
 
 class RepoUpdateHandler(object):
     """Handles plugin repository updates."""
@@ -16,6 +17,7 @@ class RepoUpdateHandler(object):
     def deactivate(self):
         get_notification_center().disconnectOutdatedRepositoriesChanged(self._processOutdated)
     
+    @loggingFunc
     def checkForUpdates(self):
         AsyncCall(getValidQtParent(),
                   get_settings().get_plugin_repositories().checkForUpdates)()
