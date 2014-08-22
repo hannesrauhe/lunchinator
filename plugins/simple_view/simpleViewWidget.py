@@ -3,12 +3,12 @@
 
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, \
                         QLineEdit, QMenu, QInputDialog
-from PyQt4.QtCore import QTimer, Qt
+from PyQt4.QtCore import QTimer, Qt, pyqtSlot
 from lunchinator import get_server, get_peers, get_notification_center
 from lunchinator.log import getLogger
 from lunchinator.lunch_button import LunchButton
 from lunchinator.log.logging_slot import loggingSlot
-from time import time, strftime
+from time import time, strftime, struct_time
             
 class SimpleViewWidget(QWidget):   
     # http://www.colourlovers.com/palette/1930/cheer_up_emo_kid
@@ -60,8 +60,11 @@ class SimpleViewWidget(QWidget):
         
         return self.colorMap[peerID]
             
+    @pyqtSlot(struct_time, object, object)
+    @pyqtSlot(object, object)
+    @pyqtSlot(object)
     @loggingSlot()
-    def updateWidgets(self):
+    def updateWidgets(self, _=None, __=None, ___=None):
         if not self.isVisible():
             return True        
         

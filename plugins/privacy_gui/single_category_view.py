@@ -44,9 +44,11 @@ class PeerModel(TableModelBase):
                     value = QVariant(Qt.PartiallyChecked)
         return TableModelBase.setData(self, index, value, role)
         
+    @loggingSlot(object, object)
     def peerNameAdded(self, pID, _name):
         self.appendContentRow(pID, None)
     
+    @loggingSlot(object, object)
     def peerNameChanged(self, pID, _newName):
         self.externalRowUpdated(pID, None)
         
@@ -214,6 +216,7 @@ class SingleCategoryView(QWidget):
     def getCategory(self):
         return self._category
 
+    @loggingSlot(object, object)
     def _privacySettingsChanged(self, pluginName, actionName):
         if pluginName != self._action.getPluginName() or actionName != self._action.getName():
             return

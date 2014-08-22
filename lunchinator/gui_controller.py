@@ -20,7 +20,7 @@ from PyQt4.QtCore import QThread, pyqtSignal, QObject,\
 from PyQt4 import QtCore
 
 from functools import partial
-import platform, sip, socket, os, subprocess
+import platform, sip, socket, os, subprocess, time
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -103,7 +103,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def _initNotificationCenter(self):
         NotificationCenter.setSingletonInstance(NotificationCenterQt(self))
         
-    def _newMessage(self):
+    @loggingSlot(time.struct_time, object, object)
+    def _newMessage(self, _messageTime, _senderID, _messageText):
         if self.mainWindow.isActiveWindow():
             # dont set highlighted if window is in foreground
             return
@@ -285,18 +286,21 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         self._repoUpdateStatusAction.setVisible(self._repoUpdates > 0)
     
+    @loggingSlot()
     def _appUpdateAvailable(self):
         self._updateAvailable = True
         if self._appUpdateStatusAction != None:
             self._appUpdateStatusAction.setVisible(True)
         self.notifyUpdates()
     
+    @loggingSlot()
     def _outdatedReposChanged(self):
         self._repoUpdates = get_settings().get_plugin_repositories().getNumOutdated()
         if self._repoUpdateStatusAction != None:
             self._updateRepoUpdateStatusAction()
         self.notifyUpdates()
         
+    @loggingSlot()
     def _updatesDisabled(self):
         if self._repoUpdateStatusAction != None:
             self._repoUpdateStatusAction.setVisible(False)
@@ -309,6 +313,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def _hasUpdates(self):
         return self._updateAvailable or self._repoUpdates > 0
         
+    @loggingSlot(object)
     def _restartRequired(self, reason):
         reason = convert_string(reason)
         if self._restartReason == reason:

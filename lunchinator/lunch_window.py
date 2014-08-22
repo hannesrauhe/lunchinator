@@ -89,6 +89,7 @@ class LunchinatorWindow(QMainWindow):
         get_notification_center().disconnectPluginActivated(self._pluginActivated)
         get_notification_center().disconnectPluginWillBeDeactivated(self._pluginWillBeDeactivated)
     
+    @loggingSlot(object, object)
     def _pluginActivated(self, pName, pCat):
         pName = convert_string(pName)
         pCat = convert_string(pCat)
@@ -99,6 +100,7 @@ class LunchinatorWindow(QMainWindow):
             except:
                 getLogger().exception("while including plugins %s", str(sys.exc_info()))
             
+    @loggingSlot(object, object)
     def _pluginWillBeDeactivated(self, pName, pCat):
         pName = convert_string(pName)
         pCat = convert_string(pCat)

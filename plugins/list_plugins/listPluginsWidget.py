@@ -59,7 +59,8 @@ class listPluginsWidget(QWidget):
             item.setHidden(not showAll and p_info["forced"])
             self.ui.pluginView.addItem(item)
             
-    def update_plugin_view(self):
+    @loggingSlot(object, object)
+    def update_plugin_view(self, _pn, _pc):
         self.p_info = self.get_plugin_info()
         r = self.ui.pluginView.currentRow()
         self.ui.pluginView.clear()

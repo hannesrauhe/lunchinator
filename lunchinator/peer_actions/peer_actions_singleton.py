@@ -4,6 +4,7 @@ from lunchinator.logging_mutex import loggingMutex
 from lunchinator.peer_actions.standard_peer_actions import getStandardPeerActions
 from lunchinator.privacy.privacy_settings import PrivacySettings
 from lunchinator.privacy import PrivacyConfirmationDialog
+from lunchinator.log import loggingFunc
 
 class PeerActions(object):
     _instance = None
@@ -54,6 +55,7 @@ class PeerActions(object):
             return removed
         return None
         
+    @loggingFunc
     def _pluginActivated(self, pluginName, category):
         pluginName = convert_string(pluginName)
         category = convert_string(category)
@@ -63,7 +65,8 @@ class PeerActions(object):
                 added = self._addActionsForPlugin(pi)
             if added:
                 get_notification_center().emitPeerActionsAdded(added)
-                
+        
+    @loggingFunc
     def _pluginDeactivated(self, pluginName, category):
         pluginName = convert_string(pluginName)
         category = convert_string(category)

@@ -59,21 +59,19 @@ class ExtendedMembersModel(TableModelBase):
             text = data[headerName]
         item.setData(QVariant(text), Qt.DisplayRole)
         
+    @loggingSlot(object, object)
     def externalRowAppended(self, key, data):
         key = convert_string(key)
         data = self._checkDict(data)
         self.updateModel(key, data)
         
-    def externalRowPrepended(self, key, data):
-        key = convert_string(key)
-        data = self._checkDict(data)
-        self.updateModel(key, data, prepend=True)
-    
+    @loggingSlot(object, object)
     def externalRowUpdated(self, key, data):
         key = convert_string(key)
         data = self._checkDict(data)
         self.updateModel(key, data, update=True)
         
+    @loggingSlot(object)
     def externalRowRemoved(self, key):
         TableModelBase.externalRowRemoved(self, key)
 

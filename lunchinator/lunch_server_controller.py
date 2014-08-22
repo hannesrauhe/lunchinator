@@ -3,7 +3,7 @@ import sys
 from lunchinator import get_server, get_settings, get_notification_center,\
     get_peers, get_plugin_manager, convert_string,\
     get_peer_actions
-from lunchinator.log import getLogger, logsDebug
+from lunchinator.log import getLogger, logsDebug, loggingFunc
 from lunchinator.datathread.dt_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall, getTimeDifference,\
     formatException
@@ -136,6 +136,7 @@ class LunchServerController(object):
     def getMainGUI(self):
         return None
     
+    @loggingFunc
     def _checkSendInfoDict(self, pluginName, category):
         pluginName = convert_string(pluginName)
         category = convert_string(category)

@@ -157,6 +157,7 @@ class MultipleCategoriesView(QWidget):
         if notify:
             PrivacySettings.get().setPolicy(self._action, None, self._mode, applyImmediately=False, categoryPolicy=PrivacySettings.CATEGORY_NEVER)
     
+    @loggingSlot(object, object)
     def _privacySettingsChanged(self, pluginName, actionName):
         if pluginName != self._action.getPluginName() or actionName != self._action.getName():
             return

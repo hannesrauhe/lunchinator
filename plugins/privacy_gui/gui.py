@@ -66,9 +66,11 @@ class PrivacyGUI(QWidget):
         get_notification_center().disconnectPeerActionsRemoved(self._peerActionsRemoved)
         self._clearSettingsWidget()
         
+    @loggingSlot(object)
     def _peerActionsAdded(self, added):
         self._actionModel.addPeerActions(added)
     
+    @loggingSlot(object)
     def _peerActionsRemoved(self, removed):
         self._actionModel.removePeerActions(removed)
         

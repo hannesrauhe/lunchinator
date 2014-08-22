@@ -210,16 +210,19 @@ class ChatWidget(QWidget):
     def _updateOwnName(self):
         self._ownNameLabel.setText(self._ownName)
         
+    @loggingSlot(object, object)
     def _peerUpdated(self, peerID, peerInfo):
         peerID = convert_string(peerID)
         if peerID == self._otherID:
             self._setOffline(u"PM_v" not in peerInfo)
-    
+
+    @loggingSlot(object)    
     def _peerRemoved(self, peerID):
         peerID = convert_string(peerID)
         if peerID == self._otherID:
             self._setOffline(True)
             
+    @loggingSlot(object, object)
     def _avatarChanged(self, peerID, newFile):
         peerID = convert_string(peerID)
         newFile = convert_string(newFile)
@@ -229,6 +232,7 @@ class ChatWidget(QWidget):
         elif peerID == get_settings().get_ID():
             self.setOwnIconPath(get_peers().getPeerAvatarFile(pID=peerID))
             
+    @loggingSlot(object, object, object)
     def _displayedPeerNameChanged(self, pID, newName, _infoDict):
         pID = convert_string(pID)
         newName = convert_string(newName)

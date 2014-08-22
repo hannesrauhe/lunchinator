@@ -44,6 +44,7 @@ class RepoUpdateHandler(object):
     def areUpdatesAvailable(self):
         return get_settings().get_plugin_repositories().areUpdatesAvailable()
     
+    @loggingFunc
     def _processOutdated(self):
         nOutdated = get_settings().get_plugin_repositories().getNumOutdated()
         

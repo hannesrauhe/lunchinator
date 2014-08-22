@@ -2,7 +2,7 @@ import cmd, threading, time, inspect
 from functools import partial
 from lunchinator import get_server, utilities,\
     get_notification_center, get_settings, get_plugin_manager
-from lunchinator.log import getLogger
+from lunchinator.log import getLogger, loggingFunc
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.cli.cli_message import CLIMessageHandling
 from lunchinator.cli.cli_option import CLIOptionHandling
@@ -133,6 +133,7 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
             except KeyboardInterrupt:
                 print "^C"
     
+    @loggingFunc
     def notifyUpdates(self):
         print "There are updates available for you. Please exit to fetch the updates."
         self.prompt = "(update available)> "

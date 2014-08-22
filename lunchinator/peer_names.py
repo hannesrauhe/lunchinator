@@ -1,6 +1,6 @@
 from lunchinator import get_notification_center, convert_string,\
     get_db_connection
-from lunchinator.log import getLogger
+from lunchinator.log import getLogger, loggingFunc
         
 class PeerNames(object):
     _DB_VERSION_INITIAL = 0
@@ -36,6 +36,7 @@ class PeerNames(object):
         get_notification_center().disconnectPeerAppended(self._addPeerName)
         get_notification_center().disconnectPeerUpdated(self._addPeerName)
         
+    @loggingFunc
     def _addPeerName(self, peerID, peerInfo):
         peerID = convert_string(peerID)
         with self._lock:

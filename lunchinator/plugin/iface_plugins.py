@@ -1,7 +1,7 @@
 from yapsy.IPlugin import IPlugin
 from lunchinator import convert_string, \
     get_notification_center, get_db_connection
-from lunchinator.log import getLogger
+from lunchinator.log import getLogger, loggingFunc
 import types, sys, logging, threading
 from copy import deepcopy
 
@@ -451,6 +451,7 @@ class iface_plugin(IPlugin):
             raise Exception("Adding supported DBMS only allowed via class inherited for db_for_plugin_iface")
         self._supported_dbms[db_type] = db_iface
         
+    @loggingFunc
     def connect_to_db(self, changedDBConn = None):
         """
         connects to a database or changes the database connection type.

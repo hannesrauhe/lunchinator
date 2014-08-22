@@ -1,7 +1,7 @@
 from lunchinator.plugin import iface_called_plugin, db_for_plugin_iface
 from lunchinator import get_server, get_settings, get_db_connection,\
     get_notification_center, get_peers
-from lunchinator.log import getLogger
+from lunchinator.log import getLogger, loggingFunc
 
 class statistics(iface_called_plugin):
     def __init__(self):
@@ -47,6 +47,7 @@ class statistics(iface_called_plugin):
         else:
             getLogger().warning("Statistics: DB not ready -- cannot process event")
             
+    @loggingFunc
     def peer_update(self, _peerID, peerInfo):        
         if self.is_db_ready():
             self.specialized_db_conn().insert_members("ip", peerInfo["name"], \

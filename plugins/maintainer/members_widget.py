@@ -459,6 +459,7 @@ class MembersWidget(QWidget):
             get_server().call(convert_string(lineEdit.text()),set([selectedMember]))
             lineEdit.clear()
         
+    @loggingSlot(object, object)
     def updateMemberInformation(self, peerID=None, peerInfo=None):
         if peerID != None and peerID != self.get_selected_log_member():
             # only update if selected member updated

@@ -101,13 +101,15 @@ class LunchinatorSettingsDialog(QDialog):
         get_notification_center().disconnectPluginActivated(self._pluginActivated)
         get_notification_center().disconnectPluginWillBeDeactivated(self._pluginWillBeDeactivated)
         
+    @loggingSlot(object, object)
     def _pluginActivated(self, pName, pCat):
         pName = convert_string(pName)
         pCat = convert_string(pCat)
         pluginInfo = get_plugin_manager().getPluginByName(pName, pCat)
         if pluginInfo is not None:
             self.addPlugin(pluginInfo.plugin_object, pName, pCat)
-            
+           
+    @loggingSlot(object, object) 
     def _pluginWillBeDeactivated(self, pName, pCat):
         pName = convert_string(pName)
         pCat = convert_string(pCat)
