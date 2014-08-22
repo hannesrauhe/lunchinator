@@ -593,11 +593,11 @@ class lunch_server(object):
             
             fileToSend = StringIO()
             with contextlib.closing(tarfile.open(mode='w:gz', fileobj=fileToSend)) as tarWriter:
-                if os.path.exists(get_settings().get_getLogger().file()):
-                    tarWriter.add(get_settings().get_getLogger().file(), arcname="0.log")
+                if os.path.exists(get_settings().get_log_file()):
+                    tarWriter.add(get_settings().get_log_file(), arcname="0.log")
                 logIndex = 1
-                while os.path.exists("%s.%d" % (get_settings().get_getLogger().file(), logIndex)):
-                    tarWriter.add("%s.%d" % (get_settings().get_getLogger().file(), logIndex), arcname="%d.log" % logIndex)
+                while os.path.exists("%s.%d" % (get_settings().get_log_file(), logIndex)):
+                    tarWriter.add("%s.%d" % (get_settings().get_log_file(), logIndex), arcname="%d.log" % logIndex)
                     logIndex = logIndex + 1
             
             fileSize = fileToSend.tell()
