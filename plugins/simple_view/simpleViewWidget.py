@@ -4,9 +4,10 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, \
                         QLineEdit, QMenu, QInputDialog
 from PyQt4.QtCore import QTimer, Qt
-from lunchinator import get_server, get_peers, log_info, get_notification_center
-from time import localtime, time, strftime, mktime
+from lunchinator import get_server, get_peers, get_notification_center
+from lunchinator.log import getLogger
 from lunchinator.lunch_button import LunchButton
+from time import time, strftime
             
 class SimpleViewWidget(QWidget):   
     # http://www.colourlovers.com/palette/1930/cheer_up_emo_kid
@@ -113,7 +114,7 @@ class SimpleViewWidget(QWidget):
             get_notification_center().disconnectMemberRemoved(self.updateWidgets)
             get_notification_center().disconnectMessagePrepended(self.updateWidgets) 
         except:
-            log_info("Simple View: was not able to disconnect timer")
+            getLogger().info("Simple View: was not able to disconnect timer")
         
 if __name__ == '__main__':        
     from lunchinator.plugin import iface_gui_plugin

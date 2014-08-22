@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QThread, pyqtSignal
-from lunchinator import log_exception
+from lunchinator.log import getLogger
 from cStringIO import StringIO, OutputType
 import urllib2, contextlib
 from urllib2 import HTTPError
@@ -77,7 +77,8 @@ class DownloadThread(QThread):
                 break
             except HTTPError as e:
                 # don't print trace on HTTP error
-                log_exception("Error while downloading %s (%s)" % (self.url, e))
+                getLogger().exception("Error while downloading %s (%s)", self.url, e)
+                #               + ).exception + "Error while downloading %s (%s)" + self.url, e)
                 if nTries >= self.NUMBER_OF_TRIES:
                     self.error.emit(self, self.url)
                     
@@ -85,7 +86,7 @@ class DownloadThread(QThread):
                     # no need to retry
                     break
             except:
-                log_exception("Error while downloading %s" % self.url)
+                getLogger().exception("Error while downloading %s", self.url)
                 self.error.emit(self, self.url)
                 break
 

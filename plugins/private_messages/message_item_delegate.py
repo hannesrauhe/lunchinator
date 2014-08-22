@@ -1,14 +1,17 @@
+from private_messages.chat_messages_model import ChatMessagesModel
+from lunchinator import convert_string
+from lunchinator.log import getLogger
+from lunchinator.utilities import formatTime
+
 from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QTextDocument,\
     QStyle, QAbstractTextDocumentLayout, QPalette,\
     QBrush, QColor, QLinearGradient, QPainter,\
     QTextEdit, QFrame, QSizePolicy, QIcon, QFont
 from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
     QRectF, QSizeF, pyqtSignal, QModelIndex, QMetaType, pyqtSlot
-import webbrowser
 from PyQt4.Qt import QWidget
-from private_messages.chat_messages_model import ChatMessagesModel
-from lunchinator import log_warning, convert_string
-from lunchinator.utilities import formatTime
+
+import webbrowser
 from time import localtime
 
 class ItemEditor(QTextEdit):
@@ -270,7 +273,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         
         if modelIndex.row() != self.mouseOverDocumentRow:
             # TODO reset document
-            log_warning("shouldStartEditAt(): wrong mouse over document")
+            getLogger().warning("shouldStartEditAt(): wrong mouse over document")
             return False
         messageRect = self._getMessageRect(self.mouseOverOption, self.mouseOverDocument, modelIndex)
         anchorPos = QPointF(eventPos) - QPointF(messageRect.topLeft())

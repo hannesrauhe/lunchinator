@@ -9,7 +9,8 @@ from functools import partial
 from cStringIO import StringIO
 import contextlib
 import shutil
-from lunchinator import log_error, log_info, get_settings
+from lunchinator import get_settings
+from lunchinator.log import getLogger
 from lunchinator.utilities import formatException
 
 def printProgress(prog, maxProg):
@@ -36,7 +37,7 @@ def testSend(openPort, filesOrData, sendDict):
         dt.performSend()
     except:
         errorSend = True
-        log_error(u"Error sending:", formatException())
+        getLogger().error(u"Error sending: %s", formatException())
     
 def testReceive(openPort, targetPath, totalSize, sendDict):
     global errorReceive
@@ -48,7 +49,7 @@ def testReceive(openPort, targetPath, totalSize, sendDict):
         dt.performReceive()
     except:
         errorReceive = True
-        log_error(u"Error receiving:", formatException())
+        getLogger().error(u"Error receiving: %s", formatException())
 
 def makeData(size):
     global chars, tbl
@@ -80,7 +81,7 @@ def sendAndReceive(filesOrData, totalSize=None, targetPath=None, sendDict=None):
     endTime = time.time()
     
     if not errorSend and not errorReceive:
-        log_info("  transfer finished, runtime: %.2fs" % (endTime - startTime))
+        getLogger().info("  transfer finished, runtime: %.2fs", (endTime - startTime))
     
 def compareFiles(f1, f2):
     chunk1 = f1.read(1024 * 1024)
@@ -125,21 +126,21 @@ def testResult(filesOrData, targetDir, targetName, useTarstream):
             targetPath = os.path.join(targetDir, targetName)
             with contextlib.closing(open(targetPath, 'rb')) as f2:
                 if not compareFiles(f1, f2):
-                    log_error("ERROR: target file", targetPath, "does not match source data")
+                    getLogger().error("ERROR: target file %s does not match source data", targetPath)
                     return False
     else:
         for path1 in filesOrData:
             for source, target in iterCorrespondingFiles(path1, targetDir, useTarstream, targetName):
                 if not os.path.exists(target):
-                    log_error("ERROR: target file", target, "does not exist")
+                    getLogger().error("ERROR: target file %s does not exist", target)
                     return False
                 if not os.path.isfile(target):
-                    log_error("ERROR: target file", target, "is not a file")
+                    getLogger().error("ERROR: target file %s is not a file", target)
                     return False
                 with contextlib.closing(open(source, 'rb')) as f1:
                     with contextlib.closing(open(target, 'rb')) as f2:
                         if not compareFiles(f1, f2):
-                            log_error("ERROR: target file", target, "does not match source file", source)
+                            getLogger().error("ERROR: target file %s does not match source file %s", target, source)
                             return False
                 
     return True
@@ -149,24 +150,24 @@ def testTransfer(filesOrData, targetDir, targetName=None):
     errors = False
     
     if type(filesOrData) is str or (numFiles is 1 and not containsDir):
-        log_info("- Test single file transfer")
+        getLogger().info("- Test single file transfer")
         sendAndReceive(filesOrData, totalSize, os.path.join(targetDir, targetName))
         if not testResult(filesOrData, targetDir, targetName, useTarstream=False):
             errors = True
     
-    log_info("- Test uncompressed auto transfer")
+    getLogger().info("- Test uncompressed auto transfer")
     sendDict = DataThreadBase.prepareSending(filesOrData, targetName)
     sendAndReceive(filesOrData, totalSize, targetDir, sendDict)
     if not testResult(filesOrData, targetDir, targetName, useTarstream=True):
         errors = True
     
-    log_info("- Test bzip2 compressed auto transfer")
+    getLogger().info("- Test bzip2 compressed auto transfer")
     sendDict = DataThreadBase.prepareSending(filesOrData, targetName, "bz2")
     sendAndReceive(filesOrData, totalSize, targetDir, sendDict)
     if not testResult(filesOrData, targetDir, targetName, useTarstream=True):
         errors = True
     
-    log_info("- Test gzip compressed auto transfer")
+    getLogger().info("- Test gzip compressed auto transfer")
     sendDict = DataThreadBase.prepareSending(filesOrData, targetName, "gz")
     sendAndReceive(filesOrData, totalSize, targetDir, sendDict)
     if not testResult(filesOrData, targetDir, targetName, useTarstream=True):
@@ -184,26 +185,26 @@ if __name__ == '__main__':
     
     errors = False
     try:
-        log_info("Test raw data transfer")
+        getLogger().info("Test raw data transfer")
         inData = makeData(FILE_SIZE)
         if not testTransfer(inData, targetDir, "rawdata"):
             errors = True
          
-        log_info()
-        log_info("Test file transfer (1 file)")
+        getLogger().info()
+        getLogger().info("Test file transfer (1 file)")
         inPath = makeFile(sourceDir, FILE_SIZE)
         if not testTransfer([inPath], targetDir, "rawdata.dat"):
             errors = True
          
-        log_info()
-        log_info("Test file transfer (2 files)")
+        getLogger().info()
+        getLogger().info("Test file transfer (2 files)")
         inPath1 = makeFile(sourceDir, FILE_SIZE)
         inPath2 = makeFile(sourceDir, FILE_SIZE)
         if not testTransfer([inPath1, inPath2], targetDir):
             errors = True
             
-        log_info()
-        log_info("Test directory transfer")
+        getLogger().info()
+        getLogger().info("Test directory transfer")
         baseDir = mkdtemp(dir=sourceDir)
         subDir = mkdtemp(dir=baseDir)
         f1 = makeFile(baseDir, 1024)
@@ -216,49 +217,49 @@ if __name__ == '__main__':
         if not testTransfer([baseDir], targetDir):
             errors = True
             
-        log_info()
-        log_info("Trying to send more files than announced - should fail")
+        getLogger().info()
+        getLogger().info("Trying to send more files than announced - should fail")
         inPath1 = makeFile(sourceDir, FILE_SIZE)
         inPath2 = makeFile(sourceDir, FILE_SIZE)
         inPath3 = makeFile(sourceDir, FILE_SIZE)
         sendDict = DataThreadBase.prepareSending([inPath1, inPath2])
         sendAndReceive([inPath1, inPath2, inPath3], targetPath=targetDir, sendDict=sendDict)
         if not errorReceive:
-            log_error("ERROR: This test should have failed.")
+            getLogger().error("ERROR: This test should have failed.")
             errors = True
         if os.path.exists(os.path.join(targetDir, os.path.basename(inPath3))):
-            log_error("ERROR: file", os.path.join(targetDir, os.path.basename(inPath2)), "should not have been created")
+            getLogger().error("ERROR: file %s hould not have been created", os.path.join(targetDir, os.path.basename(inPath2)))
             errors = True
             
-        log_info()
-        log_info("Trying to send bigger file than announced (single file) - should fail")
+        getLogger().info()
+        getLogger().info("Trying to send bigger file than announced (single file) - should fail")
         inPath1 = makeFile(sourceDir, FILE_SIZE)
         sendDict = DataThreadBase.prepareSending([inPath1])
         sendDict[u"size"] = int(0.5 * FILE_SIZE)
         sendAndReceive([inPath1], targetPath=targetDir, sendDict=sendDict)
         if not errorReceive  and not errorSend:
-            log_error("ERROR: This test should have failed.")
+            getLogger().error("ERROR: This test should have failed.")
             errors = True
         elif os.path.getsize(os.path.join(targetDir, os.path.basename(inPath1))) > sendDict[u"size"]:
-            log_error("ERROR: file", os.path.join(targetDir, os.path.basename(inPath1)), "should not be bigger than", sendDict[u"size"])
+            getLogger().error("ERROR: file %s should not be bigger than %d", os.path.join(targetDir, os.path.basename(inPath1)), sendDict[u"size"])
             errors = True
           
-        log_info()
-        log_info("Trying to send bigger file than announced (multiple files) - should fail")
+        getLogger().info()
+        getLogger().info("Trying to send bigger file than announced (multiple files) - should fail")
         inPath1 = makeFile(sourceDir, FILE_SIZE)
         inPath2 = makeFile(sourceDir, FILE_SIZE)
         sendDict = DataThreadBase.prepareSending([inPath1, inPath2])
         sendDict[u"size"] = 1.5 * FILE_SIZE
         sendAndReceive([inPath1, inPath2], targetPath=targetDir, sendDict=sendDict)
         if not errorReceive:
-            log_error("ERROR: This test should have failed.")
+            getLogger().error("ERROR: This test should have failed.")
             errors = True
         elif os.path.exists(os.path.join(targetDir, os.path.basename(inPath2))):
-            log_error("ERROR: file", os.path.join(targetDir, os.path.basename(inPath2)), "should not have been created")
+            getLogger().error("ERROR: file %s should not have been created", os.path.join(targetDir, os.path.basename(inPath2)))
             errors = True
         
     finally:
-        log_info("removing tempfiles")  
+        getLogger().info("removing tempfiles")  
         shutil.rmtree(sourceDir, ignore_errors=True)
         shutil.rmtree(targetDir, ignore_errors=True)
 

@@ -1,11 +1,11 @@
 from PyQt4.QtGui import QWidget, QTreeWidget, QVBoxLayout, QLabel, QProgressBar,\
     QTreeWidgetItem, QFrame, QHBoxLayout, QPushButton, QSizePolicy,\
     QPixmap, QFileIconProvider, QToolButton, QMenu
-from PyQt4.Qt import Qt
+from PyQt4.QtCore import pyqtSlot, QVariant, QFileInfo, pyqtSignal, QThread, Qt
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, revealFile,\
     openFile, formatSize
-from lunchinator import get_settings, get_peers, log_warning, log_error
-from PyQt4.QtCore import pyqtSlot, QVariant, QFileInfo, pyqtSignal, QThread
+from lunchinator import get_settings, get_peers
+from lunchinator.log import getLogger
 import os
 from functools import partial
 from tempfile import NamedTemporaryFile
@@ -401,7 +401,7 @@ class FileTransferWidget(QWidget):
         menu.clear()
         
         if get_peers() is None:
-            log_warning("no lunch_peers instance available, cannot show peer actions")
+            getLogger().warning("no lunch_peers instance available, cannot show peer actions")
             return
         
         with get_peers():
@@ -413,7 +413,7 @@ class FileTransferWidget(QWidget):
     def _sendFile(self, peerID):
         peerInfo = get_peers().getPeerInfo(pID=peerID)
         if peerInfo is None:
-            log_error("cannot send file to offline peer")
+            getLogger().error("cannot send file to offline peer")
             return
         self._delegate.getSendFileAction().performAction(peerID, peerInfo, self)
         

@@ -1,5 +1,6 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import get_server, log_exception
+from lunchinator import get_server
+from lunchinator.log import getLogger
 
 class rot13(iface_gui_plugin):
     def __init__(self):
@@ -38,7 +39,7 @@ class rot13(iface_gui_plugin):
                 aString = aString.encode("utf-8")
                 print string.translate(aString, rot13)
             except:
-                log_exception("Error encrypting string:", aString)
+                getLogger().exception("Error encrypting string: %s", aString)
         
     def add_menu(self,menu):
         pass

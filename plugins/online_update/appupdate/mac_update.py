@@ -1,13 +1,13 @@
 from online_update.appupdate.gpg_update import GPGUpdateHandler
-import os
-from functools import partial
-from xml.etree import ElementTree
+from lunchinator import get_settings, get_server
+from lunchinator.log import getLogger
+from lunchinator.shell_thread import ShellThread
+from lunchinator.download_thread import DownloadThread
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
     getApplicationBundle
-from lunchinator.download_thread import DownloadThread
-import tempfile
-from lunchinator import log_debug, get_settings, log_error, get_server
-from lunchinator.shell_thread import ShellThread
+import os, tempfile
+from functools import partial
+from xml.etree import ElementTree
 
 class MacUpdateHandler(GPGUpdateHandler):
     @classmethod
@@ -59,7 +59,7 @@ class MacUpdateHandler(GPGUpdateHandler):
                 dmgURL = e.iter("channel").next().iter("item").next().iter("enclosure").next().attrib["url"]
                 
                 tmpFile = tempfile.NamedTemporaryFile(suffix=".dmg", prefix="macgpg", delete=False)
-                log_debug("Donloading", dmgURL, "to", tmpFile.name)
+                getLogger().debug("Downloading %s to %s", dmgURL, tmpFile.name)
                 self._setStatus("Downloading MacGPG...", progress=True)
                 self._ui.setProgress(0)
                 
@@ -92,7 +92,7 @@ class MacUpdateHandler(GPGUpdateHandler):
                 else:
                     self._setStatus("Error installing MacGPG.", err=True)
                     if dt.pErr:
-                        log_error("Console output:", dt.pErr.strip())
+                        getLogger().error("Console output: %s", dt.pErr.strip())
                 
                 self._updateCheckButtonText()
                 self._ui.setInteractive(True)

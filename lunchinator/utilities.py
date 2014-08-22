@@ -1,8 +1,8 @@
 import subprocess, sys, os, contextlib, json, shutil, socket, time
 from datetime import datetime, timedelta 
 from time import mktime, strftime
-from lunchinator import log_exception, log_warning, log_debug, \
-    get_settings, log_error
+from lunchinator import get_settings
+from lunchinator.log import getLogger
 import locale
 import platform
 from tempfile import NamedTemporaryFile
@@ -66,24 +66,24 @@ def displayNotification(name, msg, icon=None):
             fh = open(os.path.devnull,"w")
             exe = getBinary("terminal-notifier", "bin")
             if not exe:
-                log_warning("terminal-notifier not found.")
+                getLogger().warning("terminal-notifier not found.")
                 return
             
             call = [exe, "-title", "Lunchinator: %s" % name, "-message", msg]
             if False and checkBundleIdentifier(_LUNCHINATOR_BUNDLE_IDENTIFIER): # no sender until code signing is fixed (probably never)
                 call.extend(["-sender", _LUNCHINATOR_BUNDLE_IDENTIFIER])
                 
-            log_debug(call)
+            getLogger().debug(call)
             try:
                 subprocess.call(call, stdout=fh, stderr=fh)
             except:
-                log_exception("Error calling", call)
+                getLogger().exception("Error calling %s", call)
         elif myPlatform == PLATFORM_WINDOWS:
             from lunchinator import get_server
             if hasattr(get_server().controller, "statusicon"):
                 get_server().controller.statusicon.showMessage(name,msg)
     except:
-        log_exception("error displaying notification")
+        getLogger().exception("error displaying notification")
         
 qtParent = None 
 
@@ -115,7 +115,7 @@ def _processCallOnPlugin(pluginObject, pluginName, ip, call, newPeer, fromQueue,
     # called also contains gui plugins
     if not (isinstance(pluginObject, iface_called_plugin) or \
             isinstance(pluginObject, iface_gui_plugin)):
-        log_warning("Plugin '%s' is not a called/gui plugin" % pluginName)
+        getLogger().warning("Plugin '%s' is not a called/gui plugin", pluginName)
         return
     if pluginObject.is_activated:
         try:
@@ -123,7 +123,7 @@ def _processCallOnPlugin(pluginObject, pluginName, ip, call, newPeer, fromQueue,
                (not pluginObject.processes_events_immediately() and not newPeer):
                 call(pluginObject, ip, member_info)
         except:
-            log_exception(u"plugin error in %s while processing event" % pluginName)
+            getLogger().exception(u"plugin error in %s while processing event" % pluginName)
     
 def processPluginCall(ip, call, newPeer, fromQueue, action=None):
     if not get_settings().get_plugins_enabled():
@@ -191,7 +191,7 @@ def getGPG(secret=False):
     from gnupg import GPG
     gbinary = getBinary("gpg", "bin")
     if not gbinary:
-        log_error("GPG not found")
+        getLogger().error("GPG not found")
         return None, None
     
     ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
@@ -215,7 +215,7 @@ def getGPG(secret=False):
         if not gpg.encoding:
             gpg.encoding = 'utf-8'
     except Exception, e:
-        log_exception("GPG not working: "+str(e))
+        getLogger().exception("GPG not working: %s", str(e))
         return None, None
     
     # use key from keyring as default
@@ -230,7 +230,7 @@ def getGPG(secret=False):
             path = get_settings().get_resource("lunchinator_pub_0x17F57DC2.asc")
                 
         if not os.path.isfile(path):
-            log_error("Key file not found:", path)
+            getLogger().error("Key file not found: %s", path)
             return None, None
         with contextlib.closing(open(path,"r")) as keyf:
             gpg.import_keys(keyf.read())
@@ -243,7 +243,7 @@ def getGPG(secret=False):
    therefore a list of possible peers is needed'''
 def determineOwnIP(peers):
     if 0 == len(peers):
-        log_debug("Cannot determine IP if there is no peer given")
+        getLogger().debug("Cannot determine IP if there is no peer given")
         return None
     
     own_ip = None
@@ -255,10 +255,10 @@ def determineOwnIP(peers):
             own_ip = unicode(s.getsockname()[0])
             break
         except:
-            log_debug("While getting own IP, problem to connect to", m)
+            getLogger().debug("While getting own IP, problem to connect to %s", m)
             continue
     if own_ip:
-        log_debug("Found my IP:", own_ip)
+        getLogger().debug("Found my IP: %s", own_ip)
     s.close()
     return own_ip
 
@@ -275,7 +275,7 @@ def getTimeDelta(end):
         try:
             end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
         except ValueError:
-            log_debug("Unsupported time format:", end)
+            getLogger().debug("Unsupported time format: %s", end)
             return None
         
         # ignore begin
@@ -286,7 +286,7 @@ def getTimeDelta(end):
         return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
     
     except:
-        log_exception("don't know how to handle time span")
+        getLogger().exception("don't know how to handle time span")
         return None
     
 
@@ -305,14 +305,14 @@ def getTimeDifference(begin, end):
         try:
             end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
         except ValueError:
-            log_debug("Unsupported time format:", end)
+            getLogger().debug("Unsupported time format: %s", end)
             return None
         
         try:
             begin = datetime.strptime(begin, lunch_settings.LUNCH_TIME_FORMAT)
         except ValueError:
             # this is called repeatedly, so only debug
-            log_debug("Unsupported time format:", begin)
+            getLogger().debug("Unsupported time format: %s", begin)
             return None
         
         now = datetime.now()
@@ -332,7 +332,7 @@ def getTimeDifference(begin, end):
             # now is after end
             return 0
     except:
-        log_exception("don't know how to handle time span")
+        getLogger().exception("don't know how to handle time span")
         return None
 
 def msecUntilNextMinute():
@@ -356,7 +356,7 @@ def getApplicationBundle():
     return path
 
 def spawnProcess(args):
-    log_debug("spawning process: %s"%str(args))
+    getLogger().debug("spawning process: %s", args)
     if getPlatform() in (PLATFORM_LINUX, PLATFORM_MAC):
         #somehow fork() is not safe on Mac OS. I guess this will do fine on Linux, too. 
         fh = open(os.path.devnull, "w")
@@ -380,7 +380,7 @@ def _getStartCommand():
     elif getPlatform() == PLATFORM_WINDOWS:
         return [_getPythonInterpreter(), os.path.join(get_settings().get_main_package_path(), "start_lunchinator.py")]
     else:
-        log_error("Restart not yet implemented for your OS.")
+        getLogger().error("Restart not yet implemented for your OS.")
             
     return None
     
@@ -402,7 +402,7 @@ def stopWithCommands(args):
     try:        
         spawnProcess(args)
     except:
-        log_exception("Error in stopWithCommands")
+        getLogger().exception("Error in stopWithCommands")
         return
     if get_server().getController() != None:
         get_server().getController().shutdown()
@@ -427,7 +427,7 @@ def restartWithCommands(commands):
         
         spawnProcess(args)
     except:
-        log_exception("Error in restartWithCommands")
+        getLogger().exception("Error in restartWithCommands")
         return
     if get_server().getController() != None:
         get_server().getController().shutdown()
@@ -441,7 +441,7 @@ def restart():
     if getPlatform()==PLATFORM_WINDOWS:  
         frozen = getattr(sys, 'frozen', '')
         if frozen:
-            log_debug("Trying to spawn %s"%sys.executable)
+            getLogger().debug("Trying to spawn %s", sys.executable)
             from lunchinator import get_server
             get_server().stop_server()
             subprocess.Popen(sys.executable, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
@@ -449,7 +449,7 @@ def restart():
     restartWithCommands(None)
     
 def installPipDependencyWindows(package, notifyRestart=True):
-    log_debug("Trying to install %s"%package)
+    getLogger().debug("Trying to install %s", package)
     
     import win32api, win32con, win32event, win32process, types
     from win32com.shell.shell import ShellExecuteEx
@@ -473,14 +473,14 @@ def installPipDependencyWindows(package, notifyRestart=True):
     procHandle = procInfo['hProcess']    
     _obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
     rc = win32process.GetExitCodeProcess(procHandle)
-    log_debug("Process handle %s returned code %s" % (procHandle, rc))
+    getLogger().debug("Process handle %s returned code %s", procHandle, rc)
 
     if notifyRestart:
         try:
             from lunchinator import get_notification_center
             get_notification_center().emitRestartRequired("Dependecies were installed, please restart")
         except:
-            log_error("Restart Notification failed")
+            getLogger().error("Restart Notification failed")
     
 
 def formatTime(mTime):
@@ -496,7 +496,7 @@ def formatTime(mTime):
 
 def revealFile(path):
     if not os.path.exists(path):
-        log_error("Trying to reveal file", path, "which does not exist.")
+        getLogger().error("Trying to reveal file %s which does not exist.", path)
         return
     try:
         if getPlatform() == PLATFORM_MAC:
@@ -508,11 +508,11 @@ def revealFile(path):
         elif getPlatform() == PLATFORM_LINUX:
             subprocess.call(['xdg-open', os.path.dirname(path)])
     except:
-        log_exception("Could not reveal file")
+        getLogger().exception("Could not reveal file")
         
 def openFile(path):
     if not os.path.exists(path):
-        log_error("Trying to open file", path, "which does not exist.")
+        getLogger().error("Trying to open file %s which does not exist.", path)
         return
     try:
         if getPlatform() == PLATFORM_MAC:
@@ -524,7 +524,7 @@ def openFile(path):
         elif getPlatform() == PLATFORM_LINUX:
             subprocess.call(['xdg-open', path])
     except:
-        log_exception("Could not open file")
+        getLogger().exception("Could not open file")
     
 def formatException():
     exc_info = sys.exc_info()

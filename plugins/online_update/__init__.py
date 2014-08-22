@@ -1,17 +1,3 @@
-from lunchinator import get_server, log_warning, get_notification_center
-from lunchinator.lunch_settings import lunch_settings
-import urllib2, sys, os, contextlib, subprocess, json
-import tempfile
-from functools import partial
-from xml.etree import ElementTree
-from lunchinator.plugin import iface_general_plugin
-from lunchinator import log_exception, log_error, log_info, get_settings, log_debug
-from lunchinator.utilities import getValidQtParent, displayNotification, \
-    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, PLATFORM_LINUX, which,\
-    getApplicationBundle, restartWithCommands
-from lunchinator.download_thread import DownloadThread
-from lunchinator.shell_thread import ShellThread
-from lunchinator.git import GitHandler
 from online_update.online_update_gui import OnlineUpdateGUI
 from online_update.appupdate.git_update import GitUpdateHandler
 from online_update.appupdate.mac_update import MacUpdateHandler
@@ -19,7 +5,21 @@ from online_update.appupdate.external_update import ExternalUpdateHandler
 from online_update.appupdate.win_update import WinUpdateHandler
 from online_update.appupdate.app_update_handler import AppUpdateHandler
 from online_update.repoupdate.repo_update_handler import RepoUpdateHandler
+
+from lunchinator import get_server, get_notification_center, get_settings
+from lunchinator.lunch_settings import lunch_settings
+from lunchinator.plugin import iface_general_plugin
+from lunchinator.download_thread import DownloadThread
+from lunchinator.shell_thread import ShellThread
+from lunchinator.git import GitHandler
+from lunchinator.utilities import getValidQtParent, displayNotification, \
+    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, PLATFORM_LINUX, which,\
+    getApplicationBundle, restartWithCommands
 from lunchinator.commands import Commands
+    
+import urllib2, sys, os, contextlib, subprocess, json, tempfile
+from functools import partial
+from xml.etree import ElementTree
     
 class online_update(iface_general_plugin):
     CHECK_INTERVAL = 12 * 60 * 60 * 1000 # check twice a day

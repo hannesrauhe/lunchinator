@@ -2,7 +2,7 @@ from lunchinator.datathread.base import DataSenderThreadBase, DataReceiverThread
     IncompleteTransfer
 from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot
 from lunchinator.utilities import formatException
-from lunchinator import log_exception, log_error
+from lunchinator.log import getLogger
 import socket
 
 class DataSenderThread(QThread, DataSenderThreadBase):
@@ -35,10 +35,10 @@ class DataSenderThread(QThread, DataSenderThreadBase):
             self.transferCanceled.emit(self)
         except socket.error:
             msg = formatException()
-            log_error("Error sending:", msg)
+            getLogger().error("Error sending: %s", msg)
             self.errorOnTransfer.emit(self, msg)
         except:
-            log_exception("Error sending")
+            getLogger().exception("Error sending")
             self.errorOnTransfer.emit(self, formatException())
         
 class DataReceiverThread(QThread, DataReceiverThreadBase):
@@ -76,5 +76,5 @@ class DataReceiverThread(QThread, DataReceiverThreadBase):
         except IncompleteTransfer:
             self.errorOnTransfer.emit(self, u"Transfer incomplete.")
         except:
-            log_exception("Error receiving")
+            getLogger().exception("Error receiving")
             self.errorOnTransfer.emit(self, formatException())

@@ -1,5 +1,5 @@
 from threading import Thread
-from lunchinator import log_info, log_error
+from lunchinator.log import getLogger
 from lunchinator.datathread.base import DataSenderThreadBase,\
     DataReceiverThreadBase
 from lunchinator.utilities import formatException
@@ -13,7 +13,7 @@ class DataSenderThread(Thread, DataSenderThreadBase):
         try:
             self.performSend()
         except:
-            log_error("Error sending file:", formatException())
+            getLogger().error("Error sending file: %s", formatException())
     
 class DataReceiverThread(Thread, DataReceiverThreadBase):    
     def __init__(self, senderIP, portOrSocket, targetPath, overwrite, sendDict, category, success_func=None, err_func=None):
@@ -26,11 +26,11 @@ class DataReceiverThread(Thread, DataReceiverThreadBase):
     def run(self):
         try:
             self.performReceive()
-            log_info("Successfully received file at", self._targetPath)
+            getLogger().info("Successfully received file at %s", self._targetPath)
             if self._successFunc is not None:
                 self._successFunc()
         except:
             self.error()
-            log_info("Error receiving file at", self._targetPath)
+            getLogger().info("Error receiving file at %s", self._targetPath)
             if self._errorFunc is not None:
                 self._errorFunc()

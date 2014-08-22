@@ -4,7 +4,8 @@ from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
 from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp, QTimer
 
 from lunchinator import convert_string, get_settings, get_notification_center,\
-    get_peers, log_error
+    get_peers
+from lunchinator.log import getLogger
 from lunchinator.history_line_edit import HistoryTextEdit
 from lunchinator.peer_actions.peer_action_utils import showPeerActionsPopup,\
     initializePeerActionsMenu
@@ -465,7 +466,7 @@ class ChatWidget(QWidget):
                 from markdown import Markdown
                 self._md = Markdown(extensions=['extra'])
             except ImportError:
-                log_error("Cannot enable Markdown (%s)" % formatException)
+                getLogger().error("Cannot enable Markdown (%s)", formatException)
                 raise
         return self._md
         

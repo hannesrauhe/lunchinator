@@ -1,5 +1,6 @@
-from lunchinator import log_warning, get_notification_center, convert_string,\
-    get_db_connection, log_error
+from lunchinator import get_notification_center, convert_string,\
+    get_db_connection
+from lunchinator.log import getLogger
         
 class PeerNames(object):
     _DB_VERSION_INITIAL = 0
@@ -11,7 +12,7 @@ class PeerNames(object):
         self._peerNameCache = {} # peer ID -> (peer name, custom name)
         
         if plugin_type != "SQLite Connection":
-            log_warning("Your standard connection is not of type SQLite." + \
+            getLogger().warning("Your standard connection is not of type SQLite." + \
                 "Loading peer names from another type is experimental.")
         
         if not self._db.existsTable("CORE_PEER_NAME_VERSION"):
@@ -78,7 +79,7 @@ class PeerNames(object):
         self._checkCache(peerID)
         peerName, oldCustomName = self._peerNameCache[peerID]
         if peerName == None:
-            log_error("Trying to specify custom name for unknown peer")
+            getLogger().error("Trying to specify custom name for unknown peer")
             return
         self._peerNameCache[peerID] = (peerName, customName)
             

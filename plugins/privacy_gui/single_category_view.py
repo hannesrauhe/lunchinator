@@ -2,8 +2,9 @@ from PyQt4.QtGui import QWidget, QHBoxLayout, QLabel, QComboBox, QTreeView,\
     QVBoxLayout, QFrame, QCheckBox, QSortFilterProxyModel
 from PyQt4.QtCore import Qt, QVariant
 from lunchinator.table_models import TableModelBase
-from lunchinator import get_peers, log_warning, get_notification_center,\
+from lunchinator import get_peers, get_notification_center,\
     convert_string
+from lunchinator.log import getLogger
 from lunchinator.privacy.privacy_settings import PrivacySettings
 
 class PeerModel(TableModelBase):
@@ -55,7 +56,7 @@ class PeerModel(TableModelBase):
             m_name = pID
         
         if m_name is None:
-            log_warning("displayed peer name (%s) should not be None" % pID)
+            getLogger().warning("displayed peer name (%s) should not be None", pID)
             m_name = pID
         item.setText(m_name)
         item.setCheckable(True)

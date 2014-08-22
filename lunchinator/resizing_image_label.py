@@ -1,6 +1,6 @@
 from PyQt4.QtGui import QImage, QPixmap, QLabel, QSizePolicy
 from PyQt4.QtCore import Qt, QSize, QThread, pyqtSlot, QTimer, pyqtSignal
-from lunchinator import log_exception, log_error
+from lunchinator.log import getLogger
 from lunchinator.download_thread import DownloadThread
 
 class ResizingImageLabel(QLabel):
@@ -75,7 +75,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
             try:
                 self.setImage(self.fallback_pic)
             except:
-                log_exception("Something went wrong when trying to display the fallback image",self.fallback_pic)
+                getLogger().exception("Something went wrong when trying to display the fallback image %s", self.fallback_pic)
         else:
             self.setPixmap(QPixmap())
             
@@ -99,7 +99,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
             
     @pyqtSlot(QThread, object)
     def errorDownloading(self, _thread, url):
-        log_error("Error downloading webcam image from %s" % url)
+        getLogger().error("Error downloading webcam image from %s", url)
         
     def showEvent(self, event):
         self.update()

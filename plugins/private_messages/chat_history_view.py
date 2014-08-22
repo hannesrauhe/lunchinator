@@ -1,18 +1,19 @@
-from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView,\
-    QSplitter, QTextDocument, QStandardItemModel, QSortFilterProxyModel,\
-    QLineEdit, QVBoxLayout, QPushButton, QFrame, QToolButton, QMenu,\
-    QStandardItem
-from lunchinator import get_peers, log_warning,\
-    convert_string
-from lunchinator.table_models import TableModelBase
-from lunchinator.utilities import formatTime, getPlatform, PLATFORM_MAC
-from time import localtime
-from functools import partial
-from PyQt4.QtCore import Qt, QVariant
 from private_messages.chat_messages_storage import ChatMessagesStorage
-from __init__ import log_error, log_exception
 from private_messages.message_item_delegate import MessageItemDelegate
 from private_messages.chat_messages_model import ChatMessagesModel
+from lunchinator import get_peers,  convert_string
+from lunchinator.log import getLogger
+from lunchinator.table_models import TableModelBase
+from lunchinator.utilities import formatTime, getPlatform, PLATFORM_MAC
+
+from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView,\
+    QSplitter, QStandardItemModel, QSortFilterProxyModel,\
+    QLineEdit, QVBoxLayout, QPushButton, QFrame, QToolButton, QMenu,\
+    QStandardItem
+from PyQt4.QtCore import Qt, QVariant
+
+from time import localtime
+from functools import partial
 
 class HistoryPeersModel(TableModelBase):
     _NAME_KEY = u'name'
@@ -25,7 +26,7 @@ class HistoryPeersModel(TableModelBase):
     def _updateNameItem(self, pID, _data, item):
         m_name = get_peers().getDisplayedPeerName(pID=pID)
         if m_name == None:
-            log_warning("displayed peer name (%s) should not be None" % pID)
+            getLogger().warning("displayed peer name (%s) should not be None", pID)
             m_name = pID
         item.setText(m_name)
         
@@ -196,7 +197,7 @@ class ChatHistoryWidget(QWidget):
         menu.clear()
         
         if get_peers() is None:
-            log_warning("no lunch_peers instance available, cannot show peer actions")
+            getLogger().warning("no lunch_peers instance available, cannot show peer actions")
             return
         
         with get_peers():
@@ -208,7 +209,7 @@ class ChatHistoryWidget(QWidget):
     def _openChat(self, peerID):
         peerInfo = get_peers().getPeerInfo(pID=peerID)
         if peerInfo is None:
-            log_error("No peer info found for peer", peerID)
+            getLogger().error("No peer info found for peer %s", peerID)
             return
         
         self._delegate.getOpenChatAction().performAction(peerID, peerInfo, self)

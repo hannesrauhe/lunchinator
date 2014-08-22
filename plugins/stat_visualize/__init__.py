@@ -1,5 +1,5 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import log_exception, log_error, get_settings, get_server, get_db_connection
+from lunchinator import get_settings, get_server, get_db_connection
 
     
 class stat_visualize(iface_gui_plugin):

@@ -1,5 +1,6 @@
 from lunchinator.plugin import iface_gui_plugin, db_for_plugin_iface
-from lunchinator import log_exception, log_error, get_settings, get_server, get_db_connection
+from lunchinator import get_settings, get_server, get_db_connection
+from lunchinator.log import getLogger
 import urllib2,sys
 
     
@@ -54,7 +55,7 @@ class sql_interface(iface_gui_plugin):
             header, res = self.db_connection.queryWithHeader(sql_stat)
         except Exception as e:
             QMessageBox.warning(self.resultTable,"Error in SQL statement",str(e))
-            log_error("SQL error:")
+            getLogger().error("SQL error:")
             return False
         
         columns = []

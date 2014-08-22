@@ -1,6 +1,6 @@
 from PyQt4.QtCore import QThread, pyqtSignal
 import subprocess, os
-from lunchinator import log_exception
+from lunchinator.log import getLogger
    
 class ShellThread(QThread):
     finished = pyqtSignal(QThread, int)
@@ -26,6 +26,6 @@ class ShellThread(QThread):
             self.exitCode = p.returncode
             self.finished.emit(self, self.exitCode)
         except:
-            log_exception("Error executing shell command", self.args)
+            getLogger().exception("Error executing shell command '%s'", ' '.join(self.args))
             self.error.emit(self)
         

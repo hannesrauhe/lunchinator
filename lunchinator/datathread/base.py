@@ -1,4 +1,5 @@
-from lunchinator import log_exception, log_error, get_settings
+from lunchinator import get_settings, convert_string
+from lunchinator.log import getLogger
 from lunchinator.utilities import getUniquePath
 from lunchinator.logging_mutex import loggingMutex
 
@@ -237,7 +238,7 @@ class DataSenderThreadBase(DataThreadBase):
                 except:
                     numAttempts = numAttempts + 1
                     if numAttempts == 10:
-                        log_error("Could not initiate connection to", self._otherIP, "on Port", self._portOrSocket)
+                        getLogger().error("Could not initiate connection to %s on Port %s", self._otherIP, self._portOrSocket)
                         raise
         
             numFiles, totalSize, name, useTarstream, compression = self._readSendDict(self._sendDict, checkName=False)
@@ -349,7 +350,7 @@ class DataReceiverThreadBase(DataThreadBase):
             s.close()
             del cls._inactiveSockets[port]
         except:
-            log_exception("Socket timed out, error trying to clean up")
+            getLogger().exception("Socket timed out, error trying to clean up")
         finally:
             if cls._useQMutex():
                 cls._inactiveSocketsMutex().unlock()
@@ -436,7 +437,7 @@ class DataReceiverThreadBase(DataThreadBase):
     def __init__(self, senderIP, portOrSocket, targetPath, overwrite, sendDict, category):
         super(DataReceiverThreadBase, self).__init__(senderIP, portOrSocket, sendDict)
         
-        self._targetPath = os.path.abspath(targetPath)
+        self._targetPath = os.path.abspath(convert_string(targetPath))
         self._overwrite = overwrite
         self._category = category
     
@@ -604,7 +605,7 @@ class DataReceiverThreadBase(DataThreadBase):
             if addr[0] == self._otherIP:
                 self._receiveFiles(con, numFiles, totalSize, useTarstream, compression)
             else:
-                log_error("Sender is not allowed to send file:", addr[0], ", expected:", self._otherIP)
+                getLogger().error("Sender is not allowed to send file: %s, expected: %s", addr[0], self._otherIP)
         except IncompleteTransfer:
             raise
         except:

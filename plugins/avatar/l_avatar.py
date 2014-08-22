@@ -1,7 +1,8 @@
 #!/usr/bin/python
 import hashlib, shutil
 import os
-from lunchinator import log_exception, log_error, get_settings
+from lunchinator import get_settings
+from lunchinator.log import getLogger
 from PyQt4.QtGui import QImage, QPixmap
 from PyQt4.QtCore import Qt
 
@@ -27,11 +28,11 @@ class l_avatar(object):
                 pixmap = pixmap.scaled(self.width, self.height, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 pixmap.save(outfile, "PNG")
             except IOError:
-                log_exception("cannot create thumbnail for '%s'" % infile)
+                getLogger().exception("cannot create thumbnail for '%s'", infile)
     
     def use_as_avatar(self, file_path):    
         if not os.path.exists(file_path):
-            log_error("no image found at", file_path, ", exiting")
+            getLogger().error("no image found at %s, exiting", file_path)
 
         tmpPath = os.path.join(get_settings().get_avatar_dir(), "tmp.png")
         self.scale_image(file_path, tmpPath)

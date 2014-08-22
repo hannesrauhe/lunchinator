@@ -1,5 +1,6 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import log_error, get_server, get_notification_center
+from lunchinator import get_server, get_notification_center
+from lunchinator.log import getLogger
 from lunchinator.utilities import canUseBackgroundQThreads
 from StringIO import StringIO
 from lunchinator.peer_actions import PeerAction
@@ -189,14 +190,14 @@ class remote_pictures(iface_gui_plugin):
                 
     def getCategories(self):
         if self._handler is None:
-            log_error("Remote Pictures not initialized")
+            getLogger().error("Remote Pictures not initialized")
             return []
     
         return self._handler.getCategoryNames(alsoEmpty=True)
     
     def getCategoryIcon(self, category):
         if self._gui is None:
-            log_error("Remote Pictures not initialized")
+            getLogger().error("Remote Pictures not initialized")
             return None
         return self._gui.getCategoryIcon(category)
     

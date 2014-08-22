@@ -1,19 +1,20 @@
-from lunchinator import get_settings, convert_string,\
-    log_error, log_exception, get_peers, convert_raw, log_debug
-from lunchinator.callables import AsyncCall
-from lunchinator.download_thread import DownloadThread
 from remote_pictures.remote_pictures_storage import RemotePicturesStorage
 from remote_pictures.remote_pictures_category_model import CategoriesModel
+from lunchinator import get_settings, convert_string, get_peers, convert_raw
+from lunchinator.log import getLogger
+from lunchinator.callables import AsyncCall
+from lunchinator.download_thread import DownloadThread
+from lunchinator.privacy import PrivacySettings
+from lunchinator.utilities import displayNotification, sanitizeForFilename
+
+from PyQt4.QtCore import QObject, Qt, pyqtSignal, pyqtSlot
+from PyQt4.QtGui import QImage
+
 import csv, tempfile, os, urllib2, contextlib
 from time import time
 from cStringIO import StringIO
 from functools import partial
-from PyQt4.QtCore import QObject, Qt, pyqtSignal, pyqtSlot
-from PyQt4.QtGui import QImage
-from lunchinator.utilities import displayNotification, sanitizeForFilename
 from urlparse import urlparse
-from lunchinator.privacy import PrivacySettings
-import string
 
 class RemotePicturesHandler(QObject):
     addCategory = pyqtSignal(object, object, int) # category, thumbnail path, thumbnail size
@@ -111,7 +112,7 @@ class RemotePicturesHandler(QObject):
             newImage.save(fileName, 'jpeg')
             return fileName, inFile, category
         except:
-            log_exception("Error trying to create thumbnail for category")
+            getLogger().exception("Error trying to create thumbnail for category")
             return None, inFile, category
             
     def _addCategoryAndCloseFile(self, aTuple):
@@ -191,7 +192,7 @@ class RemotePicturesHandler(QObject):
     def _displayImage(self, category, result):
         picID, picRow = result
         if picID is None:
-            log_error("Cannot display picture", category, "(picture not found).")
+            getLogger().error("Cannot display picture %d (picture not found).", picID)
             
         self.displayImageInGui.emit(category,
                                     picID,
@@ -201,7 +202,7 @@ class RemotePicturesHandler(QObject):
         self._storage.seenPicture(picID)
         
     def _errorDownloadingPicture(self, thread, url):
-        log_error("Error downloading picture from url %s" % convert_string(url))
+        getLogger().error("Error downloading picture from url %s", convert_string(url))
         thread.deleteLater()
         
     def _downloadedPicture(self, category, description, sender, thread, url):
@@ -236,7 +237,7 @@ class RemotePicturesHandler(QObject):
             downloadThread.finished.connect(downloadThread.deleteLater)
             downloadThread.start()
         else:
-            log_debug("Remote Pics: Downloaded this url before, won't do it again:",url)
+            getLogger().debug("Remote Pics: Downloaded this url before, won't do it again: %s", url)
         
     def processRemotePicture(self, value, ip):
         self._processRemotePicture.emit(value, ip)
@@ -272,7 +273,7 @@ class RemotePicturesHandler(QObject):
     def openCategory(self, category):
         category = convert_string(category)
         if not self._storage.hasCategory(category):
-            log_error("Cannot open category", category, "(category not found).")
+            getLogger().error("Cannot open category %s (category not found).", category)
             return
         
         self._displayImage(category, self._storage.getLatestPicture(category))

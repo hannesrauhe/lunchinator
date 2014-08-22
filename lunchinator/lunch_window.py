@@ -1,6 +1,7 @@
 from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplication, QMenu, QKeySequence, QIcon
 from PyQt4.QtCore import Qt, QSettings, QVariant, QEvent, pyqtSignal
-from lunchinator import get_settings, log_exception, convert_string, get_plugin_manager, get_notification_center
+from lunchinator import get_settings, convert_string, get_plugin_manager, get_notification_center
+from lunchinator.log import getLogger
 import sys
 from StringIO import StringIO
 import traceback
@@ -60,7 +61,7 @@ class LunchinatorWindow(QMainWindow):
                     if pluginInfo.plugin_object.is_activated:
                         self.addPluginWidget(pluginInfo.plugin_object, pluginInfo.name, noTabs=True)
         except:
-            log_exception("while including plugins %s"%str(sys.exc_info()))
+            getLogger().exception("while including plugins %s", str(sys.exc_info()))
         
         if savedGeometry != None:
             self.restoreGeometry(savedGeometry.toByteArray())
@@ -95,7 +96,7 @@ class LunchinatorWindow(QMainWindow):
                 pluginInfo = get_plugin_manager().getPluginByName(pName, u"gui")
                 self.addPluginWidget(pluginInfo.plugin_object, pName)
             except:
-                log_exception("while including plugins %s"%str(sys.exc_info()))
+                getLogger().exception("while including plugins %s", str(sys.exc_info()))
             
     def _pluginWillBeDeactivated(self, pName, pCat):
         pName = convert_string(pName)
@@ -105,7 +106,7 @@ class LunchinatorWindow(QMainWindow):
             try:
                 pluginInfo.plugin_object.destroy_widget()
             except:
-                log_exception("Error destroying plugin widget for plugin", pName)
+                getLogger().exception("Error destroying plugin widget for plugin %s", pName)
             self.removePluginWidget(pName)
             
     def _prepareMenuBar(self):
@@ -168,7 +169,7 @@ class LunchinatorWindow(QMainWindow):
                 for aMenu in menus:
                     self.menuBar().addMenu(aMenu)
         except:
-            log_exception("while creating menu for plugin %s: %s" % (name, str(sys.exc_info())))
+            getLogger().exception("while creating menu for plugin %s: %s", name, str(sys.exc_info()))
 
         widgetToTabify = None
         if not noTabs:
@@ -226,7 +227,7 @@ class LunchinatorWindow(QMainWindow):
                 self.settings.setValue("locked", QVariant(self.locked))
                 self.settings.sync()
             except:
-                log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
+                getLogger().exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
         
         QMainWindow.closeEvent(self, closeEvent)     
         
@@ -242,7 +243,7 @@ class LunchinatorWindow(QMainWindow):
         except:
             stringOut = StringIO()
             traceback.print_exc(None, stringOut)
-            log_exception("while including plugin %s with options: %s  %s"%(p_name, str(plugin_object.options), str(sys.exc_info())))
+            getLogger().exception("while including plugin %s with options: %s  %s", p_name, str(plugin_object.options), str(sys.exc_info()))
             sw = QTextEdit(parent)
             #sw.set_size_request(400,200)
             sw.setLineWrapMode(QTextEdit.WidgetWidth)

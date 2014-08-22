@@ -1,5 +1,6 @@
 import sys
-from lunchinator import log_debug, log_warning, convert_string, get_peers
+from lunchinator import convert_string, get_peers
+from lunchinator.log import getLogger
 from PyQt4.QtGui import QStackedWidget, QListView, QWidget, QHBoxLayout, \
     QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy, QSortFilterProxyModel, \
     QFrame
@@ -144,7 +145,7 @@ class RemotePicturesGui(QStackedWidget):
         elif picURL:
             self.imageLabel.setURL(picURL)
         else:
-            log_warning("No image source specified")
+            getLogger().warning("No image source specified")
             self.imageLabel.displayFallbackPic()
         
         if picSender:
@@ -200,7 +201,7 @@ class HiddenWidgetBase(object):
             self.timer.timeout.connect(self._fade)
             self.good = True
         except:
-            log_debug(u"Could not enable opacity effects. %s: %s" % (sys.exc_info()[0].__name__, unicode(sys.exc_info()[1])))
+            getLogger().debug(u"Could not enable opacity effects. %s: %s", sys.exc_info()[0].__name__, unicode(sys.exc_info()[1]))
         
     def setMinOpacity(self, newVal):
         self.minOpacity = newVal

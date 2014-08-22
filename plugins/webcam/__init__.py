@@ -1,5 +1,5 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import log_exception, get_settings
+from lunchinator import get_settings
 import urllib2,sys
     
 class webcam(iface_gui_plugin):

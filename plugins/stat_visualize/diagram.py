@@ -1,8 +1,8 @@
-import sys, random, time, math
+import time, math
+from lunchinator.log import getLogger
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QGridLayout, QLabel, QPushButton, QWidget, QSpinBox, QLineEdit
-from lunchinator import log_exception
+from PyQt4.QtGui import QGridLayout, QLabel, QSpinBox, QLineEdit
 
 class statTimelineTab(QtGui.QWidget):
     def __init__(self, parent, connPlugin):
@@ -35,7 +35,7 @@ class statTimelineWidget(QtGui.QWidget):
         try:
             self.drawPoints(qp)
         except:
-            log_exception("Error painting")
+            getLogger().exception("Error painting")
         qp.end()
         
     def drawPoints(self, qp):      

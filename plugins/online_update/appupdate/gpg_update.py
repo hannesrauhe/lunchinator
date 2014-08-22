@@ -1,10 +1,9 @@
 from online_update.appupdate.app_update_handler import AppUpdateHandler
 from lunchinator.utilities import getGPG, getValidQtParent
 from lunchinator.download_thread import DownloadThread
-import os
-import contextlib
-from lunchinator import log_error, log_debug, log_exception, get_settings
-import json
+from lunchinator import get_settings
+from lunchinator.log import getLogger
+import os, contextlib, json
 
 class GPGUpdateHandler(AppUpdateHandler):
     """Base class for updaters that download GPG signed packages and install them."""
@@ -75,7 +74,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             return None
         v = gpg.verify(str(signedString))
         if not v:
-            log_error("Verification of Signature failed")
+            getLogger().error("Verification of Signature failed")
             return False
         
         return v
@@ -115,13 +114,13 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._setStatus("Version info not available", True)
             return
         
-        log_debug("Update: Got version info, checking signature", signedString)
+        getLogger().debug("Update: Got version info, checking signature %s", signedString)
         
         ver_result = False
         try:
             ver_result = self._verifySignature(signedString)
         except:
-            log_exception("Error verifying signature")
+            getLogger().exception("Error verifying signature")
             self._setStatus("Signature could not be verified because of unknown error", True)
             return
         
@@ -129,7 +128,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._setStatus("Signature could not be verified", True)
             return
                 
-        log_debug("Updater: Signature OK, checking version info")
+        getLogger().debug("Updater: Signature OK, checking version info")
         
         for l in signedString.splitlines():
             info = l.split(":", 1)
@@ -138,7 +137,7 @@ class GPGUpdateHandler(AppUpdateHandler):
                 
         if not self._version_info.has_key("URL") or not self._version_info.has_key("Commit Count"):
             self._setStatus("Version Info corrupt - URL and/or Commit Count missing", True)
-            log_debug(str(self._version_info))
+            getLogger().debug(str(self._version_info))
             return
         else:
             try:
@@ -157,7 +156,7 @@ class GPGUpdateHandler(AppUpdateHandler):
                 changeLog = json.loads(self._version_info[u"Change Log"])
                 self._setChangeLog(changeLog)
             except:
-                log_exception("Error reading change log.")
+                getLogger().exception("Error reading change log.")
                 self._setChangeLog(["Error loading change log"])
         
         if self._hasNewVersion():

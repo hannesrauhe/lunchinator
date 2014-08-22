@@ -1,12 +1,12 @@
 from private_messages.chat_messages_model import ChatMessagesModel
-from lunchinator import log_exception, log_error, log_debug,\
-    log_warning, log_info, convert_string, get_server, get_peers,\
-    get_notification_center, get_settings
-from PyQt4.QtCore import pyqtSignal, pyqtSlot, QTimer, QObject
-from time import time
-import json
 from private_messages.chat_messages_storage import InconsistentIDError,\
     ChatMessagesStorage
+from lunchinator import convert_string, get_server, get_peers,\
+    get_notification_center, get_settings
+from lunchinator.log import getLogger
+from PyQt4.QtCore import pyqtSignal, pyqtSlot, QTimer, QObject
+import json
+from time import time
         
 class ChatMessagesHandler(QObject):
     # other ID, message ID, receive time, HTML, time, state, error message
@@ -80,7 +80,7 @@ class ChatMessagesHandler(QObject):
             # check if partner is online
             otherID = msgTuple[ChatMessagesStorage.MSG_PARTNER_COL]
             if get_peers().isPeerID(pID=otherID):
-                log_debug("Resending undelivered message %d to peer '%s'" % (msgID, otherID))
+                getLogger().debug("Resending undelivered message %d to peer '%s'", msgID, otherID)
                 # partner is online, resend message
                 msgHTML = msgTuple[ChatMessagesStorage.MSG_TEXT_COL]
                 self.sendMessage(otherID, msgHTML, msgID, msgTime)
@@ -113,7 +113,7 @@ class ChatMessagesHandler(QObject):
             # seems my next message ID is invalid
             newValue = max(self._nextMessageID, answerDict[u"validID"])
             if newValue != self._nextMessageID:
-                log_info("Adjusting incorrect next message ID. Was %d, set to %d" % (self._nextMessageID, newValue))
+                getLogger().info("Adjusting incorrect next message ID. Was %d, set to %d", self._nextMessageID, newValue)
                 self._nextMessageID = newValue
                 
             if isNoResend:
@@ -123,14 +123,14 @@ class ChatMessagesHandler(QObject):
                 # need to resend message
                 msgTuple = self._getStorage().getMessage(otherID, oldMsgID, True)
                 if msgTuple is None:
-                    log_error("Error trying to resend message", oldMsgID, "with a new ID (message not found)")
+                    getLogger().error("Error trying to resend message %d with a new ID (message not found)", oldMsgID)
                     return False
                 msgHTML = msgTuple[ChatMessagesStorage.MSG_TEXT_COL]
                 recvTime = msgTuple[ChatMessagesStorage.MSG_TIME_COL]
                 
                 newID = self._getNextMessageID()
                 if not self._getStorage().updateMessageID(otherID, oldMsgID, newID, True):
-                    log_error("Error trying to resend message", oldMsgID, "with a new ID (could not update message ID)")
+                    getLogger().error("Error trying to resend message %d with a new ID (could not update message ID)", oldMsgID)
                     return False
                 self.messageIDChanged.emit(otherID, oldMsgID, newID)
                 
@@ -152,7 +152,7 @@ class ChatMessagesHandler(QObject):
                 self._getStorage().updateMessageState(msgID, ChatMessagesModel.MESSAGE_STATE_ERROR if error else ChatMessagesModel.MESSAGE_STATE_OK)
                 self._getStorage().updateReceiveTime(otherID, msgID, recvTime)
             except:
-                log_exception("Error updating message state")
+                getLogger().exception("Error updating message state")
             
             self.delayedDelivery.emit(otherID, msgID, recvTime, error, self._getAnswerErrorMessage(error, answerDict, msgID, otherID))
             return True
@@ -163,9 +163,9 @@ class ChatMessagesHandler(QObject):
         if error:
             if u"err" in answerDict:
                 errorMsg = answerDict[u"err"]
-                log_warning("Message %s could not be processed by peer '%s': %s" % (msgID, otherID, errorMsg))
+                getLogger().warning("Message %s could not be processed by peer '%s': %s", msgID, otherID, errorMsg)
             else:
-                log_warning("Message %s could not be processed by peer '%s'" % (msgID, otherID))
+                getLogger().warning("Message %s could not be processed by peer '%s'", msgID, otherID)
         return errorMsg
      
     def processAck(self, ackPeerID, valueJSON, error=False):
@@ -178,11 +178,11 @@ class ChatMessagesHandler(QObject):
         try:
             answerDict = json.loads(valueJSON)
         except:
-            log_error("Error reading ACK message:", valueJSON)
+            getLogger().error("Error reading ACK message: %s", valueJSON)
             return
         
         if not u"id" in answerDict:
-            log_error("No message ID in ACK message:", valueJSON)
+            getLogger().error("No message ID in ACK message: %s", valueJSON)
             return
         
         if u"recvTime" in answerDict:
@@ -194,14 +194,14 @@ class ChatMessagesHandler(QObject):
         
         if not msgID in self._waitingForAck:
             if self._checkDelayedAck(ackPeerID, msgID, error, answerDict, recvTime):
-                log_debug("Delayed delivery of message", msgID, "to", ackPeerID)
+                getLogger().debug("Delayed delivery of message %d to %s", msgID, ackPeerID)
                 return
-            log_debug("Received ACK for message ID '%s' that I was not waiting for." % msgID)
+            getLogger().debug("Received ACK for message ID '%s' that I was not waiting for.", msgID)
             return
         
         otherID, msgTime, msgHTML, isResend = self._waitingForAck.pop(msgID)
         if otherID != ackPeerID:
-            log_warning("Received ACK from different peer ID than the message was sent to ('%s' != '%s')" % (otherID, ackPeerID))
+            getLogger().warning("Received ACK from different peer ID than the message was sent to ('%s' != '%s')", otherID, ackPeerID)
             return
         
         if isResend:
@@ -223,7 +223,7 @@ class ChatMessagesHandler(QObject):
         try:
             self._getStorage().addOwnMessage(msgID, otherID, msgTime, status, msgHTML, recvTime)
         except:
-            log_exception("Error storing own message")
+            getLogger().exception("Error storing own message")
         
     def processMessage(self, otherID, msgDictJSON):
         self._processMessage.emit(otherID, msgDictJSON)
@@ -254,7 +254,7 @@ class ChatMessagesHandler(QObject):
                 self._sendAnswer(otherID, msgDict, u"Unknown message format: %s" % msgDict[u"format"])
                 return
         else:
-            log_info("Message without format. Assuming plain text or HTML.")
+            getLogger().info("Message without format. Assuming plain text or HTML.")
             msgHTML = msgDict[u"data"]
 
         if u"time" in msgDict:
@@ -274,7 +274,7 @@ class ChatMessagesHandler(QObject):
             if not containsMessage:
                 self.newMessage.emit(otherID, msgHTML, msgTime, msgDict)
             else:
-                log_debug("Received message from %s that I already know (id %d)" % (otherID, msgDict[u"id"]))
+                getLogger().debug("Received message from %s that I already know (id %d)", otherID, msgDict[u"id"])
                 # send ACK again
                 self._sendAnswer(otherID, msgDict)
         except InconsistentIDError as e:
@@ -289,7 +289,7 @@ class ChatMessagesHandler(QObject):
         try:
             self._getStorage().addOtherMessage(msgDict[u"id"], otherID, msgTime, msgHTML, recvTime)
         except:
-            log_exception("Error storing partner message")
+            getLogger().exception("Error storing partner message")
         self._sendAnswer(otherID, msgDict, recvTime=recvTime)
         
     def errorReceivingMessage(self, otherID, msgDict, errorMsg):
@@ -306,8 +306,8 @@ class ChatMessagesHandler(QObject):
     def _sendAnswer(self, otherID, msgDict, errorMsg=None, recvTime=None, validID=None):
         if u"id" not in msgDict:
             if errorMsg:
-                log_error(errorMsg)
-            log_debug("Message has no ID, cannot send answer.")
+                getLogger().error(errorMsg)
+            getLogger().debug("Message has no ID, cannot send answer.")
             return
         
         msgID = msgDict[u"id"]
@@ -318,7 +318,7 @@ class ChatMessagesHandler(QObject):
                 recvTime = self._delegate.getStorage().getReceiveTime(otherID, msgID)
             if recvTime == None:
                 # should not happen
-                log_error("Could not determine receive time for msg", msgID, "from", otherID)
+                getLogger().error("Could not determine receive time for msg %s from %s", msgID, otherID)
                 recvTime = time()
             
             answerDict[u"recvTime"] = recvTime
@@ -327,12 +327,12 @@ class ChatMessagesHandler(QObject):
             # partner sent message with invalid ID
             answerDict[u"err"] = u"Inconsistent ID"
             answerDict[u"validID"] = validID 
-            log_warning(u"Received message with inconsistent ID from %s, ID was %d, next valid ID is %d" % (otherID, msgDict[u"id"], validID))
+            getLogger().warning(u"Received message with inconsistent ID from %s, ID was %d, next valid ID is %d", otherID, msgDict[u"id"], validID)
             get_server().call("HELO_PM_ERROR " + json.dumps(answerDict), peerIDs=[otherID])
         else:
             # default error handling, send error message
             answerDict[u"err"] = errorMsg 
-            log_error(errorMsg)
+            getLogger().error(errorMsg)
             get_server().call("HELO_PM_ERROR " + json.dumps(answerDict), peerIDs=[otherID])  
     
     ############### PUBLIC SLOTS #################
@@ -362,7 +362,7 @@ class ChatMessagesHandler(QObject):
         try:
             msgDictJSON = json.dumps(msgDict)
         except:
-            log_exception("Error serializing private message:", msgDict)
+            getLogger().exception("Error serializing private message: %s", msgDict)
             return
         
         get_server().call("HELO_PM " + msgDictJSON, peerIDs=[otherID])

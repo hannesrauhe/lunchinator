@@ -2,7 +2,7 @@ import threading
 import Queue
 import sqlite3
 from lunchinator.plugin import lunch_db
-from lunchinator import log_debug
+from lunchinator.log import getLogger
 import datetime
 
 class MultiThreadSQLite(threading.Thread, lunch_db):
@@ -54,10 +54,10 @@ class MultiThreadSQLite(threading.Thread, lunch_db):
         err = Queue.Queue()
         descr = Queue.Queue()
         if wildcards:
-            log_debug(query, wildcards)
+            getLogger().debug("%s, %s", query, wildcards)
             self.reqs.put((query, wildcards, res, err, descr, commit))
         else:
-            log_debug(query)
+            getLogger().debug(query)
             self.reqs.put((query, tuple(), res, err, descr, commit))
             
         resultList = []
@@ -87,21 +87,21 @@ class MultiThreadSQLite(threading.Thread, lunch_db):
         sql="SELECT LAST_UPDATE FROM %s WHERE DATE=%s" % (self.get_table_name(tableName), self.get_formatted_date(date))
         tuples = self.query(sql)
         if tuples == None or len(tuples) == 0:
-            log_debug("%s -> None" % sql)
+            getLogger().debug("%s -> None", sql)
             return None
         else:
-            log_debug("%s -> %s" % (sql, tuples))
+            getLogger().debug("%s -> %s", sql, tuples)
             return self.parse_result_date(tuples[0][0])
         
     def insertLunchPart(self, date, textAndAdditivesList, update, table):
         sql=None
         if update:
             sql="DELETE FROM %s WHERE DATE=%s" % (self.get_table_name(table), self.get_formatted_date(date))
-            log_debug(sql)
+            getLogger().debug(sql)
             self.executeNoCommit(sql)
         for textAndAdditives in textAndAdditivesList:
             sql="INSERT INTO %s VALUES(%s, ?, ?, %s)" % (self.get_table_name(table), self.get_formatted_date(date), self.get_formatted_date(date.today()))
-            log_debug("%s, %s, %s" % (sql, textAndAdditives[0], textAndAdditives[1]))
+            getLogger().debug("%s, %s, %s", sql, textAndAdditives[0], textAndAdditives[1])
             self.executeNoCommit(sql, textAndAdditives[0], textAndAdditives[1])            
 
     def get_table_name(self, baseName):

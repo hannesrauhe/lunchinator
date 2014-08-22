@@ -1,10 +1,11 @@
 from lunchinator.table_models import TableModelBase
-from lunchinator import get_peers, log_debug
+from lunchinator import get_peers
+from lunchinator.log import getLogger
 from lunchinator.utilities import getTimeDifference
 from lunchinator.lunch_settings import lunch_settings
 import time
 from datetime import datetime
-from PyQt4.QtCore import Qt, QVariant, QModelIndex
+from PyQt4.QtCore import Qt, QVariant
 from PyQt4.QtGui import QColor, QBrush
 
 class MembersTableModel(TableModelBase):
@@ -66,7 +67,7 @@ class MembersTableModel(TableModelBase):
                     else:
                         item.setData(self._red if isMember else self._grayRed, Qt.DecorationRole)
             except ValueError:
-                log_debug("Ignoring illegal lunch time:", infoDict[self._LUNCH_BEGIN_KEY])
+                getLogger().debug("Ignoring illegal lunch time: %s", infoDict[self._LUNCH_BEGIN_KEY])
         else:
             item.setData(QVariant(-1), self.SORT_ROLE)
             

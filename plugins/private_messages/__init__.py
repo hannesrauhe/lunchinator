@@ -1,6 +1,6 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import log_exception, convert_string, log_error, get_peers,\
-    get_settings, get_server
+from lunchinator import convert_string, get_peers, get_settings, get_server
+from lunchinator.log import getLogger
 from lunchinator.peer_actions import PeerAction
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
     displayNotification, canUseBackgroundQThreads
@@ -69,7 +69,7 @@ class _BlockAction(PeerAction):
     def performAction(self, peerID, _peerInfo, _parent):
         policy = self._sendMessageAction.getPrivacyPolicy()
         if policy not in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
-            log_error("Illegal policy for block action:", policy)
+            getLogger().error("Illegal policy for block action: %s", policy)
             return
         
         exceptions = self._sendMessageAction.getExceptions(policy)
@@ -247,7 +247,7 @@ class private_messages(iface_gui_plugin):
             chatWindow.deleteLater()
             del self._openChats[pID]
         else:
-            log_error("Closed chat window was not maintained:", pID)
+            getLogger().error("Closed chat window was not maintained: %s", pID)
         
     def getOpenChatAction(self):
         return self._openChatAction
@@ -260,7 +260,7 @@ class private_messages(iface_gui_plugin):
         
         otherName = get_peers().getDisplayedPeerName(pID=pID)
         if otherName == None:
-            log_error("Could not get info of chat partner", pID)
+            getLogger().error("Could not get info of chat partner %s", pID)
             return
         otherAvatar = get_peers().getPeerAvatarFile(pID=pID)
         

@@ -1,5 +1,5 @@
-from lunchinator import log_error, log_info, get_settings,\
-    get_notification_center
+from lunchinator import get_settings, get_notification_center
+from lunchinator.log import getLogger
 from lunchinator.utilities import displayNotification, restartWithCommands
 
 class AppUpdateHandler(object):
@@ -56,10 +56,10 @@ class AppUpdateHandler(object):
             The progress bar will be made visible based on this parameter.
         """
         if err:
-            log_error("Updater: " + status)
+            getLogger().error("Updater: %s", status)
             status = "Error: " + status
         else:
-            log_info("Updater: " + status)
+            getLogger().info("Updater: %s", status)
             
         if self._ui != None:
             self._ui.setAppStatus("Status: " + status, progress)

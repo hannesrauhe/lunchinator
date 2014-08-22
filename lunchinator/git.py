@@ -1,7 +1,6 @@
 import subprocess
 import os
-from lunchinator import log_debug
-from tempfile import NamedTemporaryFile, mkdtemp
+from lunchinator.log import getLogger
 
 class GitHandler(object):
     UP_TO_DATE_REASON = "Repository is up-to-date"
@@ -23,7 +22,7 @@ class GitHandler(object):
         fh = subprocess.PIPE    
         if quiet:
             fh = open(os.path.devnull, "w")
-        log_debug("Git call", call)
+        getLogger().debug("Git call %s", call)
         p = subprocess.Popen(call, stdout=fh, stderr=fh)
         pOut, pErr = p.communicate()
         retCode = p.returncode
@@ -127,7 +126,7 @@ class GitHandler(object):
         
         canUpdate, reason = cls.canGitUpdate(False, path)
         if not canUpdate:
-            log_debug("Repository", path, "cannot be updated:", reason)
+            getLogger().debug("Repository %s cannot be updated: %s", path, reason)
             return False if not returnReason else (False, reason)
         
         # update remotes
@@ -140,14 +139,14 @@ class GitHandler(object):
         
         if local == remote:
             # up-to-date
-            log_debug("Repository", path, "up-to-date")
+            getLogger().debug("Repository %s up-to-date", path)
             return False if not returnReason else (False, cls.UP_TO_DATE_REASON)
         if local == base:
             # can fast-forward
             return True if not returnReason else (True, None)
         
         # need to push or diverged
-        log_debug("Repository", path, "needs to be pushed or is diverged")
+        getLogger().debug("Repository %s needs to be pushed or is diverged", path)
         return False if not returnReason else (False, "Repository contains unpushed commits or is diverged")
     
     @classmethod

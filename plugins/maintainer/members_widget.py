@@ -1,13 +1,15 @@
-from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTreeWidget, QStandardItem, QStandardItemModel, QComboBox, QSplitter, QTextEdit, QTreeWidgetItem
+from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTreeWidget, QComboBox, QSplitter, QTextEdit, QTreeWidgetItem
 from PyQt4.QtCore import Qt, QVariant, pyqtSlot, QTimer, QStringList, QThread
+
 from lunchinator.history_line_edit import HistoryLineEdit
-from functools import partial
-from lunchinator import get_server, get_settings, convert_string, log_warning,\
-    log_exception, log_debug, getLogLineTime, get_peers, get_notification_center
-import os, sip, codecs, copy, shutil, contextlib, tarfile
-from datetime import datetime
+from lunchinator import get_server, get_settings, convert_string, get_peers, get_notification_center
+from lunchinator.log import getLogger, getLogLineTime
 from lunchinator.datathread.dt_qthread import DataReceiverThread
 from lunchinator.table_models import TableModelBase
+
+import os, sip, codecs, shutil, contextlib, tarfile
+from functools import partial
+from datetime import datetime
 
 class DropdownModel(TableModelBase):
     _NAME_KEY = u'name'
@@ -233,7 +235,7 @@ class MembersWidget(QWidget):
         if not os.path.exists(tmpPath):
             os.makedirs(tmpPath)
 
-        logsAdded = []   
+        logsAdded = []
         if path.endswith(".tgz"):
             #extract received log files
             with contextlib.closing(tarfile.open(path, 'r:gz')) as tarContent:
@@ -258,7 +260,7 @@ class MembersWidget(QWidget):
             if numNew > 0 and logNum < 9:
                 # there might be more new ones
                 self.logRequests[thread.sender] = (logNum + 1, datetime.now())
-                log_debug("log seems to be new, another!!!")
+                getLogger().debug("log seems to be new, another!!!")
                 logsAdded.append((logNum + 1, None))
                 self.request_log(thread.sender, logNum + 1)
             elif thread.sender in self.logRequests:
@@ -293,7 +295,7 @@ class MembersWidget(QWidget):
         if member == None:
             member = self.get_selected_log_member()
         if member != None:
-            log_debug("Requesting log %d from %s" % (logNum, member))
+            getLogger().debug("Requesting log %d from %s", logNum, member)
             get_server().call("HELO_REQUEST_LOGFILE %s %d"%(DataReceiverThread.getOpenPort(category="log%s"%member), logNum), set([member]))
         else:
             self.log_area.setText("No Member selected!")
@@ -376,7 +378,7 @@ class MembersWidget(QWidget):
                 if item != None:
                     itemLogFile = convert_string(item.data(0, Qt.UserRole).toString())
                     if itemLogFile != oldName:
-                        log_warning("index does not correspond to item in list:\n\t%s\n\t%s" % (itemLogFile, oldName))
+                        getLogger().warning("index does not correspond to item in list:\n\t%s\n\t%s", itemLogFile, oldName)
                     self.initializeLogItem(item, newName)
             
         if len(logsAdded) == 0:
@@ -430,7 +432,7 @@ class MembersWidget(QWidget):
             with codecs.open(logPath,"r",'utf8') as fhandler:
                 fcontent = fhandler.read()
         except Exception as e:
-            log_exception("Error reading file")
+            getLogger().exception("Error reading file")
             fcontent = "Error reading file: %s"%str(e)
         return fcontent
     

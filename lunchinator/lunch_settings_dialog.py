@@ -1,8 +1,9 @@
 from PyQt4.QtGui import QTabWidget, QDialog, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton,\
     QDialogButtonBox
 from PyQt4.QtCore import Qt, pyqtSignal
-from lunchinator import get_settings, get_plugin_manager, log_exception,\
+from lunchinator import get_settings, get_plugin_manager,\
     get_notification_center, convert_string
+from lunchinator.log import getLogger
 from lunchinator.ComboTabWidget import ComboTabWidget
 from bisect import bisect_left
 
@@ -25,7 +26,7 @@ class _SettingsWidgetContainer(QWidget):
             w = self._pluginObject.create_options_widget(self)
         except:
             w = QLabel("Error while including plugin", self)
-            log_exception("while including plugin %s in settings window" % self._pluginName)
+            getLogger().exception("while including plugin %s in settings window", self._pluginName)
             
         self.layout().addWidget(w, 1)
         
@@ -62,7 +63,7 @@ class LunchinatorSettingsDialog(QDialog):
                                        pluginInfo.name,
                                        pluginInfo.category)
         except:
-            log_exception("while including plugins in settings window")
+            getLogger().exception("while including plugins in settings window")
         
         contentLayout.addWidget(self.nb)
         # d.get_content_area().pack_start(nb, True, True, 0)
@@ -142,7 +143,7 @@ class LunchinatorSettingsDialog(QDialog):
             try:
                 po.destroy_options_widget()
             except:
-                log_exception("Error destroying options widget for plugin", pName, "from category", pCat)
+                getLogger().exception("Error destroying options widget for plugin %s from category %s", pName, pCat)
                     
         if po.get_displayed_name():
             displayedName = po.get_displayed_name()

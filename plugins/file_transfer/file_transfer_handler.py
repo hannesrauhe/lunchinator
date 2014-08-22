@@ -1,12 +1,11 @@
 from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QTimer
-import os
-from lunchinator import get_server, log_exception, log_error, log_warning,\
-    log_debug, get_peers
-import json
+from lunchinator import get_server, get_peers
+from lunchinator.log import getLogger
 from lunchinator.datathread.dt_qthread import DataReceiverThread, DataSenderThread
-from time import time
 from lunchinator.datathread.base import DataThreadBase
 from lunchinator.utilities import sanitizeForFilename, getUniquePath
+import os, json
+from time import time
 
 class FileTransferHandler(QObject):
     startOutgoingTransfer = pyqtSignal(int, object, object, object, int, int, bool) # transfer ID, target peer ID, filesOrData, target dir, num files, file size, is retry
@@ -133,22 +132,22 @@ class FileTransferHandler(QObject):
                 transferDict = json.loads(value)
                 
                 if not type(transferDict) is dict:
-                    log_error("transferDict is no dict.")
+                    getLogger().error("transferDict is no dict.")
                     return
             except:
-                log_exception("Could not parse transfer dict.")
+                getLogger().exception("Could not parse transfer dict.")
                 return
         
         if not u"id" in transferDict:
-            log_error("No transfer ID in transfer dict. Cannot accept request")
+            getLogger().error("No transfer ID in transfer dict. Cannot accept request")
             return
         
         if not u"name" in transferDict:
-            log_error("No file name in transfer dict. Cannot accept request")
+            getLogger().error("No file name in transfer dict. Cannot accept request")
             return
         
         if not u"size" in transferDict:
-            log_error("No file size in transfer dict. Cannot accept request")
+            getLogger().error("No file size in transfer dict. Cannot accept request")
             return
         
         transferID = transferDict[u"id"]
@@ -159,7 +158,7 @@ class FileTransferHandler(QObject):
         if not os.path.exists(self._downloadDir):
             os.makedirs(self._downloadDir)
         elif not os.path.isdir(self._downloadDir):
-            log_error("Download path %s is no directory. Cannot accept file.")
+            getLogger().error("Download path %s is no directory. Cannot accept file.")
             return
         
         if numFiles > 1:
@@ -199,17 +198,17 @@ class FileTransferHandler(QObject):
             answerDict = json.loads(value)
             
             if not type(answerDict) is dict:
-                log_error(u"answerDict is no dict.")
+                getLogger().error(u"answerDict is no dict.")
                 return
         except:
-            log_exception(u"Could not parse answer dict.")
+            getLogger().exception(u"Could not parse answer dict.")
             return
         
         if not u"id" in answerDict:
-            log_error(u"answerDict does not contain transfer ID.")
+            getLogger().error(u"answerDict does not contain transfer ID.")
             return
         if not u"port" in answerDict:
-            log_error(u"answerDict does not contain port.")
+            getLogger().error(u"answerDict does not contain port.")
             return
         
         transferID = answerDict[u"id"]
@@ -217,15 +216,15 @@ class FileTransferHandler(QObject):
         outData = self._outgoing.get(transferID, None)
         
         if outData is None:
-            log_warning(u"Received ACK for transfer that I don't know of or that already timed out.")
+            getLogger().warning(u"Received ACK for transfer that I don't know of or that already timed out.")
             return
         elif type(outData) is DataSenderThread:
-            log_warning(u"Received ACK for transfer that is already running.")
+            getLogger().warning(u"Received ACK for transfer that is already running.")
             return
         
         targetID, paths, sendDict, _time = outData
         if targetID != peerID:
-            log_warning(u"Received ACK from peer that I wasn't sending to.")
+            getLogger().warning(u"Received ACK from peer that I wasn't sending to.")
             return
         
         outThread = DataSenderThread.send(peerIP, port, paths, sendDict, parent=self)
@@ -246,18 +245,18 @@ class FileTransferHandler(QObject):
             cancelDict = json.loads(value)
             
             if not type(cancelDict) is dict:
-                log_error(u"answerDict is no dict.")
+                getLogger().error(u"answerDict is no dict.")
                 return
         except:
-            log_exception("Could not parse cancel dict.")
+            getLogger().exception("Could not parse cancel dict.")
             return
         
         if not u"id" in cancelDict:
-            log_error("Cancel dict does not contain transfer ID.")
+            getLogger().error("Cancel dict does not contain transfer ID.")
             return
         
         if not u"up" in cancelDict:
-            log_error("Cancel dict does not specify whether it was an upload or not.")
+            getLogger().error("Cancel dict does not specify whether it was an upload or not.")
             return
         
         transferID = cancelDict[u"id"]
@@ -267,12 +266,12 @@ class FileTransferHandler(QObject):
             # is download on this side
             thread = self._incoming.pop((peerID, transferID), None)
             if thread is None:
-                log_debug("Download canceled that was not running")
+                getLogger().debug("Download canceled that was not running")
                 return
         else:
             thread = self._outgoing.pop(transferID, None)
             if thread is None:
-                log_debug("Upload canceled that was not running")
+                getLogger().debug("Upload canceled that was not running")
                 return
             
         thread.cancelTransfer()
@@ -290,7 +289,7 @@ class FileTransferHandler(QObject):
         if type(toSend) in (str, unicode):
             toSend = [toSend]
         elif type(toSend) is not list:
-            log_error("toSend must be path of list of paths")
+            getLogger().error("toSend must be path of list of paths")
             return
         
         # TODO separate preparation phase

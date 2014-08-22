@@ -1,8 +1,8 @@
 import os, codecs, socket
 from copy import deepcopy
 from time import time
-from lunchinator import get_settings, log_exception, log_debug, log_info, get_notification_center,\
-    log_error, log_warning
+from lunchinator import get_settings, get_notification_center
+from lunchinator.log import getLogger
 from lunchinator.utilities import getTimeDifference
 from lunchinator.logging_mutex import loggingMutex
 from lunchinator.peer_names import PeerNames
@@ -119,7 +119,7 @@ class LunchPeers(object):
                         idx = ips.index(ip)
                         ips[idx], ips[-1] = ips[-1], ips[idx]
                     except ValueError:
-                        log_error("IP", ip, "of peer", pID, "not in _idToIP")
+                        getLogger().error("IP %s of peer %s not in _idToIP", ip, pID)
         
     def getIPLastSeen(self, ip):
         """returns a timestamp of the last contact with that IP"""
@@ -170,7 +170,7 @@ class LunchPeers(object):
 
     def _addMember(self, pID):
         if pID not in self._memberIDs:
-            log_debug("Peer %s is a member" % pID) 
+            getLogger().debug("Peer %s is a member", pID) 
             self._memberIDs.add(pID)           
             get_notification_center().emitMemberAppended(pID, deepcopy(self.getPeerInfo(pID=pID, lock=False)))
         else:  # something may have changed for the member data
@@ -250,7 +250,7 @@ class LunchPeers(object):
             try:
                 return int(self._peer_info[ip][u'version_commit_count'])
             except:
-                log_debug("Commit Count is not an Integer")
+                getLogger().debug("Commit Count is not an Integer")
                 return None
         return None   
     
@@ -404,7 +404,7 @@ class LunchPeers(object):
     
     def _createPeerByIP(self, ip, info):  
         """adds a peer for that IP"""
-        log_info("new peer: %s" % ip)
+        getLogger().info("new peer: %s", ip)
         self._peer_info[ip] = info
         pID = self._peer_info[ip][u"ID"]
         self._addPeerIPtoID(pID, ip)
@@ -449,13 +449,13 @@ class LunchPeers(object):
                     existing_info = self._peer_info[ip]
                 elif ip not in self._peer_info and newPID in self._idToIp:
                     # this is a new IP for an existing peer
-                    log_debug("New IP:", ip, "for ID:", newPID)
+                    getLogger().debug("New IP: %s for ID: %s", ip, newPID)
                     existing_info = self._peer_info[self._idToIp[newPID][-1]]
                     self._peer_info[ip] = existing_info
                     self._addPeerIPtoID(newPID, ip)
                 elif ip in self._peer_info and newPID not in self._idToIp:
                     # we already know this IP but it is not this peer - should not happen
-                    log_error("Something went wrong - ID", newPID, "is missing in _idToIp")
+                    getLogger().error("Something went wrong - ID %s is missing in _idToIp", newPID)
                     return
                     
                 old_info = deepcopy(existing_info)
@@ -467,9 +467,9 @@ class LunchPeers(object):
                     
                 if old_info != existing_info:
                     get_notification_center().emitPeerUpdated(newPID, deepcopy(existing_info))
-                    log_debug("%s has new info: %s; \n update was %s" % (ip, existing_info, newInfo))
+                    getLogger().debug("%s has new info: %s; \n update was %s", ip, existing_info, newInfo)
                 else:
-                    log_debug("%s sent info - without new info" % ip)
+                    getLogger().debug("%s sent info - without new info", ip)
                     
                 if u"avatar" in old_info and u"avatar" in existing_info and \
                    old_info[u"avatar"] != existing_info[u"avatar"] and \
@@ -492,7 +492,7 @@ class LunchPeers(object):
         member, a MemberRemoved notification is sent, too.
         """
         
-        log_debug("Removing inactive peers")      
+        getLogger().debug("Removing inactive peers")      
         try:            
             with self._lock:
                 for ip in self._IP_seen:
@@ -501,10 +501,10 @@ class LunchPeers(object):
                         self._removePeerIPfromID(pID, ip)
                         del self._peer_info[ip]
         except:
-            log_exception("Something went wrong while trying to clean up the list of peers")
+            getLogger().exception("Something went wrong while trying to clean up the list of peers")
              
     def _removePeerIPfromID(self, pID, ip):   
-        log_debug("Removing %s from ID: %s" % (ip, pID))
+        getLogger().debug("Removing %s from ID: %s", ip, pID)
         self._idToIp[pID].remove(ip)
         
         if 0 == len(self._idToIp[pID]):
@@ -534,7 +534,7 @@ class LunchPeers(object):
         #TODO change AF_INET when going to v6
         ownIPs = set(i[4][0] for i in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET))
         if not ownIPs:
-            log_warning("Didn't find IPs for ourselves")
+            getLogger().warning("Didn't find IPs for ourselves")
         for ip in ownIPs:
             peerIPs.append(ip)
         if os.path.exists(p_file):
@@ -550,7 +550,7 @@ class LunchPeers(object):
                         for ip in set(i[4][0] for i in socket.getaddrinfo(hostn, None, socket.AF_INET)):
                             peerIPs.append(ip)
                     except socket.error:
-                        log_debug("cannot find host specified in members_file by %s with name %s" % (p_file, hostn))
+                        getLogger().debug("cannot find host specified in members_file by %s with name %s", p_file, hostn)
         return peerIPs
     
     def _writePeersToFile(self):
@@ -567,7 +567,7 @@ class LunchPeers(object):
                     f.truncate()
                     f.write(u"\n".join(sorted(self._potentialPeers)))
         except:
-            log_exception("Could not write peers to %s" % (get_settings().get_peers_file()))    
+            getLogger().exception("Could not write peers to %s", get_settings().get_peers_file())    
         
     def __len__(self):
         return len(self._idToIp)    

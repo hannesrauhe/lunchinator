@@ -1,4 +1,4 @@
-from lunchinator import log_debug
+from lunchinator.log import getLogger
 import math, hashlib
 
 """ Message classes """
@@ -146,7 +146,7 @@ class extMessageOutgoing(extMessage):
             return True
 
         self._compressedMsg = "z"+zlib.compress(self._plainMsg)
-        log_debug("Compression: %d -> %d"%(len(self._plainMsg), len(self._compressedMsg)))
+        getLogger().debug("Compression: %d -> %d", len(self._plainMsg), len(self._compressedMsg))
         
     def split(self):
         msg_len = len(self._compressedMsg)
@@ -159,5 +159,5 @@ class extMessageOutgoing(extMessage):
         
         self._fragments = ["HELOX " + chr(i/n) + chr(m) + self.getSplitID() + \
                            self._compressedMsg[i:i+n] for i in range(0, msg_len, n)]
-        log_debug("Splitting %d Byte in %d segments of size %d"%(msg_len, m, n))
+        getLogger().debug("Splitting %d Byte in %d segments of size %d", msg_len, m, n)
             

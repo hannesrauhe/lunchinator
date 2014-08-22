@@ -1,6 +1,6 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import get_server, get_settings, log_exception, log_error,\
-    get_peers, convert_string
+from lunchinator import get_server, get_settings, get_peers, convert_string
+from lunchinator.log import getLogger
 from lunchinator.utilities import displayNotification
 from PyQt4.QtGui import QTreeView, QWidget, QSortFilterProxyModel, QSizePolicy, QTableWidgetItem, QPushButton, QPalette, QColor
 from PyQt4.QtCore import Qt, QTime
@@ -22,14 +22,14 @@ class voter(iface_gui_plugin):
     def process_event(self, cmd, value, ip, member_info, _prep):
         if cmd == "HELO_VOTE":
             if self.w is None:
-                log_error("Voter: Vote cannot be processed")
+                getLogger().error("Voter: Vote cannot be processed")
                 return
             vote = json.loads(value)
             if vote.has_key("time") and vote.has_key("place"):
                 self.add_vote(member_info[u"ID"], vote["place"], vote["time"])
                 displayNotification("New Vote", "%s voted" % get_peers().getDisplayedPeerName(pIP=ip))
             else:
-                log_error("Voter: Vote does not look valid: " + value)
+                getLogger().error("Voter: Vote does not look valid: %s", value)
         
     # todo: rename ip=>id
     def add_vote(self, ip, vote_place, vote_time):
@@ -127,5 +127,4 @@ if __name__ == "__main__":
     def call_dummy(place, time):
         pass
     
-    from lunchinator.plugin import iface_gui_plugin
     iface_gui_plugin.run_standalone(lambda window : voterWidget(window, call_dummy))

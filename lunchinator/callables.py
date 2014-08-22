@@ -1,4 +1,4 @@
-from lunchinator import log_exception, log_warning
+from lunchinator.log import getLogger
 import sys
 from functools import partial
 from PyQt4.QtCore import QThread, pyqtSignal, QObject
@@ -12,11 +12,11 @@ class _CallBase(object):
         
         if successCall != None:
             if type(successCall) in (str, unicode):
-                successCall = partial(log_warning, successCall)
+                successCall = partial(getLogger().info, successCall)
             self._setSuccessCall(successCall)
         if errorCall != None:
             if type(errorCall) in (str, unicode):
-                errorCall = partial(log_warning, errorCall)            
+                errorCall = partial(getLogger().warning, errorCall)            
             self._setErrorCall(errorCall)
         
         self._call = call
@@ -46,7 +46,7 @@ class _CallBase(object):
             if exc_info[0] != None:
                 typeName = unicode(exc_info[0].__name__)
             errorMessage = u"%s: %s" % (typeName, unicode(exc_info[1]))
-            log_exception(errorMessage)
+            getLogger().exception(errorMessage)
         self._callError(errorMessage)
             
     def _callError(self, errorMessage):

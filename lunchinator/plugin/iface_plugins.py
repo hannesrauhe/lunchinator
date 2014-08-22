@@ -1,6 +1,7 @@
 from yapsy.IPlugin import IPlugin
-from lunchinator import log_error, log_exception, convert_string, \
-    get_notification_center, get_db_connection, log_debug
+from lunchinator import convert_string, \
+    get_notification_center, get_db_connection
+from lunchinator.log import getLogger
 import types, sys, logging, threading
 from copy import deepcopy
 
@@ -53,7 +54,7 @@ class iface_plugin(IPlugin):
             for o, v in self.options:
                 if type(o) in (tuple, list):
                     if len(o) < 2:
-                        log_error("Setting '%s' specified as tuple must contain at least 2 elements." % o[0])
+                        getLogger().error("Setting '%s' specified as tuple must contain at least 2 elements.", o[0])
                         continue
                     dict_options[o[0]] = v
                     self.option_names.append(o)
@@ -161,9 +162,9 @@ class iface_plugin(IPlugin):
             elif type(v) in (types.StringType, types.UnicodeType):
                 return convert_string(new_v)
             else:
-                log_error("type of value", o, v, "not supported, using default")
+                getLogger().error("type of value %s %s not supported, using default", o, v)
         except:
-            log_exception("could not convert value of", o, "from config to type", type(v), "(", new_v, ") using default")
+            getLogger().exception("could not convert value of %s from config to type %s (%s) using default", o, type(v), new_v)
 
     def _readOptionsFromFile(self):
         if self.has_options():
@@ -460,8 +461,7 @@ class iface_plugin(IPlugin):
             dbPlugin, plugin_type = get_db_connection(self.options["db_connection"])
             
             if dbPlugin == None:
-                log_error("Plugin %s: DB  connection %s not available: Maybe DB Connections are not active yet?"
-                          %(type(self),self.options["db_connection"]))
+                getLogger().error("Plugin %s: DB  connection %s not available: Maybe DB Connections are not active yet?", type(self), self.options["db_connection"])
                 return False
             
             if plugin_type in self._supported_dbms:
@@ -469,11 +469,11 @@ class iface_plugin(IPlugin):
             elif "default" in self._supported_dbms:
                 self._specialized_db_conn = self._supported_dbms["default"](dbPlugin)
             else:
-                log_error("DB Conn of type %s is not supported by this plugin"%plugin_type)
+                getLogger().error("DB Conn of type %s is not supported by this plugin", plugin_type)
                 self._specialized_db_conn = None
                 return False
                 
-            log_debug("Plugin %s uses DB Connection of type %s "%(type(self),plugin_type))
+            getLogger().debug("Plugin %s uses DB Connection of type %s ", type(self), plugin_type)
                         
             return True
             
@@ -492,7 +492,8 @@ class iface_plugin(IPlugin):
     @classmethod
     def prepare_application(cls, beforeCreate, factory):
         from PyQt4.QtGui import QApplication, QMainWindow
-        from lunchinator import setLoggingLevel, get_settings
+        from lunchinator import get_settings
+        from lunchinator.log import setLoggingLevel
         from lunchinator.utilities import setValidQtParent
     
         get_settings().set_verbose(True)
@@ -530,7 +531,7 @@ class db_for_plugin_iface(object):
         try:
             self.init_db()
         except:
-            log_exception("Problem while migrating dataset to new version")
+            getLogger().exception("Problem while migrating dataset to new version")
     
     def is_open(self):
         if self.dbConn != None:
