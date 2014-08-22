@@ -61,9 +61,9 @@ class _lunchinatorLogger(object):
                 except IOError:
                     cls.lunch_logger.error("Could not initialize log file.")
             
-            cls.cacheHandler = NotificationLogHandler()
-            cls.cacheHandler.setLevel(logging.DEBUG)
-            cls.lunch_logger.addHandler(cls.cacheHandler)
+            cls.notificationHandler = NotificationLogHandler()
+            cls.notificationHandler.setLevel(logging.DEBUG)
+            cls.lunch_logger.addHandler(cls.notificationHandler)
             
             yapsi_logger = logging.getLogger('yapsy')
             yapsi_logger.setLevel(logging.WARNING)
@@ -79,6 +79,7 @@ class _lunchinatorLogger(object):
     @classmethod
     def setLevel(cls, newLevel):
         cls.streamHandler.setLevel(newLevel)
+        cls.notificationHandler.setLevel(newLevel)
         if cls.logfileHandler:
             cls.logfileHandler.setLevel(newLevel)
 

@@ -532,8 +532,9 @@ def openFile(path):
     except:
         getLogger().exception("Could not open file")
     
-def formatException():
-    exc_info = sys.exc_info()
+def formatException(exc_info=None):
+    if exc_info is None:
+        exc_info = sys.exc_info()
     typeName = u"Unknown Exception"
     if exc_info[0] != None:
         typeName = unicode(exc_info[0].__name__)

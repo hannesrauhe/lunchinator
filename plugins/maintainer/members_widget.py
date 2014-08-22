@@ -22,6 +22,8 @@ class DropdownModel(TableModelBase):
         super(DropdownModel, self).__init__(dataSource, columns)
         
         # Called before server is running, no need to lock here
+        if self.dataSource is None:
+            return
         for peerID in self.dataSource:
             infoDict = dataSource.getPeerInfo(pID=peerID)
             self.appendContentRow(peerID, infoDict)
@@ -52,12 +54,9 @@ class MembersWidget(QWidget):
         self.dropdown_members = QComboBox(self)
         self.dropdown_members.setModel(self.dropdown_members_model)
         
-        self.update_button = QPushButton("Send Update Command", self)
-
         topLayout = QHBoxLayout()
         topLayout.setSpacing(10)
         topLayout.addWidget(self.dropdown_members, 1)
-        topLayout.addWidget(self.update_button)
         self.requestLogsButton = QPushButton("Request Logfiles", self)
         topLayout.addWidget(self.requestLogsButton)
         layout.addLayout(topLayout)
@@ -121,7 +120,6 @@ class MembersWidget(QWidget):
         self.memberSelectionChanged()
         self.log_tree_view.selectionModel().selectionChanged.connect(self.displaySelectedLogfile)
         self.dropdown_members.currentIndexChanged.connect(self.memberSelectionChanged)
-        self.update_button.clicked.connect(self.request_update)
         self.requestLogsButton.clicked.connect(self.requestLogClicked)
         self.sendMessageButton.clicked.connect(partial(self.sendMessageToMember, messageInput))
         messageInput.returnPressed.connect(partial(self.sendMessageToMember, messageInput))
@@ -309,12 +307,6 @@ class MembersWidget(QWidget):
         self.updateLogList([(0, None)])
         self.request_log()
             
-    @loggingSlot()
-    def request_update(self):
-        member = self.get_selected_log_member()
-        if member != None:
-            get_server().call("HELO_UPDATE from GUI", set([member]))
-    
     def listLogFilesForMember(self, member):
         logDir = "%s/logs/%s" % (get_settings().get_main_config_dir(), member)
         if not os.path.exists(logDir):
@@ -448,7 +440,6 @@ class MembersWidget(QWidget):
         self.updateLogList()
         isMemberSelected = self.get_selected_log_member() != None
         self.sendMessageButton.setEnabled(isMemberSelected)
-        self.update_button.setEnabled(isMemberSelected)
         self.requestLogsButton.setEnabled(isMemberSelected)
         self.updateMemberInformation()
         

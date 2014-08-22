@@ -5,11 +5,14 @@ from PyQt4.QtGui import QTreeView, QTabWidget, QSortFilterProxyModel, QSizePolic
     QStandardItem
 from PyQt4.QtCore import Qt, QVariant
 from maintainer.members_widget import MembersWidget
+from maintainer.console_widget import ConsoleWidget
 
 class ExtendedMembersModel(TableModelBase):
     def __init__(self, dataSource):
         super(ExtendedMembersModel, self).__init__(dataSource, None)
         self.headerNames = []
+        if self.dataSource is None:
+            return
         for peerID in self.dataSource:
             self.updateModel(peerID, self.dataSource.getPeerInfo(peerID))
     
@@ -84,6 +87,7 @@ class maintainer_gui(QTabWidget):
         self.membersWidget = MembersWidget(parent) 
         self.addTab(self.membersWidget, "Members")        
         self.addTab(self.create_info_table_widget(self), "Info")
+        self.addTab(ConsoleWidget(self), "Log")
         
         self.setCurrentIndex(0)
         

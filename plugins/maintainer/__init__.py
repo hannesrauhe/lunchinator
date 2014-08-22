@@ -57,3 +57,10 @@ class maintainer(iface_gui_plugin):
             dr.finished.connect(dr.deleteLater)
             dr.start()
             
+if __name__ == '__main__':
+    def logSomething():
+        from lunchinator.log import getLogger
+        getLogger().info("foo")
+        
+    m = maintainer()
+    m.run_in_window(callAfterCreate=logSomething)

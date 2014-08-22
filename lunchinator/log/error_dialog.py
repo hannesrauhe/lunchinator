@@ -51,7 +51,10 @@ class ErrorLogDialog(QDialog):
             if self._notAgain.checkState() == Qt.Checked:
                 return
             if record.levelno == logging.ERROR:
-                err = convert_string(record.msg) % record.args
+                recMsg = record.msg
+                if not isinstance(recMsg, basestring):
+                    recMsg = unicode(recMsg)
+                err = convert_string(recMsg) % record.args
                 msg = u"%s - In %s:%d: %s" % (strftime("%H:%M:%S", localtime(record.created)),
                                               record.pathname,
                                               record.lineno,
@@ -59,7 +62,8 @@ class ErrorLogDialog(QDialog):
                 if record.exc_info:
                     out = StringIO()
                     traceback.print_tb(record.exc_info[2], file=out)
-                    msg += u"\nStack trace:\n" + out.getvalue()
+                    msg += u"\nStack trace:\n" + out.getvalue() + formatException(record.exc_info) + u"\n"
+                    
                 self._errorLog.append(msg)
                 self._empty = False
                 if not self.isVisible():

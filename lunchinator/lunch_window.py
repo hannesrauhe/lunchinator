@@ -148,7 +148,7 @@ class LunchinatorWindow(QMainWindow):
         for aDockWidget in self.pluginNameToDockWidget.values():
             aDockWidget.setFeatures(aDockWidget.features() | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
     
-    @loggingSlot()
+    @loggingSlot(object)
     def _dockWidgetClosed(self, pluginName):
         get_plugin_manager().deactivatePluginByName(pluginName, "gui")
             
