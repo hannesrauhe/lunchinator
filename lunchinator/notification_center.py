@@ -43,7 +43,7 @@ def _disconnectFunc(func):
 def _emitFunc(func):
     signal = func.__name__[4:]
     def newFunc(self, *args, **kwargs):
-        func(self, *args, **kwargs)
+        #func(self, *args, **kwargs) TODO why would we do this?
         self._emit(signal, *args, **kwargs)
     return newFunc
 
@@ -414,15 +414,15 @@ class NotificationCenter(object):
     def emitPrivacySettingsDiscarded(self, pluginName, actionName):
         pass
     
-    """Emitted when modifications to privacy settings are discarded."""    
+    """Emitted when a message is logged."""    
     @_connectFunc
-    def connectErrorOccurred(self, callback):
+    def connectLogMessage(self, callback):
         pass
     @_disconnectFunc
-    def disconnectErrorOccurred(self, callback):
+    def disconnectLogMessage(self, callback):
         pass
     @_emitFunc
-    def emitErrorOccurred(self, logLevel, logMessage):
+    def emitLogMessage(self, logRecord):
         pass
 
 if __name__ == '__main__':

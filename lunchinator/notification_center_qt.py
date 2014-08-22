@@ -234,10 +234,10 @@ class NotificationCenterQt(QObject):
     def emitPrivacySettingsDiscarded(self, pluginName, actionName):
         self._signalPrivacySettingsDiscarded.emit(pluginName, actionName)
         
-    _signalErrorOccurred = pyqtSignal(int, object)
-    def connectErrorOccurred(self, callback):
-        self._signalErrorOccurred.connect(callback, type=Qt.QueuedConnection)
-    def disconnectErrorOccurred(self, callback):
-        self._signalErrorOccurred.disconnect(callback)
-    def emitErrorOccurred(self, logLevel, logMessage):
-        self._signalErrorOccurred.emit(logLevel, logMessage)
+    _signalLogMessage = pyqtSignal(object)
+    def connectLogMessage(self, callback):
+        self._signalLogMessage.connect(callback, type=Qt.QueuedConnection)
+    def disconnectLogMessage(self, callback):
+        self._signalLogMessage.disconnect(callback)
+    def emitLogMessage(self, logRecord):
+        self._signalLogMessage.emit(logRecord)

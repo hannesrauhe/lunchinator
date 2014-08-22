@@ -1,5 +1,5 @@
 from lunchinator import convert_string
-from lunchinator.log.error_notification_handler import ErrorNotificationHandler
+from lunchinator.log.notification_handler import NotificationLogHandler
 import logging
 from logging.handlers import RotatingFileHandler
 import os
@@ -34,7 +34,8 @@ class _lunchinatorLogger(object):
     
     @classmethod
     def initializeLogger(cls, path):
-        if cls.lunch_logger == None:
+        if cls.lunch_logger is None:
+            from lunchinator import get_settings
             if path:
                 logDir = os.path.dirname(path)
                 if not os.path.exists(logDir):
@@ -60,9 +61,9 @@ class _lunchinatorLogger(object):
                 except IOError:
                     cls.lunch_logger.error("Could not initialize log file.")
             
-            errorHandler = ErrorNotificationHandler()
-            errorHandler.setLevel(logging.ERROR)
-            cls.lunch_logger.addHandler(errorHandler)
+            cls.cacheHandler = NotificationLogHandler()
+            cls.cacheHandler.setLevel(logging.DEBUG)
+            cls.lunch_logger.addHandler(cls.cacheHandler)
             
             yapsi_logger = logging.getLogger('yapsy')
             yapsi_logger.setLevel(logging.WARNING)

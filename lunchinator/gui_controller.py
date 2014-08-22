@@ -12,6 +12,7 @@ from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 from lunchinator.notification_center_qt import NotificationCenterQt
 from lunchinator.notification_center import NotificationCenter
 from lunchinator.log.logging_slot import loggingSlot
+from lunchinator.log.error_dialog import ErrorLogDialog
 
 from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QSystemTrayIcon,\
     QIcon, QCursor, QDialog
@@ -70,6 +71,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         # initialize main window
         self.mainWindow = LunchinatorWindow(self)
         self.settingsWindow = None
+        self.errorDialog = ErrorLogDialog(self.mainWindow)
         self.setParent(self.mainWindow)
         
         if not self.createTrayIcon():
