@@ -1,6 +1,7 @@
-from lunchinator import get_peers, get_peer_actions, log_warning
-from functools import partial
+from lunchinator import get_peers, get_peer_actions
 from lunchinator.peer_actions.peer_actions_singleton import PeerActions
+from lunchinator.log import loggingFunc, getCoreLogger
+from functools import partial
 
 def _fillPeerActionsMenu(popupMenu, peerID, filterFunc, parentWidget):
     peerInfo = get_peers().getPeerInfo(pID=peerID)
@@ -39,20 +40,22 @@ def _fillPeerActionsMenu(popupMenu, peerID, filterFunc, parentWidget):
                     popupMenu.addAction(action.getDisplayedName(peerID), partial(action.performAction, peerID, peerInfo, parentWidget))
     return popupMenu
 
+@loggingFunc
 def initializePeerActionsMenu(menu, peerID, filterFunc, parentWidget):
     menu.clear()
     if get_peers() == None:
-        log_warning("no lunch_peers instance available, cannot show peer actions")
+        getCoreLogger().warning("no lunch_peers instance available, cannot show peer actions")
         return menu
     
     if peerID:
         _fillPeerActionsMenu(menu, peerID, filterFunc, parentWidget)
     return menu
 
+@loggingFunc
 def showPeerActionsPopup(peerID, filterFunc, parent):
     from PyQt4.QtGui import QMenu, QCursor
     if get_peers() == None:
-        log_warning("no lunch_peers instance available, cannot show peer actions")
+        getCoreLogger().warning("no lunch_peers instance available, cannot show peer actions")
         return
     if peerID:
         popupMenu = _fillPeerActionsMenu(QMenu(parent), peerID, filterFunc, parent)

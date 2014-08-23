@@ -1,22 +1,22 @@
-from lunchinator import log_exception, log_warning
 import sys
 from functools import partial
 from PyQt4.QtCore import QThread, pyqtSignal, QObject
 
 class _CallBase(object):
-    def __init__(self, call, successCall, errorCall, mutex):
+    def __init__(self, call, successCall, errorCall, mutex, logger):
         super(_CallBase, self).__init__()
         
         self._success = None
         self._error = None
+        self.logger = logger
         
         if successCall != None:
             if type(successCall) in (str, unicode):
-                successCall = partial(log_warning, successCall)
+                successCall = partial(self.logger.info, successCall)
             self._setSuccessCall(successCall)
         if errorCall != None:
             if type(errorCall) in (str, unicode):
-                errorCall = partial(log_warning, errorCall)            
+                errorCall = partial(self.logger.warning, errorCall)            
             self._setErrorCall(errorCall)
         
         self._call = call
@@ -46,7 +46,7 @@ class _CallBase(object):
             if exc_info[0] != None:
                 typeName = unicode(exc_info[0].__name__)
             errorMessage = u"%s: %s" % (typeName, unicode(exc_info[1]))
-            log_exception(errorMessage)
+            self.logger.exception(errorMessage)
         self._callError(errorMessage)
             
     def _callError(self, errorMessage):
@@ -58,7 +58,7 @@ class _CallBase(object):
             self._success(result)
 
 class SyncCall(_CallBase):
-    def __init__(self, call, successCall = None, errorCall = None, mutex = None):
+    def __init__(self, logger, call, successCall = None, errorCall = None, mutex = None):
         """Creates a synchronous call object
         
         call -- The callable to be called.
@@ -67,7 +67,7 @@ class SyncCall(_CallBase):
         errorCall -- If call() raises an exception, errorCall is called with an error message as the only argument.
         mutex -- A QMutex object that will be locked during call().
         """
-        super(SyncCall, self).__init__(call, successCall, errorCall, mutex)
+        super(SyncCall, self).__init__(call, successCall, errorCall, mutex, logger)
         
     def __call__(self, *args, **kwargs):
         self._processCall(args, kwargs)
@@ -84,7 +84,7 @@ class AsyncCall(QObject, _CallBase):
         def run(self):
             self._call()
     
-    def __init__(self, parent, call, successCall = None, errorCall = None, mutex = None):
+    def __init__(self, parent, logger, call, successCall = None, errorCall = None, mutex = None):
         """Creates an asynchronous call object
         
         parent -- The parent object for QThread.
@@ -95,7 +95,7 @@ class AsyncCall(QObject, _CallBase):
         mutex -- A QMutex object that will be locked during call().
         """
         QObject.__init__(self, parent)
-        _CallBase.__init__(self, call, successCall, errorCall, mutex)
+        _CallBase.__init__(self, call, successCall, errorCall, mutex, logger)
         self._parent = parent
 
     def _setErrorCall(self, errorCall):

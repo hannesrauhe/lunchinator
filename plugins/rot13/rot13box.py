@@ -2,6 +2,7 @@ import string #fixed typo was using
 from functools import partial
 from PyQt4.QtGui import QWidget, QHBoxLayout, QPushButton, QLineEdit, QSizePolicy, QToolButton, QMenu
 from lunchinator import get_server
+from lunchinator.log.logging_slot import loggingSlot
 
 class rot13box(QWidget):
     def __init__(self, parent):
@@ -35,6 +36,7 @@ class rot13box(QWidget):
         self.setMaximumHeight(self.sizeHint().height())
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         
+    @loggingSlot()
     def updateMsgMenu(self):
         self.msgMenu.clear()
         messages = get_server().get_messages()
@@ -53,6 +55,7 @@ class rot13box(QWidget):
         else:
             self.buffer = text
         
+    @loggingSlot()
     def enc(self):        
         rot13 = string.maketrans( 
             u"ABCDEFGHIJKLMabcdefghijklmNOPQRSTUVWXYZnopqrstuvwxyz", 

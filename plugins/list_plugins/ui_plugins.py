@@ -53,11 +53,10 @@ class Ui_Plugins(object):
         self.gridLayout.addWidget(self.installReqButton, 4, 1, 1, 1)
 
         self.retranslateUi(Plugins)
-        QtCore.QObject.connect(self.pluginView, QtCore.SIGNAL(_fromUtf8("currentItemChanged(QListWidgetItem*,QListWidgetItem*)")), Plugins.plugin_selected)
-        QtCore.QObject.connect(self.installReqButton, QtCore.SIGNAL(_fromUtf8("clicked()")), Plugins.install_req_clicked)
-        QtCore.QObject.connect(self.showAllCheckBox, QtCore.SIGNAL(_fromUtf8("toggled(bool)")), Plugins.show_all_toggled)
-        QtCore.QObject.connect(self.pluginView, QtCore.SIGNAL(_fromUtf8("itemClicked(QListWidgetItem*)")), Plugins.activate_plugin_toggled)
-        QtCore.QMetaObject.connectSlotsByName(Plugins)
+        self.pluginView.currentItemChanged.connect(Plugins.plugin_selected)
+        self.installReqButton.clicked.connect(Plugins.install_req_clicked)
+        self.showAllCheckBox.toggled.connect(Plugins.show_all_toggled)
+        self.pluginView.itemClicked.connect(Plugins.activate_plugin_toggled)
 
     def retranslateUi(self, Plugins):
         Plugins.setWindowTitle(_translate("Plugins", "Form", None))

@@ -1,39 +1,46 @@
 from PyQt4.QtGui import QDialog, QLabel, QHBoxLayout,\
     QWidget, QPushButton, QStyle, QLineEdit, QCheckBox,\
-    QFileDialog
+    QFileDialog, QVBoxLayout, QTabWidget
 from PyQt4.Qt import Qt
-from lunchinator import convert_string
+from lunchinator import convert_string, get_settings
 from lunchinator.git import GitHandler
-import os
 from lunchinator.error_message_dialog import ErrorMessageDialog
+from lunchinator.callables import AsyncCall
+from lunchinator.utilities import getUniquePath
+from lunchinator.log.logging_slot import loggingSlot
+import os
 
 class AddRepoDialog(ErrorMessageDialog):
-    def __init__(self, parent):
+    _WORKING_COPY = 0
+    _CLONE_URL = 1
+    
+    def __init__(self, parent, logger):
         super(AddRepoDialog, self).__init__(parent)
-        
-        self._path = None
-        self._active = True
-        self._autoUpdate = False
+        self.logger = logger
         self._canAutoUpdate = False
+        self._closeable = True
+        self._path = None
+        self._gitHandler = GitHandler(logger)
         
-    def _initInputUI(self, layout):
-        style = None
+    def _createPathPage(self):
         try:
             from PyQt4.QtGui import QCommonStyle
             style = QCommonStyle()
         except:
-            pass
+            style = None
         
-        self.setWindowTitle(u"Add Plugin Repository")
-
+        w = QWidget(self)
+        layout = QVBoxLayout(w)
+        
         inputWidget = QWidget(self)
         inputLayout = QHBoxLayout(inputWidget)
         inputLayout.setContentsMargins(0, 0, 0, 0)
         
         inputLayout.addWidget(QLabel("Path:", self))
-        self.pathEdit = QLineEdit(self)
-        self.pathEdit.returnPressed.connect(self._checkPath)
-        inputLayout.addWidget(self.pathEdit, 1)
+        self._pathEdit = QLineEdit(self)
+        if hasattr(self._pathEdit, "setPlaceholderText"):
+            self._pathEdit.setPlaceholderText(u"Directory Path")
+        inputLayout.addWidget(self._pathEdit, 1)
         
         browseButton = QPushButton(self)
         browseButton.setAutoDefault(False)
@@ -42,36 +49,71 @@ class AddRepoDialog(ErrorMessageDialog):
         else:
             browseIcon = None
         
-        if browseIcon:
+        if browseIcon and not browseIcon.isNull():
             browseButton.setIcon(browseIcon)
         else:
             browseButton.setText("Browse...")
         browseButton.clicked.connect(self._browse)
         inputLayout.addWidget(browseButton, 0, Qt.AlignHCenter)
         
-        layout.addWidget(inputWidget, 0)
+        layout.addWidget(inputWidget, 0)        
+        return w, layout
+    
+    def _createURLPage(self):
+        w = QWidget(self)
+        layout = QVBoxLayout(w)
         
+        inputWidget = QWidget(self)
+        inputLayout = QHBoxLayout(inputWidget)
+        inputLayout.setContentsMargins(0, 0, 0, 0)
+        
+        inputLayout.addWidget(QLabel("URL:", self))
+        self._urlEdit = QLineEdit(self)
+        if hasattr(self._urlEdit, "setPlaceholderText"):
+            self._urlEdit.setPlaceholderText(u"Git URL (HTTPS/SSH)")
+        inputLayout.addWidget(self._urlEdit, 1)
+        
+        layout.addWidget(inputWidget, 0)        
+        return w, layout
+        
+    def _addPropertyWidgets(self, layout, autoUpdateEnabled):
         propertiesLayout = QHBoxLayout()
         propertiesLayout.setContentsMargins(0, 0, 0, 0)
         
         activeCheckBox = QCheckBox("Active", self)
-        activeCheckBox.stateChanged.connect(self._activeChanged)
         activeCheckBox.setChecked(True)
         propertiesLayout.addWidget(activeCheckBox)
+        self._activeBoxes.append(activeCheckBox)
         
-        self.autoUpdateCheckBox = QCheckBox("Auto Update", self)
-        self.autoUpdateCheckBox.setEnabled(False)
-        self.autoUpdateCheckBox.stateChanged.connect(self._autoUpdateChanged)
-        propertiesLayout.addWidget(self.autoUpdateCheckBox, 1, Qt.AlignLeft)
+        autoUpdateCheckBox = QCheckBox("Auto Update", self)
+        autoUpdateCheckBox.setEnabled(autoUpdateEnabled)
+        propertiesLayout.addWidget(autoUpdateCheckBox, 1, Qt.AlignLeft)
+        self._autoUpdateBoxes.append(autoUpdateCheckBox)
         
         layout.addLayout(propertiesLayout)
         
-    def _activeChanged(self, newState):
-        self._active = newState == Qt.Checked
+    def _initInputUI(self, dialogLayout):
+        self.setWindowTitle(u"Add Plugin Repository")
+
+        self._tabs = QTabWidget(self)
         
+        self._activeBoxes = []
+        self._autoUpdateBoxes = []
+
+        w, layout = self._createPathPage()
+        self._addPropertyWidgets(layout, False)
+        self._tabs.addTab(w, "Working Copy")
+        
+        w, layout = self._createURLPage()
+        self._addPropertyWidgets(layout, True)
+        self._tabs.addTab(w, "Clone URL")
+        
+        dialogLayout.addWidget(self._tabs)
+                
     def _autoUpdateChanged(self, newState):
         self._autoUpdate = newState == Qt.Checked
         
+    @loggingSlot()
     def _browse(self):
         fd = QFileDialog(self)
         fd.setOptions(QFileDialog.ShowDirsOnly)
@@ -82,51 +124,94 @@ class AddRepoDialog(ErrorMessageDialog):
             self._setPath(path)
         
     def _checkPath(self):
-        self._canAutoUpdate = GitHandler.hasGit(self.getPath())
+        self._canAutoUpdate = self._gitHandler.hasGit(self.getPath())
         
-        self.autoUpdateCheckBox.setEnabled(self._canAutoUpdate)
+        box = self._autoUpdateBoxes[self._WORKING_COPY]
         if not self._canAutoUpdate:
-            self.autoUpdateCheckBox.setChecked(False)
-        
+            box.setChecked(False)
+        if box.isEnabled() != self._canAutoUpdate: 
+            box.setEnabled(self._canAutoUpdate)
+            return True
+        return False
+            
     def _setPath(self, path):
-        self._path = convert_string(path)
-        self.pathEdit.setText(path)
+        self._pathEdit.setText(path)
         self._checkPath()
     
     def getPath(self):
-        if convert_string(self.pathEdit.text()) != self._path:
-            self._setPath(convert_string(self.pathEdit.text()))
-        return self._path
+        if self._path is not None:
+            return self._path
+        return convert_string(self._pathEdit.text())
     
     def isRepositoryActive(self):
-        return self._active
+        return self._activeBoxes[self._tabs.currentIndex()].checkState() == Qt.Checked
     
     def isAutoUpdateEnabled(self):
-        return self._autoUpdate
+        return self._autoUpdateBoxes[self._tabs.currentIndex()].checkState() == Qt.Checked
     
     def canAutoUpdate(self):
-        return self._canAutoUpdate
+        return self._tabs.currentIndex() == self._CLONE_URL or self._canAutoUpdate
     
-    def _setAutoUpdate(self, autoUpdate):
-        self._autoUpdate = autoUpdate
-        self.autoUpdateCheckBox.setChecked(autoUpdate)
-        
+    def _setWorking(self, w):
+        self._closeable = not w
+        self._tabs.setEnabled(not w)
+        self._setButtonsEnabled(not w)
+    
+    @loggingSlot()
     def _checkOK(self):
-        if not os.path.isdir(self.getPath()):
-            self._error("The given path does not exist or is not a directory.")
+        if self._tabs.currentIndex() == self._WORKING_COPY:
+            if not os.path.isdir(self.getPath()):
+                self._error("The given path does not exist or is not a directory.")
+            elif not self._checkPath():
+                # no change to properties widget -> accept
+                self._path = self.getPath()
+                self.accept()
         else:
-            self.accept()
+            self._info(u"Cloning repository...")
+            self._setWorking(True)
+            url = convert_string(self._urlEdit.text())
+            AsyncCall(self, self.logger, self._checkAndClone, self._cloneSuccess, self._cloneError)(url)
 
+    def closeEvent(self, event):
+        if self._closeable:
+            event.accept()
+        else:
+            event.ignore()
+
+    def _checkAndClone(self, url):
+        if not self._gitHandler.isGitURL(url):
+            raise ValueError(u"The given URL does not exist or is no Git repository.")
+
+        targetDir = get_settings().get_config(self._gitHandler.extractRepositoryNameFromURL(url))
+        targetDir = getUniquePath(targetDir)
+        self._gitHandler.clone(url, targetDir)
+        return targetDir
+        
+    @loggingSlot(object)
+    def _cloneSuccess(self, path):
+        self._setWorking(False)
+        self.setResult(self.Accepted)
+        self._path = path
+        self.close()
+        
+    @loggingSlot(object)
+    def _cloneError(self, msg):
+        self._setWorking(False)
+        self._error(msg)
+        
 if __name__ == '__main__':
     from PyQt4.QtGui import QApplication
+    from lunchinator.log import getCoreLogger
     import sys
 
     app = QApplication(sys.argv)
-    window = AddRepoDialog(None)
+    window = AddRepoDialog(getCoreLogger(), None)
     
     window.showNormal()
     window.raise_()
     window.activateWindow()
     
     app.exec_()
+    
+    print "path:", window.getPath()
 

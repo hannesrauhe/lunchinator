@@ -1,7 +1,8 @@
 from PyQt4.QtGui import QLabel, QLineEdit, QFormLayout
 from lunchinator import get_peers, convert_string
-import re
 from lunchinator.error_message_dialog import ErrorMessageDialog
+from lunchinator.log.logging_slot import loggingSlot
+import re
 
 class RemotePicturesDialog(ErrorMessageDialog):
     _urlRegex = None
@@ -57,6 +58,7 @@ class RemotePicturesDialog(ErrorMessageDialog):
                 r'(?:/?|[/?]\S+)$', re.IGNORECASE)
         return cls._urlRegex
         
+    @loggingSlot()
     def _checkOK(self):
         urlText = convert_string(self.urlInput.text()) 
         if len(urlText) == 0:

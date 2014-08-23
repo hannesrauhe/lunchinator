@@ -1,5 +1,5 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import get_server, log_exception
+from lunchinator import get_server
 
 class simple_view(iface_gui_plugin):
     def __init__(self):
@@ -17,7 +17,7 @@ class simple_view(iface_gui_plugin):
     def create_widget(self, parent):
         from simple_view.simpleViewWidget import SimpleViewWidget
         
-        self.w = SimpleViewWidget(parent)
+        self.w = SimpleViewWidget(parent, self.logger)
             
         return self.w
         

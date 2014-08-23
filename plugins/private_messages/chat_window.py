@@ -8,10 +8,11 @@ from private_messages.chat_widget import ChatWidget
 class ChatWindow(QMainWindow):
     windowClosing = pyqtSignal(object) # other's peer ID
     
-    def __init__(self, parent, ownName, otherName, ownPicFile, otherPicFile, otherID):
+    def __init__(self, parent, logger, ownName, otherName, ownPicFile, otherPicFile, otherID):
         super(ChatWindow, self).__init__(parent)
+        self.logger = logger
         self._otherID = otherID
-        self._chatWidget = ChatWidget(self, ownName, otherName, ownPicFile, otherPicFile, otherID)
+        self._chatWidget = ChatWidget(self, logger, ownName, otherName, ownPicFile, otherPicFile, otherID)
         self.setCentralWidget(self._chatWidget)
         self.setWindowTitle(otherName)
         self.setWindowIcon(QIcon(get_settings().get_resource("images", "lunchinator_chat.png")))

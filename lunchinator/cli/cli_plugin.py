@@ -1,7 +1,7 @@
 from functools import partial
 from lunchinator.cli import LunchCLIModule
-from lunchinator import get_settings, get_plugin_manager, log_exception,\
- get_notification_center
+from lunchinator import get_settings, get_plugin_manager
+from lunchinator.log import getCoreLogger
 
 class CLIPluginHandling(LunchCLIModule):
     def __init__(self, parent):
@@ -22,7 +22,7 @@ class CLIPluginHandling(LunchCLIModule):
                             not pluginInfo.plugin_object.is_activated and listDeactivated:
                         yield (pluginInfo.name, pluginInfo.description, pluginInfo.categories)
         except:
-            log_exception("while collecting option categories")
+            getCoreLogger().exception("while collecting option categories")
             
     def listPlugins(self, args):
         try:
@@ -37,7 +37,7 @@ class CLIPluginHandling(LunchCLIModule):
                 self.appendOutput("no", cats, name, desc)
             self.flushOutput()
         except:
-            log_exception("while printing plugin names")
+            getCoreLogger().exception("while printing plugin names")
             
     def loadPlugins(self, args):
         while len(args) > 0:
@@ -56,7 +56,7 @@ class CLIPluginHandling(LunchCLIModule):
                     get_plugin_manager().activatePlugin(pluginInfo=pInfo)
                     self.parent.addModule(pInfo.plugin_object)
             except:
-                log_exception("while loading plugin")
+                getCoreLogger().exception("while loading plugin")
             
     def unloadPlugins(self, args):
         pluginInfos = []
@@ -76,7 +76,7 @@ class CLIPluginHandling(LunchCLIModule):
                     pluginInfos.append(pInfo)
                     self.parent.removeModule(pInfo.plugin_object)
             except:
-                log_exception("while unloading plugin")
+                getCoreLogger().exception("while unloading plugin")
         
         get_plugin_manager().deactivatePlugins(pluginInfos)
     

@@ -1,16 +1,15 @@
 from online_update.appupdate.app_update_handler import AppUpdateHandler
 from lunchinator.utilities import getGPGandKey, getValidQtParent
 from lunchinator.download_thread import DownloadThread
-import os
-import contextlib
-from lunchinator import log_error, log_debug, log_exception, get_settings
-import json
+from lunchinator import get_settings
+from lunchinator.log.logging_func import loggingFunc
+import os, contextlib, json
 
 class GPGUpdateHandler(AppUpdateHandler):
     """Base class for updaters that download GPG signed packages and install them."""
     
-    def __init__(self, urlBase):
-        AppUpdateHandler.__init__(self)
+    def __init__(self, logger, urlBase):
+        AppUpdateHandler.__init__(self, logger)
         self._urlBase = urlBase
         self._version_info = {}
         self._local_installer_file = None
@@ -25,6 +24,7 @@ class GPGUpdateHandler(AppUpdateHandler):
     def canCheckForUpdate(self):
         return True
         
+    @loggingFunc
     def checkForUpdate(self):
         if not self._has_gpg():
             # user clicked on "Install GPG"
@@ -37,7 +37,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             return
         
         url = self._getCheckURLBase() + "/latest_version.asc"
-        version_download = DownloadThread(getValidQtParent(), url)
+        version_download = DownloadThread(getValidQtParent(), self.logger, url)
         version_download.success.connect(self._versionInfoDownloaded)
         version_download.error.connect(self._errorDownloading)
         version_download.finished.connect(version_download.deleteLater)
@@ -48,7 +48,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             return self._prepareInstallation(self._local_installer_file, commands)
     
     def _has_gpg(self):
-        gpg, _key = getGPGandKey()
+        gpg, _key = getGPGandKey(self.logger)
         return gpg != None
     
     def _checkGPG(self):
@@ -57,7 +57,8 @@ class GPGUpdateHandler(AppUpdateHandler):
             self.checkForUpdate()
         else:
             self._setStatus("GPG not installed or not working properly.")
-            
+        
+    @loggingFunc    
     def _downloadProgressChanged(self, _t, prog):
         if self._ui != None:
             self._ui.setProgress(prog)
@@ -70,12 +71,12 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._ui.setAppStatusToolTip(vstr)
             
     def _verifySignature(self, signedString):
-        gpg, _keyid = getGPGandKey()
+        gpg, _keyid = getGPGandKey(self.logger)
         if gpg == None:
             return None
         v = gpg.verify(str(signedString))
         if not v:
-            log_error("Verification of Signature failed")
+            self.logger.error("Verification of Signature failed")
             return False
         
         return v
@@ -108,6 +109,7 @@ class GPGUpdateHandler(AppUpdateHandler):
         if self._version_info != None:
             return self._version_info[u"Version String"] if u"Version String" in self._version_info else self._version_info["Commit Count"]
         
+    @loggingFunc
     def _versionInfoDownloaded(self, thread):
         try:
             signedString = thread.getResult()
@@ -115,13 +117,13 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._setStatus("Version info not available", True)
             return
         
-        log_debug("Update: Got version info, checking signature", signedString)
+        self.logger.debug("Update: Got version info, checking signature %s", signedString)
         
         ver_result = False
         try:
             ver_result = self._verifySignature(signedString)
         except:
-            log_exception("Error verifying signature")
+            self.logger.exception("Error verifying signature")
             self._setStatus("Signature could not be verified because of unknown error", True)
             return
         
@@ -129,7 +131,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._setStatus("Signature could not be verified", True)
             return
                 
-        log_debug("Updater: Signature OK, checking version info")
+        self.logger.debug("Updater: Signature OK, checking version info")
         
         for l in signedString.splitlines():
             info = l.split(":", 1)
@@ -138,7 +140,7 @@ class GPGUpdateHandler(AppUpdateHandler):
                 
         if not self._version_info.has_key("URL") or not self._version_info.has_key("Commit Count"):
             self._setStatus("Version Info corrupt - URL and/or Commit Count missing", True)
-            log_debug(str(self._version_info))
+            self.logger.debug(str(self._version_info))
             return
         else:
             try:
@@ -157,7 +159,7 @@ class GPGUpdateHandler(AppUpdateHandler):
                 changeLog = json.loads(self._version_info[u"Change Log"])
                 self._setChangeLog(changeLog)
             except:
-                log_exception("Error reading change log.")
+                self.logger.exception("Error reading change log.")
                 self._setChangeLog(["Error loading change log"])
         
         if self._hasNewVersion():
@@ -165,7 +167,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             if not self._checkHash():
                 self._setStatus("New Version %s available, Downloading ..." % (self._getDownloadedVersion()), progress=True)
                 
-                installer_download = DownloadThread(getValidQtParent(), self._installer_url, target=open(self._local_installer_file, "wb"), progress=True)
+                installer_download = DownloadThread(getValidQtParent(), self.logger, self._installer_url, target=open(self._local_installer_file, "wb"), progress=True)
                 installer_download.progressChanged.connect(self._downloadProgressChanged)
                 installer_download.success.connect(self._installerDownloaded)
                 installer_download.error.connect(self._errorDownloading)
@@ -174,6 +176,7 @@ class GPGUpdateHandler(AppUpdateHandler):
         else:
             self._setStatus("No new version available")
             
+    @loggingFunc
     def _installerDownloaded(self, thread):
         try:
             # close the file object that keeps the downloaded data
@@ -183,6 +186,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             
         self._checkHash()
     
+    @loggingFunc
     def _errorDownloading(self):
         self._setStatus("Download failed", True)
         

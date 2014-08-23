@@ -1,7 +1,7 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import get_server, get_settings, log_exception, log_error,\
-    get_peers, convert_string
+from lunchinator import get_server, get_settings, get_peers, convert_string
 from lunchinator.utilities import displayNotification
+from lunchinator.log.logging_slot import loggingSlot
 from PyQt4.QtGui import QTreeView, QWidget, QSortFilterProxyModel, QSizePolicy, QTableWidgetItem, QPushButton, QPalette, QColor
 from PyQt4.QtCore import Qt, QTime
 from ui_voter import Ui_Voter
@@ -16,20 +16,20 @@ class voter(iface_gui_plugin):
         self.ip2vote = {}        
     
     def create_widget(self, parent):        
-        self.w = voterWidget(parent, self.send_vote)            
+        self.w = voterWidget(parent, self.send_vote, self.logger)
         return self.w
     
     def process_event(self, cmd, value, ip, member_info, _prep):
         if cmd == "HELO_VOTE":
             if self.w is None:
-                log_error("Voter: Vote cannot be processed")
+                self.logger.error("Voter: Vote cannot be processed")
                 return
             vote = json.loads(value)
             if vote.has_key("time") and vote.has_key("place"):
                 self.add_vote(member_info[u"ID"], vote["place"], vote["time"])
-                displayNotification("New Vote", "%s voted" % get_peers().getDisplayedPeerName(pIP=ip))
+                displayNotification("New Vote", "%s voted" % get_peers().getDisplayedPeerName(pIP=ip), self.logger)
             else:
-                log_error("Voter: Vote does not look valid: " + value)
+                self.logger.error("Voter: Vote does not look valid: %s", value)
         
     # todo: rename ip=>id
     def add_vote(self, ip, vote_place, vote_time):
@@ -66,8 +66,9 @@ class voter(iface_gui_plugin):
         get_server().getController().changeNextLunchTime(stime.toString("hh:mm"), etime.toString("hh:mm"))
 
 class voterWidget(QWidget):
-    def __init__(self, parent, vote_clicked_callable):
+    def __init__(self, parent, vote_clicked_callable, logger):
         super(voterWidget, self).__init__(parent)
+        self.logger = logger
         self.ui = Ui_Voter()
         self.ui.setupUi(self)
         self.send_vote = vote_clicked_callable
@@ -76,11 +77,13 @@ class voterWidget(QWidget):
         self.ui.tableWidget.clearContents()
         self.ui.tableWidget.setRowCount(0)
         
+    @loggingSlot()
     def vote_clicked(self):
         currentText = convert_string(self.ui.comboBox.currentText())
         if currentText:
             self.send_vote(currentText, self.ui.timeEdit.time())
         
+    @loggingSlot(int, int)
     def tablevote_clicked(self, row, column):
         vote_place = self.ui.tableWidget.item(row, 0).text()
         vote_time = self.ui.tableWidget.item(row, 1).text()
@@ -126,6 +129,5 @@ class voterWidget(QWidget):
 if __name__ == "__main__":
     def call_dummy(place, time):
         pass
-    
-    from lunchinator.plugin import iface_gui_plugin
-    iface_gui_plugin.run_standalone(lambda window : voterWidget(window, call_dummy))
+    from lunchinator.log import getCoreLogger
+    iface_gui_plugin.run_standalone(lambda window : voterWidget(window, call_dummy, getCoreLogger()))

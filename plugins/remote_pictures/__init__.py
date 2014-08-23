@@ -1,17 +1,12 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import log_exception, get_settings, log_error, convert_string,\
-    log_warning, get_server, log_debug, get_peers, get_notification_center
-import urllib2,sys,tempfile,csv,contextlib,os,socket
-from lunchinator.utilities import getValidQtParent, displayNotification,\
-    canUseBackgroundQThreads
-from lunchinator.download_thread import DownloadThread
+from lunchinator import get_server, get_notification_center
+from lunchinator.log import loggingFunc
+from lunchinator.utilities import canUseBackgroundQThreads
 from StringIO import StringIO
-from functools import partial
-from tempfile import NamedTemporaryFile
-from urlparse import urlparse
 from lunchinator.peer_actions import PeerAction
 from lunchinator.privacy import PrivacySettings
 from remote_pictures.remote_pictures_dialog import RemotePicturesDialog
+import contextlib, csv
     
 class _RemotePictureAction(PeerAction):
     def getName(self):
@@ -119,6 +114,7 @@ class remote_pictures(iface_gui_plugin):
         from remote_pictures.remote_pictures_handler import RemotePicturesHandler
         super(remote_pictures, self).create_widget(parent)
         self._gui = RemotePicturesGui(parent,
+                                      self.logger,
                                       self.get_option(u"smooth_scaling"),
                                       self.get_option(u"min_opacity"),
                                       self.get_option(u"max_opacity"))
@@ -127,7 +123,8 @@ class remote_pictures(iface_gui_plugin):
             self._messagesThread = QThread()
         else:
             self._messagesThread = None
-        self._handler = RemotePicturesHandler(self.get_option(u"thumbnail_size"),
+        self._handler = RemotePicturesHandler(self.logger,
+                                              self.get_option(u"thumbnail_size"),
                                               self.get_option(u"store_locally"),
                                               self._gui)
         if self._messagesThread is not None:
@@ -195,14 +192,14 @@ class remote_pictures(iface_gui_plugin):
                 
     def getCategories(self):
         if self._handler is None:
-            log_error("Remote Pictures not initialized")
+            self.logger.error("Remote Pictures not initialized")
             return []
     
         return self._handler.getCategoryNames(alsoEmpty=True)
     
     def getCategoryIcon(self, category):
         if self._gui is None:
-            log_error("Remote Pictures not initialized")
+            self.logger.error("Remote Pictures not initialized")
             return None
         return self._gui.getCategoryIcon(category)
     
@@ -223,5 +220,6 @@ class remote_pictures(iface_gui_plugin):
                 writer.writerow(data)
                 get_server().call("HELO_REMOTE_PIC " + strOut.getvalue(), peerIDs=[peerID])
     
+    @loggingFunc
     def _privacySettingsChanged(self):
         get_notification_center().emitPrivacySettingsChanged(self._rpAction.getPluginName(), self._rpAction.getName())

@@ -1,12 +1,13 @@
 import cmd, threading, time, inspect
 from functools import partial
-from lunchinator import get_server, log_error, utilities, log_exception,\
+from lunchinator import get_server, utilities,\
     get_notification_center, get_settings, get_plugin_manager
+from lunchinator.log import getCoreLogger, loggingFunc
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.cli.cli_message import CLIMessageHandling
 from lunchinator.cli.cli_option import CLIOptionHandling
 from lunchinator.cli.cli_plugin import CLIPluginHandling
-from lunchinator.lunch_server import EXIT_CODE_UPDATE, lunch_server
+from lunchinator.lunch_server import EXIT_CODE_UPDATE
 
 # enable tab completion on most platforms
 
@@ -24,7 +25,7 @@ class ServerThread(threading.Thread):
         try:
             get_server().start_server()
         except:
-            log_exception("Exception in Lunch Server")
+            getCoreLogger().exception("Exception in Lunch Server")
             get_server().running = False
         
     def stop(self):
@@ -69,7 +70,7 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
             if name.startswith("do_"):
                 cmdName = name[3:]
                 if cmdName in self.commands:
-                    log_error("Conflicting command name: 'do_%s' is defined multiple times")
+                    getCoreLogger().error("Conflicting command name: 'do_%s' is defined multiple times", cmdName)
                 else:
                     self.commands.add(cmdName)
                     setattr(self.__class__, name, value)
@@ -132,6 +133,7 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
             except KeyboardInterrupt:
                 print "^C"
     
+    @loggingFunc
     def notifyUpdates(self):
         print "There are updates available for you. Please exit to fetch the updates."
         self.prompt = "(update available)> "

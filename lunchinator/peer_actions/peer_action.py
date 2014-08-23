@@ -125,6 +125,7 @@ class PeerAction(object):
     def setParentPlugin(self, pluginName, pluginObject):
         self._pluginName = pluginName
         self._pluginObject = pluginObject
+        self.logger = pluginObject.logger
         
     def getPrivacyPolicy(self, category=None, categoryPolicy=None):
         """Convenience method to get the privacy policy"""

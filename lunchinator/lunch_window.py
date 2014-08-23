@@ -1,6 +1,8 @@
 from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplication, QMenu, QKeySequence, QIcon
 from PyQt4.QtCore import Qt, QSettings, QVariant, QEvent, pyqtSignal
-from lunchinator import get_settings, log_exception, convert_string, get_plugin_manager, get_notification_center
+from lunchinator import get_settings, convert_string, get_plugin_manager, get_notification_center
+from lunchinator.log import getCoreLogger
+from lunchinator.log.logging_slot import loggingSlot
 import sys
 from StringIO import StringIO
 import traceback
@@ -60,7 +62,7 @@ class LunchinatorWindow(QMainWindow):
                     if pluginInfo.plugin_object.is_activated:
                         self.addPluginWidget(pluginInfo.plugin_object, pluginInfo.name, noTabs=True)
         except:
-            log_exception("while including plugins %s"%str(sys.exc_info()))
+            getCoreLogger().exception("while including plugins %s", str(sys.exc_info()))
         
         if savedGeometry != None:
             self.restoreGeometry(savedGeometry.toByteArray())
@@ -87,6 +89,7 @@ class LunchinatorWindow(QMainWindow):
         get_notification_center().disconnectPluginActivated(self._pluginActivated)
         get_notification_center().disconnectPluginWillBeDeactivated(self._pluginWillBeDeactivated)
     
+    @loggingSlot(object, object)
     def _pluginActivated(self, pName, pCat):
         pName = convert_string(pName)
         pCat = convert_string(pCat)
@@ -95,8 +98,9 @@ class LunchinatorWindow(QMainWindow):
                 pluginInfo = get_plugin_manager().getPluginByName(pName, u"gui")
                 self.addPluginWidget(pluginInfo.plugin_object, pName)
             except:
-                log_exception("while including plugins %s"%str(sys.exc_info()))
+                getCoreLogger().exception("while including plugins %s", str(sys.exc_info()))
             
+    @loggingSlot(object, object)
     def _pluginWillBeDeactivated(self, pName, pCat):
         pName = convert_string(pName)
         pCat = convert_string(pCat)
@@ -105,7 +109,7 @@ class LunchinatorWindow(QMainWindow):
             try:
                 pluginInfo.plugin_object.destroy_widget()
             except:
-                log_exception("Error destroying plugin widget for plugin", pName)
+                getCoreLogger().exception("Error destroying plugin widget for plugin %s", pName)
             self.removePluginWidget(pName)
             
     def _prepareMenuBar(self):
@@ -143,7 +147,8 @@ class LunchinatorWindow(QMainWindow):
         self.locked = False
         for aDockWidget in self.pluginNameToDockWidget.values():
             aDockWidget.setFeatures(aDockWidget.features() | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
-            
+    
+    @loggingSlot(object)
     def _dockWidgetClosed(self, pluginName):
         get_plugin_manager().deactivatePluginByName(pluginName, "gui")
             
@@ -168,7 +173,7 @@ class LunchinatorWindow(QMainWindow):
                 for aMenu in menus:
                     self.menuBar().addMenu(aMenu)
         except:
-            log_exception("while creating menu for plugin %s: %s" % (name, str(sys.exc_info())))
+            getCoreLogger().exception("while creating menu for plugin %s: %s", name, str(sys.exc_info()))
 
         widgetToTabify = None
         if not noTabs:
@@ -226,7 +231,7 @@ class LunchinatorWindow(QMainWindow):
                 self.settings.setValue("locked", QVariant(self.locked))
                 self.settings.sync()
             except:
-                log_exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
+                getCoreLogger().exception("while storing order of GUI plugins:\n  %s", str(sys.exc_info()))
         
         QMainWindow.closeEvent(self, closeEvent)     
         
@@ -242,7 +247,7 @@ class LunchinatorWindow(QMainWindow):
         except:
             stringOut = StringIO()
             traceback.print_exc(None, stringOut)
-            log_exception("while including plugin %s with options: %s  %s"%(p_name, str(plugin_object.options), str(sys.exc_info())))
+            getCoreLogger().exception("while including plugin %s with options: %s  %s", p_name, str(plugin_object.options), str(sys.exc_info()))
             sw = QTextEdit(parent)
             #sw.set_size_request(400,200)
             sw.setLineWrapMode(QTextEdit.WidgetWidth)

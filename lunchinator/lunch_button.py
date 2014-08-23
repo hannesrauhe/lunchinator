@@ -1,6 +1,7 @@
 from PyQt4.QtGui import QPushButton, QSizePolicy, QIcon
 from PyQt4.QtCore import QSize
 from lunchinator import get_settings, get_server, convert_string
+from lunchinator.log.logging_slot import loggingSlot
     
 class LunchButton(QPushButton):
     def __init__(self, parent, msgfield=None):
@@ -15,6 +16,7 @@ class LunchButton(QPushButton):
         if self.sendMessageField != None:
             self.sendMessageField.returnPressed.connect(self.callForLunch)
         
+    @loggingSlot()
     def callForLunch(self):
         optmsg = ""
         if self.sendMessageField != None:

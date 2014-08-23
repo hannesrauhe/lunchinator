@@ -1,12 +1,14 @@
-from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator import get_settings, get_notification_center, get_server
+from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator.callables import AsyncCall
+from lunchinator.log.logging_func import loggingFunc
 
 class RepoUpdateHandler(object):
     """Handles plugin repository updates."""
     
-    def __init__(self):
+    def __init__(self, logger):
         self._ui = None
+        self.logger = logger
     
     def activate(self):
         get_notification_center().connectOutdatedRepositoriesChanged(self._processOutdated)
@@ -16,8 +18,10 @@ class RepoUpdateHandler(object):
     def deactivate(self):
         get_notification_center().disconnectOutdatedRepositoriesChanged(self._processOutdated)
     
+    @loggingFunc
     def checkForUpdates(self):
         AsyncCall(getValidQtParent(),
+                  self.logger,
                   get_settings().get_plugin_repositories().checkForUpdates)()
     
     def setUI(self, ui):
@@ -42,11 +46,12 @@ class RepoUpdateHandler(object):
     def areUpdatesAvailable(self):
         return get_settings().get_plugin_repositories().areUpdatesAvailable()
     
+    @loggingFunc
     def _processOutdated(self):
         nOutdated = get_settings().get_plugin_repositories().getNumOutdated()
         
         if nOutdated > 0:
-            displayNotification("Update(s) available", self._getRepoStatus())
+            displayNotification("Update(s) available", self._getRepoStatus(), self.logger)
         if self._ui != None:
             self._ui.setRepoUpdatesAvailable(nOutdated > 0)
             self._updateRepoStatus(nOutdated)

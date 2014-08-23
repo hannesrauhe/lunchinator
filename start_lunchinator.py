@@ -7,12 +7,12 @@ if __name__ == '__main__':
         from lunchinator.start_lunchinator import startLunchinator
         startLunchinator()
     except Exception as e:
-        import traceback
+        import sys, traceback
         traceback.print_exc()
         msg = "Unhandled Exception: "+str(e)
         try:
             from PyQt4.QtGui import QApplication, QMessageBox
-            app = QApplication([])
+            app = QApplication(sys.argv)
             QMessageBox.critical(None, "Lunchinator Critical Error", msg)
         except:
             print msg

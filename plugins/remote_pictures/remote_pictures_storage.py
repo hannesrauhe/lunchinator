@@ -1,5 +1,4 @@
-from lunchinator import get_db_connection, log_error, log_warning,\
-    convert_string, log_exception, get_settings
+from lunchinator import get_db_connection, convert_string, get_settings
 from PyQt4.QtCore import QSettings
 from time import time
 from lunchinator.privacy import PrivacySettings
@@ -38,16 +37,17 @@ class RemotePicturesStorage(object):
                                              HIDDEN BOOLEAN NOT NULL)
     """
     
-    def __init__(self, delegate):
+    def __init__(self, delegate, logger):
         self._delegate = delegate
-        self._db, plugin_type = get_db_connection()
+        self.logger = logger
+        self._db, plugin_type = get_db_connection(self.logger)
         
         if self._db == None:
-            log_error("Unable to get database connection.")
+            self.logger.error("Unable to get database connection.")
             return
         
         if plugin_type != "SQLite Connection":
-            log_warning("Your standard connection is not of type SQLite. " + \
+            self.logger.warning("Your standard connection is not of type SQLite. " + \
                 "Using Remote Pictures with another type is experimental.")
         
         self._checkDBVersion()
@@ -75,7 +75,7 @@ class RemotePicturesStorage(object):
             
     def _addCategory(self, title, thumbnail, hidden=False):
         if self._db is None:
-            log_error("Cannot add category, no database connection")
+            self.logger.error("Cannot add category, no database connection")
             return
         
         if title is None:
@@ -95,7 +95,7 @@ class RemotePicturesStorage(object):
         category.
         """
         if self._db is None:
-            log_error("Cannot add picture, no database connection")
+            self.logger.error("Cannot add picture, no database connection")
             return
         
         catAdded = False
@@ -141,7 +141,7 @@ class RemotePicturesStorage(object):
                             picDesc = None
                         
         except:
-            log_exception("Could not load thumbnail index.")
+            self.logger.exception("Could not load thumbnail index.")
     
     def hasCategory(self, cat):
         if self._db is None:
@@ -235,14 +235,14 @@ class RemotePicturesStorage(object):
     
     def setCategoryThumbnail(self, category, thumbnailPath):
         if self._db is None:
-            log_error("Cannot set category thumbnail, no database connection")
+            self.logger.error("Cannot set category thumbnail, no database connection")
             return
         
         self._db.execute("UPDATE REMOTE_PICTURES_CATEGORY SET THUMBNAIL=? WHERE TITLE=?", thumbnailPath, category)
         
     def setPictureFile(self, category, url, path):
         if self._db is None:
-            log_error("Cannot set picture path, no database connection")
+            self.logger.error("Cannot set picture path, no database connection")
             return
         
         self._db.execute("UPDATE REMOTE_PICTURES SET FILE=? WHERE CAT=? AND URL=? AND FILE IS NULL", path, category, url)

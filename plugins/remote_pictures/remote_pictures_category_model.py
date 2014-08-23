@@ -1,11 +1,13 @@
 from PyQt4.QtGui import QStandardItemModel, QImage, QIcon, QPixmap,\
     QStandardItem
-from PyQt4.QtCore import Qt, QSize, QVariant, pyqtSignal, pyqtSlot
+from PyQt4.QtCore import Qt, QSize, QVariant, pyqtSignal
 from lunchinator.callables import AsyncCall
-from functools import partial
 from lunchinator import convert_string
-import os
 from lunchinator.privacy import PrivacySettings
+from lunchinator.log.logging_slot import loggingSlot
+from lunchinator.log import loggingFunc
+import os
+from functools import partial
 
 class CategoriesModel(QStandardItemModel):
     SORT_ROLE = Qt.UserRole + 1
@@ -17,8 +19,9 @@ class CategoriesModel(QStandardItemModel):
     
     categoriesChanged = pyqtSignal()
     
-    def __init__(self):
+    def __init__(self, logger):
         super(CategoriesModel, self).__init__()
+        self.logger = logger
         self.setColumnCount(1)
         self._categoryIcons = {}
         
@@ -27,6 +30,7 @@ class CategoriesModel(QStandardItemModel):
         image = QImage(imagePath)
         return image.scaled(QSize(thumbnailSize, thumbnailSize), Qt.KeepAspectRatio, Qt.SmoothTransformation), adding
         
+    @loggingFunc
     def _setThumbnail(self, item, cat, aTuple):
         image, adding = aTuple
         icon = QIcon(QPixmap.fromImage(image))
@@ -37,7 +41,7 @@ class CategoriesModel(QStandardItemModel):
         
     def _initializeItem(self, item, imagePath, thumbnailSize, cat, adding):
         if imagePath and os.path.exists(imagePath):
-            AsyncCall(self, self._createThumbnail, partial(self._setThumbnail, item, cat))(imagePath, thumbnailSize, adding)
+            AsyncCall(self, self.logger, self._createThumbnail, partial(self._setThumbnail, item, cat))(imagePath, thumbnailSize, adding)
         elif adding:
             self.categoriesChanged.emit()
         
@@ -46,7 +50,7 @@ class CategoriesModel(QStandardItemModel):
             return self._categoryIcons[cat]
         return None
         
-    @pyqtSlot(object, object, int)
+    @loggingSlot(object, object, int)
     def addCategory(self, cat, thumbnailPath, thumbnailSize):
         cat = convert_string(cat)
         thumbnailPath = convert_string(thumbnailPath)

@@ -1,5 +1,5 @@
 import shlex, inspect, sys, re
-from lunchinator import get_server, log_exception, convert_string, get_peers
+from lunchinator import get_server, convert_string, get_peers
 
 class LunchCLIModule(object):
     MAX_COL_WIDTH = 60

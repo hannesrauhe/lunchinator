@@ -3,13 +3,15 @@ from PyQt4.QtGui import QWidget, QComboBox, QHBoxLayout, QLabel, QToolBox,\
 from PyQt4.QtCore import Qt
 from privacy_gui.single_category_view import SingleCategoryView
 from lunchinator.privacy.privacy_settings import PrivacySettings
-from lunchinator import get_notification_center, log_debug, convert_string
+from lunchinator import get_notification_center, convert_string
+from lunchinator.log.logging_slot import loggingSlot
 from itertools import izip
 
 class MultipleCategoriesView(QWidget):
-    def __init__(self, action, parent):
+    def __init__(self, action, parent, logger):
         super(MultipleCategoriesView, self).__init__(parent)
-
+        
+        self.logger = logger
         self._action = action
         self._mode = PrivacySettings.get().getPolicy(self._action, None, useModified=True, categoryPolicy=PrivacySettings.CATEGORY_NEVER)
         self._currentSingleViews = {}
@@ -101,7 +103,7 @@ class MultipleCategoriesView(QWidget):
         
     def _updateCategoryView(self):
         if self._currentToolBox is None:
-            log_debug("Current tool box is None. Have to reset.")
+            self.logger.debug("Current tool box is None. Have to reset.")
             self._createCategoryView()
             return
         
@@ -129,6 +131,7 @@ class MultipleCategoriesView(QWidget):
         self._currentSingleViews[None] = w
         self._settingsWidget.layout().addWidget(w)
         
+    @loggingSlot(int)
     def _modeChanged(self, newMode, notify=True):
         if newMode == self._mode and newMode == PrivacySettings.POLICY_BY_CATEGORY:
             self._updateCategoryView()
@@ -154,6 +157,7 @@ class MultipleCategoriesView(QWidget):
         if notify:
             PrivacySettings.get().setPolicy(self._action, None, self._mode, applyImmediately=False, categoryPolicy=PrivacySettings.CATEGORY_NEVER)
     
+    @loggingSlot(object, object)
     def _privacySettingsChanged(self, pluginName, actionName):
         if pluginName != self._action.getPluginName() or actionName != self._action.getName():
             return

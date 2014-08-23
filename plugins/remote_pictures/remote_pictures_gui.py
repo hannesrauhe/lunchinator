@@ -1,16 +1,19 @@
-import sys
-from lunchinator import log_debug, log_warning, convert_string, get_peers
+from remote_pictures.remote_pictures_storage import RemotePicturesStorage
+from remote_pictures.remote_pictures_category_model import CategoriesModel
+from lunchinator import convert_string, get_peers
+from lunchinator.resizing_image_label import ResizingWebImageLabel
+from lunchinator.utilities import formatTime
+from lunchinator.log.logging_slot import loggingSlot
+
 from PyQt4.QtGui import QStackedWidget, QListView, QWidget, QHBoxLayout, \
     QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy, QSortFilterProxyModel, \
     QFrame
-from PyQt4.QtCore import QTimer, QSize, Qt, pyqtSlot, pyqtSignal, QModelIndex
-from lunchinator.resizing_image_label import ResizingWebImageLabel
+from PyQt4.QtCore import QTimer, QSize, Qt, pyqtSignal, QModelIndex
+
+import sys, os
 from functools import partial
-from remote_pictures.remote_pictures_category_model import CategoriesModel
-import os
-from remote_pictures.remote_pictures_storage import RemotePicturesStorage
-from lunchinator.utilities import formatTime
 from time import localtime
+from lunchinator.log.logging_func import loggingFunc
 
 class RemotePicturesGui(QStackedWidget):
     openCategory = pyqtSignal(object) # category
@@ -23,15 +26,16 @@ class RemotePicturesGui(QStackedWidget):
     
     _categoryOpened = pyqtSignal() # used to flash hidden widgets
     
-    def __init__(self, parent, smoothScaling, minOpacity, maxOpacity):
+    def __init__(self, parent, logger, smoothScaling, minOpacity, maxOpacity):
         super(RemotePicturesGui, self).__init__(parent)
         
+        self.logger = logger
         self.good = True
         self.settings = None
         self.categoryPictures = {}
         self.currentCategory = None
         self.curPicIndex = 0
-        self.categoryModel = CategoriesModel()
+        self.categoryModel = CategoriesModel(logger)
         self.sortProxy = None
         
         self.categoryView = QListView(self)
@@ -51,14 +55,14 @@ class RemotePicturesGui(QStackedWidget):
 
         self.addWidget(self.categoryView)
         
-        self.imageLabel = ResizingWebImageLabel(self, smooth_scaling=smoothScaling)
+        self.imageLabel = ResizingWebImageLabel(self, self.logger, smooth_scaling=smoothScaling)
         self.imageLabel.imageDownloaded.connect(self.pictureDownloadedSlot)
         imageViewerLayout = QVBoxLayout(self.imageLabel)
         imageViewerLayout.setContentsMargins(0, 0, 0, 0)
         imageViewerLayout.setSpacing(0)
         
         defaultFont = self.font()
-        self.categoryLabel = HiddenLabel(self.imageLabel, fontSize=16, fontOptions=QFont.Bold)
+        self.categoryLabel = HiddenLabel(self.imageLabel, self.logger, fontSize=16, fontOptions=QFont.Bold)
         topLayout = QHBoxLayout(self.categoryLabel)
         topLayout.setContentsMargins(0, 0, 0, 0)
         backButton = QToolButton(self.categoryLabel)
@@ -74,13 +78,13 @@ class RemotePicturesGui(QStackedWidget):
         navButtonsLayout = QHBoxLayout(navButtonsWidget)
         navButtonsLayout.setContentsMargins(0, 0, 0, 0)
         
-        self.prevButton = HiddenToolButton(self.imageLabel)
+        self.prevButton = HiddenToolButton(self.imageLabel, self.logger)
         self.prevButton.setArrowType(Qt.LeftArrow)
         self.prevButton.setEnabled(False)
         self.prevButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
         navButtonsLayout.addWidget(self.prevButton, 0, Qt.AlignLeft)
         
-        self.nextButton = HiddenToolButton(self.imageLabel)
+        self.nextButton = HiddenToolButton(self.imageLabel, self.logger)
         self.nextButton.setArrowType(Qt.RightArrow)
         self.nextButton.setEnabled(False)
         self.nextButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
@@ -88,7 +92,7 @@ class RemotePicturesGui(QStackedWidget):
         
         imageViewerLayout.addWidget(navButtonsWidget, 1)
         
-        self.descriptionLabel = HiddenLabel(self.imageLabel, fontSize=14)
+        self.descriptionLabel = HiddenLabel(self.imageLabel, self.logger, fontSize=14)
         self.descriptionLabel.setWordWrap(True)
         imageViewerLayout.addWidget(self.descriptionLabel, 0)
                 
@@ -113,20 +117,22 @@ class RemotePicturesGui(QStackedWidget):
         self.minOpacityChanged.connect(w.setMinOpacity)
         self.maxOpacityChanged.connect(w.setMaxOpacity)
 
-    @pyqtSlot(QModelIndex)
+    @loggingSlot(QModelIndex)
     def _itemDoubleClicked(self, index):
         index = self.sortProxy.mapToSource(index)
         item = self.categoryModel.item(index.row())
         cat = item.data(CategoriesModel.CAT_ROLE).toString()
         self.openCategory.emit(cat)
         
+    @loggingSlot()
     def _displayNextImage(self):
         self.displayNext.emit(self.currentCategory, self.curPicIndex)
-        
+    
+    @loggingSlot()
     def _displayPreviousImage(self):
         self.displayPrev.emit(self.currentCategory, self.curPicIndex)
     
-    @pyqtSlot(object, int, list, bool, bool)
+    @loggingSlot(object, int, list, bool, bool)
     def displayImage(self, cat, picID, picRow, hasPrev, hasNext):
         cat = convert_string(cat)
         picURL = convert_string(picRow[RemotePicturesStorage.PIC_URL_COL])
@@ -144,7 +150,7 @@ class RemotePicturesGui(QStackedWidget):
         elif picURL:
             self.imageLabel.setURL(picURL)
         else:
-            log_warning("No image source specified")
+            self.logger.warning("No image source specified")
             self.imageLabel.displayFallbackPic()
         
         if picSender:
@@ -173,7 +179,7 @@ class RemotePicturesGui(QStackedWidget):
     def destroyWidget(self):
         pass
     
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def pictureDownloadedSlot(self, url, picData):
         if self.currentCategory is not None:
             self.pictureDownloaded.emit(self.currentCategory, url, picData)
@@ -183,7 +189,8 @@ class HiddenWidgetBase(object):
     NUM_STEPS = 15
     INTERVAL = 20
     
-    def __init__(self):
+    def __init__(self, logger):
+        self.logger = logger
         self.good = False
         self.fadingEnabled = False
         self.minOpacity = 0.
@@ -200,21 +207,24 @@ class HiddenWidgetBase(object):
             self.timer.timeout.connect(self._fade)
             self.good = True
         except:
-            log_debug(u"Could not enable opacity effects. %s: %s" % (sys.exc_info()[0].__name__, unicode(sys.exc_info()[1])))
+            self.logger.debug(u"Could not enable opacity effects. %s: %s", sys.exc_info()[0].__name__, unicode(sys.exc_info()[1]))
         
+    @loggingFunc
     def setMinOpacity(self, newVal):
         self.minOpacity = newVal
         self.incr = (self.maxOpacity - self.minOpacity) / self.NUM_STEPS
         if self.fadingEnabled and not self.timer.isActive():
             self.timer.start(self.INTERVAL)
     
+    @loggingFunc
     def setMaxOpacity(self, newVal):
         self.maxOpacity = newVal
         self.incr = (self.maxOpacity - self.minOpacity) / self.NUM_STEPS
         if self.fadingEnabled and not self.timer.isActive():
             self.timer.start(self.INTERVAL)
         
-    def showTemporarily(self, _=None):
+    @loggingFunc
+    def showTemporarily(self):
         if self.good:
             self.fadingEnabled = False
             self.fadeIn = False
@@ -226,6 +236,7 @@ class HiddenWidgetBase(object):
         self.fadingEnabled = True
         self.timer.start(self.INTERVAL * 1.5)
     
+    @loggingFunc
     def _fade(self):
         if self.fadeIn:
             desOp = self.maxOpacity
@@ -259,9 +270,9 @@ class HiddenWidgetBase(object):
             self.timer.start(self.INTERVAL)
         
 class HiddenLabel(QLabel, HiddenWidgetBase):
-    def __init__(self, parent, fontSize = 14, fontOptions = 0):
+    def __init__(self, parent, logger, fontSize = 14, fontOptions = 0):
         QLabel.__init__(self, parent)
-        HiddenWidgetBase.__init__(self)
+        HiddenWidgetBase.__init__(self, logger)
         
         self.setAutoFillBackground(True)
         oldFont = self.font()
@@ -282,9 +293,9 @@ class HiddenLabel(QLabel, HiddenWidgetBase):
         return super(HiddenLabel, self).leaveEvent(event)
 
 class HiddenWidget(QWidget, HiddenWidgetBase):
-    def __init__(self, parent):
+    def __init__(self, parent, logger):
         QWidget.__init__(self, parent)
-        HiddenWidgetBase.__init__(self)
+        HiddenWidgetBase.__init__(self, logger)
         
     def enterEvent(self, event):
         self._mouseEntered()
@@ -295,9 +306,9 @@ class HiddenWidget(QWidget, HiddenWidgetBase):
         return super(HiddenWidget, self).leaveEvent(event)
 
 class HiddenToolButton(QToolButton, HiddenWidgetBase):
-    def __init__(self, parent):
+    def __init__(self, parent, logger):
         QToolButton.__init__(self, parent)
-        HiddenWidgetBase.__init__(self)
+        HiddenWidgetBase.__init__(self, logger)
         self.setFocusPolicy(Qt.NoFocus)
         
     def enterEvent(self, event):

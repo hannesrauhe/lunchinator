@@ -1,10 +1,10 @@
-from lunchinator import log_exception, log_error, get_settings
+from lunchinator import get_settings, convert_string
+from lunchinator.log import getCoreLogger
 from lunchinator.utilities import getUniquePath
 from lunchinator.logging_mutex import loggingMutex
 
-import contextlib, os, tarfile, socket
+import contextlib, os, tarfile, socket, errno, time
 from cStringIO import StringIO
-import time
 from functools import partial
 
 class CanceledException(Exception):
@@ -116,10 +116,11 @@ class DataThreadBase(object):
         
         return sendDict
         
-    def __init__(self, otherIP, portOrSocket, sendDict):
+    def __init__(self, otherIP, portOrSocket, sendDict, logger):
         self._otherIP = otherIP
         self._portOrSocket = portOrSocket
         self._sendDict = sendDict
+        self.logger = logger
         
         self.con = None
         self._userData = None
@@ -146,7 +147,7 @@ class DataThreadBase(object):
     
 class DataSenderThreadBase(DataThreadBase):
     @classmethod
-    def sendSingleFile(cls, receiverIP, receiverPort, filePath, *args, **kwargs):
+    def sendSingleFile(cls, receiverIP, receiverPort, filePath, logger, *args, **kwargs):
         """Send a single file to a receiver. Use receiveSingleFile() on the receiver.
         
         receiverIP -- IP address of receiver
@@ -161,10 +162,10 @@ class DataSenderThreadBase(DataThreadBase):
             raise IOError("filePath is not a file.")
         
         sendDict = {u"size" : os.path.getsize(filePath)}
-        return cls(receiverIP, receiverPort, [filePath], sendDict, *args, **kwargs)
+        return cls(receiverIP, receiverPort, [filePath], sendDict, logger, *args, **kwargs)
         
     @classmethod
-    def sendData(cls, receiverIP, receiverPort, data, *args, **kwargs):
+    def sendData(cls, receiverIP, receiverPort, data, logger, *args, **kwargs):
         """Send raw data to a receiver. Use receiveSingleFile() on the receiver.
         
         receiverIP -- IP address of receiver
@@ -175,10 +176,10 @@ class DataSenderThreadBase(DataThreadBase):
             raise TypeError("data must be str")
         
         sendDict = {u"size" : len(data)}
-        return cls(receiverIP, receiverPort, data, sendDict, *args, **kwargs)
+        return cls(receiverIP, receiverPort, data, sendDict, logger, *args, **kwargs)
                 
     @classmethod
-    def send(cls, receiverIP, receiverPort, filesOrData, sendDict, *args, **kwargs):
+    def send(cls, receiverIP, receiverPort, filesOrData, sendDict, logger, *args, **kwargs):
         """Sends files or raw data to a receiver.
         
         Use this method in combination with prepareSending() to generate the
@@ -189,10 +190,10 @@ class DataSenderThreadBase(DataThreadBase):
         filesOrData -- either a list of file paths or a str object to be sent as raw data
         sendDict -- Dict returned by prepareSending() 
         """
-        return cls(receiverIP, receiverPort, filesOrData, sendDict, *args, **kwargs)
+        return cls(receiverIP, receiverPort, filesOrData, sendDict, logger, *args, **kwargs)
     
-    def __init__(self, receiverIP, receiverPort, filesOrData, sendDict):
-        super(DataSenderThreadBase, self).__init__(receiverIP, receiverPort, sendDict)
+    def __init__(self, receiverIP, receiverPort, filesOrData, sendDict, logger):
+        super(DataSenderThreadBase, self).__init__(receiverIP, receiverPort, sendDict, logger)
         
         self._filesOrData = filesOrData
         
@@ -238,7 +239,7 @@ class DataSenderThreadBase(DataThreadBase):
                 except:
                     numAttempts = numAttempts + 1
                     if numAttempts == 10:
-                        log_error("Could not initiate connection to", self._otherIP, "on Port", self._portOrSocket)
+                        self.logger.error("Could not initiate connection to %s on Port %s", self._otherIP, self._portOrSocket)
                         raise
         
             numFiles, totalSize, name, useTarstream, compression = self._readSendDict(self._sendDict, checkName=False)
@@ -350,7 +351,7 @@ class DataReceiverThreadBase(DataThreadBase):
             s.close()
             del cls._inactiveSockets[port]
         except:
-            log_exception("Socket timed out, error trying to clean up")
+            getCoreLogger().exception("Socket timed out, error trying to clean up")
         finally:
             if cls._useQMutex():
                 cls._inactiveSocketsMutex().unlock()
@@ -358,7 +359,7 @@ class DataReceiverThreadBase(DataThreadBase):
                 cls._inactiveSocketsMutex().release()
  
     @classmethod
-    def getOpenPort(cls, blockPort = True, category = None):
+    def getOpenPort(cls, blockPort=True, category=None):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         port = 0
         try:
@@ -393,7 +394,7 @@ class DataReceiverThreadBase(DataThreadBase):
         return port
     
     @classmethod
-    def receiveSingleFile(cls, senderIP, targetPath, fileSize, portOrSocket, category=None, overwrite=False, *args, **kwargs):
+    def receiveSingleFile(cls, senderIP, targetPath, fileSize, portOrSocket, logger, category=None, overwrite=False, *args, **kwargs):
         """Receives a single file.
         
         Use this function in combination with sendSingleFile() or sendData().
@@ -410,10 +411,10 @@ class DataReceiverThreadBase(DataThreadBase):
         """
         sendDict = {u"size" : fileSize,
                     u"name" : os.path.basename(targetPath)}
-        return cls(senderIP, portOrSocket, targetPath, overwrite, sendDict, category, *args, **kwargs)
+        return cls(senderIP, portOrSocket, targetPath, overwrite, sendDict, category, logger, *args, **kwargs)
         
     @classmethod
-    def receive(cls, senderIP, targetDir, portOrSocket, sendDict, overwrite=False, *args, **kwargs):
+    def receive(cls, senderIP, targetDir, portOrSocket, sendDict, logger, overwrite=False, *args, **kwargs):
         """Receives one or multiple files sent using send().
         
         senderIP-- IP address of sender
@@ -432,12 +433,12 @@ class DataReceiverThreadBase(DataThreadBase):
             # if one file is transferred and a name is given, use it for the target path
             target = os.path.join(targetDir, name)
         
-        return cls(senderIP, portOrSocket, target, overwrite, sendDict, None, *args, **kwargs)
+        return cls(senderIP, portOrSocket, target, overwrite, sendDict, None, logger, *args, **kwargs)
         
-    def __init__(self, senderIP, portOrSocket, targetPath, overwrite, sendDict, category):
-        super(DataReceiverThreadBase, self).__init__(senderIP, portOrSocket, sendDict)
+    def __init__(self, senderIP, portOrSocket, targetPath, overwrite, sendDict, category, logger):
+        super(DataReceiverThreadBase, self).__init__(senderIP, portOrSocket, sendDict, logger)
         
-        self._targetPath = os.path.abspath(targetPath)
+        self._targetPath = os.path.abspath(convert_string(targetPath))
         self._overwrite = overwrite
         self._category = category
     
@@ -447,7 +448,12 @@ class DataReceiverThreadBase(DataThreadBase):
         while remaining > 0:
             if self._canceled:
                 raise CanceledException()
-            rec = read(min(chunkSize, remaining))
+            try:
+                rec = read(min(chunkSize, remaining))
+            except socket.error as e:
+                if e.errno == errno.EINTR:
+                    continue
+                raise
             outFile.write(rec)
             remaining -= len(rec)
             offset += len(rec)
@@ -583,12 +589,24 @@ class DataReceiverThreadBase(DataThreadBase):
                 s.bind(("", self._portOrSocket)) 
                 s.settimeout(30.0)
                 s.listen(1)
-            con, addr = s.accept()
+            retry = True
+            while retry:
+                try:
+                    con, addr = s.accept()
+                    retry = False
+                except socket.error as e:
+                    if e.errno == errno.EINTR:
+                        retry = True
+                    else:
+                        raise
+                except:
+                    raise
+            
             con.settimeout(30.0)
             if addr[0] == self._otherIP:
                 self._receiveFiles(con, numFiles, totalSize, useTarstream, compression)
             else:
-                log_error("Sender is not allowed to send file:", addr[0], ", expected:", self._otherIP)
+                self.logger.error("Sender is not allowed to send file: %s, expected: %s", addr[0], self._otherIP)
         except IncompleteTransfer:
             raise
         except:

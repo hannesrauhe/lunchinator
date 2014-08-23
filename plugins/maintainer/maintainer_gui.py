@@ -1,14 +1,18 @@
 from lunchinator import get_peers, get_notification_center, convert_string
 from lunchinator.table_models import TableModelBase
+from lunchinator.log.logging_slot import loggingSlot
 from PyQt4.QtGui import QTreeView, QTabWidget, QSortFilterProxyModel, QSizePolicy,\
     QStandardItem
-from PyQt4.QtCore import Qt, pyqtSlot, QVariant
+from PyQt4.QtCore import Qt, QVariant
 from maintainer.members_widget import MembersWidget
+from maintainer.console_widget import ConsoleWidget
 
 class ExtendedMembersModel(TableModelBase):
-    def __init__(self, dataSource):
-        super(ExtendedMembersModel, self).__init__(dataSource, None)
+    def __init__(self, dataSource, logger):
+        super(ExtendedMembersModel, self).__init__(dataSource, None, logger)
         self.headerNames = []
+        if self.dataSource is None:
+            return
         for peerID in self.dataSource:
             self.updateModel(peerID, self.dataSource.getPeerInfo(peerID))
     
@@ -31,7 +35,7 @@ class ExtendedMembersModel(TableModelBase):
         
         return cmp(x, y)
         
-    @pyqtSlot(dict)
+    @loggingSlot(dict)
     def updateModel(self, peerID, infoDict, update=False, prepend=False):
         # update columns labels
         
@@ -58,33 +62,33 @@ class ExtendedMembersModel(TableModelBase):
             text = data[headerName]
         item.setData(QVariant(text), Qt.DisplayRole)
         
+    @loggingSlot(object, object)
     def externalRowAppended(self, key, data):
         key = convert_string(key)
         data = self._checkDict(data)
         self.updateModel(key, data)
         
-    def externalRowPrepended(self, key, data):
-        key = convert_string(key)
-        data = self._checkDict(data)
-        self.updateModel(key, data, prepend=True)
-    
+    @loggingSlot(object, object)
     def externalRowUpdated(self, key, data):
         key = convert_string(key)
         data = self._checkDict(data)
         self.updateModel(key, data, update=True)
         
+    @loggingSlot(object)
     def externalRowRemoved(self, key):
         TableModelBase.externalRowRemoved(self, key)
 
 class maintainer_gui(QTabWidget):
     LOG_REQUEST_TIMEOUT = 20 # 10 seconds until request is invalid
-    def __init__(self,parent):
+    def __init__(self, parent, logger):
         super(maintainer_gui, self).__init__(parent)
+        self.logger = logger
         self.info_table = None
         
-        self.membersWidget = MembersWidget(parent) 
+        self.membersWidget = MembersWidget(parent, logger)
         self.addTab(self.membersWidget, "Members")        
         self.addTab(self.create_info_table_widget(self), "Info")
+        self.addTab(ConsoleWidget(self, logger), "Log")
         
         self.setCurrentIndex(0)
         
@@ -100,7 +104,7 @@ class maintainer_gui(QTabWidget):
         self.info_table.setAlternatingRowColors(True)
         self.info_table.setIndentation(0)
         
-        self.info_table_model = ExtendedMembersModel(get_peers())
+        self.info_table_model = ExtendedMembersModel(get_peers(), self.logger)
         proxyModel = QSortFilterProxyModel(self.info_table)
         proxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
         proxyModel.setDynamicSortFilter(True)

@@ -1,5 +1,6 @@
 from lunchinator.cli import LunchCLIModule
-from lunchinator import get_server, log_exception
+from lunchinator import get_server
+from lunchinator.log import getCoreLogger
 
 class CLIMessageHandling(LunchCLIModule):
     def do_send(self, args):
@@ -17,7 +18,7 @@ class CLIMessageHandling(LunchCLIModule):
         try:
             get_server().call(message, peerIPs=self.getHostList(args))
         except:
-            log_exception("Error sending")
+            getCoreLogger().exception("Error sending")
         
     def complete_send(self, text, line, begidx, endidx):
         if self.getArgNum(text, line, begidx, endidx)[0] > 1:
@@ -35,7 +36,7 @@ class CLIMessageHandling(LunchCLIModule):
         try:
             get_server().call("lunch", peerIPs=self.getHostList(args))
         except:
-            log_exception("Error calling")
+            getCoreLogger().exception("Error calling")
         
     def complete_call(self, text, line, begidx, endidx):
         return self.completeHostnames(text, line, begidx, endidx)

@@ -50,9 +50,9 @@ class file_transfer(iface_gui_plugin):
     
     def __init__(self):
         super(file_transfer, self).__init__()
-        self.options = [((u"download_dir", u"Save received files in directory", self._downloadDirChanged), os.path.expanduser("~")),
+        self.options = [((u"download_dir", u"Save received files in directory", self._downloadDirChanged), os.path.join(os.path.expanduser("~"), "Downloads")),
                         ((u"overwrite", u"Overwrite existing files", self._overwriteChanged), False),
-                        ((u"compression", u"Use compression when sending:", self._compressionChanged, (u"No", u"GZip", u"BZip2")), u"No")]
+                        ((u"compression", u"Use compression when sending", self._compressionChanged, (u"No", u"GZip", u"BZip2")), u"No")]
     
     def get_displayed_name(self):
         return u"File Transfer"
@@ -74,15 +74,16 @@ class file_transfer(iface_gui_plugin):
         else:
             self._handlerThread = None
             
-        self._handler = FileTransferHandler(self.get_option(u"download_dir"),
+        self._handler = FileTransferHandler(self.logger,
+                                            self.get_option(u"download_dir"),
                                             self.get_option(u"overwrite"),
                                             self.get_option(u"compression"))
         if self._handlerThread is not None:
             self._handlerThread.moveToThread(self._handlerThread)
             self._handlerThread.start()
         
-        self._gui = FileTransferWidget(parent, self)
-        self._toolWindow = FileTransferWidget(parent, self, asWindow=True)
+        self._gui = FileTransferWidget(parent, self.logger, self)
+        self._toolWindow = FileTransferWidget(parent, self.logger, self, asWindow=True)
         self._toolWindow.setWindowTitle("File Transfers")
 
         for gui in (self._gui, self._toolWindow):        
@@ -142,7 +143,8 @@ class file_transfer(iface_gui_plugin):
             
     def chooseAndSendFilesToPeer(self, peerID, parent):
         selectedFiles = QFileDialog.getOpenFileNames(parent, u"Chooses files to upload")
-        self._handler.sendFilesToPeer([convert_string(f) for f in selectedFiles], peerID)
+        if len(selectedFiles) > 0:
+            self._handler.sendFilesToPeer([convert_string(f) for f in selectedFiles], peerID)
         
     def sendFilesToPeer(self, toSend, peerID):
         self._handler.sendFilesToPeer([convert_string(f) for f in toSend], peerID)

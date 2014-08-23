@@ -5,12 +5,11 @@
 import platform, sys, subprocess, os, re, logging, signal
 from functools import partial
 from optparse import OptionParser
-from lunchinator import log_info, log_error, get_settings,\
-    get_server, log_exception, initialize_logger, MAIN_CONFIG_DIR
+from lunchinator import get_settings, get_server, MAIN_CONFIG_DIR
+from lunchinator.log import getCoreLogger, initializeLogger, setGlobalLoggingLevel
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
 from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS, restart
-from lunchinator import setLoggingLevel
-    
+
 def parse_args():
     usage = "usage: %prog [options]"
     optionParser = OptionParser(usage = usage)
@@ -74,7 +73,7 @@ def installDependencies(deps = [], gui = False):
     
     if result == EXIT_CODE_UPDATE:
         # need to restart
-        restart()
+        restart(getCoreLogger())
         return False
     
     try:
@@ -92,7 +91,7 @@ def installDependencies(deps = [], gui = False):
                                     "Errors during installation",
                                     "There were errors during installation, but Lunchinator might work anyways. If you experience problems with some plugins, try to install the required libraries manually using pip.")
             return True
-        log_info("yapsy is working after dependency installation")
+        getCoreLogger().info("yapsy is working after dependency installation")
         #without gui there are enough messages on the screen already
     except:
         if gui:
@@ -102,8 +101,8 @@ def installDependencies(deps = [], gui = False):
                                      "Error installing dependencies",
                                      "There was an error, the dependencies could not be installed. Continuing without plugins.")
             except:
-                log_error("There was an error, the dependencies could not be installed. Continuing without plugins.")
-        log_error("Dependencies could not be installed.")
+                getCoreLogger().error("There was an error, the dependencies could not be installed. Continuing without plugins.")
+        getCoreLogger().error("Dependencies could not be installed.")
     return False
         
 
@@ -126,7 +125,7 @@ def checkDependencies(noPlugins, gui = False):
             QMessageBox.critical(None,
                                      "Error: missing dependencies",
                                      msg)
-        log_error(msg)
+        getCoreLogger().error(msg)
         return False
     
     deps = []
@@ -159,26 +158,27 @@ def startLunchinator():
     
     if options.verbose:
         get_settings().set_verbose(True)
-        setLoggingLevel(logging.DEBUG)
+        setGlobalLoggingLevel(logging.DEBUG)
     usePlugins = options.noPlugins
+    defaultLogPath = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
     if options.exitWithStopCode:
         sys.exit(EXIT_CODE_STOP)
     elif options.lunchCall or options.message != None:
-        initialize_logger()
+        initializeLogger()
         get_settings().set_plugins_enabled(False)
         get_server().set_has_gui(False)
         sendMessage(options.message, options.client)
     elif options.stop:
-        initialize_logger()
+        initializeLogger()
         get_settings().set_plugins_enabled(False)
         get_server().set_has_gui(False)
         get_server().stop_server(stop_any=True)
         print "Sent stop command to local lunchinator"
     elif options.installDep:
-        initialize_logger()
+        initializeLogger()
         installDependencies()
     elif options.cli:
-        initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))
+        initializeLogger(defaultLogPath)
         usePlugins = checkDependencies(usePlugins)
             
         retCode = 1
@@ -190,11 +190,11 @@ def startLunchinator():
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
         except:
-            log_exception("cli version cannot be started, is readline installed?")
+            getCoreLogger().exception("cli version cannot be started, is readline installed?")
         finally:
             sys.exit(retCode)
     elif options.noGui:
-        initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))
+        initializeLogger(defaultLogPath)
         usePlugins = checkDependencies(usePlugins)
         
     #    sys.settrace(trace)
@@ -207,18 +207,26 @@ def startLunchinator():
     else:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         
-        initialize_logger(os.path.join(MAIN_CONFIG_DIR, "lunchinator.log"))    
-        log_info("We are on",platform.system(),platform.release(),platform.version())
+        initializeLogger(defaultLogPath)    
+        getCoreLogger().info("We are on %s, %s, version %s", platform.system(), platform.release(), platform.version())
         try:
             from PyQt4.QtCore import QThread
         except:
-            log_error("pyQT4 not found - start lunchinator with --no-gui")
+            getCoreLogger().error("pyQT4 not found - start lunchinator with --no-gui")
             sys.exit(EXIT_CODE_NO_QT)
             
         from lunchinator.gui_controller import LunchinatorGuiController
         from PyQt4.QtGui import QApplication
         
-        app = QApplication(sys.argv)
+        class LunchApplication(QApplication):
+            def notify(self, obj, event):
+                try:
+                    return QApplication.notify(self, obj, event)
+                except:
+                    getCoreLogger().exception("C++ Error")
+                    return False
+                        
+        app = LunchApplication(sys.argv)
         usePlugins = checkDependencies(usePlugins, gui=True)
 
         get_settings().set_plugins_enabled(usePlugins)

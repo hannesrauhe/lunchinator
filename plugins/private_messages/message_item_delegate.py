@@ -1,15 +1,18 @@
+from private_messages.chat_messages_model import ChatMessagesModel
+from lunchinator import convert_string
+from lunchinator.utilities import formatTime
+
 from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QTextDocument,\
     QStyle, QAbstractTextDocumentLayout, QPalette,\
     QBrush, QColor, QLinearGradient, QPainter,\
     QTextEdit, QFrame, QSizePolicy, QIcon, QFont
 from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
-    QRectF, QSizeF, pyqtSignal, QModelIndex, QMetaType, pyqtSlot
-import webbrowser
+    QRectF, QSizeF, pyqtSignal, QModelIndex, QMetaType
 from PyQt4.Qt import QWidget
-from private_messages.chat_messages_model import ChatMessagesModel
-from lunchinator import log_warning, convert_string
-from lunchinator.utilities import formatTime
+
+import webbrowser
 from time import localtime
+from lunchinator.log.logging_slot import loggingSlot
 
 class ItemEditor(QTextEdit):
     def __init__(self, text, width, parent):
@@ -56,9 +59,10 @@ class EditorWidget(QWidget):
         self._itemEditor = itemEditor
             
 class MessageItemDelegate(QStyledItemDelegate):
-    def __init__(self, parentView):
+    def __init__(self, parentView, logger, column=None, margin=50):
         super(MessageItemDelegate, self).__init__(parentView)
 
+        self.logger = logger
         # We need that to receive mouse move events in editorEvent
         parentView.setMouseTracking(True)
 
@@ -73,6 +77,8 @@ class MessageItemDelegate(QStyledItemDelegate):
         self.lastTextPos = QPoint(0, 0)
         self._editIndex = None
         self._editor = None
+        self._column = column
+        self._margin = margin
         
         ownGradient = QLinearGradient(0, 0, 0, 10)
         ownGradient.setColorAt(0, QColor(229, 239, 254))
@@ -92,7 +98,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         
         self._rowHeights = {}
         
-    @pyqtSlot()
+    @loggingSlot()
     def unsetParentCursor(self):
         self.parent().unsetCursor()
         
@@ -102,6 +108,7 @@ class MessageItemDelegate(QStyledItemDelegate):
     def getEditIndex(self):
         return self._editIndex
         
+    @loggingSlot(QWidget, int)
     def editorClosing(self, _editor, _hint):
         self._editor = None
         self.setEditIndex(None)
@@ -133,7 +140,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         pass
     
     def _preferredMessageWidth(self, textRectWidth):
-        return textRectWidth - 50
+        return textRectWidth - self._margin
     
     def _getMessageRect(self, option, doc, modelIndex, relativeToItem=False):
         rightAligned = modelIndex.data(ChatMessagesModel.OWN_MESSAGE_ROLE).toBool()
@@ -186,6 +193,9 @@ class MessageItemDelegate(QStyledItemDelegate):
         painter.restore()
     
     def paint(self, painter, option1, modelIndex):
+        if self._column is not None and modelIndex.column() != self._column:
+            return super(MessageItemDelegate, self).paint(painter, option1, modelIndex)
+        
         option = QStyleOptionViewItemV4(option1)
         self.initStyleOption(option, modelIndex)
         
@@ -193,7 +203,7 @@ class MessageItemDelegate(QStyledItemDelegate):
             # this is a time item
             self._paintTime(painter, option, modelIndex)
             return
-        
+
         text = QString(option.text)
         if not text:
             option1.decorationAlignment = Qt.AlignLeft
@@ -265,7 +275,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         
         if modelIndex.row() != self.mouseOverDocumentRow:
             # TODO reset document
-            log_warning("shouldStartEditAt(): wrong mouse over document")
+            self.logger.warning("shouldStartEditAt(): wrong mouse over document")
             return False
         messageRect = self._getMessageRect(self.mouseOverOption, self.mouseOverDocument, modelIndex)
         anchorPos = QPointF(eventPos) - QPointF(messageRect.topLeft())
@@ -276,6 +286,8 @@ class MessageItemDelegate(QStyledItemDelegate):
         return messageRect.contains(eventPos)
 
     def editorEvent(self, event, _model, option_, modelIndex):
+        if self._column and modelIndex.column() != self._column:
+            return False
         option = QStyleOptionViewItemV4(option_)
         self.initStyleOption(option, modelIndex)
         text = QString(option.text)

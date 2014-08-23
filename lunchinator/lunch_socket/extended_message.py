@@ -1,4 +1,5 @@
-from lunchinator import log_debug
+from lunchinator.log import getCoreLogger
+from lunchinator.utilities import getGPG
 import math, hashlib
 
 """ Message classes """
@@ -213,7 +214,7 @@ class extMessageOutgoing(extMessage):
 
         compressedMsg = zlib.compress(value)
         self._statusByte = 0b00010000 | self._statusByte
-        log_debug("Compression: %d -> %d"%(len(value), len(compressedMsg)))
+        getCoreLogger().debug("Compression: %d -> %d"%(len(value), len(compressedMsg)))
         return compressedMsg
     
     ''' @brief value will be split into fragments and an ID will be assigned and stored in instance variables''' 
@@ -231,6 +232,4 @@ class extMessageOutgoing(extMessage):
         
         self._fragments = ["HELOX "+ chr(self._protocol_version) + chr(i/n) + chr(m) + self.getSplitID() + \
                            value[i:i+n] for i in range(0, msg_len, n)]
-        log_debug("Splitting %d Byte in %d segments of size %d"%(msg_len, m, n))
-        
-            
+        getCoreLogger().debug("Splitting %d Byte in %d segments of size %d", msg_len, m, n)

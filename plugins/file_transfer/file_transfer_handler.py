@@ -1,12 +1,11 @@
-from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QTimer
-import os
-from lunchinator import get_server, log_exception, log_error, log_warning,\
-    log_debug, get_peers
-import json
-from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
-from time import time
-from lunchinator.lunch_datathread import DataThreadBase
+from PyQt4.QtCore import QObject, pyqtSignal, QTimer, pyqtSlot
+from lunchinator import get_server, get_peers
+from lunchinator.log.logging_slot import loggingSlot
+from lunchinator.datathread.dt_qthread import DataReceiverThread, DataSenderThread
+from lunchinator.datathread.base import DataThreadBase
 from lunchinator.utilities import sanitizeForFilename, getUniquePath
+import os, json
+from time import time
 
 class FileTransferHandler(QObject):
     startOutgoingTransfer = pyqtSignal(int, object, object, object, int, int, bool) # transfer ID, target peer ID, filesOrData, target dir, num files, file size, is retry
@@ -23,9 +22,10 @@ class FileTransferHandler(QObject):
     _overwriteChanged = pyqtSignal(bool)
     _compressionChanged = pyqtSignal(object)
     
-    def __init__(self, downloadDir, overwrite, compression):
+    def __init__(self, logger, downloadDir, overwrite, compression):
         super(FileTransferHandler, self).__init__()
         
+        self.logger = logger
         self._nextID = 0
         self._downloadDir = downloadDir
         self._overwrite = overwrite
@@ -69,7 +69,7 @@ class FileTransferHandler(QObject):
         elif comp == "bip2":
             self._compression = "bzip2"
         
-    @pyqtSlot()
+    @loggingSlot()
     def _cleanup(self):
         timedOut = []
         for tID, data in self._outgoing.iteritems():
@@ -86,11 +86,11 @@ class FileTransferHandler(QObject):
         self._nextID += 1
         return nextID
     
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _errorDownloading(self, thread, _message):
         self._removeDownload(thread)
             
-    @pyqtSlot(object)
+    @loggingSlot(object)
     def _transferCanceled(self, thread):
         peerID, transferID = thread.getUserData()
         sendCancel = False
@@ -110,13 +110,13 @@ class FileTransferHandler(QObject):
             get_server().call("HELO_FT_CANCEL %s" % json.dumps(cancelDict), peerIDs=[peerID])
     
     @pyqtSlot(object)
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _removeUpload(self, thread, _msg=None):
         _, transferID = thread.getUserData()
         self._outgoing.pop(transferID, None)
         
     @pyqtSlot(object)
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _removeDownload(self, thread, _path=None):
         peerID, transferID = thread.getUserData()
         self._incoming.pop((peerID, transferID), None)
@@ -126,35 +126,41 @@ class FileTransferHandler(QObject):
     # someone wants to send me a file
     def processSendRequest(self, peerID, peerIP, value, preprocessed):
         self._processSendRequest.emit(peerID, peerIP, value, preprocessed)
-    @pyqtSlot(object, object, object, object)
+    @loggingSlot(object, object, object, object)
     def _processSendRequestSlot(self, peerID, peerIP, value, transferDict):
         if transferDict is None:
             try:
                 transferDict = json.loads(value)
                 
                 if not type(transferDict) is dict:
-                    log_error("transferDict is no dict.")
+                    self.logger.error("transferDict is no dict.")
                     return
             except:
-                log_exception("Could not parse transfer dict.")
+                self.logger.exception("Could not parse transfer dict.")
                 return
         
         if not u"id" in transferDict:
-            log_error("No transfer ID in transfer dict. Cannot accept request")
+            self.logger.error("No transfer ID in transfer dict. Cannot accept request")
             return
         
         if not u"name" in transferDict:
-            log_error("No file name in transfer dict. Cannot accept request")
+            self.logger.error("No file name in transfer dict. Cannot accept request")
             return
         
         if not u"size" in transferDict:
-            log_error("No file size in transfer dict. Cannot accept request")
+            self.logger.error("No file size in transfer dict. Cannot accept request")
             return
         
         transferID = transferDict[u"id"]
         size = transferDict[u"size"]
         name = transferDict.get(u"name", None)
         numFiles = transferDict.get(u"count", 1)
+        
+        if not os.path.exists(self._downloadDir):
+            os.makedirs(self._downloadDir)
+        elif not os.path.isdir(self._downloadDir):
+            self.logger.error("Download path %s is no directory. Cannot accept file.")
+            return
         
         if numFiles > 1:
             peerName = get_peers().getDisplayedPeerName(pID=peerID)
@@ -170,7 +176,7 @@ class FileTransferHandler(QObject):
             targetDir = self._downloadDir
         
         port = DataReceiverThread.getOpenPort(blockPort=True)
-        inThread = DataReceiverThread.receive(peerIP, targetDir, port, transferDict, overwrite=self._overwrite, parent=self)
+        inThread = DataReceiverThread.receive(peerIP, targetDir, port, transferDict, self.logger, overwrite=self._overwrite, parent=self)
         inThread.setUserData((peerID, transferID))
         inThread.errorOnTransfer.connect(self._errorDownloading)
         inThread.successfullyTransferred.connect(self._removeDownload)
@@ -187,23 +193,23 @@ class FileTransferHandler(QObject):
     
     def processAck(self, peerID, peerIP, value):
         self._processAck.emit(peerID, peerIP, value)
-    @pyqtSlot(object, object, object)
+    @loggingSlot(object, object, object)
     def _processAckSlot(self, peerID, peerIP, value):
         try:
             answerDict = json.loads(value)
             
             if not type(answerDict) is dict:
-                log_error(u"answerDict is no dict.")
+                self.logger.error(u"answerDict is no dict.")
                 return
         except:
-            log_exception(u"Could not parse answer dict.")
+            self.logger.exception(u"Could not parse answer dict.")
             return
         
         if not u"id" in answerDict:
-            log_error(u"answerDict does not contain transfer ID.")
+            self.logger.error(u"answerDict does not contain transfer ID.")
             return
         if not u"port" in answerDict:
-            log_error(u"answerDict does not contain port.")
+            self.logger.error(u"answerDict does not contain port.")
             return
         
         transferID = answerDict[u"id"]
@@ -211,47 +217,47 @@ class FileTransferHandler(QObject):
         outData = self._outgoing.get(transferID, None)
         
         if outData is None:
-            log_warning(u"Received ACK for transfer that I don't know of or that already timed out.")
+            self.logger.warning(u"Received ACK for transfer that I don't know of or that already timed out.")
             return
         elif type(outData) is DataSenderThread:
-            log_warning(u"Received ACK for transfer that is already running.")
+            self.logger.warning(u"Received ACK for transfer that is already running.")
             return
         
         targetID, paths, sendDict, _time = outData
         if targetID != peerID:
-            log_warning(u"Received ACK from peer that I wasn't sending to.")
+            self.logger.warning(u"Received ACK from peer that I wasn't sending to.")
             return
         
-        outThread = DataSenderThread.send(peerIP, port, paths, sendDict, parent=self)
+        outThread = DataSenderThread.send(peerIP, port, paths, sendDict, self.logger, parent=self)
         outThread.transferCanceled.connect(self._transferCanceled)
         outThread.errorOnTransfer.connect(self._removeUpload)
         outThread.successfullyTransferred.connect(self._removeUpload)
         outThread.finished.connect(outThread.deleteLater)
         outThread.setUserData((peerID, transferID))
         self._outgoing[transferID] = outThread
-        self.outgoingTransferStarted.emit(transferID, outThread)
         outThread.start()
+        self.outgoingTransferStarted.emit(transferID, outThread)
     
     def processCancel(self, peerID, value):
         self._processCancel.emit(peerID, value)
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _processCancelSlot(self, peerID, value):
         try:
             cancelDict = json.loads(value)
             
             if not type(cancelDict) is dict:
-                log_error(u"answerDict is no dict.")
+                self.logger.error(u"answerDict is no dict.")
                 return
         except:
-            log_exception("Could not parse cancel dict.")
+            self.logger.exception("Could not parse cancel dict.")
             return
         
         if not u"id" in cancelDict:
-            log_error("Cancel dict does not contain transfer ID.")
+            self.logger.error("Cancel dict does not contain transfer ID.")
             return
         
         if not u"up" in cancelDict:
-            log_error("Cancel dict does not specify whether it was an upload or not.")
+            self.logger.error("Cancel dict does not specify whether it was an upload or not.")
             return
         
         transferID = cancelDict[u"id"]
@@ -261,19 +267,19 @@ class FileTransferHandler(QObject):
             # is download on this side
             thread = self._incoming.pop((peerID, transferID), None)
             if thread is None:
-                log_debug("Download canceled that was not running")
+                self.logger.debug("Download canceled that was not running")
                 return
         else:
             thread = self._outgoing.pop(transferID, None)
             if thread is None:
-                log_debug("Upload canceled that was not running")
+                self.logger.debug("Upload canceled that was not running")
                 return
             
         thread.cancelTransfer()
     
     def sendFilesToPeer(self, toSend, peerID):
         self._sendFilesToPeer.emit(toSend, peerID)
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _sendFilesToPeerSlot(self, toSend, peerID, transferID=None):
         if transferID is None:
             isRetry = False
@@ -284,7 +290,7 @@ class FileTransferHandler(QObject):
         if type(toSend) in (str, unicode):
             toSend = [toSend]
         elif type(toSend) is not list:
-            log_error("toSend must be path of list of paths")
+            self.logger.error("toSend must be path of list of paths")
             return
         
         # TODO separate preparation phase
@@ -298,27 +304,27 @@ class FileTransferHandler(QObject):
         
     def downloadDirChanged(self, newDir):
         self._downloadDirChanged.emit(newDir)
-    @pyqtSlot(object)
+    @loggingSlot(object)
     def _downloadDirChangedSlot(self, newDir):
         self._downloadDir = newDir
         
     def overwriteChanged(self, overwrite):
         self._overwriteChanged.emit(overwrite)
-    @pyqtSlot(bool)
+    @loggingSlot(bool)
     def _overwriteChangedSlot(self, overwrite):
         self._overwrite = overwrite
         
     def compressionChanged(self, comp):
         self._compressionChanged.emit(comp)
-    @pyqtSlot(object)
+    @loggingSlot(object)
     def _compressionChangedSlot(self, comp):
         self._setCompression(comp)
         
-    @pyqtSlot(object, object, int)
+    @loggingSlot(object, object, int)
     def retrySendFileToPeer(self, toSend, peerID, oldID):
-        self._sendFileToPeerSlot(toSend, peerID, oldID)
+        self._sendFilesToPeerSlot(toSend, peerID, oldID)
         
-    @pyqtSlot(int)
+    @loggingSlot(int)
     def cancelOutgoingTransfer(self, transferID):
         data = self._outgoing.get(transferID, None)
         if type(data) is tuple:

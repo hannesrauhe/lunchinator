@@ -1,5 +1,5 @@
 import threading, Queue
-from lunchinator import log_exception, log_debug
+from lunchinator.log import getCoreLogger
 
 class EventSignalLoop(threading.Thread):
     def __init__(self):
@@ -10,15 +10,15 @@ class EventSignalLoop(threading.Thread):
     def run(self):
         while True:
             req, args, kwargs = self.reqs.get()
-            log_debug("processing Signal: %s"%req)
+            getCoreLogger().debug("processing Signal: %s", req)
             if req == 'exit': 
                 break
             try:
                 req(*args, **kwargs)
             except Exception, e:
-                log_exception("Error in Signal handling; executed method: %s; Error: %s"%(str(req), str(e)))
+                getCoreLogger().exception("Error in Signal handling; executed method: %s; Error: %s", str(req), str(e))
             except:
-                log_exception("Error in Signal handling; executed method:  %s; no additional info"%str(req))
+                getCoreLogger().exception("Error in Signal handling; executed method:  %s; no additional info", str(req))
     
     def append(self, func, *args, **kwargs):
         self.reqs.put((func, args, kwargs))
@@ -43,7 +43,7 @@ def _disconnectFunc(func):
 def _emitFunc(func):
     signal = func.__name__[4:]
     def newFunc(self, *args, **kwargs):
-        func(self, *args, **kwargs)
+        #func(self, *args, **kwargs) TODO why would we do this?
         self._emit(signal, *args, **kwargs)
     return newFunc
 
@@ -412,6 +412,17 @@ class NotificationCenter(object):
         pass
     @_emitFunc
     def emitPrivacySettingsDiscarded(self, pluginName, actionName):
+        pass
+    
+    """Emitted when a message is logged."""    
+    @_connectFunc
+    def connectLogMessage(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectLogMessage(self, callback):
+        pass
+    @_emitFunc
+    def emitLogMessage(self, logRecord):
         pass
 
 if __name__ == '__main__':

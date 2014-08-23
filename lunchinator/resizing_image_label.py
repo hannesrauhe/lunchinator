@@ -1,12 +1,13 @@
 from PyQt4.QtGui import QImage, QPixmap, QLabel, QSizePolicy
-from PyQt4.QtCore import Qt, QSize, QThread, pyqtSlot, QTimer, pyqtSignal
-from lunchinator import log_exception, log_error
+from PyQt4.QtCore import Qt, QSize, QThread, QTimer, pyqtSignal
 from lunchinator.download_thread import DownloadThread
+from lunchinator.log.logging_slot import loggingSlot
 
 class ResizingImageLabel(QLabel):
-    def __init__(self,parent,smooth_scaling,sizeHint = None):
+    def __init__(self, parent, logger, smooth_scaling, sizeHint=None):
         super(ResizingImageLabel, self).__init__(parent)
         
+        self.logger = logger
         self._sizeHint = sizeHint
         self.rawPixmap = None
         self.smooth_scaling = smooth_scaling
@@ -53,8 +54,8 @@ class ResizingWebImageLabel(ResizingImageLabel):
     timeout -- number of seconds between updates
     no_proxy -- True to disable proxy for pic_url
     """
-    def __init__(self, parent, pic_url=None, fallback_pic=None, smooth_scaling=False, update=False, timeout=0, no_proxy=False):
-        super(ResizingWebImageLabel, self).__init__(parent, smooth_scaling, QSize(640, 480))
+    def __init__(self, parent, logger, pic_url=None, fallback_pic=None, smooth_scaling=False, update=False, timeout=0, no_proxy=False):
+        super(ResizingWebImageLabel, self).__init__(parent, logger, smooth_scaling, QSize(640, 480))
         
         self.fallback_pic = fallback_pic
         self.pic_url = pic_url
@@ -75,7 +76,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
             try:
                 self.setImage(self.fallback_pic)
             except:
-                log_exception("Something went wrong when trying to display the fallback image",self.fallback_pic)
+                self.logger.exception("Something went wrong when trying to display the fallback image %s", self.fallback_pic)
         else:
             self.setPixmap(QPixmap())
             
@@ -89,7 +90,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
         self.pic_url = None
         self.update()
             
-    @pyqtSlot(QThread, object)
+    @loggingSlot(QThread, object)
     def downloadFinished(self, thread, url):
         self.imageDownloaded.emit(url, thread.getResult())
         qtimage = QImage()
@@ -97,20 +98,21 @@ class ResizingWebImageLabel(ResizingImageLabel):
         self.setRawPixmap(QPixmap.fromImage(qtimage))
         thread.close()
             
-    @pyqtSlot(QThread, object)
+    @loggingSlot(QThread, object)
     def errorDownloading(self, _thread, url):
-        log_error("Error downloading webcam image from %s" % url)
+        self.logger.error("Error downloading webcam image from %s", url)
         
     def showEvent(self, event):
         self.update()
         return super(ResizingWebImageLabel, self).showEvent(event)
             
+    @loggingSlot()
     def update(self):
         if not self.isVisible():
             return
          
         if self.pic_url is not None:
-            thread = DownloadThread(self, self.pic_url, no_proxy = self.no_proxy)
+            thread = DownloadThread(self, self.logger, self.pic_url, no_proxy = self.no_proxy)
             thread.finished.connect(thread.deleteLater)
             thread.error.connect(self.errorDownloading)
             thread.success.connect(self.downloadFinished)

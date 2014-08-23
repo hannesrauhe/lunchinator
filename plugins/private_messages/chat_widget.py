@@ -3,14 +3,16 @@ from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
     QLabel, QPixmap, QTextCharFormat, QTextCursor, QToolButton, QMenu
 from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp, QTimer
 
+from private_messages.chat_messages_view import ChatMessagesView
+from private_messages.chat_messages_model import ChatMessagesModel
 from lunchinator import convert_string, get_settings, get_notification_center,\
-    get_peers, log_error
+    get_peers
+from lunchinator.log import loggingFunc
+from lunchinator.log.logging_slot import loggingSlot
 from lunchinator.history_line_edit import HistoryTextEdit
 from lunchinator.peer_actions.peer_action_utils import showPeerActionsPopup,\
     initializePeerActionsMenu
 from lunchinator.peer_actions import PeerActions
-from private_messages.chat_messages_view import ChatMessagesView
-from private_messages.chat_messages_model import ChatMessagesModel
 
 from xml.etree import ElementTree
 from StringIO import StringIO
@@ -61,9 +63,10 @@ class ChatWidget(QWidget):
     typing = pyqtSignal()
     cleared = pyqtSignal()
         
-    def __init__(self, parent, ownName, otherName, ownPicFile, otherPicFile, otherID):
+    def __init__(self, parent, logger, ownName, otherName, ownPicFile, otherPicFile, otherID):
         super(ChatWidget, self).__init__(parent)
         
+        self.logger = logger
         self._firstShowEvent = True
         
         self._offline = False
@@ -208,16 +211,19 @@ class ChatWidget(QWidget):
     def _updateOwnName(self):
         self._ownNameLabel.setText(self._ownName)
         
+    @loggingSlot(object, object)
     def _peerUpdated(self, peerID, peerInfo):
         peerID = convert_string(peerID)
         if peerID == self._otherID:
             self._setOffline(u"PM_v" not in peerInfo)
-    
+
+    @loggingSlot(object)    
     def _peerRemoved(self, peerID):
         peerID = convert_string(peerID)
         if peerID == self._otherID:
             self._setOffline(True)
             
+    @loggingSlot(object, object)
     def _avatarChanged(self, peerID, newFile):
         peerID = convert_string(peerID)
         newFile = convert_string(newFile)
@@ -227,6 +233,7 @@ class ChatWidget(QWidget):
         elif peerID == get_settings().get_ID():
             self.setOwnIconPath(get_peers().getPeerAvatarFile(pID=peerID))
             
+    @loggingSlot(object, object, object)
     def _displayedPeerNameChanged(self, pID, newName, _infoDict):
         pID = convert_string(pID)
         newName = convert_string(newName)
@@ -319,8 +326,9 @@ class ChatWidget(QWidget):
         self._model = ChatMessagesModel(self, self)
         
     def _initMessageTable(self):
-        self.table = ChatMessagesView(self._model, self)
+        self.table = ChatMessagesView(self._model, self, self.logger)
         
+    @loggingSlot()
     def _textChangedSlot(self):
         if not self.entry.isEnabled() or self.entry.document().isEmpty():
             self._textChanged = False
@@ -336,6 +344,7 @@ class ChatWidget(QWidget):
         else:
             self._textChanged = True
             
+    @loggingSlot()
     def _checkTyping(self):
         curTime = time()
         if self._textChanged:
@@ -358,12 +367,14 @@ class ChatWidget(QWidget):
         if not self._offline:
             self.cleared.emit()
             
+    @loggingSlot()
     def otherIsTyping(self):
         if not self._otherWasTyping:
             self._otherWasTyping = True
             self.setStatus(self.getOtherName() + " is typing a message...")
         self._lastTimePartnerTyped = time()
-        
+    
+    @loggingSlot()
     def otherCleared(self):
         self._otherWasTyping = False
         self.setStatus(None)
@@ -383,6 +394,7 @@ class ChatWidget(QWidget):
             self.addTimeRow(msgTime)
             self._lastTimeRow = msgTime
         
+    @loggingFunc
     def addOwnMessage(self, msgID, recvTime, msg, msgTime, messageState=None, toolTip=None):
         self._checkTime(msgTime)
         self._model.addOwnMessage(msgID, recvTime, msg, msgTime, messageState, toolTip)
@@ -465,10 +477,11 @@ class ChatWidget(QWidget):
                 from markdown import Markdown
                 self._md = Markdown(extensions=['extra'])
             except ImportError:
-                log_error("Cannot enable Markdown (%s)" % formatException)
+                self.logger.error("Cannot enable Markdown (%s)", formatException)
                 raise
         return self._md
-        
+    
+    @loggingSlot()        
     def eventTriggered(self):
         text = None
         if self._markdownEnabled:
@@ -619,7 +632,7 @@ if __name__ == '__main__':
         
         tw.typing.connect(tw.otherIsTyping)
         tw.cleared.connect(tw.otherCleared)
-        tw.sendMessage.connect(lambda pID, html : tw.addOwnMessage(0, time(), html, time()), type=Qt.QueuedConnection)
+        tw.sendMessage.connect(lambda _pID, html : tw.addOwnMessage(0, time(), html, time()), type=Qt.QueuedConnection)
         
         return tw
         

@@ -1,5 +1,6 @@
 from lunchinator.peer_actions.peer_action import PeerAction
-from lunchinator import get_peers, log_exception, convert_string
+from lunchinator import get_peers, convert_string
+from lunchinator.log import getCoreLogger
 
 class ChangeDisplayedNameAction(PeerAction):
     def getName(self):
@@ -14,7 +15,7 @@ class ChangeDisplayedNameAction(PeerAction):
                 customName = convert_string(customName)
                 get_peers().setCustomPeerName(peerID, customName)
         except:
-            log_exception("Error changing displayed peer name.")
+            getCoreLogger().exception("Error changing displayed peer name.")
             
     def peerMustBeOnline(self):
         return False
