@@ -1,5 +1,5 @@
 from online_update.appupdate.app_update_handler import AppUpdateHandler
-from lunchinator.utilities import getGPGandKey, getValidQtParent
+from lunchinator.utilities import getGPG, getValidQtParent
 from lunchinator.download_thread import DownloadThread
 from lunchinator import get_settings
 from lunchinator.log.logging_func import loggingFunc
@@ -48,7 +48,10 @@ class GPGUpdateHandler(AppUpdateHandler):
             return self._prepareInstallation(self._local_installer_file, commands)
     
     def _has_gpg(self):
-        gpg, _key = getGPGandKey(self.logger)
+        try:
+            gpg = getGPG()
+        except:
+            return None
         return gpg != None
     
     def _checkGPG(self):
@@ -71,7 +74,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._ui.setAppStatusToolTip(vstr)
             
     def _verifySignature(self, signedString):
-        gpg, _keyid = getGPGandKey(self.logger)
+        gpg = getGPG()
         if gpg == None:
             return None
         v = gpg.verify(str(signedString))

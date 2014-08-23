@@ -1,7 +1,6 @@
 from lunchinator.log import getCoreLogger
-from lunchinator.utilities import getGPG
 import math, hashlib
-
+import encryption
 """ Message classes """
     
 class extMessage(object):
@@ -35,7 +34,8 @@ class extMessage(object):
         self._fragments = []
         self._plainMsg = u""
         self._splitID = "0000"
-        self._statusByte = 0b00000000 
+        self._statusByte = 0b00000000
+        self._signature_data = None
     
     def isSigned(self):
         return bool(self._statusByte & 0b00000011)
@@ -67,6 +67,9 @@ class extMessage(object):
     
     def getVersion(self):
         return self._protocol_version
+    
+    def getSignatureInfo(self):
+        return self._signature_data
         
     """ @brief returns a 4-character string used as message ID,
     uses the hash function according to the status byte"""
@@ -138,7 +141,7 @@ class extMessageIncoming(extMessage):
             pipe_value = self._decrypt_and_verify(pipe_value)
             
             self._plainMsg = pipe_value
-            if self.isSigned():
+            if not self.isSigned():
                 if self.hashPlainMessage()!=self.getSplitID():
                     raise Exception("Malformed Message: Checksum of message invalid")
     
@@ -152,13 +155,12 @@ class extMessageIncoming(extMessage):
             raise Exception("Unknown Compression identified by '%s'"%self._compressedMsg[0])
         
     def _decrypt_and_verify(self, value):
-        if not self.isEncrypted():
-            res = value
-            
-        if self.isSigned():
-            pass
-        
-        return res
+        if self.isEncrypted() or self.isSigned():
+            #decrypt also verifies unencrypted, signed data
+            plain, self._signature_data = encryption.decrypt(value)
+            return plain
+        else:
+            return value
         
     def merge(self, other):
         for f in other.getFragments():
@@ -189,24 +191,17 @@ class extMessageOutgoing(extMessage):
         self._split(pipe_value)
         
     ''' @brief value will be encrypted and optionally signed and returned'''
-    def _encrypt_sign(self, value, encrypt_key, sign_key=None):
-        #import gpg
-        
+    def _encrypt_sign(self, value, encrypt_key, sign_key=None):        
         self._statusByte = 0b00000100 | self._statusByte
         if sign_key:
             self._statusByte = 0b00000001 | self._statusByte
-#         c = gpg.encrypt(value, encrypt_key, sign=sign_key, always_trust=True)
-#         return str(c)
-        return value
+        
+        return encryption.encrypt(value, encrypt_key, sign=sign_key, always_trust=True)
     
     ''' @brief value will be signed and not encrypted'''
-    def _sign(self, value, sign_key=None):
-        #import gpg
-        
+    def _sign(self, value, sign_key=None):        
         self._statusByte = 0b00000001 | self._statusByte
-#         c = gpg.sign(value, keyid=sign_key, always_trust=True)
-#         return str(c)
-        return value
+        return encryption.sign(value, keyid=sign_key)
     
     ''' @brief value will be compressed and returned'''
     def _compress(self, value):

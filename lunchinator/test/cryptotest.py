@@ -1,13 +1,15 @@
+from lunchinator.log import initializeLogger
 from lunchinator import log_error, log_exception, get_settings
 from lunchinator.utilities import getBinary, getPlatform, PLATFORM_WINDOWS
-import zlib, sqlite3, os, locale, sys
+import zlib, sqlite3, os, locale, sys    
 from gnupg import GPG
-    
-from gnupg import GPG
+
+initializeLogger()
+
 gbinary = getBinary("gpg", "bin")
 if not gbinary:
     log_error("GPG not found")
-    sys._exit(1)
+    sys.exit(1)
 
 ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
 

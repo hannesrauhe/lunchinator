@@ -5,10 +5,17 @@ Created on 25.07.2014
 '''
 import unittest, random, string
 from lunchinator.lunch_socket import *
+from lunchinator.log import initializeLogger, getCoreLogger
 
 class extMsgTest(unittest.TestCase):
+    test_key = "3CDC 2903 4198 CA7A FB18 5EB3 8F7A 8017 17F5 7DC2".replace(" ", "") #"0x17F57DC2"
+    
     def setUp(self):
         self.split_size = 512
+        try:
+            getCoreLogger()
+        except:
+            initializeLogger()
 
     def tearDown(self):
         pass
@@ -97,16 +104,46 @@ class extMsgTest(unittest.TestCase):
         self.assertTrue(eMsgIn.isComplete())
         self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
 
+    def testEncryption(self):
+        self.test_str = self.string_generator(690).encode('utf-8')
+#         print "Using test string: "+self.test_str
+
+        eMsgOut = extMessageOutgoing(self.test_str, self.split_size, encrypt_key=self.test_key)
+        eMsgIn = extMessageIncoming(eMsgOut.getFragments()[0])
+        for f in eMsgOut.getFragments()[1:]:
+            eMsgIn.addFragment(f)
+        self.assertTrue(eMsgIn.isComplete())
+        self.assertTrue(eMsgIn.isEncrypted(), "Status byte says not encrypted")
+        self.assertFalse(eMsgIn.isSigned(), "Status byte says signed")
+        self.assertEqual(eMsgIn.getSignatureInfo()['fingerprint'], None)
+        self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
+        
     def testSign(self):
         self.test_str = self.string_generator(690).encode('utf-8')
 #         print "Using test string: "+self.test_str
 
-        eMsgOut = extMessageOutgoing(self.test_str, self.split_size, sign_key=True)
+        eMsgOut = extMessageOutgoing(self.test_str, self.split_size, sign_key=self.test_key)
         eMsgIn = extMessageIncoming(eMsgOut.getFragments()[0])
         for f in eMsgOut.getFragments()[1:]:
             eMsgIn.addFragment(f)
         self.assertTrue(eMsgIn.isComplete())
         self.assertTrue(eMsgIn.isSigned(), "Status byte says not signed")
+        self.assertEqual(eMsgIn.getSignatureInfo()['fingerprint'], self.test_key)
+        self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
+        
+        
+    def testEncryptSign(self):
+        self.test_str = self.string_generator(690).encode('utf-8')
+#         print "Using test string: "+self.test_str
+
+        eMsgOut = extMessageOutgoing(self.test_str, self.split_size, encrypt_key=self.test_key, sign_key=self.test_key)
+        eMsgIn = extMessageIncoming(eMsgOut.getFragments()[0])
+        for f in eMsgOut.getFragments()[1:]:
+            eMsgIn.addFragment(f)
+        self.assertTrue(eMsgIn.isComplete())
+        self.assertTrue(eMsgIn.isSigned(), "Status byte says not signed")
+        self.assertTrue(eMsgIn.isEncrypted(), "Status byte says not encrypted")
+        self.assertEqual(eMsgIn.getSignatureInfo()['fingerprint'], self.test_key)
         self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
 
 if __name__ == "__main__":
