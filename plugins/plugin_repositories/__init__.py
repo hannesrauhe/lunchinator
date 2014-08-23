@@ -34,7 +34,7 @@ class plugin_repositories(iface_general_plugin):
         return True
         
     def create_options_widget(self, parent):
-        self._ui = PluginRepositoriesGUI(parent)
+        self._ui = PluginRepositoriesGUI(self.logger, parent)
         
         self._initRepositories()
         self._ui.resizeColumns()
