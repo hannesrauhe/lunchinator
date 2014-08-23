@@ -344,7 +344,6 @@ class lunch_server(object):
                    u"next_lunch_end":get_settings().get_default_lunch_end(),
                    u"version":get_settings().get_version(),
                    u"version_commit_count":get_settings().get_commit_count(),
-                   u"version_commit_count_plugins":get_settings().get_commit_count_plugins(),
                    u"platform": sys.platform}
         
         try:

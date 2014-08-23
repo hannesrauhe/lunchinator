@@ -118,7 +118,6 @@ class lunch_settings(object):
         self._avatar_dir = self.get_config("avatars")
         self._version = None
         self._commit_count = None
-        self._commit_count_plugins = "-1"
         self._main_package_path = self._findMainPackagePath()
         if self._main_package_path == None:
             raise Exception("Could not determine path to the main lunchinator package.")
@@ -351,9 +350,6 @@ class lunch_settings(object):
         self.get_version()
         
         return self._commit_count
-    
-    def get_commit_count_plugins(self):
-        return self._commit_count_plugins
     
     def log_file(self):
         return self._log_file
