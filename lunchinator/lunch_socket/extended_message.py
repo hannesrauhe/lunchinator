@@ -26,7 +26,7 @@ class extMessage(object):
     BYTE_FRAGNUM        = 7
     BYTE_EXPECTED_NUM   = 8
     BYTE_HASH_START     = 9
-    BYTE_HASH_END       = 13 #exclusive
+    BYTE_HASH_END       = 13 #exclusive (used for slice notation)
     BYTE_MSG_START      = 13
     
     def __init__(self):
@@ -133,13 +133,15 @@ class extMessageIncoming(extMessage):
             
             self._statusByte = ord(pipe_value[0])
             pipe_value = pipe_value[1:]
-            pipe_value = self.decompress(pipe_value)
+            pipe_value = self._decompress(pipe_value)
+            pipe_value = self._decrypt_and_verify(pipe_value)
             
             self._plainMsg = pipe_value
-            if self.hashPlainMessage()!=self.getSplitID():
-                raise Exception("Malformed Message: Checksum of message invalid")
+            if self.isSigned():
+                if self.hashPlainMessage()!=self.getSplitID():
+                    raise Exception("Malformed Message: Checksum of message invalid")
     
-    def decompress(self, value):
+    def _decompress(self, value):
         if not self.isCompressed():
             return value
         if 0b010000 == (self._statusByte & 0b00110000):
@@ -147,6 +149,15 @@ class extMessageIncoming(extMessage):
             return zlib.decompress(value)
         else:
             raise Exception("Unknown Compression identified by '%s'"%self._compressedMsg[0])
+        
+    def _decrypt_and_verify(self, value):
+        if not self.isEncrypted():
+            res = value
+            
+        if self.isSigned():
+            pass
+        
+        return res
         
     def merge(self, other):
         for f in other.getFragments():
@@ -167,17 +178,17 @@ class extMessageOutgoing(extMessage):
         
         pipe_value = outgoingMessage
         if encrypt_key:
-            pipe_value = self.encrypt_sign(pipe_value, encrypt_key, sign_key)
+            pipe_value = self._encrypt_sign(pipe_value, encrypt_key, sign_key)
         elif sign_key:
-            pipe_value = self.sign(pipe_value, sign_key)
+            pipe_value = self._sign(pipe_value, sign_key)
             
         if compress=="zlib":
-            pipe_value = self.compress(pipe_value)        
+            pipe_value = self._compress(pipe_value)        
         
-        self.split(pipe_value)
+        self._split(pipe_value)
         
     ''' @brief value will be encrypted and optionally signed and returned'''
-    def encrypt_sign(self, value, encrypt_key, sign_key=None):
+    def _encrypt_sign(self, value, encrypt_key, sign_key=None):
         #import gpg
         
         self._statusByte = 0b00000100 | self._statusByte
@@ -188,7 +199,7 @@ class extMessageOutgoing(extMessage):
         return value
     
     ''' @brief value will be signed and not encrypted'''
-    def sign(self, value, sign_key=None):
+    def _sign(self, value, sign_key=None):
         #import gpg
         
         self._statusByte = 0b00000001 | self._statusByte
@@ -197,7 +208,7 @@ class extMessageOutgoing(extMessage):
         return value
     
     ''' @brief value will be compressed and returned'''
-    def compress(self, value):
+    def _compress(self, value):
         import zlib
 
         compressedMsg = zlib.compress(value)
@@ -206,7 +217,7 @@ class extMessageOutgoing(extMessage):
         return compressedMsg
     
     ''' @brief value will be split into fragments and an ID will be assigned and stored in instance variables''' 
-    def split(self, value):
+    def _split(self, value):
         msg_len = len(value)
         n = self._fragment_size
         m = int(math.ceil(float(msg_len) / float(n)))

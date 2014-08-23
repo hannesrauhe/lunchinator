@@ -185,39 +185,45 @@ def _findLunchinatorKeyID(gpg, secret):
                 return key['keyid']
     return None
 
-def getGPG(secret=False):
+lunch_gpg = None
+
+def getGPG():
+    global lunch_gpg
+    if not lunch_gpg:
+        from gnupg import GPG
+        gbinary = getBinary("gpg", "bin")
+        if not gbinary:
+            log_error("GPG not found")
+            return None
+        
+        ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
+        
+        if not locale.getpreferredencoding():
+            # Fix for GnuPG on Mac
+            # TODO will this work on systems without English locale?
+            os.putenv("LANG", "en_US.UTF-8")
+        
+        if not locale.getpreferredencoding():
+            # Fix for GnuPG on Mac
+            # TODO will this work on systems without English locale?
+            os.putenv("LANG", "en_US.UTF-8")
+        
+        try:
+            if getPlatform() == PLATFORM_WINDOWS:
+                lunch_gpg = GPG("\""+gbinary+"\"",ghome)
+            else:
+                lunch_gpg = GPG(gbinary,ghome)
+            if not lunch_gpg.encoding:
+                lunch_gpg.encoding = 'utf-8'
+        except Exception, e:
+            log_exception("GPG not working: "+str(e))
+            return None
+    
+    return lunch_gpg
+
+def getGPGandKey(secret=False):
     """ Returns tuple (GPG instance, keyid) """
-    
-    from gnupg import GPG
-    gbinary = getBinary("gpg", "bin")
-    if not gbinary:
-        log_error("GPG not found")
-        return None, None
-    
-    ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
-    
-    if not locale.getpreferredencoding():
-        # Fix for GnuPG on Mac
-        # TODO will this work on systems without English locale?
-        os.putenv("LANG", "en_US.UTF-8")
-    
-    if not locale.getpreferredencoding():
-        # Fix for GnuPG on Mac
-        # TODO will this work on systems without English locale?
-        os.putenv("LANG", "en_US.UTF-8")
-    
-    try:
-        gpg = None
-        if getPlatform() == PLATFORM_WINDOWS:
-            gpg = GPG("\""+gbinary+"\"",ghome)
-        else:
-            gpg = GPG(gbinary,ghome)
-        if not gpg.encoding:
-            gpg.encoding = 'utf-8'
-    except Exception, e:
-        log_exception("GPG not working: "+str(e))
-        return None, None
-    
+    gpg = getGPG()
     # use key from keyring as default
     keyid = _findLunchinatorKeyID(gpg, secret)
     
