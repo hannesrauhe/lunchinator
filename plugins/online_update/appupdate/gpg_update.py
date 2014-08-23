@@ -48,7 +48,10 @@ class GPGUpdateHandler(AppUpdateHandler):
             return self._prepareInstallation(self._local_installer_file, commands)
     
     def _has_gpg(self):
-        gpg, _key = getGPG(self.logger)
+        try:
+            gpg = getGPG()
+        except:
+            return None
         return gpg != None
     
     def _checkGPG(self):
@@ -71,7 +74,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._ui.setAppStatusToolTip(vstr)
             
     def _verifySignature(self, signedString):
-        gpg, _keyid = getGPG(self.logger)
+        gpg = getGPG()
         if gpg == None:
             return None
         v = gpg.verify(str(signedString))
