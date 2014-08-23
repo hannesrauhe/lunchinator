@@ -8,6 +8,7 @@ from lunchinator.utilities import formatException
 import logging, traceback
 from StringIO import StringIO
 from time import localtime, strftime
+from lunchinator.log.lunch_logger import getCachedLogRecords
 
 class ErrorLogDialog(QDialog):
     def __init__(self, parent):
@@ -17,6 +18,9 @@ class ErrorLogDialog(QDialog):
         self._initUI()
         self.setWindowTitle("Error")
         get_notification_center().connectLogMessage(self._checkLogMessage)
+        
+        for record in getCachedLogRecords():
+            self._checkLogMessage(record)
         
     def sizeHint(self):
         return QSize(400, 200)
