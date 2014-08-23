@@ -49,6 +49,10 @@ class extMsgTest(unittest.TestCase):
             eMsgIn.merge(other)
         self.assertTrue(eMsgIn.isComplete())
         self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
+        #message should not be signed nor encrypted
+        self.assertFalse(eMsgIn.isEncrypted(), "Message status byte says encrpyted; shouldn't be")
+        self.assertFalse(eMsgIn.isSigned(), "Message status byte says signed; shouldn't be")
+        self.assertTrue(eMsgIn.isCompressed(), "Message status byte says not compressed; should be")
         
         self.assertRaises(Exception, eMsgIn.addFragment, "fdjaf")
         
@@ -69,6 +73,20 @@ class extMsgTest(unittest.TestCase):
         self.assertTrue(eMsgIn.isComplete())
         self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
         
+    
+    '''test (force) disabled compression'''
+    def testNoCompression(self):
+        self.test_str = self.string_generator(690).encode('utf-8')
+#         print "Using test string: "+self.test_str
+
+        eMsgOut = extMessageOutgoing(self.test_str, self.split_size, compress=None)
+        eMsgIn = extMessageIncoming(eMsgOut.getFragments()[0])
+        for f in eMsgOut.getFragments()[1:]:
+            eMsgIn.addFragment(f)
+        self.assertTrue(eMsgIn.isComplete())
+        self.assertFalse(eMsgIn.isCompressed(), "Status byte says compressed")
+        self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
+        
     def testUnicode(self):
         self.test_str = self.string_generator(self.split_size-100, string.printable).encode('utf-8')
         eMsgOut = extMessageOutgoing(self.test_str, self.split_size)
@@ -79,6 +97,17 @@ class extMsgTest(unittest.TestCase):
         self.assertTrue(eMsgIn.isComplete())
         self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
 
+    def testSign(self):
+        self.test_str = self.string_generator(690).encode('utf-8')
+#         print "Using test string: "+self.test_str
+
+        eMsgOut = extMessageOutgoing(self.test_str, self.split_size, sign_key=True)
+        eMsgIn = extMessageIncoming(eMsgOut.getFragments()[0])
+        for f in eMsgOut.getFragments()[1:]:
+            eMsgIn.addFragment(f)
+        self.assertTrue(eMsgIn.isComplete())
+        self.assertTrue(eMsgIn.isSigned(), "Status byte says not signed")
+        self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
