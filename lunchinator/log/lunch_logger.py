@@ -142,9 +142,6 @@ def newLogger(name):
 def removeLogger(name):
     _lunchinatorLogger.removeLogger(name)
 
-def logsDebug():
-    return _lunchinatorLogger.get().isEnabledFor(logging.DEBUG)
-
 def setGlobalLoggingLevel(newLevel):
     _lunchinatorLogger.setGlobalLevel(newLevel)
     

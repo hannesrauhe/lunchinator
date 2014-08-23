@@ -3,7 +3,7 @@ import sys
 from lunchinator import get_server, get_settings, get_notification_center,\
     get_peers, get_plugin_manager, convert_string,\
     get_peer_actions
-from lunchinator.log import getCoreLogger, logsDebug, loggingFunc
+from lunchinator.log import getCoreLogger, loggingFunc
 from lunchinator.datathread.dt_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall, getTimeDifference,\
     formatException
@@ -190,8 +190,7 @@ class LunchServerController(object):
                     self.last_lunch_call = eventTime
                     processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info), newPeer, fromQueue)
                 else:
-                    if logsDebug():
-                        getCoreLogger().debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)", t, m, msg, strftime("%H:%M:%S", localtime(eventTime + get_settings().get_mute_timeout())))
+                    getCoreLogger().debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)", t, m, msg, strftime("%H:%M:%S", localtime(eventTime + get_settings().get_mute_timeout())))
         
     def serverStopped(self, _exit_code):
         get_settings().write_config_to_hd()

@@ -4,6 +4,32 @@ import os
 
 MAIN_CONFIG_DIR = unicode(os.path.join(os.getenv("HOME"), ".lunchinator") if os.getenv("HOME") else os.path.join(os.getenv("USERPROFILE"), ".lunchinator"))
 
+""" The following methods are deprecated and will be removed soon """
+def _generate_string(*s):
+    return u" ".join(x if type(x) in (str, unicode) else str(x) for x in s)
+def log_exception(*s):
+    from log import getCoreLogger
+    getCoreLogger().exception(_generate_string(*s))
+def log_critical(*s):
+    from log import getCoreLogger
+    getCoreLogger().critical(_generate_string(*s))
+def log_error(*s):
+    from log import getCoreLogger
+    getCoreLogger().error(_generate_string(*s))
+def log_warning(*s):
+    from log import getCoreLogger
+    getCoreLogger().warn(_generate_string(*s))
+def log_info(*s):
+    from log import getCoreLogger
+    getCoreLogger().info(_generate_string(*s))
+def log_debug(*s):
+    from log import getCoreLogger
+    getCoreLogger().debug(_generate_string(*s))
+def logs_debug():
+    from log import getCoreLogger
+    import logging
+    return getCoreLogger().isEnabledFor(logging.DEBUG)
+
 def convert_string(string):
     if string is None:
         return None
