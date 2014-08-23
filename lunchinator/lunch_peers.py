@@ -16,7 +16,7 @@ def peerGetter(needsID=False):
                 try:
                     if not pID and pIP:
                         if pIP in self._peer_info:
-                            pID = self._peer_info[pIP][u"ID"]
+                            pID = self._peer_info[pIP][LunchPeers.PEER_ID_KEY]
                     return func(self, pID)
                 finally:
                     if lock:
@@ -64,6 +64,17 @@ class LunchPeers(object):
     says something else ^^.
     
     """
+    
+    """Default Info Dict keys"""
+    PEER_ID_KEY = u"ID"
+    PEER_NAME_KEY = u"name"
+    GROUP_KEY = u"group"
+    AVATAR_KEY = u"avatar"
+    NEXT_LUNCH_BEGIN_KEY = u"next_lunch_begin"
+    NEXT_LUNCH_END_KEY = u"next_lunch_end"
+    APPLICATION_VERSION_KEY = u"version"
+    APPLICATION_COMMIT_COUNT_KEY = u"version_commit_count"
+    PLATFORM_KEY = u"platform"
 
     def __init__(self):
         """after initializing all variables, the peer information form the lust run is read from a file"""
@@ -152,7 +163,7 @@ class LunchPeers(object):
                 
             for ip in toRemove:
                 if ip in self._peer_info:
-                    self._removeMember(self._peer_info[ip][u"ID"])
+                    self._removeMember(self._peer_info[ip][self.PEER_ID_KEY])
     
     def getMemberIPs(self):
         """returns the IPs of all members"""
@@ -203,7 +214,7 @@ class LunchPeers(object):
         with self._lock:
             for ip in toRemove:
                 if ip in self._peer_info:
-                    pID = self._peer_info.pop(ip)[u"ID"]
+                    pID = self._peer_info.pop(ip)[self.PEER_ID_KEY]
                     self._removePeerIPfromID(pID, ip)
                      
     ########### Getters for peer / member information ##############
@@ -316,8 +327,8 @@ class LunchPeers(object):
         """returns True if there is a valid lunch time interval for the peer"""
         if ip in self._peer_info:
             p_info = self._peer_info[ip]
-            if p_info and p_info.has_key(u"next_lunch_begin") and p_info.has_key(u"next_lunch_end"):
-                diff = getTimeDifference(p_info[u"next_lunch_begin"], p_info[u"next_lunch_end"])
+            if p_info and p_info.has_key(self.NEXT_LUNCH_BEGIN_KEY) and p_info.has_key(self.NEXT_LUNCH_END_KEY):
+                diff = getTimeDifference(p_info[self.NEXT_LUNCH_BEGIN_KEY], p_info[self.NEXT_LUNCH_END_KEY])
                 if diff != None:
                     # valid format
                     return True
@@ -331,8 +342,8 @@ class LunchPeers(object):
         the file does not exist.
         """
         peerInfo = self.getPeerInfo(pIP=ip, lock=False)
-        if peerInfo != None and u"avatar" in peerInfo and peerInfo[u"avatar"]:
-            avatarFile = os.path.join(get_settings().get_avatar_dir(), peerInfo["avatar"])
+        if peerInfo != None and self.AVATAR_KEY in peerInfo and peerInfo[self.AVATAR_KEY]:
+            avatarFile = os.path.join(get_settings().get_avatar_dir(), peerInfo[self.AVATAR_KEY])
             if os.path.isfile(avatarFile):
                 return avatarFile
         return None
@@ -341,8 +352,8 @@ class LunchPeers(object):
     def getAvatarOutdated(self, ip):
         """Returns True if the peer has an avatar but we don't have it"""
         peerInfo = self.getPeerInfo(pIP=ip, lock=False)
-        if peerInfo != None and u"avatar" in peerInfo and peerInfo[u"avatar"]:
-            avatarFile = os.path.join(get_settings().get_avatar_dir(), peerInfo["avatar"])
+        if peerInfo != None and self.AVATAR_KEY in peerInfo and peerInfo[self.AVATAR_KEY]:
+            avatarFile = os.path.join(get_settings().get_avatar_dir(), peerInfo[self.AVATAR_KEY])
             return not os.path.exists(avatarFile)
         # doesn't have avatar
         return False
@@ -350,8 +361,8 @@ class LunchPeers(object):
     ############### Additional getters ##################
     
     def _checkInfoForReady(self, p_info):
-        if p_info and p_info.has_key(u"next_lunch_begin") and p_info.has_key(u"next_lunch_end"):
-            diff = getTimeDifference(p_info[u"next_lunch_begin"], p_info[u"next_lunch_end"])
+        if p_info and p_info.has_key(self.NEXT_LUNCH_BEGIN_KEY) and p_info.has_key(self.NEXT_LUNCH_END_KEY):
+            diff = getTimeDifference(p_info[self.NEXT_LUNCH_BEGIN_KEY], p_info[self.NEXT_LUNCH_END_KEY])
             if diff == None:
                 # illegal format, just assume ready
                 return True
@@ -371,7 +382,7 @@ class LunchPeers(object):
             names = []
             with self._lock:
                 for anID, aDict in self._peer_info.iteritems():
-                    if u"name" in aDict and aDict[u"name"] == peerName:
+                    if self.PEER_NAME_KEY in aDict and aDict[self.PEER_NAME_KEY] == peerName:
                         names.append(anID)
             return names
     
@@ -406,7 +417,7 @@ class LunchPeers(object):
         """adds a peer for that IP"""
         getLogger().info("new peer: %s", ip)
         self._peer_info[ip] = info
-        pID = self._peer_info[ip][u"ID"]
+        pID = self._peer_info[ip][self.PEER_ID_KEY]
         self._addPeerIPtoID(pID, ip)
             
         if not self._IP_seen.has_key(ip):
@@ -427,16 +438,16 @@ class LunchPeers(object):
         if u'group' not in newInfo:
             newInfo[u'group'] = u""
         if u'name' not in newInfo:
-            newInfo[u"name"] = ip
-        if u"ID" not in newInfo:
-            newInfo[u"ID"] = ip
+            newInfo[self.PEER_NAME_KEY] = ip
+        if self.PEER_ID_KEY not in newInfo:
+            newInfo[self.PEER_ID_KEY] = ip
     
-        newPID = newInfo[u"ID"]
+        newPID = newInfo[self.PEER_ID_KEY]
     
         with self._lock:
-            if ip in self._peer_info and self._peer_info[ip][u"ID"] != newPID:
+            if ip in self._peer_info and self._peer_info[ip][self.PEER_ID_KEY] != newPID:
                 # IP has a new ID, assume different peer -> old peer does not use IP any more
-                self._removePeerIPfromID(self._peer_info[ip][u"ID"], ip)
+                self._removePeerIPfromID(self._peer_info[ip][self.PEER_ID_KEY], ip)
                 del self._peer_info[ip]
             
             if ip not in self._peer_info and newPID not in self._idToIp:
@@ -471,17 +482,17 @@ class LunchPeers(object):
                 else:
                     getLogger().debug("%s sent info - without new info", ip)
                     
-                if u"avatar" in old_info and u"avatar" in existing_info and \
-                   old_info[u"avatar"] != existing_info[u"avatar"] and \
+                if self.AVATAR_KEY in old_info and self.AVATAR_KEY in existing_info and \
+                   old_info[self.AVATAR_KEY] != existing_info[self.AVATAR_KEY] and \
                    not self.getAvatarOutdated(pIP=ip, lock=False):
                     # avatar changed but we already have the picture
-                    get_notification_center().emitAvatarChanged(newPID, deepcopy(existing_info[u"avatar"]))
+                    get_notification_center().emitAvatarChanged(newPID, deepcopy(existing_info[self.AVATAR_KEY]))
             
             own_group = get_settings().get_group()
             
-            if self._peer_info[ip][u"group"] == own_group:
+            if self._peer_info[ip][self.GROUP_KEY] == own_group:
                 self._addMember(newPID)
-                self.addGroup(self._peer_info[ip][u"group"])
+                self.addGroup(self._peer_info[ip][self.GROUP_KEY])
             else:
                 self._removeMember(newPID)
                 
@@ -497,7 +508,7 @@ class LunchPeers(object):
             with self._lock:
                 for ip in self._IP_seen:
                     if ip in self._peer_info and time() - self._IP_seen[ip] > get_settings().get_peer_timeout():
-                        pID = self._peer_info[ip][u"ID"]
+                        pID = self._peer_info[ip][self.PEER_ID_KEY]
                         self._removePeerIPfromID(pID, ip)
                         del self._peer_info[ip]
         except:
