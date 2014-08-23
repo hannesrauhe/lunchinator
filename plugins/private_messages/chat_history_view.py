@@ -2,7 +2,6 @@ from private_messages.chat_messages_storage import ChatMessagesStorage
 from private_messages.message_item_delegate import MessageItemDelegate
 from private_messages.chat_messages_model import ChatMessagesModel
 from lunchinator import get_peers,  convert_string
-from lunchinator.log import getLogger
 from lunchinator.table_models import TableModelBase
 from lunchinator.utilities import formatTime, getPlatform, PLATFORM_MAC
 from lunchinator.log.logging_slot import loggingSlot
@@ -21,14 +20,14 @@ class HistoryPeersModel(TableModelBase):
     _NAME_KEY = u'name'
     _ID_KEY = u'ID'
     
-    def __init__(self, dataSource):
+    def __init__(self, dataSource, logger):
         columns = [(u"Chat Partner", self._updateNameItem)]
-        super(HistoryPeersModel, self).__init__(dataSource, columns)
+        super(HistoryPeersModel, self).__init__(dataSource, columns, logger)
             
     def _updateNameItem(self, pID, _data, item):
         m_name = get_peers().getDisplayedPeerName(pID=pID)
         if m_name == None:
-            getLogger().warning("displayed peer name (%s) should not be None", pID)
+            self.logger.warning("displayed peer name (%s) should not be None", pID)
             m_name = pID
         item.setText(m_name)
         
@@ -69,14 +68,15 @@ class ChatHistoryModel(QStandardItemModel):
         return item
         
 class HistoryTable(QTreeView):
-    def __init__(self, parent):
+    def __init__(self, parent, logger):
         super(HistoryTable, self).__init__(parent)
         
+        self.logger = logger
         self.setAlternatingRowColors(False)
         self.setHeaderHidden(False)
         self.setItemsExpandable(False)
         self.setIndentation(0)
-        self.setItemDelegate(MessageItemDelegate(self, column=2, margin=0))
+        self.setItemDelegate(MessageItemDelegate(self, logger, column=2, margin=0))
         self.setSelectionMode(QTreeView.NoSelection)
                 
         self.setObjectName(u"__peer_list")
@@ -106,12 +106,13 @@ class HistoryTable(QTreeView):
         
         
 class ChatHistoryWidget(QWidget):
-    def __init__(self, delegate, parent):
+    def __init__(self, delegate, parent, logger):
         super(ChatHistoryWidget, self).__init__(parent)
         
+        self.logger = logger
         self._delegate = delegate
         
-        self._peerModel = HistoryPeersModel(None)
+        self._peerModel = HistoryPeersModel(None, self.logger)
         self._updatePeers()
         
         self._initPeerList()
@@ -143,7 +144,7 @@ class ChatHistoryWidget(QWidget):
             self._peerList.setStyleSheet("QFrame#__peer_list{border-width: 1px; border-top-style: solid; border-right-style: solid; border-bottom-style: none; border-left-style: none; border-color:palette(mid)}");
 
     def _initHistoryTable(self):
-        self._historyTable = HistoryTable(self)
+        self._historyTable = HistoryTable(self, self.logger)
         
     def _initMainWidget(self):
         split = QSplitter(Qt.Horizontal, self)
@@ -200,7 +201,7 @@ class ChatHistoryWidget(QWidget):
         menu.clear()
         
         if get_peers() is None:
-            getLogger().warning("no lunch_peers instance available, cannot show peer actions")
+            self.logger.warning("no lunch_peers instance available, cannot show peer actions")
             return
         
         with get_peers():
@@ -212,7 +213,7 @@ class ChatHistoryWidget(QWidget):
     def _openChat(self, peerID):
         peerInfo = get_peers().getPeerInfo(pID=peerID)
         if peerInfo is None:
-            getLogger().error("No peer info found for peer %s", peerID)
+            self.logger.error("No peer info found for peer %s", peerID)
             return
         
         self._delegate.getOpenChatAction().performAction(peerID, peerInfo, self)

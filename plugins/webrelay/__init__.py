@@ -1,6 +1,5 @@
 from lunchinator.plugin import iface_called_plugin
 from lunchinator import get_server, get_settings
-from lunchinator.log import getLogger
 import urllib, urllib2, contextlib, base64, json, threading
 
 class webrelay(iface_called_plugin):        
@@ -38,7 +37,7 @@ class webrelay(iface_called_plugin):
         if self.options[u"server"]:
             self._pushCall({"msg":msg, "id":member_info[u"ID"] , "name":member_info[u"name"], "group":get_settings().get_group()})
         else:
-            getLogger().error("WebRelay: please configure a server in Settings")
+            self.logger.error("WebRelay: please configure a server in Settings")
             
     def _fillUrlPlaceholders(self, url, info):
         retUrl = url
@@ -70,17 +69,17 @@ class webrelay(iface_called_plugin):
                 with contextlib.closing(urllib2.urlopen(req)) as u:
                     response = u.read()
         except urllib2.HTTPError, err:
-            getLogger().error("WebRelay HTTP Error %d: %s", err.code, err.reason)
+            self.logger.error("WebRelay HTTP Error %d: %s", err.code, err.reason)
            
         if response:
             resp = {}
             try: 
                 resp = json.loads(response)
             except:
-                getLogger().error("Invalid response from webserver after relaying call: %s", response)
+                self.logger.error("Invalid response from webserver after relaying call: %s", response)
                 
             if not "success" in resp:
-                getLogger().error("Webrelay: negative response from webserver after relaying call: %s", response)
+                self.logger.error("Webrelay: negative response from webserver after relaying call: %s", response)
                 
     def _pullCalls(self):        
         pull_url = self.options[u"server"] + self._fillUrlPlaceholders(self.options[u"pullURL"], {"group":get_settings().get_group()})
@@ -103,7 +102,7 @@ class webrelay(iface_called_plugin):
                 with contextlib.closing(urllib2.urlopen(req)) as u:
                     response = u.read()
         except urllib2.HTTPError, err:
-            getLogger().error("WebRelay HTTP Error %d: %s", err.code, err.reason)
+            self.logger.error("WebRelay HTTP Error %d: %s", err.code, err.reason)
             self.failed_attempts+=1
             
         if response:
@@ -111,23 +110,23 @@ class webrelay(iface_called_plugin):
             try: 
                 resp = json.loads(response)
             except:
-                getLogger().error("WebRelay: Invalid message when pulling calls from server: %s", response)
+                self.logger.error("WebRelay: Invalid message when pulling calls from server: %s", response)
             self.failed_attempts = 0
             if len(resp):
-                getLogger().debug("WebRelay: Pulled %d calls from server", len(resp))
+                self.logger.debug("WebRelay: Pulled %d calls from server", len(resp))
                 for c in resp:
                     if "sender" in c and "msg" in c:
                         get_server().call("Remote call from %s: %s"%(c["sender"],c["msg"]))
                     else:
-                        getLogger().error("WebRelay: Malformed message: %s", c)
+                        self.logger.error("WebRelay: Malformed message: %s", c)
             
         self._startCheckTimer()
     
     def _startCheckTimer(self, _=None, __=None):
-        getLogger().debug("WebRelay: Starting check Timer")
+        self.logger.debug("WebRelay: Starting check Timer")
         
         if 0==len(self.options[u"server"]):
-            getLogger().error("WebRelay: please configure a server in settings")
+            self.logger.error("WebRelay: please configure a server in settings")
             return
             
         if self.failed_attempts < 5:
@@ -141,7 +140,7 @@ class webrelay(iface_called_plugin):
                     if self.timer:
                         self.timer.cancel()
                 except:
-                    getLogger().debug("WebRelay: failed to cancel the timer")
+                    self.logger.debug("WebRelay: failed to cancel the timer")
                 self.timer = threading.Timer(timeout, self._pullCalls)
                 self.timer.start()
             

@@ -8,9 +8,14 @@ from lunchinator.log.logging_func import loggingFunc
 class GitUpdateHandler(AppUpdateHandler):
     """Used if Lunchinator is run directly from git."""
     
+    def __init__(self, logger):
+        super(GitUpdateHandler, self).__init__(logger)
+        self._gitHandler = GitHandler(logger)
+        
     @classmethod
-    def appliesToConfiguration(cls):
-        return GitHandler.hasGit()
+    def appliesToConfiguration(cls, logger):
+        gh = GitHandler(logger)
+        return gh.hasGit()
     
     def activate(self):
         AppUpdateHandler.activate(self)
@@ -30,7 +35,8 @@ class GitUpdateHandler(AppUpdateHandler):
     def checkForUpdate(self):
         self._setStatus("Checking for update...")
         AsyncCall(getValidQtParent(),
-                  GitHandler.needsPull,
+                  self.logger,
+                  self._gitHandler.needsPull,
                   self._checkUpdateSuccess,
                   self._checkUpdateError)(returnReason=True)
         
@@ -38,7 +44,7 @@ class GitUpdateHandler(AppUpdateHandler):
     def _checkUpdateSuccess(self, tup):
         needsPull, reason = tup
         if needsPull:
-            self._setStatus("Repository can be updated to version %s." % GitHandler.getRemoteCommitCount())
+            self._setStatus("Repository can be updated to version %s." % self._gitHandler.getRemoteCommitCount())
             self._installReady()
         else:
             self._setStatus(u"No update: " + reason)

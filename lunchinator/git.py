@@ -1,12 +1,13 @@
 import subprocess
 import os
-from lunchinator.log import getLogger
 
 class GitHandler(object):
     UP_TO_DATE_REASON = "Repository is up-to-date"
     
-    @classmethod
-    def runGitCommand(cls, args, path=None, quiet=True, isStaticCommand=False):
+    def __init__(self, logger):
+        self._logger = logger
+    
+    def runGitCommand(self, args, path=None, quiet=True, isStaticCommand=False):
         """Runs a git command and returns a triple (return code, stdout output, stderr output)"""
         if path is None and not isStaticCommand:
             from lunchinator import get_settings
@@ -22,59 +23,52 @@ class GitHandler(object):
         fh = subprocess.PIPE    
         if quiet:
             fh = open(os.path.devnull, "w")
-        getLogger().debug("Git call %s", call)
+        self._logger.debug("Git call %s", call)
         p = subprocess.Popen(call, stdout=fh, stderr=fh)
         pOut, pErr = p.communicate()
         retCode = p.returncode
         return retCode, pOut, pErr
 
-    @classmethod
-    def getGitCommandResult(cls, args, path=None, quiet=True, isStaticCommand=False):
+    def getGitCommandResult(self, args, path=None, quiet=True, isStaticCommand=False):
         """Runs a git command and returns the return code."""
-        retCode, _, __ = cls.runGitCommand(args, path, quiet, isStaticCommand)
+        retCode, _, __ = self.runGitCommand(args, path, quiet, isStaticCommand)
         return retCode
     
-    @classmethod
-    def getGitCommandOutput(cls, args, path=None, isStaticCommand=False):
+    def getGitCommandOutput(self, args, path=None, isStaticCommand=False):
         """Runs a git command and returns the stdout output."""
-        _retCode, pOut, _pErr = cls.runGitCommand(args, path, quiet=False, isStaticCommand=isStaticCommand)
+        _retCode, pOut, _pErr = self.runGitCommand(args, path, quiet=False, isStaticCommand=isStaticCommand)
         return pOut.strip()
     
-    @classmethod
-    def hasGit(cls, path=None):
+    def hasGit(self, path=None):
         """Checks if a path is a git repository.
         
         This method returns true iff git is available and the path is
         a git repository. If git is not available, None is returned.
         """
         try:
-            return cls.getGitCommandResult(["rev-parse"], path=path) == 0
+            return self.getGitCommandResult(["rev-parse"], path=path) == 0
         except:
             # seems git is not available
             return None
         
-    @classmethod
-    def isGitURL(cls, url):
-        return cls.getGitCommandResult(["ls-remote", url], isStaticCommand=True) == 0
+    def isGitURL(self, url):
+        return self.getGitCommandResult(["ls-remote", url], isStaticCommand=True) == 0
 
-    @classmethod
-    def getCommitCount(cls, path=None):
+    def getCommitCount(self, path=None):
         """Returns the number of commits in the HEAD state of a git repository."""
         try:
-            return cls.getGitCommandOutput(["rev-list", "--count", "HEAD"], path=path)
+            return self.getGitCommandOutput(["rev-list", "--count", "HEAD"], path=path)
         except:
             return None
         
-    @classmethod
-    def getRemoteCommitCount(cls, path=None):
+    def getRemoteCommitCount(self, path=None):
         """Returns the number of commits in the current upstream branch of a git repository."""
         try:
-            return cls.getGitCommandOutput(["rev-list", "--count", "@{u}"], path=path)
+            return self.getGitCommandOutput(["rev-list", "--count", "@{u}"], path=path)
         except:
             return None
     
-    @classmethod
-    def canGitUpdate(cls, ensureMaster=False, path=None):
+    def canGitUpdate(self, ensureMaster=False, path=None):
         """Checks if a git pull is possible in a git repository.
         
         This method returns True iff:
@@ -83,33 +77,32 @@ class GitHandler(object):
         ensureMaster -- If True, this method will also ensure that the
                         current branch is the master branch.
         """
-        if cls.getGitCommandResult(["rev-parse"], path) != 0:
+        if self.getGitCommandResult(["rev-parse"], path) != 0:
             return (False, "'%s' is no git repository" % path)
          
-        if cls.getGitCommandOutput(["rev-parse", "--abbrev-ref", "HEAD"], path) == "HEAD":
+        if self.getGitCommandOutput(["rev-parse", "--abbrev-ref", "HEAD"], path) == "HEAD":
             return (False, "Repository is in a detached state")
          
-        if cls.getGitCommandResult(["diff", "--name-only", "--exit-code", "--quiet"], path) != 0:
+        if self.getGitCommandResult(["diff", "--name-only", "--exit-code", "--quiet"], path) != 0:
             return (False, "There are unstaged changes")
          
-        if cls.getGitCommandResult(["diff", "--cached", "--exit-code", "--quiet"], path) != 0:
+        if self.getGitCommandResult(["diff", "--cached", "--exit-code", "--quiet"], path) != 0:
             return (False, "There are staged, uncommitted changes")
          
         if ensureMaster:
-            _, branch, __ = cls.runGitCommand(["symbolic-ref", "HEAD"], path, quiet=False)
+            _, branch, __ = self.runGitCommand(["symbolic-ref", "HEAD"], path, quiet=False)
             if not branch.endswith("/master"):
                 return (False, "The selected branch is not the master branch")
         
         # get upstream branch
-        ref = cls.getGitCommandOutput(["symbolic-ref", "-q", "HEAD"], path)
-        upstream = cls.getGitCommandOutput(["for-each-ref", "--format=%(upstream:short)", ref])
-        if cls.getGitCommandResult(["log", "%s..HEAD" % upstream, "--exit-code", "--quiet"], path) != 0:
+        ref = self.getGitCommandOutput(["symbolic-ref", "-q", "HEAD"], path)
+        upstream = self.getGitCommandOutput(["for-each-ref", "--format=%(upstream:short)", ref])
+        if self.getGitCommandResult(["log", "%s..HEAD" % upstream, "--exit-code", "--quiet"], path) != 0:
             return (False, "There are unpushed commits on the branch")
         
         return (True, None)
 
-    @classmethod
-    def needsPull(cls, returnReason=False, path=None):
+    def needsPull(self, returnReason=False, path=None):
         """Checks if a git repository is outdated and can be pulled.
         
         This method will return True iff
@@ -124,38 +117,36 @@ class GitHandler(object):
             from lunchinator import get_settings
             path = get_settings().get_main_package_path()
         
-        canUpdate, reason = cls.canGitUpdate(False, path)
+        canUpdate, reason = self.canGitUpdate(False, path)
         if not canUpdate:
-            getLogger().debug("Repository %s cannot be updated: %s", path, reason)
+            self._logger.debug("Repository %s cannot be updated: %s", path, reason)
             return False if not returnReason else (False, reason)
         
         # update remotes
-        if cls.getGitCommandResult(["remote", "update"], path) != 0:
+        if self.getGitCommandResult(["remote", "update"], path) != 0:
             return False if not returnReason else (False, "Error updating repository")
         
-        local = cls.getGitCommandOutput(["rev-parse", "HEAD"], path)
-        remote = cls.getGitCommandOutput(["rev-parse", "@{u}"], path)
-        base = cls.getGitCommandOutput(["merge-base", "HEAD", "@{u}"], path)
+        local = self.getGitCommandOutput(["rev-parse", "HEAD"], path)
+        remote = self.getGitCommandOutput(["rev-parse", "@{u}"], path)
+        base = self.getGitCommandOutput(["merge-base", "HEAD", "@{u}"], path)
         
         if local == remote:
             # up-to-date
-            getLogger().debug("Repository %s up-to-date", path)
-            return False if not returnReason else (False, cls.UP_TO_DATE_REASON)
+            self._logger.debug("Repository %s up-to-date", path)
+            return False if not returnReason else (False, self.UP_TO_DATE_REASON)
         if local == base:
             # can fast-forward
             return True if not returnReason else (True, None)
         
         # need to push or diverged
-        getLogger().debug("Repository %s needs to be pushed or is diverged", path)
+        self._logger.debug("Repository %s needs to be pushed or is diverged", path)
         return False if not returnReason else (False, "Repository contains unpushed commits or is diverged")
     
-    @classmethod
-    def pull(cls, path=None):
+    def pull(self, path=None):
         """Pulls a git repository. Does not check prerequisites!"""
-        return cls.runGitCommand(["pull"], path)
+        return self.runGitCommand(["pull"], path)
     
-    @classmethod
-    def extractRepositoryNameFromURL(cls, url):
+    def extractRepositoryNameFromURL(self, url):
         if url.endswith(u"/.git"):
             url = url[:-5]
         elif url.endswith(u".git"):
@@ -169,7 +160,6 @@ class GitHandler(object):
             url = url[url.index(u":") + 1:]
         return url
         
-    @classmethod
-    def clone(cls, url, targetDir):
-        return cls.getGitCommandResult(["clone", url, targetDir], isStaticCommand=True)
+    def clone(self, url, targetDir):
+        return self.getGitCommandResult(["clone", url, targetDir], isStaticCommand=True)
         

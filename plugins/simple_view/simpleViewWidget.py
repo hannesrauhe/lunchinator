@@ -5,7 +5,6 @@ from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, \
                         QLineEdit, QMenu, QInputDialog
 from PyQt4.QtCore import QTimer, Qt, pyqtSlot
 from lunchinator import get_server, get_peers, get_notification_center
-from lunchinator.log import getLogger
 from lunchinator.lunch_button import LunchButton
 from lunchinator.log.logging_slot import loggingSlot
 from time import time, strftime, struct_time
@@ -14,8 +13,9 @@ class SimpleViewWidget(QWidget):
     # http://www.colourlovers.com/palette/1930/cheer_up_emo_kid
     colors = ["C44D58", "C7F464", "4ECDC4", "556270", "FF6B6B"]
     
-    def __init__(self, parent):
+    def __init__(self, parent, logger):
         super(SimpleViewWidget, self).__init__(parent)
+        self.logger = logger
         self.colorMap = {}
         self.colorCounter = 0
         
@@ -119,7 +119,7 @@ class SimpleViewWidget(QWidget):
             get_notification_center().disconnectMemberRemoved(self.updateWidgets)
             get_notification_center().disconnectMessagePrepended(self.updateWidgets) 
         except:
-            getLogger().info("Simple View: was not able to disconnect timer")
+            self.logger.info("Simple View: was not able to disconnect timer")
         
 if __name__ == '__main__':        
     from lunchinator.plugin import iface_gui_plugin

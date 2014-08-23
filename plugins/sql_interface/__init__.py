@@ -1,6 +1,5 @@
 from lunchinator.plugin import iface_gui_plugin, db_for_plugin_iface
 from lunchinator import get_settings, get_server, get_db_connection
-from lunchinator.log import getLogger
 import urllib2,sys
 
     
@@ -39,7 +38,7 @@ class sql_interface(iface_gui_plugin):
         if key!=self.last_key:
             self.last_key=key
             self.times_called=0
-        item.setText(str(data[self.times_called]))
+        item.setText(unicode(data[self.times_called]))
         self.times_called+=1
         
     def sendSqlClicked(self, sql_stat):
@@ -49,19 +48,19 @@ class sql_interface(iface_gui_plugin):
         self.specialized_db_conn().insert_command(sql_stat)
         
         if None==self.db_connection:        
-            self.db_connection, _ = get_db_connection(self.options["query_db_connection"])
+            self.db_connection, _ = get_db_connection(self.logger, self.options["query_db_connection"])
                     
         try:
             header, res = self.db_connection.queryWithHeader(sql_stat)
         except Exception as e:
             QMessageBox.warning(self.resultTable,"Error in SQL statement",str(e))
-            getLogger().error("SQL error:")
+            self.logger.error("SQL error:")
             return False
         
         columns = []
         for h in header:
             columns.append((h,self.empty))
-        mod = TableModelBase(get_server(), columns)
+        mod = TableModelBase(get_server(), columns, self.logger)
         for i,r in enumerate(res):
             mod.appendContentRow(i, r)
             if i>1000:

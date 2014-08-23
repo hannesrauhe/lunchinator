@@ -2,7 +2,7 @@ from lunchinator.plugin import iface_general_plugin
 from avatar.l_avatar import l_avatar
 import mimetypes
 from lunchinator import get_server, get_settings, convert_string
-from lunchinator.log import getLogger, loggingFunc
+from lunchinator.log import loggingFunc
 from functools import partial
 import os
 
@@ -69,9 +69,9 @@ class avatar(iface_general_plugin):
                 self.selectedFile = selectedFile
                 self._setImage(selectedFile, self.label)
             else:
-                getLogger().error("Selected invalid file: '%s' is of invalid type", selectedFile)
+                self.logger.error("Selected invalid file: '%s' is of invalid type", selectedFile)
         else:
-            getLogger().debug("Avatar: no file selected")
+            self.logger.debug("Avatar: no file selected")
     
     def _display_avatar(self):
         img_path = os.path.join(get_settings().get_avatar_dir(), get_settings().get_avatar_file())
@@ -104,7 +104,7 @@ class avatar(iface_general_plugin):
 
     def save_options_widget_data(self, **_kwargs):
         if self.selectedFile != None:
-            l = l_avatar()
+            l = l_avatar(self.logger)
             l.use_as_avatar(self.selectedFile)
 
     def discard_changes(self):

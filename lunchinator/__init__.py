@@ -51,23 +51,23 @@ def get_plugin_manager():
         from yapsy.PluginManager import PluginManagerSingleton
         return PluginManagerSingleton.get()
     else:
-        from lunchinator.log import getLogger
-        getLogger().exception("Cannnot load plugin manager: plugins are disabled")   
+        from lunchinator.log import getCoreLogger
+        getCoreLogger().exception("Cannnot load plugin manager: plugins are disabled")   
         
 def get_peer_actions():
     from lunchinator.peer_actions import PeerActions
     return PeerActions.get()
     
-def get_db_connection(name=""):
+def get_db_connection(logger, name=""):
     """returns tuple (connection_handle, connection_type) of the given connection"""
     
-    from lunchinator.log import getLogger
+    from lunchinator.log import getCoreLogger
     if not get_settings().get_plugins_enabled():
-        getLogger().error("Plugins are disabled, cannot get DB connections.")
+        getCoreLogger().error("Plugins are disabled, cannot get DB connections.")
         return None, None
     
     pluginInfo = get_plugin_manager().getPluginByName("Database Settings", "general")
     if pluginInfo and pluginInfo.plugin_object.is_activated:
-        return pluginInfo.plugin_object.getDBConnection(name)
-    getLogger().error("getDBConnection: DB Connections plugin not yet loaded")
+        return pluginInfo.plugin_object.getDBConnection(logger, name)
+    getCoreLogger().error("getDBConnection: DB Connections plugin not yet loaded")
     return None, None

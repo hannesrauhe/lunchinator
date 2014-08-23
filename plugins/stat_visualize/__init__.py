@@ -21,11 +21,11 @@ class stat_visualize(iface_gui_plugin):
         from PyQt4.QtGui import QTabWidget,QLabel
         from PyQt4.QtCore import Qt
         
-        connPlugin, plugin_type = get_db_connection(self.options["db_connection"])
+        connPlugin, plugin_type = get_db_connection(self.logger, self.options["db_connection"])
         
         w = QTabWidget(parent)
-        w.addTab(statTimelineTab(parent, connPlugin), "Timeline")
-        w.addTab(statSwarmTab(parent, connPlugin), "Swarm")
+        w.addTab(statTimelineTab(parent, connPlugin, self.logger), "Timeline")
+        w.addTab(statSwarmTab(parent, connPlugin, self.logger), "Swarm")
         return w
     
     def add_menu(self, menu):

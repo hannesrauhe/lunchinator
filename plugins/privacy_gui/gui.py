@@ -11,9 +11,9 @@ from lunchinator.log.logging_slot import loggingSlot
 class PeerActionsModel(TableModelBase):
     ACTION_ROLE = TableModelBase.SORT_ROLE + 1
     
-    def __init__(self):
+    def __init__(self, logger):
         columns = [(u"Peer Action", self._updateNameItem)]
-        super(PeerActionsModel, self).__init__(None, columns)
+        super(PeerActionsModel, self).__init__(None, columns, logger)
         
         self.addPeerActions(PeerActions.get().getAllPeerActions())
     
@@ -45,10 +45,11 @@ class PeerActionsModel(TableModelBase):
             item.setData(QVariant(icon), Qt.DecorationRole)
 
 class PrivacyGUI(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, logger):
         super(PrivacyGUI, self).__init__(parent)
        
-        self._actionModel = PeerActionsModel()
+        self.logger = logger
+        self._actionModel = PeerActionsModel(self.logger)
         
         self._initActionList()
         self._initSettingsWidget()
@@ -126,6 +127,6 @@ class PrivacyGUI(QWidget):
             index = iter(newSelection.indexes()).next()
             action = index.data(PeerActionsModel.ACTION_ROLE).toPyObject()
             if action.hasCategories():
-                self._settingsWidget.layout().addWidget(MultipleCategoriesView(action, self._settingsWidget))
+                self._settingsWidget.layout().addWidget(MultipleCategoriesView(action, self._settingsWidget, self.logger))
             else:
-                self._settingsWidget.layout().addWidget(SingleCategoryView(action, self._settingsWidget))
+                self._settingsWidget.layout().addWidget(SingleCategoryView(action, self._settingsWidget, self.logger))

@@ -2,7 +2,7 @@
 
 import socket, errno
 from lunchinator import get_settings
-from lunchinator.log import getLogger
+from lunchinator.log import getCoreLogger
 from lunchinator.logging_mutex import loggingMutex
 from lunchinator.lunch_socket.extended_message import extMessageOutgoing,\
     extMessageIncoming
@@ -55,13 +55,13 @@ class lunchSocket(object):
         
         if len(msg) > self._max_msg_length:                     
             if disable_extended:
-                getLogger().warning("Message to peer %s is too long and should be compressed/split, " + \
+                getCoreLogger().warning("Message to peer %s is too long and should be compressed/split, " + \
                  "but extended message is disabled for this call", ip)   
             else:
                 peerversion = self._peers.getPeerCommitCount(pIP = ip)
                 peerversion = peerversion if peerversion else 0
                 if peerversion < self.EXT_MSG_VERSION:                
-                    getLogger().warning("Message to peer %s is too long and should be compressed/split, " + \
+                    getCoreLogger().warning("Message to peer %s is too long and should be compressed/split, " + \
                      "but peer has version %d and cannot receive extended messages", ip, peerversion) 
                     disable_extended = True
         else:
@@ -74,13 +74,13 @@ class lunchSocket(object):
                 else:
                     self._s.sendto(msg, (ip, self._port))
             else:
-                getLogger().debug("Sending as extended Message")
+                getCoreLogger().debug("Sending as extended Message")
                 xmsg = extMessageOutgoing(msg, self._max_msg_length)
                 for f in xmsg.getFragments():
                     self._s.sendto(f, (ip, self._port))
         except socket.error as e:
             if e.errno in [64,65]:
-                getLogger().debug("lunch_socket: Removing IP because host is down or there is no route")
+                getCoreLogger().debug("lunch_socket: Removing IP because host is down or there is no route")
                 self._peers.removePeerIPs([ip])
             else:
                 raise
@@ -91,14 +91,14 @@ class lunchSocket(object):
             self._s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             
             if len(msg) > self.LEGACY_MAX_LEN:
-                getLogger().debug("Broadcasting as extended Message")
+                getCoreLogger().debug("Broadcasting as extended Message")
                 xmsg = extMessageOutgoing(msg, self._max_msg_length)
                 for f in xmsg.getFragments():
                     self._s.sendto(f, ('255.255.255.255', self._port))
             else:
                 self._s.sendto(msg, ('255.255.255.255', self._port))
         except:
-            getLogger().exception("Problem while broadcasting")
+            getCoreLogger().exception("Problem while broadcasting")
     
 
     """ receives a message from a socket and returns the received data and the sender's 
@@ -136,7 +136,7 @@ class lunchSocket(object):
                     try:
                         msg = data
                     except:
-                        getLogger().error("Received illegal data from %s, maybe wrong encoding", ip)
+                        getCoreLogger().error("Received illegal data from %s, maybe wrong encoding", ip)
                         continue    
                     
                 return msg, ip

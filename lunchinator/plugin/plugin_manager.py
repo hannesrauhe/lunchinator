@@ -1,6 +1,6 @@
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from lunchinator import get_notification_center
-from lunchinator.log import getLogger
+from lunchinator.log import getCoreLogger
 from lunchinator.plugin import iface_general_plugin, iface_called_plugin, iface_gui_plugin, iface_db_plugin
 from yapsy import PLUGIN_NAME_FORBIDEN_STRING
 
@@ -79,20 +79,21 @@ class NotificationPluginManager(ConfigurablePluginManager):
         self._emitSignals = True
     
     def activatePlugin(self, pluginInfo, save_state=True):
-        getLogger().info("Activating plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
+        getCoreLogger().info("Activating plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
         try:
+            pluginInfo.plugin_object.setPluginName(pluginInfo.name)
             result = ConfigurablePluginManager.activatePluginByName(self, pluginInfo.name, category_name=pluginInfo.category, save_state=save_state)
             if self._emitSignals and result != None:
                 get_notification_center().emitPluginActivated(pluginInfo.name, pluginInfo.category)
         except:
-            getLogger().exception("Error activating plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
+            getCoreLogger().exception("Error activating plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
     
     def activatePluginByName(self, plugin_name, category_name="Default", save_state=True):
         pluginInfo = self.getPluginByName(plugin_name, category_name)
         if pluginInfo is not None:
             self.activatePlugin(pluginInfo=pluginInfo, save_state=save_state)
         else:
-            getLogger().error("Could not activate plugin %s of type %s (plugin not found)", plugin_name, category_name)
+            getCoreLogger().error("Could not activate plugin %s of type %s (plugin not found)", plugin_name, category_name)
 
     def deactivatePlugins(self, pluginInfos, save_state=True):
         # first, unload regular plugins (no database, no force activation)
@@ -114,26 +115,26 @@ class NotificationPluginManager(ConfigurablePluginManager):
         for piList in (unloadFirst, unloadSecond, unloadThird):
             # first, inform about deactivation
             for pluginInfo in piList:
-                getLogger().info("Preparing to deactivate plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
+                getCoreLogger().info("Preparing to deactivate plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
                 try:
                     # this is a direct connection, exception will be propagated here
                     get_notification_center().emitPluginWillBeDeactivated(pluginInfo.name, pluginInfo.category)
                 except:
-                    getLogger().exception("An error occured while deactivating %s", pluginInfo.name)
+                    getCoreLogger().exception("An error occured while deactivating %s", pluginInfo.name)
                         
             # then deactivate plugins
             for pluginInfo in piList:
-                getLogger().info("Deactivating plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
+                getCoreLogger().info("Deactivating plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
                 try:
                     result = ConfigurablePluginManager.deactivatePluginByName(self, pluginInfo.name, category_name=pluginInfo.category, save_state=save_state)
                     if self._emitSignals and result != None:
                         get_notification_center().emitPluginDeactivated(pluginInfo.name, pluginInfo.category)
                 except:
-                    getLogger().exception("An error occured while deactivating plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
+                    getCoreLogger().exception("An error occured while deactivating plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
 
     def deactivatePluginByName(self, plugin_name, category_name="Default", save_state=True):
         pluginInfo = self.getPluginByName(plugin_name, category_name)
         if pluginInfo is not None:
             self.deactivatePlugins([pluginInfo], save_state=save_state)
         else:
-            getLogger().error("Could not deactivate plugin %s from category (plugin not found)", plugin_name, category_name)
+            getCoreLogger().error("Could not deactivate plugin %s from category (plugin not found)", plugin_name, category_name)

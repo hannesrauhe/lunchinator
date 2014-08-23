@@ -1,5 +1,5 @@
 from private_messages.chat_widget import ChatWidget
-from lunchinator.log import getLogger
+from lunchinator.log import getCoreLogger
 
 def testMatch(matcher, text, expectedURIs):
     pos = 0
@@ -12,11 +12,11 @@ def testMatch(matcher, text, expectedURIs):
         try:
             expectedURIs.remove(match)
         except:
-            getLogger().warning("Found unexpected URI: %s", match)
+            getCoreLogger().warning("Found unexpected URI: %s", match)
             pass
         pos += matcher.matchedLength()
     if len(expectedURIs) > 0:
-        getLogger().error("Didn't find %s", expectedURIs)
+        getCoreLogger().error("Didn't find %s", expectedURIs)
     
 def testBaseURL(matcher, baseURL):
     #testMatch(matcher, baseURL, [baseURL])

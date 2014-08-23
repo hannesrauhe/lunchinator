@@ -14,11 +14,13 @@ class AddRepoDialog(ErrorMessageDialog):
     _WORKING_COPY = 0
     _CLONE_URL = 1
     
-    def __init__(self, parent):
+    def __init__(self, parent, logger):
         super(AddRepoDialog, self).__init__(parent)
+        self.logger = logger
         self._canAutoUpdate = False
         self._closeable = True
         self._path = None
+        self._gitHandler = GitHandler(logger)
         
     def _createPathPage(self):
         try:
@@ -122,7 +124,7 @@ class AddRepoDialog(ErrorMessageDialog):
             self._setPath(path)
         
     def _checkPath(self):
-        self._canAutoUpdate = GitHandler.hasGit(self.getPath())
+        self._canAutoUpdate = self._gitHandler.hasGit(self.getPath())
         
         box = self._autoUpdateBoxes[self._WORKING_COPY]
         if not self._canAutoUpdate:
@@ -168,7 +170,7 @@ class AddRepoDialog(ErrorMessageDialog):
             self._info(u"Cloning repository...")
             self._setWorking(True)
             url = convert_string(self._urlEdit.text())
-            AsyncCall(self, self._checkAndClone, self._cloneSuccess, self._cloneError)(url)
+            AsyncCall(self, self.logger, self._checkAndClone, self._cloneSuccess, self._cloneError)(url)
 
     def closeEvent(self, event):
         if self._closeable:
@@ -177,12 +179,12 @@ class AddRepoDialog(ErrorMessageDialog):
             event.ignore()
 
     def _checkAndClone(self, url):
-        if not GitHandler.isGitURL(url):
+        if not self._gitHandler.isGitURL(url):
             raise ValueError(u"The given URL does not exist or is no Git repository.")
 
-        targetDir = get_settings().get_config(GitHandler.extractRepositoryNameFromURL(url))
+        targetDir = get_settings().get_config(self._gitHandler.extractRepositoryNameFromURL(url))
         targetDir = getUniquePath(targetDir)
-        GitHandler.clone(url, targetDir)
+        self._gitHandler.clone(url, targetDir)
         return targetDir
         
     @loggingSlot(object)
@@ -199,10 +201,11 @@ class AddRepoDialog(ErrorMessageDialog):
         
 if __name__ == '__main__':
     from PyQt4.QtGui import QApplication
+    from lunchinator.log import getCoreLogger
     import sys
 
     app = QApplication(sys.argv)
-    window = AddRepoDialog(None)
+    window = AddRepoDialog(getCoreLogger(), None)
     
     window.showNormal()
     window.raise_()

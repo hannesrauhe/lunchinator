@@ -1,6 +1,5 @@
 from lunchinator.table_models import TableModelBase
 from lunchinator import get_peers
-from lunchinator.log import getLogger
 from lunchinator.utilities import getTimeDifference
 from lunchinator.lunch_settings import lunch_settings
 import time
@@ -20,11 +19,11 @@ class MembersTableModel(TableModelBase):
     LUNCH_TIME_COL_INDEX = 2
     SEND_TO_COL_INDEX = 3
     
-    def __init__(self, dataSource):
+    def __init__(self, dataSource, logger):
         columns = [(u"Name", self._updateNameItem),
                    (u"Group", self._updateGroupItem),
                    (u"LunchTime", self._updateLunchTimeItem)]
-        super(MembersTableModel, self).__init__(dataSource, columns)
+        super(MembersTableModel, self).__init__(dataSource, columns, logger)
         
         self._grayBrush = QBrush(QColor(150,150,150))
         self._blackBrush = QBrush(QColor(0,0,0))
@@ -61,14 +60,14 @@ class MembersTableModel(TableModelBase):
                 beginTime = datetime.strptime(infoDict[self._LUNCH_BEGIN_KEY], lunch_settings.LUNCH_TIME_FORMAT)
                 beginTime = beginTime.replace(year=2000)
                 item.setData(QVariant(time.mktime(beginTime.timetuple())), self.SORT_ROLE)
-                timeDifference = getTimeDifference(infoDict[self._LUNCH_BEGIN_KEY],infoDict[self._LUNCH_END_KEY])
+                timeDifference = getTimeDifference(infoDict[self._LUNCH_BEGIN_KEY],infoDict[self._LUNCH_END_KEY], self.logger)
                 if timeDifference != None:
                     if timeDifference > 0:
                         item.setData(self._green if isMember else self._grayGreen, Qt.DecorationRole)
                     else:
                         item.setData(self._red if isMember else self._grayRed, Qt.DecorationRole)
             except ValueError:
-                getLogger().debug("Ignoring illegal lunch time: %s", infoDict[self._LUNCH_BEGIN_KEY])
+                self.logger.debug("Ignoring illegal lunch time: %s", infoDict[self._LUNCH_BEGIN_KEY])
         else:
             item.setData(QVariant(-1), self.SORT_ROLE)
             

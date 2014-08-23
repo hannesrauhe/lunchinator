@@ -1,5 +1,5 @@
 import threading, Queue
-from lunchinator.log import getLogger
+from lunchinator.log import getCoreLogger
 
 class EventSignalLoop(threading.Thread):
     def __init__(self):
@@ -10,15 +10,15 @@ class EventSignalLoop(threading.Thread):
     def run(self):
         while True:
             req, args, kwargs = self.reqs.get()
-            getLogger().debug("processing Signal: %s", req)
+            getCoreLogger().debug("processing Signal: %s", req)
             if req == 'exit': 
                 break
             try:
                 req(*args, **kwargs)
             except Exception, e:
-                getLogger().exception("Error in Signal handling; executed method: %s; Error: %s", str(req), str(e))
+                getCoreLogger().exception("Error in Signal handling; executed method: %s; Error: %s", str(req), str(e))
             except:
-                getLogger().exception("Error in Signal handling; executed method:  %s; no additional info", str(req))
+                getCoreLogger().exception("Error in Signal handling; executed method:  %s; no additional info", str(req))
     
     def append(self, func, *args, **kwargs):
         self.reqs.put((func, args, kwargs))

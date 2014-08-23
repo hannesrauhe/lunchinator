@@ -60,7 +60,7 @@ class members_table(iface_gui_plugin):
         self.membersTable.getTable().customContextMenuRequested.connect(self._showContextMenu)
         
         # initialize members table
-        self.membersModel = MembersTableModel(get_peers())
+        self.membersModel = MembersTableModel(get_peers(), self.logger)
         self.membersProxyModel = NameSortProxyModel(self.membersTable)
         self.membersProxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
         self.membersProxyModel.setSortRole(MembersTableModel.SORT_ROLE)

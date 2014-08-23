@@ -74,15 +74,16 @@ class file_transfer(iface_gui_plugin):
         else:
             self._handlerThread = None
             
-        self._handler = FileTransferHandler(self.get_option(u"download_dir"),
+        self._handler = FileTransferHandler(self.logger,
+                                            self.get_option(u"download_dir"),
                                             self.get_option(u"overwrite"),
                                             self.get_option(u"compression"))
         if self._handlerThread is not None:
             self._handlerThread.moveToThread(self._handlerThread)
             self._handlerThread.start()
         
-        self._gui = FileTransferWidget(parent, self)
-        self._toolWindow = FileTransferWidget(parent, self, asWindow=True)
+        self._gui = FileTransferWidget(parent, self.logger, self)
+        self._toolWindow = FileTransferWidget(parent, self.logger, self, asWindow=True)
         self._toolWindow.setWindowTitle("File Transfers")
 
         for gui in (self._gui, self._toolWindow):        

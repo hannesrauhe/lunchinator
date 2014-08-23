@@ -55,7 +55,7 @@ class plugin_repositories(iface_general_plugin):
     @loggingFunc
     def _addRepository(self):
         from plugin_repositories.add_repo_dialog import AddRepoDialog
-        dialog = AddRepoDialog(self._ui)
+        dialog = AddRepoDialog(self.logger, self._ui)
         dialog.exec_()
         if dialog.result() == AddRepoDialog.Accepted:
             self._ui.appendRepository(dialog.getPath(),
@@ -99,6 +99,7 @@ class plugin_repositories(iface_general_plugin):
         
         self._setStatus("Checking for updates...", True)
         AsyncCall(getValidQtParent(),
+                  self.logger,
                   self._checkAllRepositories,
                   self._processUpdates,
                   self._checkingError)()
@@ -108,10 +109,11 @@ class plugin_repositories(iface_general_plugin):
         model = self._ui.getTable().model()
         outdated = set()
         upToDate = {}
+        gh = GitHandler(self.logger)
         for row in xrange(model.rowCount()):
             path = convert_string(model.item(row, PluginRepositoriesGUI.PATH_COLUMN).data(Qt.DisplayRole).toString())
-            if GitHandler.hasGit(path):
-                needsPull, reason = GitHandler.needsPull(True, path)
+            if gh.hasGit(path):
+                needsPull, reason = gh.needsPull(True, path)
                 if needsPull:
                     outdated.add(path)
                 else:

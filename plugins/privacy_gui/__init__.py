@@ -25,7 +25,7 @@ class privacy(iface_general_plugin):
         return True
 
     def create_options_widget(self, parent):
-        self._ui = PrivacyGUI(parent)
+        self._ui = PrivacyGUI(parent, self.logger)
         return self._ui  
     
     def destroy_options_widget(self):

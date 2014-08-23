@@ -6,21 +6,11 @@ from online_update.appupdate.win_update import WinUpdateHandler
 from online_update.appupdate.app_update_handler import AppUpdateHandler
 from online_update.repoupdate.repo_update_handler import RepoUpdateHandler
 
-from lunchinator import get_server, get_notification_center, get_settings
-from lunchinator.lunch_settings import lunch_settings
+from lunchinator import get_server, get_notification_center
 from lunchinator.plugin import iface_general_plugin
-from lunchinator.download_thread import DownloadThread
-from lunchinator.shell_thread import ShellThread
-from lunchinator.git import GitHandler
-from lunchinator.utilities import getValidQtParent, displayNotification, \
-    getGPG, getPlatform, PLATFORM_WINDOWS, PLATFORM_MAC, PLATFORM_LINUX, which,\
-    getApplicationBundle, restartWithCommands
+from lunchinator.utilities import getValidQtParent, restartWithCommands
 from lunchinator.commands import Commands
 from lunchinator.log.logging_func import loggingFunc
-    
-import urllib2, sys, os, contextlib, subprocess, json, tempfile
-from functools import partial
-from xml.etree import ElementTree
     
 class online_update(iface_general_plugin):
     CHECK_INTERVAL = 12 * 60 * 60 * 1000 # check twice a day
@@ -35,18 +25,18 @@ class online_update(iface_general_plugin):
         from PyQt4.QtCore import QTimer
         iface_general_plugin.activate(self)
         
-        if GitUpdateHandler.appliesToConfiguration():
-            self._appUpdateHandler = GitUpdateHandler()
-        elif MacUpdateHandler.appliesToConfiguration():
-            self._appUpdateHandler = MacUpdateHandler(self.hidden_options["check_url"])
-        elif ExternalUpdateHandler.appliesToConfiguration():
-            self._appUpdateHandler = ExternalUpdateHandler()
-        elif WinUpdateHandler.appliesToConfiguration():
-            self._appUpdateHandler = WinUpdateHandler(self.hidden_options["check_url"])
+        if GitUpdateHandler.appliesToConfiguration(self.logger):
+            self._appUpdateHandler = GitUpdateHandler(self.logger)
+        elif MacUpdateHandler.appliesToConfiguration(self.logger):
+            self._appUpdateHandler = MacUpdateHandler(self.logger, self.hidden_options["check_url"])
+        elif ExternalUpdateHandler.appliesToConfiguration(self.logger):
+            self._appUpdateHandler = ExternalUpdateHandler(self.logger)
+        elif WinUpdateHandler.appliesToConfiguration(self.logger):
+            self._appUpdateHandler = WinUpdateHandler(self.logger, self.hidden_options["check_url"])
         else:
-            self._appUpdateHandler = AppUpdateHandler()
+            self._appUpdateHandler = AppUpdateHandler(self.logger)
             
-        self._repoUpdateHandler = RepoUpdateHandler()
+        self._repoUpdateHandler = RepoUpdateHandler(self.logger)
             
         self._appUpdateHandler.activate()
         self._repoUpdateHandler.activate()
@@ -97,14 +87,14 @@ class online_update(iface_general_plugin):
         
     @loggingFunc
     def installUpdates(self):
-        commands = Commands()
+        commands = Commands(self.logger)
         
         if self._appUpdateHandler.isInstallReady():
             self._appUpdateHandler.prepareInstallation(commands)
             self._appUpdateHandler.executeInstallation(commands)
         if self._repoUpdateHandler.areUpdatesAvailable():
             self._repoUpdateHandler.prepareInstallation(commands)            
-            restartWithCommands(commands)
+            restartWithCommands(commands, self.logger)
         
 if __name__ == '__main__':
     from lunchinator.plugin import iface_gui_plugin

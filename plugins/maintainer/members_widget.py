@@ -4,7 +4,7 @@ from PyQt4.QtCore import Qt, QVariant, QTimer, QStringList, QThread
 
 from lunchinator import get_server, get_settings, convert_string, get_peers, get_notification_center
 from lunchinator.history_line_edit import HistoryLineEdit
-from lunchinator.log import getLogger, getLogLineTime
+from lunchinator.log import getLogLineTime
 from lunchinator.log.logging_slot import loggingSlot
 from lunchinator.datathread.dt_qthread import DataReceiverThread
 from lunchinator.table_models import TableModelBase
@@ -17,9 +17,9 @@ class DropdownModel(TableModelBase):
     _NAME_KEY = u'name'
     _ID_KEY = u'ID'
     
-    def __init__(self, dataSource):
+    def __init__(self, dataSource, logger):
         columns = [(u"Name", self._updateNameItem)]
-        super(DropdownModel, self).__init__(dataSource, columns)
+        super(DropdownModel, self).__init__(dataSource, columns, logger)
         
         # Called before server is running, no need to lock here
         if self.dataSource is None:
@@ -43,14 +43,15 @@ class DropdownModel(TableModelBase):
         item.setText(name)
 
 class MembersWidget(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, logger):
         super(MembersWidget, self).__init__(parent)
         
+        self.logger = logger
         layout = QVBoxLayout(self)
         layout.setSpacing(0)
         
         self.dropdown_members_dict = {}
-        self.dropdown_members_model = DropdownModel(get_peers())
+        self.dropdown_members_model = DropdownModel(get_peers(), self.logger)
         self.dropdown_members = QComboBox(self)
         self.dropdown_members.setModel(self.dropdown_members_model)
         
@@ -260,7 +261,7 @@ class MembersWidget(QWidget):
             if numNew > 0 and logNum < 9:
                 # there might be more new ones
                 self.logRequests[thread.sender] = (logNum + 1, datetime.now())
-                getLogger().debug("log seems to be new, another!!!")
+                self.logger.debug("log seems to be new, another!!!")
                 logsAdded.append((logNum + 1, None))
                 self.request_log(thread.sender, logNum + 1)
             elif thread.sender in self.logRequests:
@@ -295,7 +296,7 @@ class MembersWidget(QWidget):
         if member == None:
             member = self.get_selected_log_member()
         if member != None:
-            getLogger().debug("Requesting log %d from %s", logNum, member)
+            self.logger.debug("Requesting log %d from %s", logNum, member)
             get_server().call("HELO_REQUEST_LOGFILE %s %d"%(DataReceiverThread.getOpenPort(category="log%s"%member), logNum), set([member]))
         else:
             self.log_area.setText("No Member selected!")
@@ -375,7 +376,7 @@ class MembersWidget(QWidget):
                 if item != None:
                     itemLogFile = convert_string(item.data(0, Qt.UserRole).toString())
                     if itemLogFile != oldName:
-                        getLogger().warning("index does not correspond to item in list:\n\t%s\n\t%s", itemLogFile, oldName)
+                        self.logger.warning("index does not correspond to item in list:\n\t%s\n\t%s", itemLogFile, oldName)
                     self.initializeLogItem(item, newName)
             
         if len(logsAdded) == 0:
@@ -429,7 +430,7 @@ class MembersWidget(QWidget):
             with codecs.open(logPath,"r",'utf8') as fhandler:
                 fcontent = fhandler.read()
         except Exception as e:
-            getLogger().exception("Error reading file")
+            self.logger.exception("Error reading file")
             fcontent = "Error reading file: %s"%str(e)
         return fcontent
     

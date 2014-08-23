@@ -19,8 +19,9 @@ class CategoriesModel(QStandardItemModel):
     
     categoriesChanged = pyqtSignal()
     
-    def __init__(self):
+    def __init__(self, logger):
         super(CategoriesModel, self).__init__()
+        self.logger = logger
         self.setColumnCount(1)
         self._categoryIcons = {}
         
@@ -40,7 +41,7 @@ class CategoriesModel(QStandardItemModel):
         
     def _initializeItem(self, item, imagePath, thumbnailSize, cat, adding):
         if imagePath and os.path.exists(imagePath):
-            AsyncCall(self, self._createThumbnail, partial(self._setThumbnail, item, cat))(imagePath, thumbnailSize, adding)
+            AsyncCall(self, self.logger, self._createThumbnail, partial(self._setThumbnail, item, cat))(imagePath, thumbnailSize, adding)
         elif adding:
             self.categoriesChanged.emit()
         

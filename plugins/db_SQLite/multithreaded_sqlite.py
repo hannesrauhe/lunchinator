@@ -2,7 +2,6 @@ import threading
 import Queue
 import sqlite3
 from lunchinator.plugin import lunch_db
-from lunchinator.log import getLogger
 import datetime
 
 class MultiThreadSQLite(threading.Thread, lunch_db):
@@ -38,15 +37,15 @@ class MultiThreadSQLite(threading.Thread, lunch_db):
                 res.put('--error--')
         cnx.close()
         
-    def open(self):
+    def open(self, _logger):
         self.is_open = True 
         self.start()
     
-    def close(self):
-        self.execute('--close--')
+    def close(self, logger):
+        self.execute(logger, '--close--')
         self.is_open = False
         
-    def _execute(self, query, wildcards, returnResults=True, commit=False, returnHeader=False):            
+    def _execute(self, logger, query, wildcards, returnResults=True, commit=False, returnHeader=False):            
         if not self.is_open:
             raise Exception("not connected to a database")
         
@@ -54,10 +53,10 @@ class MultiThreadSQLite(threading.Thread, lunch_db):
         err = Queue.Queue()
         descr = Queue.Queue()
         if wildcards:
-            getLogger().debug("%s, %s", query, wildcards)
+            logger.debug("%s, %s", query, wildcards)
             self.reqs.put((query, wildcards, res, err, descr, commit))
         else:
-            getLogger().debug(query)
+            logger.debug(query)
             self.reqs.put((query, tuple(), res, err, descr, commit))
             
         resultList = []
@@ -78,37 +77,37 @@ class MultiThreadSQLite(threading.Thread, lunch_db):
         if returnResults:
             return resultList
         
-    def existsTable(self, tableName):
-        result = self.query("select sql from sqlite_master where type = 'table' and upper(name) = '%s'" % tableName.upper())
+    def existsTable(self, logger, tableName):
+        result = self.query(logger, "select sql from sqlite_master where type = 'table' and upper(name) = '%s'" % tableName.upper())
         return result != None and len(result) > 0   
     
     '''Lunch Statistics'''
-    def lastUpdateForLunchDay(self, date, tableName):
-        sql="SELECT LAST_UPDATE FROM %s WHERE DATE=%s" % (self.get_table_name(tableName), self.get_formatted_date(date))
-        tuples = self.query(sql)
+    def lastUpdateForLunchDay(self, logger, date, tableName):
+        sql="SELECT LAST_UPDATE FROM %s WHERE DATE=%s" % (self.get_table_name(logger, tableName), self.get_formatted_date(logger, date))
+        tuples = self.query(logger, sql)
         if tuples == None or len(tuples) == 0:
-            getLogger().debug("%s -> None", sql)
+            logger.debug("%s -> None", sql)
             return None
         else:
-            getLogger().debug("%s -> %s", sql, tuples)
-            return self.parse_result_date(tuples[0][0])
+            logger.debug("%s -> %s", sql, tuples)
+            return self.parse_result_date(logger, tuples[0][0])
         
-    def insertLunchPart(self, date, textAndAdditivesList, update, table):
+    def insertLunchPart(self, logger, date, textAndAdditivesList, update, table):
         sql=None
         if update:
-            sql="DELETE FROM %s WHERE DATE=%s" % (self.get_table_name(table), self.get_formatted_date(date))
-            getLogger().debug(sql)
-            self.executeNoCommit(sql)
+            sql="DELETE FROM %s WHERE DATE=%s" % (self.get_table_name(logger, table), self.get_formatted_date(logger, date))
+            logger.debug(sql)
+            self.executeNoCommit(logger, sql)
         for textAndAdditives in textAndAdditivesList:
-            sql="INSERT INTO %s VALUES(%s, ?, ?, %s)" % (self.get_table_name(table), self.get_formatted_date(date), self.get_formatted_date(date.today()))
-            getLogger().debug("%s, %s, %s", sql, textAndAdditives[0], textAndAdditives[1])
-            self.executeNoCommit(sql, textAndAdditives[0], textAndAdditives[1])            
+            sql="INSERT INTO %s VALUES(%s, ?, ?, %s)" % (self.get_table_name(logger, table), self.get_formatted_date(logger, date), self.get_formatted_date(logger, date.today()))
+            logger.debug("%s, %s, %s", sql, textAndAdditives[0], textAndAdditives[1])
+            self.executeNoCommit(logger, sql, textAndAdditives[0], textAndAdditives[1])            
 
-    def get_table_name(self, baseName):
+    def get_table_name(self, _logger, baseName):
         return "\"%s\"" % baseName    
     
-    def get_formatted_date(self, aDate):
+    def get_formatted_date(self, _logger, aDate):
         return "DATE('%s')" % datetime.datetime.combine(aDate, datetime.time()).strftime('%Y-%m-%d')
         
-    def parse_result_date(self, resultDate):
+    def parse_result_date(self, _logger, resultDate):
         return datetime.datetime.strptime(resultDate, '%Y-%m-%d').date()

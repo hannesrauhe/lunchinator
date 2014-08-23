@@ -1,6 +1,5 @@
 from online_update.appupdate.gpg_update import GPGUpdateHandler
 from lunchinator import get_settings, get_server
-from lunchinator.log import getLogger
 from lunchinator.shell_thread import ShellThread
 from lunchinator.download_thread import DownloadThread
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
@@ -12,7 +11,7 @@ from xml.etree import ElementTree
 
 class MacUpdateHandler(GPGUpdateHandler):
     @classmethod
-    def appliesToConfiguration(cls):
+    def appliesToConfiguration(cls, _logger):
         return get_server().has_gui() and getPlatform() == PLATFORM_MAC and getApplicationBundle() != None
     
     def activate(self):
@@ -47,7 +46,7 @@ class MacUpdateHandler(GPGUpdateHandler):
                 self._ui.setInteractive(False)
                 
                 self._setStatus("Searching for latest version...")
-                dt = DownloadThread(getValidQtParent(), "https://releases.gpgtools.org/nightlies/macgpg2/appcast.xml")
+                dt = DownloadThread(getValidQtParent(), self.logger, "https://releases.gpgtools.org/nightlies/macgpg2/appcast.xml")
                 dt.success.connect(partial(self._install_gpg_finished, 0))
                 dt.error.connect(partial(self._install_gpg_failed, 0))
                 dt.start()
@@ -60,11 +59,11 @@ class MacUpdateHandler(GPGUpdateHandler):
                 dmgURL = e.iter("channel").next().iter("item").next().iter("enclosure").next().attrib["url"]
                 
                 tmpFile = tempfile.NamedTemporaryFile(suffix=".dmg", prefix="macgpg", delete=False)
-                getLogger().debug("Downloading %s to %s", dmgURL, tmpFile.name)
+                self.logger.debug("Downloading %s to %s", dmgURL, tmpFile.name)
                 self._setStatus("Downloading MacGPG...", progress=True)
                 self._ui.setProgress(0)
                 
-                dt = DownloadThread(getValidQtParent(), dmgURL, target=tmpFile, progress=True)
+                dt = DownloadThread(getValidQtParent(), self.logger, dmgURL, target=tmpFile, progress=True)
                 dt.success.connect(partial(self._install_gpg_finished, 1))
                 dt.error.connect(partial(self._install_gpg_failed, 1))
                 dt.progressChanged.connect(self._downloadProgressChanged)
@@ -78,7 +77,7 @@ class MacUpdateHandler(GPGUpdateHandler):
                 dmgFile = dt.target.name
                 dt.close()
                 
-                st = ShellThread(getValidQtParent(), [get_settings().get_resource('bin', 'mac_gpg_installer.sh'), dmgFile], context=dmgFile, quiet=False)
+                st = ShellThread(getValidQtParent(), self.logger, [get_settings().get_resource('bin', 'mac_gpg_installer.sh'), dmgFile], context=dmgFile, quiet=False)
                 st.finished.connect(partial(self._install_gpg_finished, 2))
                 st.start()
                 
@@ -93,7 +92,7 @@ class MacUpdateHandler(GPGUpdateHandler):
                 else:
                     self._setStatus("Error installing MacGPG.", err=True)
                     if dt.pErr:
-                        getLogger().error("Console output: %s", dt.pErr.strip())
+                        self.logger.error("Console output: %s", dt.pErr.strip())
                 
                 self._updateCheckButtonText()
                 self._ui.setInteractive(True)

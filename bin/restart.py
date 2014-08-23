@@ -36,40 +36,40 @@ def isRunning(pid):
 
 def executeCommand(args):
     from lunchinator.utilities import spawnProcess
-    spawnProcess(args)
+    spawnProcess(args, getCoreLogger())
 
 def restart():
     # wait for Lunchinator to exit
     try:
         pid = int(options.pid)
-        getLogger().info("Waiting for Lunchinator (pid %s) to terminate", options.pid)
+        getCoreLogger().info("Waiting for Lunchinator (pid %s) to terminate", options.pid)
         c = 0
         while isRunning(pid) and c<100:
             time.sleep(1. / 5)
             c+=1
             if 0==c%10:
-                getLogger().info("Lunchinator (pid %s) still running", options.pid)
+                getCoreLogger().info("Lunchinator (pid %s) still running", options.pid)
             
         if isRunning(pid):            
-            getLogger().info("Lunchinator (pid %s) still running, aborting restart", options.pid)
+            getCoreLogger().info("Lunchinator (pid %s) still running, aborting restart", options.pid)
             sys.exit(1)
             
     except ValueError:
-        getLogger().error("Invalid pid: %d", options.pid)
+        getCoreLogger().error("Invalid pid: %d", options.pid)
     
-    getLogger().info("Lunchinator gone")
+    getCoreLogger().info("Lunchinator gone")
     # execute commands while Lunchinator is not running
     cmdString = options.commands
     if cmdString:
-        getLogger().info("Executing commands while Lunchinator is not running...")
-        commands = Commands(cmdString)
+        getCoreLogger().info("Executing commands while Lunchinator is not running...")
+        commands = Commands(getCoreLogger(), cmdString)
         commands.executeCommands()
 
     # restart Lunchinator
     startCmd = options.startCmd
     if startCmd:
         args = json.loads(startCmd)
-        getLogger().info("Restarting Lunchinator: %s", ' '.join(args))
+        getCoreLogger().info("Restarting Lunchinator: %s", ' '.join(args))
         
         if platform.system()=="Windows":
             subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
@@ -84,12 +84,12 @@ if __name__ == '__main__':
         sys.path.insert(0, lunchinatorPath)
     
     from lunchinator import get_settings
-    from lunchinator.log import initializeLogger, getLogger
+    from lunchinator.log import initializeLogger, getCoreLogger
     initializeLogger(get_settings().get_config("update.log"))
     
     try:
         from lunchinator.commands import Commands
         restart()
     except:
-        getLogger().exception("Unrecoverable error during restart.")
+        getCoreLogger().exception("Unrecoverable error during restart.")
     

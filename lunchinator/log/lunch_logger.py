@@ -16,7 +16,7 @@ class _UnicodeLogger(logging.Logger):
         return logging.Logger.makeRecord(self, name, level, fn, lno, msg, args if convArgs is None else tuple(convArgs), exc_info, func=func, extra=extra)
 
 class _log_formatter (logging.Formatter):
-    LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+    LOG_FORMAT = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     def __init__(self):
         logging.Formatter.__init__(self, self.LOG_FORMAT)
@@ -31,57 +31,95 @@ class _lunchinatorLogger(object):
     lunch_logger = None
     streamHandler = None
     logfileHandler = None
+    _loggers = {} # name -> logger
+    _globalLevel = logging.DEBUG
+    _specificLevels = {} # name -> level
     
     @classmethod
     def initializeLogger(cls, path):
         if cls.lunch_logger is None:
-            from lunchinator import get_settings
             if path:
                 logDir = os.path.dirname(path)
                 if not os.path.exists(logDir):
                     os.makedirs(logDir)
             
-            cls.lunch_logger = logging.getLogger("LunchinatorLogger")
-            cls.lunch_logger.setLevel(logging.DEBUG)
-            
             cls.streamHandler = logging.StreamHandler()
             cls.streamHandler.setFormatter(logging.Formatter("[%(levelname)7s] %(message)s"))
-            cls.lunch_logger.addHandler(cls.streamHandler)
             
+            cls.notificationHandler = NotificationLogHandler()
+            cls.notificationHandler.setLevel(logging.DEBUG)
+            
+            logHandlerError = False
             if path:
                 try:
                     cls.logfileHandler = RotatingFileHandler(path, 'a', 0, 9)
                     cls.logfileHandler.setFormatter(_log_formatter())
                     cls.logfileHandler.setLevel(logging.DEBUG)
                     
-                    cls.lunch_logger.addHandler(cls.logfileHandler)
-                    
                     if os.path.getsize(path) > 0:
                         cls.logfileHandler.doRollover()
                 except IOError:
-                    cls.lunch_logger.error("Could not initialize log file.")
-            
-            cls.notificationHandler = NotificationLogHandler()
-            cls.notificationHandler.setLevel(logging.DEBUG)
-            cls.lunch_logger.addHandler(cls.notificationHandler)
+                    logHandlerError = True
             
             yapsi_logger = logging.getLogger('yapsy')
-            yapsi_logger.setLevel(logging.WARNING)
+            yapsi_logger.setLevel(cls._globalLevel)
             yapsi_logger.addHandler(cls.logfileHandler)
             yapsi_logger.addHandler(cls.streamHandler)
+            cls._loggers['yapsy'] = yapsi_logger
+            
+            cls.lunch_logger = cls.newLogger(u"Core")
+            if logHandlerError:
+                cls.lunch_logger.error("Could not initialize log file.")
     
     @classmethod
-    def get(cls):
+    def getCoreLogger(cls):
         if cls.lunch_logger is None:
             raise ValueError("Logger not initialized")
         return cls.lunch_logger
     
     @classmethod
-    def setLevel(cls, newLevel):
-        cls.streamHandler.setLevel(newLevel)
-        cls.notificationHandler.setLevel(newLevel)
+    def newLogger(cls, name):
+        name = u"lunchinator." + name
+        logger = logging.getLogger(name)
+        logger.setLevel(cls._globalLevel)
+        logger.addHandler(cls.streamHandler)
         if cls.logfileHandler:
-            cls.logfileHandler.setLevel(newLevel)
+            logger.addHandler(cls.logfileHandler)
+        logger.addHandler(cls.notificationHandler)
+        
+        cls._loggers[name] = logger
+        return logger
+    
+    @classmethod
+    def removeLogger(cls, name):
+        cls._loggers.pop(name, None)
+    
+    @classmethod
+    def setGlobalLevel(cls, newLevel):
+        cls._globalLevel = newLevel
+        for name, logger in cls._loggers.iteritems():
+            if name not in cls._specificLevels:
+                logger.setLevel(newLevel)
+                
+    @classmethod
+    def setSpecificLevel(cls, name, newLevel):
+        logger = cls._loggers.get(name, None)
+        if logger is not None:
+            if newLevel is None:
+                # reset to global level
+                logger.setLevel(cls._globalLevel)
+            else:
+                logger.setLevel(newLevel)
+        
+        if newLevel is None:
+            # remove specific level
+            cls._specificLevels.pop(name, None)
+        else:
+            cls._specificLevels[name] = newLevel
+            
+    @classmethod
+    def getLoggerNames(cls):
+        return list(cls._loggers.keys())
         
     @classmethod    
     def getCachedRecords(cls):
@@ -95,14 +133,23 @@ def initializeLogger(path=None):
     logging.setLoggerClass(_UnicodeLogger)
     _lunchinatorLogger.initializeLogger(path)
     
-def getLogger():
-    return _lunchinatorLogger.get()
+def getCoreLogger():
+    return _lunchinatorLogger.getCoreLogger()
+
+def newLogger(name):
+    return _lunchinatorLogger.newLogger(name)
+
+def removeLogger(name):
+    _lunchinatorLogger.removeLogger(name)
 
 def logsDebug():
     return _lunchinatorLogger.get().isEnabledFor(logging.DEBUG)
 
-def setLoggingLevel(newLevel):
-    _lunchinatorLogger.setLevel(newLevel)
+def setGlobalLoggingLevel(newLevel):
+    _lunchinatorLogger.setGlobalLevel(newLevel)
+    
+def setSpecificLoggingLevel(loggerName, newLevel):
+    _lunchinatorLogger.setSpecificLevel(loggerName, newLevel)
     
 def getCachedLogRecords():
     return _lunchinatorLogger.getCachedRecords()
@@ -126,6 +173,4 @@ def getLogLineTime(logLine):
     except ValueError:
         return None
     except:
-        from lunchinator.log import getLogger
-        getLogger().exception()
         return None

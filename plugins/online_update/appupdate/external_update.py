@@ -7,7 +7,7 @@ class ExternalUpdateHandler(AppUpdateHandler):
     """Used when Lunchinator updates are handled by the OS package management."""
     
     @classmethod
-    def appliesToConfiguration(cls):
+    def appliesToConfiguration(cls, _logger):
         if getPlatform() != PLATFORM_LINUX:
             return False
          

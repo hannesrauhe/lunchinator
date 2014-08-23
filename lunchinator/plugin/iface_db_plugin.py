@@ -78,41 +78,41 @@ class lunch_db(object):
     def __init__(self):
         self.is_open = False
         
-    def isOpen(self):
+    def isOpen(self, _logger):
         return self.is_open
         
     '''convenience calls'''    
-    def execute(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=False, commit=True)
+    def execute(self, logger, query, *wildcards):
+        return self._execute(logger, query, wildcards, returnResults=False, commit=True)
         
-    def executeNoCommit(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=False, commit=False)
+    def executeNoCommit(self, logger, query, *wildcards):
+        return self._execute(logger, query, wildcards, returnResults=False, commit=False)
         
-    def query(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=True, commit=False)
+    def query(self, logger, query, *wildcards):
+        return self._execute(logger, query, wildcards, returnResults=True, commit=False)
     
-    def queryWithHeader(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=True, commit=False, returnHeader=True)
+    def queryWithHeader(self, logger, query, *wildcards):
+        return self._execute(logger, query, wildcards, returnResults=True, commit=False, returnHeader=True)
     
     '''abstract methods - basic functionality'''   
             
-    def _execute(self, query, wildcards, returnResults=True, commit=False, returnHeader=False):
+    def _execute(self, logger, query, wildcards, returnResults=True, commit=False, returnHeader=False):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
-    def existsTable(self, tableName):
+    def existsTable(self, logger, tableName):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
-    def insert_values(self, table, *values):
+    def insert_values(self, logger, table, *values):
         raise  NotImplementedError("%s does not implement this method"%self.db_type) 
             
             
     '''The following maybe should be moved to the other class'''
     
     '''lunch statistics plugin methods'''    
-    def lastUpdateForLunchDay(self, date, tableName):
+    def lastUpdateForLunchDay(self, logger, date, tableName):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
         
-    def insertLunchPart(self, date, textAndAdditivesList, update, table):
+    def insertLunchPart(self, logger, date, textAndAdditivesList, update, table):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
             
        

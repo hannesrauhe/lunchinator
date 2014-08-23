@@ -13,9 +13,10 @@ from time import strftime, localtime
 class ConsoleWidget(QWidget):
     _RECORD_ROLE = Qt.UserRole + 1
     
-    def __init__(self, parent):
+    def __init__(self, parent, logger):
         super(ConsoleWidget, self).__init__(parent)
         
+        self.logger = logger
         self._errorColor = QVariant(QColor(180, 0, 0))
         self._warningColor = QVariant(QColor(170, 100, 0))
         self._records = []

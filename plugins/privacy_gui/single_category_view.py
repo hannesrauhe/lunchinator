@@ -4,14 +4,13 @@ from PyQt4.QtCore import Qt, QVariant
 from lunchinator.table_models import TableModelBase
 from lunchinator import get_peers, get_notification_center,\
     convert_string
-from lunchinator.log import getLogger
 from lunchinator.privacy.privacy_settings import PrivacySettings
 from lunchinator.log.logging_slot import loggingSlot
 
 class PeerModel(TableModelBase):
-    def __init__(self, data, tristate):
+    def __init__(self, data, tristate, logger):
         columns = [(u"Peer Name", self._updateNameItem)]
-        super(PeerModel, self).__init__(get_peers(), columns)
+        super(PeerModel, self).__init__(get_peers(), columns, logger)
         
         if data is None:
             raise ValueError("data cannot be None")
@@ -59,7 +58,7 @@ class PeerModel(TableModelBase):
             m_name = pID
         
         if m_name is None:
-            getLogger().warning("displayed peer name (%s) should not be None", pID)
+            self.logger.warning("displayed peer name (%s) should not be None", pID)
             m_name = pID
         item.setText(m_name)
         item.setCheckable(True)
@@ -71,9 +70,10 @@ class PeerModel(TableModelBase):
         item.setCheckState(checkState)
         
 class SingleCategoryView(QWidget):
-    def __init__(self, action, parent, category=None, mode=None):
+    def __init__(self, action, parent, logger, category=None, mode=None):
         super(SingleCategoryView, self).__init__(parent)
         
+        self.logger = logger
         self._action = action
         self._category = category
         self._resetting = False
@@ -140,7 +140,8 @@ class SingleCategoryView(QWidget):
         else:
             exceptions = {}
         self._peerModel = PeerModel(exceptions,
-                                    mode == PrivacySettings.POLICY_PEER_EXCEPTION)
+                                    mode == PrivacySettings.POLICY_PEER_EXCEPTION,
+                                    self.logger)
         self._peerModel.itemChanged.connect(self._peerDataChanged)
         
         proxyModel = QSortFilterProxyModel(self)

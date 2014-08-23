@@ -19,7 +19,7 @@ class maintainer(iface_gui_plugin):
     def create_widget(self, parent):
         from maintainer.maintainer_gui import maintainer_gui
         iface_gui_plugin.create_widget(self, parent)
-        self.w = maintainer_gui(parent)
+        self.w = maintainer_gui(parent, self.logger)
         
         return self.w
     
@@ -54,7 +54,7 @@ class maintainer(iface_gui_plugin):
             else:
                 file_name= os.path.join(logDir, "tmp.log")
             
-            dr = DataReceiverThread.receiveSingleFile(ip, file_name, file_size, tcp_port, "log%s"%ip, parent=self.w)
+            dr = DataReceiverThread.receiveSingleFile(ip, file_name, file_size, tcp_port, self.logger, "log%s"%ip, parent=self.w)
             dr.successfullyTransferred.connect(self.w.membersWidget.cb_log_transfer_success)
             dr.errorOnTransfer.connect(self.w.membersWidget.cb_log_transfer_error)
             dr.finished.connect(dr.deleteLater)
@@ -62,8 +62,8 @@ class maintainer(iface_gui_plugin):
             
 if __name__ == '__main__':
     def logSomething():
-        from lunchinator.log import getLogger
-        getLogger().info("foo")
+        from lunchinator.log import getCoreLogger
+        getCoreLogger().info("foo")
         
     m = maintainer()
     m.run_in_window(callAfterCreate=logSomething)

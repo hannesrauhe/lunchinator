@@ -7,7 +7,7 @@ from private_messages.chat_messages_view import ChatMessagesView
 from private_messages.chat_messages_model import ChatMessagesModel
 from lunchinator import convert_string, get_settings, get_notification_center,\
     get_peers
-from lunchinator.log import getLogger, loggingFunc
+from lunchinator.log import loggingFunc
 from lunchinator.log.logging_slot import loggingSlot
 from lunchinator.history_line_edit import HistoryTextEdit
 from lunchinator.peer_actions.peer_action_utils import showPeerActionsPopup,\
@@ -63,9 +63,10 @@ class ChatWidget(QWidget):
     typing = pyqtSignal()
     cleared = pyqtSignal()
         
-    def __init__(self, parent, ownName, otherName, ownPicFile, otherPicFile, otherID):
+    def __init__(self, parent, logger, ownName, otherName, ownPicFile, otherPicFile, otherID):
         super(ChatWidget, self).__init__(parent)
         
+        self.logger = logger
         self._firstShowEvent = True
         
         self._offline = False
@@ -325,7 +326,7 @@ class ChatWidget(QWidget):
         self._model = ChatMessagesModel(self, self)
         
     def _initMessageTable(self):
-        self.table = ChatMessagesView(self._model, self)
+        self.table = ChatMessagesView(self._model, self, self.logger)
         
     @loggingSlot()
     def _textChangedSlot(self):
@@ -476,7 +477,7 @@ class ChatWidget(QWidget):
                 from markdown import Markdown
                 self._md = Markdown(extensions=['extra'])
             except ImportError:
-                getLogger().error("Cannot enable Markdown (%s)", formatException)
+                self.logger.error("Cannot enable Markdown (%s)", formatException)
                 raise
         return self._md
     
@@ -631,7 +632,7 @@ if __name__ == '__main__':
         
         tw.typing.connect(tw.otherIsTyping)
         tw.cleared.connect(tw.otherCleared)
-        tw.sendMessage.connect(lambda pID, html : tw.addOwnMessage(0, time(), html, time()), type=Qt.QueuedConnection)
+        tw.sendMessage.connect(lambda _pID, html : tw.addOwnMessage(0, time(), html, time()), type=Qt.QueuedConnection)
         
         return tw
         

@@ -17,7 +17,7 @@ class simple_view(iface_gui_plugin):
     def create_widget(self, parent):
         from simple_view.simpleViewWidget import SimpleViewWidget
         
-        self.w = SimpleViewWidget(parent)
+        self.w = SimpleViewWidget(parent, self.logger)
             
         return self.w
         

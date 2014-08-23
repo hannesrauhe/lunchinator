@@ -2,7 +2,7 @@ import subprocess, sys, os, contextlib, json, shutil, socket, time
 from datetime import datetime, timedelta 
 from time import mktime, strftime
 from lunchinator import get_settings
-from lunchinator.log import getLogger, loggingFunc
+from lunchinator.log import loggingFunc, getCoreLogger
 import locale
 import platform
 from tempfile import NamedTemporaryFile
@@ -36,7 +36,7 @@ def _mustScaleNotificationIcon():
         return platform.linux_distribution()[0].startswith("SUSE Linux Enterprise")
 
 # TODO: message groups for notification center
-def displayNotification(name, msg, icon=None):
+def displayNotification(name, msg, logger, icon=None):
     if msg == None:
         msg = u""
     myPlatform = getPlatform()
@@ -67,29 +67,29 @@ def displayNotification(name, msg, icon=None):
             fh = open(os.path.devnull,"w")
             exe = getBinary("terminal-notifier", "bin")
             if not exe:
-                getLogger().warning("terminal-notifier not found.")
+                logger.warning("terminal-notifier not found.")
                 return
             
             call = [exe, "-title", "Lunchinator: %s" % name, "-message", msg]
             if False and checkBundleIdentifier(_LUNCHINATOR_BUNDLE_IDENTIFIER): # no sender until code signing is fixed (probably never)
                 call.extend(["-sender", _LUNCHINATOR_BUNDLE_IDENTIFIER])
                 
-            getLogger().debug(call)
+            logger.debug(call)
             try:
                 subprocess.call(call, stdout=fh, stderr=fh)
             except OSError as e:
                 if e.errno == errno.EINVAL:
-                    getLogger().warning("Ignoring invalid value on Mac")
+                    logger.warning("Ignoring invalid value on Mac")
                 else:
                     raise
             except:
-                getLogger().exception("Error calling %s", call)
+                logger.exception("Error calling %s", call)
         elif myPlatform == PLATFORM_WINDOWS:
             from lunchinator import get_server
             if hasattr(get_server().controller, "statusicon"):
                 get_server().controller.statusicon.showMessage(name,msg)
     except:
-        getLogger().exception("error displaying notification")
+        logger.exception("error displaying notification")
         
 qtParent = None 
 
@@ -121,7 +121,7 @@ def _processCallOnPlugin(pluginObject, pluginName, ip, call, newPeer, fromQueue,
     # called also contains gui plugins
     if not (isinstance(pluginObject, iface_called_plugin) or \
             isinstance(pluginObject, iface_gui_plugin)):
-        getLogger().warning("Plugin '%s' is not a called/gui plugin", pluginName)
+        getCoreLogger().warning("Plugin '%s' is not a called/gui plugin", pluginName)
         return
     if pluginObject.is_activated:
         try:
@@ -129,7 +129,7 @@ def _processCallOnPlugin(pluginObject, pluginName, ip, call, newPeer, fromQueue,
                (not pluginObject.processes_events_immediately() and not newPeer):
                 call(pluginObject, ip, member_info)
         except:
-            getLogger().exception(u"plugin error in %s while processing event" % pluginName)
+            getCoreLogger().exception(u"plugin error in %s while processing event" % pluginName)
     
 def processPluginCall(ip, call, newPeer, fromQueue, action=None):
     if not get_settings().get_plugins_enabled():
@@ -191,13 +191,13 @@ def _findLunchinatorKeyID(gpg, secret):
                 return key['keyid']
     return None
 
-def getGPG(secret=False):
+def getGPG(logger, secret=False):
     """ Returns tuple (GPG instance, keyid) """
     
     from gnupg import GPG
     gbinary = getBinary("gpg", "bin")
     if not gbinary:
-        getLogger().error("GPG not found")
+        logger.error("GPG not found")
         return None, None
     
     ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
@@ -221,7 +221,7 @@ def getGPG(secret=False):
         if not gpg.encoding:
             gpg.encoding = 'utf-8'
     except Exception, e:
-        getLogger().exception("GPG not working: %s", str(e))
+        logger.exception("GPG not working: %s", str(e))
         return None, None
     
     # use key from keyring as default
@@ -236,7 +236,7 @@ def getGPG(secret=False):
             path = get_settings().get_resource("lunchinator_pub_0x17F57DC2.asc")
                 
         if not os.path.isfile(path):
-            getLogger().error("Key file not found: %s", path)
+            logger.error("Key file not found: %s", path)
             return None, None
         with contextlib.closing(open(path,"r")) as keyf:
             gpg.import_keys(keyf.read())
@@ -244,31 +244,7 @@ def getGPG(secret=False):
     
     return gpg, keyid
 
-# TODO not used anymore. May be removed.    
-'''for the external IP a connection to someone has to be opened briefly
-   therefore a list of possible peers is needed'''
-def determineOwnIP(peers):
-    if 0 == len(peers):
-        getLogger().debug("Cannot determine IP if there is no peer given")
-        return None
-    
-    own_ip = None
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      
-    for m in peers:
-        try:
-            # connect to UDF discard port 9
-            s.connect((m, 9))
-            own_ip = unicode(s.getsockname()[0])
-            break
-        except:
-            getLogger().debug("While getting own IP, problem to connect to %s", m)
-            continue
-    if own_ip:
-        getLogger().debug("Found my IP: %s", own_ip)
-    s.close()
-    return own_ip
-
-def getTimeDelta(end):
+def getTimeDelta(end, logger):
     """
     calculates the correlation of now and the specified time
     positive value: now is before time, milliseconds until time
@@ -281,7 +257,7 @@ def getTimeDelta(end):
         try:
             end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
         except ValueError:
-            getLogger().debug("Unsupported time format: %s", end)
+            logger.debug("Unsupported time format: %s", end)
             return None
         
         # ignore begin
@@ -292,11 +268,11 @@ def getTimeDelta(end):
         return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
     
     except:
-        getLogger().exception("don't know how to handle time span")
+        logger.exception("don't know how to handle time span")
         return None
     
 
-def getTimeDifference(begin, end):
+def getTimeDifference(begin, end, logger):
     """
     calculates the correlation of now and the specified lunch dates
     negative value: now is before begin, seconds until begin
@@ -311,14 +287,14 @@ def getTimeDifference(begin, end):
         try:
             end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
         except ValueError:
-            getLogger().debug("Unsupported time format: %s", end)
+            logger.debug("Unsupported time format: %s", end)
             return None
         
         try:
             begin = datetime.strptime(begin, lunch_settings.LUNCH_TIME_FORMAT)
         except ValueError:
             # this is called repeatedly, so only debug
-            getLogger().debug("Unsupported time format: %s", begin)
+            logger.debug("Unsupported time format: %s", begin)
             return None
         
         now = datetime.now()
@@ -338,7 +314,7 @@ def getTimeDifference(begin, end):
             # now is after end
             return 0
     except:
-        getLogger().exception("don't know how to handle time span")
+        logger.exception("don't know how to handle time span")
         return None
 
 def msecUntilNextMinute():
@@ -361,8 +337,8 @@ def getApplicationBundle():
         return None
     return path
 
-def spawnProcess(args):
-    getLogger().debug("spawning process: %s", args)
+def spawnProcess(args, logger):
+    logger.debug("spawning process: %s", args)
     if getPlatform() in (PLATFORM_LINUX, PLATFORM_MAC):
         #somehow fork() is not safe on Mac OS. I guess this will do fine on Linux, too. 
         fh = open(os.path.devnull, "w")
@@ -372,7 +348,7 @@ def spawnProcess(args):
     else:
         raise NotImplementedError("Process spawning not implemented for your OS.")
 
-def _getStartCommand():
+def _getStartCommand(logger):
     if getPlatform() == PLATFORM_MAC:
         # Git or Application bundle?
         bundlePath = getApplicationBundle()
@@ -386,7 +362,7 @@ def _getStartCommand():
     elif getPlatform() == PLATFORM_WINDOWS:
         return [_getPythonInterpreter(), os.path.join(get_settings().get_main_package_path(), "start_lunchinator.py")]
     else:
-        getLogger().error("Restart not yet implemented for your OS.")
+        logger.error("Restart not yet implemented for your OS.")
             
     return None
     
@@ -400,20 +376,20 @@ def _getPythonInterpreter():
             return sys.executable
     return which("python")
 
-def stopWithCommands(args):
+def stopWithCommands(args, logger):
     """
     Stops Lunchinator and execute commands
     """
     from lunchinator import get_server
     try:        
-        spawnProcess(args)
+        spawnProcess(args, logger)
     except:
-        getLogger().exception("Error in stopWithCommands")
+        logger.exception("Error in stopWithCommands")
         return
     if get_server().getController() != None:
         get_server().getController().shutdown()
             
-def restartWithCommands(commands):
+def restartWithCommands(commands, logger):
     """
     Restart Lunchinator and execute commands in background while it is stopped.
     commands: lunchinator.commands.Commands instance
@@ -423,7 +399,7 @@ def restartWithCommands(commands):
         # copy restart script to safe place
         shutil.copy(get_settings().get_resource("bin", "restart.py"), get_settings().get_main_config_dir())
         
-        startCmd = _getStartCommand()
+        startCmd = _getStartCommand(logger)
         args = [_getPythonInterpreter(), get_settings().get_config("restart.py"),
                 "--lunchinator-path", get_settings().get_main_package_path(),
                 "--start-cmd", json.dumps(startCmd),
@@ -431,31 +407,33 @@ def restartWithCommands(commands):
         if commands != None:
             args.extend(["--commands", commands.toString()])
         
-        spawnProcess(args)
+        spawnProcess(args, logger)
     except:
-        getLogger().exception("Error in restartWithCommands")
+        logger.exception("Error in restartWithCommands")
         return
     if get_server().getController() != None:
         get_server().getController().shutdown()
     else:
         sys.exit(0)
     
-@loggingFunc
-def restart():
+def restart(logger):
     """Restarts the Lunchinator"""
-    #on Windows with pyinstaller we use this special handling for now
-    if getPlatform()==PLATFORM_WINDOWS:  
-        frozen = getattr(sys, 'frozen', '')
-        if frozen:
-            getLogger().debug("Trying to spawn %s", sys.executable)
-            from lunchinator import get_server
-            get_server().stop_server()
-            subprocess.Popen(sys.executable, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
-            
-    restartWithCommands(None)
+    try:
+        #on Windows with pyinstaller we use this special handling for now
+        if getPlatform()==PLATFORM_WINDOWS:  
+            frozen = getattr(sys, 'frozen', '')
+            if frozen:
+                logger.debug("Trying to spawn %s", sys.executable)
+                from lunchinator import get_server
+                get_server().stop_server()
+                subprocess.Popen(sys.executable, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
+                
+        restartWithCommands(None, logger)
+    except:
+        logger.exception("Error restarting")
     
 def installPipDependencyWindows(package, notifyRestart=True):
-    getLogger().debug("Trying to install %s", package)
+    getCoreLogger().debug("Trying to install %s", package)
     
     import win32api, win32con, win32event, win32process, types
     from win32com.shell.shell import ShellExecuteEx
@@ -479,14 +457,14 @@ def installPipDependencyWindows(package, notifyRestart=True):
     procHandle = procInfo['hProcess']    
     _obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
     rc = win32process.GetExitCodeProcess(procHandle)
-    getLogger().debug("Process handle %s returned code %s", procHandle, rc)
+    getCoreLogger().debug("Process handle %s returned code %s", procHandle, rc)
 
     if notifyRestart:
         try:
             from lunchinator import get_notification_center
             get_notification_center().emitRestartRequired("Dependecies were installed, please restart")
         except:
-            getLogger().error("Restart Notification failed")
+            getCoreLogger().error("Restart Notification failed")
     
 
 def formatTime(mTime):
@@ -500,9 +478,9 @@ def formatTime(mTime):
         return strftime("%b %d, %H:%M", mTime)
     return strftime("%b %d %Y, %H:%M", mTime)
 
-def revealFile(path):
+def revealFile(path, logger):
     if not os.path.exists(path):
-        getLogger().error("Trying to reveal file %s which does not exist.", path)
+        logger.error("Trying to reveal file %s which does not exist.", path)
         return
     try:
         if getPlatform() == PLATFORM_MAC:
@@ -514,11 +492,11 @@ def revealFile(path):
         elif getPlatform() == PLATFORM_LINUX:
             subprocess.call(['xdg-open', os.path.dirname(path)])
     except:
-        getLogger().exception("Could not reveal file")
+        logger.exception("Could not reveal file")
         
-def openFile(path):
+def openFile(path, logger):
     if not os.path.exists(path):
-        getLogger().error("Trying to open file %s which does not exist.", path)
+        logger.error("Trying to open file %s which does not exist.", path)
         return
     try:
         if getPlatform() == PLATFORM_MAC:
@@ -530,7 +508,7 @@ def openFile(path):
         elif getPlatform() == PLATFORM_LINUX:
             subprocess.call(['xdg-open', path])
     except:
-        getLogger().exception("Could not open file")
+        logger.exception("Could not open file")
     
 def formatException(exc_info=None):
     if exc_info is None:

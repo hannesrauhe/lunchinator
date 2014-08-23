@@ -1,6 +1,5 @@
 from lunchinator.plugin import iface_gui_plugin
 from lunchinator import get_settings, get_server, get_notification_center
-from lunchinator.log import getLogger
 import urllib2,sys
 from datetime import datetime, timedelta
 from lunchinator.log.logging_slot import loggingSlot
@@ -49,7 +48,7 @@ class messages_table(iface_gui_plugin):
         
     @loggingSlot()
     def _updateTimes(self):
-        getLogger().debug("It's a new day, update the message times.")
+        self.logger.debug("It's a new day, update the message times.")
         self.messagesModel.updateTimes()
         self._updateDailyTrigger()
         

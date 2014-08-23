@@ -5,8 +5,10 @@ from private_messages.message_item_delegate import MessageItemDelegate
 from lunchinator.log.logging_slot import loggingSlot
 
 class ChatMessagesView(QTreeView):
-    def __init__(self, model, parent):
+    def __init__(self, model, parent, logger):
         super(ChatMessagesView, self).__init__(parent)
+        self.logger = logger
+        
         self.setIconSize(QSize(32,32))
         self.setModel(model)
         self.header().setStretchLastSection(False)
@@ -14,7 +16,7 @@ class ChatMessagesView(QTreeView):
         self.setColumnWidth(0, 32)
         self.setColumnWidth(2, 32)
         
-        self.setItemDelegate(MessageItemDelegate(self))
+        self.setItemDelegate(MessageItemDelegate(self, self.logger))
         self.setAutoFillBackground(False)
         
         pal = QPalette(self.palette())

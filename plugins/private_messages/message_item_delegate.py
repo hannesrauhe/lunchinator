@@ -1,6 +1,5 @@
 from private_messages.chat_messages_model import ChatMessagesModel
 from lunchinator import convert_string
-from lunchinator.log import getLogger
 from lunchinator.utilities import formatTime
 
 from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QTextDocument,\
@@ -60,9 +59,10 @@ class EditorWidget(QWidget):
         self._itemEditor = itemEditor
             
 class MessageItemDelegate(QStyledItemDelegate):
-    def __init__(self, parentView, column=None, margin=50):
+    def __init__(self, parentView, logger, column=None, margin=50):
         super(MessageItemDelegate, self).__init__(parentView)
 
+        self.logger = logger
         # We need that to receive mouse move events in editorEvent
         parentView.setMouseTracking(True)
 
@@ -275,7 +275,7 @@ class MessageItemDelegate(QStyledItemDelegate):
         
         if modelIndex.row() != self.mouseOverDocumentRow:
             # TODO reset document
-            getLogger().warning("shouldStartEditAt(): wrong mouse over document")
+            self.logger.warning("shouldStartEditAt(): wrong mouse over document")
             return False
         messageRect = self._getMessageRect(self.mouseOverOption, self.mouseOverDocument, modelIndex)
         anchorPos = QPointF(eventPos) - QPointF(messageRect.topLeft())

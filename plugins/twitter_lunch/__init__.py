@@ -1,6 +1,5 @@
 from lunchinator.plugin import iface_called_plugin
 from lunchinator import get_server, get_settings, convert_string
-from lunchinator.log import getLogger
 
 import subprocess, sys, ctypes, logging
 import urllib2, tempfile, json, time, twitter, contextlib, csv
@@ -10,8 +9,9 @@ from threading import Thread,Event,Lock
 from lunchinator.logging_mutex import loggingMutex
 
 class TwitterDownloadThread(Thread):    
-    def __init__(self, event):
+    def __init__(self, event, logger):
         super(TwitterDownloadThread, self).__init__()
+        self.logger = logger
         self._twitter_api = None
         self._own_screen_name = ""
         self._screen_names = []
@@ -59,9 +59,9 @@ class TwitterDownloadThread(Thread):
             try:
                 self._twitter_api.CreateFriendship(screen_name=remote_caller)
                 self._friends.append(unicode(remote_caller))
-                getLogger().debug("Twitter: now following %s", remote_caller)
+                self.logger.debug("Twitter: now following %s", remote_caller)
             except:
-                getLogger().exception("Twitter: cannot follow %s", remote_caller)
+                self.logger.exception("Twitter: cannot follow %s", remote_caller)
                 
                 
     def get_old_pic_urls(self):
@@ -78,35 +78,35 @@ class TwitterDownloadThread(Thread):
                                  debugHTTP=False)
                     self._mentions_since_id = 0
                 except:
-                    getLogger().exception("Twitter: authentication with twitter failed: check settings")
+                    self.logger.exception("Twitter: authentication with twitter failed: check settings")
                     self._twitter_api = None
                     return False
                 try:
                     self._own_screen_name = self._twitter_api.VerifyCredentials().GetScreenName()
                 except:
-                    getLogger().exception("Twitter: was not able to find my screen_name")
+                    self.logger.exception("Twitter: was not able to find my screen_name")
                     self._twitter_api = None
                     return False                
                 try:
                     self._friends = [x.GetScreenName() for x in self._twitter_api.GetFriends()]
-                    getLogger().debug("Twitter: my Friends %s", self._friends)
+                    self.logger.debug("Twitter: my Friends %s", self._friends)
                 except:
-                    getLogger().exception("Twitter: was not able to fetch my friends")
+                    self.logger.exception("Twitter: was not able to fetch my friends")
                     
             else:
-                getLogger().error("Twitter: provide keys and secrets in settings")
+                self.logger.error("Twitter: provide keys and secrets in settings")
                 self._twitter_api = None
                 return False
             
     def post(self,message):
         if self._twitter_api == None:
-            getLogger().error("Twitter: cannot post - not authenticated")
+            self.logger.error("Twitter: cannot post - not authenticated")
             return False
         
         try:
             self._twitter_api.PostUpdate(message[0:140])
         except:
-            getLogger().exception("Twitter: was not able to post %s", message)
+            self.logger.exception("Twitter: was not able to post %s", message)
 
     def _get_pics_from_account(self,account_name):
         with self._lock:
@@ -114,7 +114,7 @@ class TwitterDownloadThread(Thread):
                 urls = []
                 tweets = self._twitter_api.GetUserTimeline(screen_name=account_name,since_id=self._since_ids[account_name])
                 if 0==len(tweets):
-                    getLogger().debug("Twitter: no new tweets from %s since %s", str(account_name), self._since_ids[account_name])
+                    self.logger.debug("Twitter: no new tweets from %s since %s", str(account_name), self._since_ids[account_name])
                     return
                 
                 self._since_ids[account_name] = tweets[0].GetId()
@@ -126,13 +126,13 @@ class TwitterDownloadThread(Thread):
                     item = tweets[0].AsDict()
                     urls = [(url,item['text']) for url in item['text'].split(" ") if url.startswith("http")]  
                      
-                getLogger().debug("Twitter: from %s extracted URLs: %s", str(account_name),str(urls))  
+                self.logger.debug("Twitter: from %s extracted URLs: %s", str(account_name),str(urls))  
                 if len(urls):
                 #for u in urls:
                     self.announce_pic(account_name, urls[0])
                     self._old_pic_urls[account_name]=urls[0]
             except twitter.TwitterError as t:
-                getLogger().error("Twitter: Error while trying to retrieve pics from %s: %s", account_name,str(t))
+                self.logger.error("Twitter: Error while trying to retrieve pics from %s: %s", account_name,str(t))
                 
     def _find_remote_calls(self):
         get_server().call("HELO_TWITTER_REMOTE %s"%self._own_screen_name)          
@@ -145,36 +145,36 @@ class TwitterDownloadThread(Thread):
                         self._mentions_since_id = ments[0].GetId()
                     else:
                         self._mentions_since_id = 1
-                    getLogger().debug("Twitter: Starting with mentions ID %s", self._mentions_since_id)            
+                    self.logger.debug("Twitter: Starting with mentions ID %s", self._mentions_since_id)            
                 
                 ments = self._twitter_api.GetMentions(since_id=self._mentions_since_id)
                 if 0==len(ments):
-                    getLogger().debug("Twitter: Nobody mentioned me since %s", self._mentions_since_id)
+                    self.logger.debug("Twitter: Nobody mentioned me since %s", self._mentions_since_id)
                     return
                 self._mentions_since_id = ments[0].GetId()
                 for m in ments:
-                    getLogger().debug("Twitter: I was mentioned: %s %s", m.GetUser(), m.GetText())
+                    self.logger.debug("Twitter: I was mentioned: %s %s", m.GetUser(), m.GetText())
                     s_name = m.GetUser().GetScreenName()
                     if s_name not in self._remote_callers:
-                        getLogger().debug("Twitter: I do not know him")
+                        self.logger.debug("Twitter: I do not know him")
                         self._twitter_api.PostUpdate(u"@"+s_name+u" Sorry, I do not know you", m.GetId())
                         continue
                     get_server().call("Remote call by @%s: %s"%(s_name,m.GetText()))
                     self._twitter_api.PostUpdate(u"@"+s_name+u" OK, I forwarded your message", m.GetId())
             except twitter.TwitterError as t:
-                getLogger().error("Twitter: Error while trying to retrieve mentions %s", str(t))   
+                self.logger.error("Twitter: Error while trying to retrieve mentions %s", str(t))   
         
                 
     def run(self):        
         while not self._stop_event.wait(self._polling_time):
             if None==self._twitter_api:
                 continue
-            getLogger().debug("Polling Twitter now")
+            self.logger.debug("Polling Twitter now")
             for account_name in self._screen_names:
                 try:
                     self._get_pics_from_account(account_name)
                 except:
-                    getLogger().exception("Twitter: Error while accessing twitter timeline of user %s",account_name)
+                    self.logger.exception("Twitter: Error while accessing twitter timeline of user %s",account_name)
             
             self._find_remote_calls()        
         
@@ -194,7 +194,7 @@ class twitter_lunch(iface_called_plugin):
     def activate(self):        
         iface_called_plugin.activate(self)
         
-        self.dthread = TwitterDownloadThread(self.stopEvent)
+        self.dthread = TwitterDownloadThread(self.stopEvent, self.logger)
         self.authenticate()
         self.set_twitter_pics()
         self.reset_timer()
@@ -202,7 +202,7 @@ class twitter_lunch(iface_called_plugin):
         self.dthread.start()
     
     def deactivate(self):
-        getLogger().info("Stopping Twitter Thread")
+        self.logger.info("Stopping Twitter Thread")
         self.stopEvent.set()
         #TODO: join thread
         iface_called_plugin.deactivate(self)
@@ -227,7 +227,7 @@ class twitter_lunch(iface_called_plugin):
         if cmd.startswith("HELO_REQUEST_PIC"):
             if cmd=="HELO_REQUEST_PIC_TWITTER":
                 self.dthread.add_screen_name(value)
-                getLogger().debug("Twitter: Now following these streams for pics: %s", str(self.dthread.get_screen_names()))
+                self.logger.debug("Twitter: Now following these streams for pics: %s", str(self.dthread.get_screen_names()))
                 self.set_option("twitter_pics",";;".join(self.dthread.get_screen_names()))
             if self.dthread.get_old_pic_urls().has_key(value):
                 self.dthread.announce_pic(value, self.dthread.get_old_pic_urls()[value])
@@ -237,7 +237,7 @@ class twitter_lunch(iface_called_plugin):
             
         elif cmd=="HELO_TWITTER_USER":
             self.dthread.add_remote_caller(value)
-            getLogger().debug("Twitter: Now accepting remote calls from: %s", str(self.dthread.get_remote_callers()))            
+            self.logger.debug("Twitter: Now accepting remote calls from: %s", str(self.dthread.get_remote_callers()))            
 
     def process_message(self,msg,addr,member_info):
         pass        

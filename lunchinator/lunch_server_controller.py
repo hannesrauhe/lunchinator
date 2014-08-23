@@ -3,13 +3,14 @@ import sys
 from lunchinator import get_server, get_settings, get_notification_center,\
     get_peers, get_plugin_manager, convert_string,\
     get_peer_actions
-from lunchinator.log import getLogger, logsDebug, loggingFunc
+from lunchinator.log import getCoreLogger, logsDebug, loggingFunc
 from lunchinator.datathread.dt_threading import DataReceiverThread, DataSenderThread
 from lunchinator.utilities import processPluginCall, getTimeDifference,\
     formatException
 from lunchinator.notification_center import NotificationCenter
 from time import localtime, strftime
 from lunchinator.peer_actions import PeerActions
+from lunchinator.lunch_peers import LunchPeers
 
 class LunchServerController(object):
     def __init__(self):
@@ -41,11 +42,11 @@ class LunchServerController(object):
             try:
                 self.plugin_manager.collectPlugins()
             except:
-                getLogger().exception("problem when loading plugins")
+                getCoreLogger().exception("problem when loading plugins")
             
             get_peer_actions().initialize()
         else:
-            getLogger().info("lunchinator initialised without plugins")
+            getCoreLogger().info("lunchinator initialised without plugins")
     
     def call(self, msg, peerIDs, peerIPs):
         get_server().perform_call(msg, peerIDs, peerIPs)
@@ -70,7 +71,7 @@ class LunchServerController(object):
                 try:
                     pluginInfo.plugin_object.extendInfoDict(infoDict)
                 except:
-                    getLogger().exception(u"plugin error in %s while extending member info" % pluginInfo.name)
+                    getCoreLogger().exception(u"plugin error in %s while extending member info" % pluginInfo.name)
     
     def getOpenTCPPort(self, senderIP):
         return DataReceiverThread.getOpenPort(category="avatar%s" % senderIP)
@@ -78,15 +79,15 @@ class LunchServerController(object):
     def receiveFile(self, ip, fileSize, fileName, tcp_port, successFunc=None, errorFunc=None):
         if tcp_port == 0:
             tcp_port = self.getOpenTCPPort()
-        getLogger().info("Receiving file of size %d on port %d", fileSize, tcp_port)
-        dr = DataReceiverThread.receiveSingleFile(ip, fileName, fileSize, tcp_port, successFunc, errorFunc)
+        getCoreLogger().info("Receiving file of size %d on port %d", fileSize, tcp_port)
+        dr = DataReceiverThread.receiveSingleFile(ip, fileName, fileSize, tcp_port, getCoreLogger(), None, successFunc, errorFunc)
         dr.start()
     
     def sendFile(self, ip, fileOrData, otherTCPPort, isData=False):
         if isData:
-            ds = DataSenderThread.sendData(ip, otherTCPPort, fileOrData)
+            ds = DataSenderThread.sendData(ip, otherTCPPort, fileOrData, getCoreLogger())
         else:
-            ds = DataSenderThread.sendSingleFile(ip, otherTCPPort, fileOrData)
+            ds = DataSenderThread.sendSingleFile(ip, otherTCPPort, fileOrData, getCoreLogger())
         ds.start()
     
     def processEvent(self, cmd, value, addr, _eventTime, newPeer, fromQueue):
@@ -102,17 +103,17 @@ class LunchServerController(object):
             peerID = get_peers().getPeerID(pIP=addr)
             if action is not None:
                 if peerID is None:
-                    getLogger().error(u"Could not get peer ID for IP %s", addr)
+                    getCoreLogger().error(u"Could not get peer ID for IP %s", addr)
                     return
                 
                 try:
                     msgData = action.preProcessMessageData(value)
                 except:
-                    getLogger().error("Error preprocessing data for peer action %s: %s", action.getName(), formatException())
+                    getCoreLogger().error("Error preprocessing data for peer action %s: %s", action.getName(), formatException())
                     return
                 
                 if action.willIgnorePeerAction(msgData):
-                    getLogger().debug("Ignore peer action %s.%s from peer %s (message: %s)",
+                    getCoreLogger().debug("Ignore peer action %s.%s from peer %s (message: %s)",
                               action.getPluginName(), action.getName(),
                               peerID, value)
                 
@@ -123,7 +124,7 @@ class LunchServerController(object):
                 
                 shouldProcess = PeerActions.get().shouldProcessMessage(action, category, peerID, self.getMainGUI(), msgData)
                 
-                getLogger().debug(u"%s peer action %s.%s from peer %s%s"
+                getCoreLogger().debug(u"%s peer action %s.%s from peer %s%s"
                                   "Accept" if shouldProcess else "Reject",
                                   action.getPluginName(), action.getName(),
                                   peerID, ("" if category is None else " category " + category))
@@ -156,10 +157,17 @@ class LunchServerController(object):
         t = strftime("%a, %d %b %Y %H:%M:%S", mtime).decode("utf-8")
         
         if not newPeer:
-            m = get_peers().getPeerInfo(pIP=addr)
-            getLogger().info("%s: [%s] %s", t, m[u"ID"], msg)
-            self._insertMessage(mtime, m[u"ID"], msg)
-            get_notification_center().emitMessagePrepended(mtime, m[u"ID"], msg)
+            with get_peers():
+                m = get_peers().getPeerInfo(pIP=addr, lock=False)
+                peerName = get_peers().getDisplayedPeerName(pIP=addr, lock=False)
+            if m is None:
+                getCoreLogger().error("Error processing message: info dict is None")
+            else:
+                if peerName is None:
+                    peerName = m.get(LunchPeers.PEER_NAME_KEY, "<unknown>")
+                getCoreLogger().info("%s: [%s (%s)] %s", t, peerName, m[LunchPeers.PEER_ID_KEY], msg)
+                self._insertMessage(mtime, m[LunchPeers.PEER_ID_KEY], msg)
+                get_notification_center().emitMessagePrepended(mtime, m[LunchPeers.PEER_ID_KEY], msg)
         else:
             m = {u"ID": addr}
         
@@ -169,7 +177,7 @@ class LunchServerController(object):
             if get_settings().get_lunch_trigger() in msg.lower():
                 processLunchCall = False
                 # check if we should process the lunch call
-                diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time())
+                diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time(), getCoreLogger())
                 if diff == None or 0 < diff:
                     # either the time format is invalid or we are within the alarm time
                     if eventTime - self.last_lunch_call > get_settings().get_mute_timeout() or \
@@ -183,7 +191,7 @@ class LunchServerController(object):
                     processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info), newPeer, fromQueue)
                 else:
                     if logsDebug():
-                        getLogger().debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)", t, m, msg, strftime("%H:%M:%S", localtime(eventTime + get_settings().get_mute_timeout())))
+                        getCoreLogger().debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)", t, m, msg, strftime("%H:%M:%S", localtime(eventTime + get_settings().get_mute_timeout())))
         
     def serverStopped(self, _exit_code):
         get_settings().write_config_to_hd()

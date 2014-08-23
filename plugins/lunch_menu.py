@@ -23,7 +23,7 @@ class lunch_menu(iface_gui_plugin):
         self._textview.setReadOnly(True)
         self._textview.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         
-        AsyncCall(getValidQtParent(), self._downloadText, self._updateText, self._errorDownloadingText)()
+        AsyncCall(getValidQtParent(), self.logger, self._downloadText, self._updateText, self._errorDownloadingText)()
         
         return self._textview
     

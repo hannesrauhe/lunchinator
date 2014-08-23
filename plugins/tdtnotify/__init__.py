@@ -1,5 +1,4 @@
 from lunchinator import get_server, get_settings, convert_string, get_peers
-from lunchinator.log import getLogger
 from lunchinator.logging_mutex import loggingMutex
 from lunchinator.plugin import iface_called_plugin
 
@@ -58,7 +57,7 @@ class tdtnotify(iface_called_plugin):
             timeout = 5
         else:
             # too many failed attempts
-            getLogger().error("TDTNotify: too many failed attempts, I stop trying")
+            self.logger.error("TDTNotify: too many failed attempts, I stop trying")
             return
             
         self.timer = Timer(timeout, self.check)
@@ -85,10 +84,10 @@ class tdtnotify(iface_called_plugin):
                 http_result = u.read()
             return True, http_result
         except urllib2.HTTPError as e:
-            getLogger().error("TDT: Error while downloading %s (%s)", self.url, e)
+            self.logger.error("TDT: Error while downloading %s (%s)", self.url, e)
             return False, None
         except:
-            getLogger().exception("TDT: Error while downloading %s", self.url)
+            self.logger.exception("TDT: Error while downloading %s", self.url)
             return False, None
         
     def parse_json(self, http_result):
@@ -100,7 +99,7 @@ class tdtnotify(iface_called_plugin):
         oldurl = self.pic_url
         self.pic_url = j['response']['posts'][0]['photos'][0]['original_size']['url']
         if oldurl != self.pic_url:
-            getLogger().info("TDT: New picture! Yeay!")
+            self.logger.info("TDT: New picture! Yeay!")
             get_server().call("HELO_TDTNOTIFY_NEW_PIC " + self.pic_url)
             with contextlib.closing(StringIO()) as strOut:
                 writer = csv.writer(strOut, delimiter=' ', quotechar='"')

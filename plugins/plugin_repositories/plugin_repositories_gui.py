@@ -15,9 +15,12 @@ class PluginRepositoriesGUI(QWidget):
     addRepository = pyqtSignal()
     checkForUpdates = pyqtSignal()
     
-    def __init__(self, parent):
+    def __init__(self, logger, parent):
         super(PluginRepositoriesGUI, self).__init__(parent)
        
+        self.logger = logger
+        self._gitHandler = GitHandler(logger)
+        
         layout = QVBoxLayout(self)
         
         self._reposTable = QTreeView(self) 
@@ -102,7 +105,7 @@ class PluginRepositoriesGUI(QWidget):
         autoUpdateItem = QStandardItem()
         autoUpdateItem.setEditable(False)
         if canAutoUpdate == None:
-            canAutoUpdate = GitHandler.hasGit(path)
+            canAutoUpdate = self._gitHandler.hasGit(path)
         if canAutoUpdate:
             autoUpdateItem.setCheckState(Qt.Checked if autoUpdate else Qt.Unchecked)
             autoUpdateItem.setCheckable(True)

@@ -2,15 +2,14 @@ from online_update.appupdate.app_update_handler import AppUpdateHandler
 from lunchinator.utilities import getGPG, getValidQtParent
 from lunchinator.download_thread import DownloadThread
 from lunchinator import get_settings
-from lunchinator.log import getLogger
 from lunchinator.log.logging_func import loggingFunc
 import os, contextlib, json
 
 class GPGUpdateHandler(AppUpdateHandler):
     """Base class for updaters that download GPG signed packages and install them."""
     
-    def __init__(self, urlBase):
-        AppUpdateHandler.__init__(self)
+    def __init__(self, logger, urlBase):
+        AppUpdateHandler.__init__(self, logger)
         self._urlBase = urlBase
         self._version_info = {}
         self._local_installer_file = None
@@ -38,7 +37,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             return
         
         url = self._getCheckURLBase() + "/latest_version.asc"
-        version_download = DownloadThread(getValidQtParent(), url)
+        version_download = DownloadThread(getValidQtParent(), self.logger, url)
         version_download.success.connect(self._versionInfoDownloaded)
         version_download.error.connect(self._errorDownloading)
         version_download.finished.connect(version_download.deleteLater)
@@ -49,7 +48,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             return self._prepareInstallation(self._local_installer_file, commands)
     
     def _has_gpg(self):
-        gpg, _key = getGPG()
+        gpg, _key = getGPG(self.logger)
         return gpg != None
     
     def _checkGPG(self):
@@ -72,12 +71,12 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._ui.setAppStatusToolTip(vstr)
             
     def _verifySignature(self, signedString):
-        gpg, _keyid = getGPG()
+        gpg, _keyid = getGPG(self.logger)
         if gpg == None:
             return None
         v = gpg.verify(str(signedString))
         if not v:
-            getLogger().error("Verification of Signature failed")
+            self.logger.error("Verification of Signature failed")
             return False
         
         return v
@@ -118,13 +117,13 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._setStatus("Version info not available", True)
             return
         
-        getLogger().debug("Update: Got version info, checking signature %s", signedString)
+        self.logger.debug("Update: Got version info, checking signature %s", signedString)
         
         ver_result = False
         try:
             ver_result = self._verifySignature(signedString)
         except:
-            getLogger().exception("Error verifying signature")
+            self.logger.exception("Error verifying signature")
             self._setStatus("Signature could not be verified because of unknown error", True)
             return
         
@@ -132,7 +131,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._setStatus("Signature could not be verified", True)
             return
                 
-        getLogger().debug("Updater: Signature OK, checking version info")
+        self.logger.debug("Updater: Signature OK, checking version info")
         
         for l in signedString.splitlines():
             info = l.split(":", 1)
@@ -141,7 +140,7 @@ class GPGUpdateHandler(AppUpdateHandler):
                 
         if not self._version_info.has_key("URL") or not self._version_info.has_key("Commit Count"):
             self._setStatus("Version Info corrupt - URL and/or Commit Count missing", True)
-            getLogger().debug(str(self._version_info))
+            self.logger.debug(str(self._version_info))
             return
         else:
             try:
@@ -160,7 +159,7 @@ class GPGUpdateHandler(AppUpdateHandler):
                 changeLog = json.loads(self._version_info[u"Change Log"])
                 self._setChangeLog(changeLog)
             except:
-                getLogger().exception("Error reading change log.")
+                self.logger.exception("Error reading change log.")
                 self._setChangeLog(["Error loading change log"])
         
         if self._hasNewVersion():
@@ -168,7 +167,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             if not self._checkHash():
                 self._setStatus("New Version %s available, Downloading ..." % (self._getDownloadedVersion()), progress=True)
                 
-                installer_download = DownloadThread(getValidQtParent(), self._installer_url, target=open(self._local_installer_file, "wb"), progress=True)
+                installer_download = DownloadThread(getValidQtParent(), self.logger, self._installer_url, target=open(self._local_installer_file, "wb"), progress=True)
                 installer_download.progressChanged.connect(self._downloadProgressChanged)
                 installer_download.success.connect(self._installerDownloaded)
                 installer_download.error.connect(self._errorDownloading)

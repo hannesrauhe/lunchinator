@@ -5,7 +5,6 @@ from PyQt4.QtCore import QVariant, QFileInfo, pyqtSignal, QThread, Qt, pyqtSlot
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, revealFile,\
     openFile, formatSize
 from lunchinator import get_settings, get_peers
-from lunchinator.log import getLogger
 from lunchinator.log.logging_slot import loggingSlot
 import os
 from functools import partial
@@ -16,9 +15,10 @@ class _TransferWidget(QFrame):
     cancelBeforeTransfer = pyqtSignal(int) # transfer ID
     retry = pyqtSignal(object, object, int) # filesOrData, peerID, transfer ID
     
-    def __init__(self, parent, filesOrData, name, targetDir, numFiles, totalSize, peerID, transferID, down):
+    def __init__(self, parent, logger, filesOrData, name, targetDir, numFiles, totalSize, peerID, transferID, down):
         super(_TransferWidget, self).__init__(parent)
         
+        self.logger = logger
         self._filesOrData = filesOrData
         self._targetDir = targetDir
         self._numFiles = numFiles
@@ -198,11 +198,11 @@ class _TransferWidget(QFrame):
     def _reveal(self):
         filePath = self.getFilePath()
         if filePath:
-            revealFile(filePath)
+            revealFile(filePath, self.logger)
         elif self._down:
-            openFile(self._targetDir)
+            openFile(self._targetDir, self.logger)
         elif self._currentFile and os.path.exists(self._currentFile):
-            revealFile(self._currentFile)
+            revealFile(self._currentFile, self.logger)
     
     def _buttonClicked(self):
         if self._transferring:
@@ -306,9 +306,10 @@ class FileTransferWidget(QWidget):
     retry = pyqtSignal(object, object, int) # filesOrData, peerID, transfer ID (forwarded from transfer widget)
     cancel = pyqtSignal(int) # transfer ID
     
-    def __init__(self, parent, delegate, asWindow=False):
+    def __init__(self, parent, logger, delegate, asWindow=False):
         super(FileTransferWidget, self).__init__(parent, Qt.Tool if asWindow else Qt.Widget)
         
+        self.logger = logger
         self._delegate = delegate
         self._asWindow = asWindow
         
@@ -396,13 +397,13 @@ class FileTransferWidget(QWidget):
         if widget.isFinished() and widget.isSuccessful():
             filePath = widget.getFilePath()
             if filePath:
-                openFile(widget.getFilePath())
+                openFile(widget.getFilePath(), self.logger)
     
     def _fillPeersPopup(self, menu):
         menu.clear()
         
         if get_peers() is None:
-            getLogger().warning("no lunch_peers instance available, cannot show peer actions")
+            self.logger.warning("no lunch_peers instance available, cannot show peer actions")
             return
         
         with get_peers():
@@ -414,7 +415,7 @@ class FileTransferWidget(QWidget):
     def _sendFile(self, peerID):
         peerInfo = get_peers().getPeerInfo(pID=peerID)
         if peerInfo is None:
-            getLogger().error("cannot send file to offline peer")
+            self.logger.error("cannot send file to offline peer")
             return
         self._delegate.getSendFileAction().performAction(peerID, peerInfo, self)
         
@@ -429,7 +430,7 @@ class FileTransferWidget(QWidget):
         item.setData(0, self._IS_OUTGOING, QVariant(not down))
         
         self._transferList.addTopLevelItem(item)
-        widget = _TransferWidget(self._transferList, filesOrData, name, targetDir, numFiles, fileSize, peerID, transferID, down)
+        widget = _TransferWidget(self._transferList, self.logger, filesOrData, name, targetDir, numFiles, fileSize, peerID, transferID, down)
         widget.retry.connect(self._retry)
         self._transferList.setItemWidget(item, 0, widget)
         

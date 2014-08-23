@@ -7,10 +7,11 @@ class TableModelBase(QStandardItemModel):
     KEY_ROLE = Qt.UserRole + 1
     SORT_ROLE = Qt.UserRole + 2
     
-    def __init__(self, dataSource, columns):
+    def __init__(self, dataSource, columns, logger):
         super(TableModelBase, self).__init__()
         self.dataSource = dataSource
         self.columns = columns
+        self.logger = logger
         if self.columns != None:
             self.setColumnCount(len(self.columns))
             stringList = QStringList()

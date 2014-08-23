@@ -5,7 +5,7 @@ import socket, sys, os, json, contextlib, tarfile, platform, random
 from time import strftime, localtime, time
 from cStringIO import StringIO
 
-from lunchinator.log import getLogger
+from lunchinator.log import getCoreLogger
 from lunchinator.lunch_socket import lunchSocket, splitCall
 from lunchinator import get_settings, convert_string, get_notification_center
 from lunchinator.logging_mutex import loggingMutex
@@ -143,7 +143,7 @@ class lunch_server(object):
 
     '''listening method - should be started in its own thread'''    
     def start_server(self):
-        getLogger().info("%s - Starting the lunch notifier service", strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"))
+        getCoreLogger().info("%s - Starting the lunch notifier service", strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"))
         
         self.my_master = -1  # the peer i use as master
         
@@ -168,13 +168,13 @@ class lunch_server(object):
                     try:
                         data = data.decode('utf-8')
                     except:
-                        getLogger().error("Received illegal data from %s, maybe wrong encoding", ip)
+                        getCoreLogger().error("Received illegal data from %s, maybe wrong encoding", ip)
                         continue         
                      
                     # check for local address: only stop command allowed, else ignore
                     if ip.startswith("127."):
                         if data.startswith("HELO_STOP"):
-                            getLogger().info("Got Stop Command from localhost: %s", data)
+                            getCoreLogger().info("Got Stop Command from localhost: %s", data)
                             self.running = False
                             self.exitCode = EXIT_CODE_STOP
                         continue
@@ -190,17 +190,17 @@ class lunch_server(object):
                     
                     self._handle_event(data, ip, time(), isNewPeer, False)
                 except splitCall as e:
-                    getLogger().debug(e.value)
+                    getCoreLogger().debug(e.value)
                 except socket.timeout:                    
                     if len(self._peers) > 1:                     
                         if is_in_broadcast_mode:
                             is_in_broadcast_mode = False
-                            getLogger().warning("ending broadcast")       
+                            getCoreLogger().warning("ending broadcast")       
                     else:
                         if not self._disable_broadcast:
                             if not is_in_broadcast_mode:
                                 is_in_broadcast_mode = True
-                                getLogger().warning("seems like you are alone - broadcasting for others")
+                                getCoreLogger().warning("seems like you are alone - broadcasting for others")
                             s_broad = lunchSocket(self._peers)
                             s_broad.broadcast('HELO_REQUEST_INFO ' + self._build_info_string())
                             s_broad.close()
@@ -210,11 +210,11 @@ class lunch_server(object):
                             
         except socket.error as e:
             # socket error messages may contain special characters, which leads to crashes on old python versions
-            getLogger().error(u"stopping lunchinator because of socket error: %s", convert_string(str(e)))
+            getCoreLogger().error(u"stopping lunchinator because of socket error: %s", convert_string(str(e)))
         except KeyboardInterrupt:
-            getLogger().info("Received keyboard interrupt, stopping.")
+            getCoreLogger().info("Received keyboard interrupt, stopping.")
         except:
-            getLogger().exception("stopping - Critical error: %s", str(sys.exc_info())) 
+            getCoreLogger().exception("stopping - Critical error: %s", str(sys.exc_info())) 
         finally: 
             self.running = False
             try:
@@ -226,7 +226,7 @@ class lunch_server(object):
                 self._recv_socket.close()
                 self._recv_socket = None 
             except:
-                getLogger().warning("Wasn't able to send the leave call and close the socket...")
+                getCoreLogger().warning("Wasn't able to send the leave call and close the socket...")
             self._finish()
             
     def stop_server(self, stop_any=False):
@@ -239,7 +239,7 @@ class lunch_server(object):
             # Just in case the call does not reach the socket:
             self.running = False
         else:
-            getLogger().warning("There is no running server to stop")
+            getCoreLogger().warning("There is no running server to stop")
 
     def perform_call(self, msg, peerIDs, peerIPs):
         """Only the controller should invoke this method -> Called from main thread
@@ -258,10 +258,10 @@ class lunch_server(object):
                 if len(pIPs):
                     target = target.union(pIPs)
                 else:
-                    getLogger().warning("While calling: I do not know a peer with ID %s, ignoring ", pID)
+                    getCoreLogger().warning("While calling: I do not know a peer with ID %s, ignoring ", pID)
     
         if 0 == len(target):            
-            getLogger().error("Cannot send message (%s), there is no peer given or none found", msg)
+            getCoreLogger().error("Cannot send message (%s), there is no peer given or none found", msg)
             
         if self.has_gui() and \
            get_settings().get_warn_if_members_not_ready() and \
@@ -298,11 +298,11 @@ class lunch_server(object):
             for ip in target:
                 try:
                     short = msg if len(msg)<15 else msg[:14]+"..."
-                    getLogger().debug("Sending %s to %s", short, ip.strip())
+                    getCoreLogger().debug("Sending %s to %s", short, ip.strip())
                     s.sendto(msg.encode('utf-8'), ip.strip())
                     i += 1
                 except Exception as e:
-                    getLogger().exception("The following message could not be delivered to %s: %s\n%s", ip, str(sys.exc_info()[0]), msg)
+                    getCoreLogger().exception("The following message could not be delivered to %s: %s\n%s", ip, str(sys.exc_info()[0]), msg)
         finally:
             s.close() 
         return i
@@ -319,7 +319,7 @@ class lunch_server(object):
         with self._cleanupLock:
             if not self.running:
                 return
-            getLogger().debug("clean up thread runs")
+            getCoreLogger().debug("clean up thread runs")
             try:
                 # it's time to announce my name again and switch the master
                 self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getPeerIPs())
@@ -331,7 +331,7 @@ class lunch_server(object):
                 self._cleanup_cached_messages()
                 self._recv_socket.drop_incomplete_messages()
             except:
-                getLogger().exception("Something went wrong in the lunch interval thread")
+                getCoreLogger().exception("Something went wrong in the lunch interval thread")
             self._startCleanupTimer()
     
     def _build_info_string(self):
@@ -354,7 +354,7 @@ class lunch_server(object):
             elif getPlatform() == PLATFORM_MAC:
                 info_d[u"os"] = u" ".join(aString if type(aString) in (str, unicode) else "[%s]" % " ".join(aString) for aString in platform.mac_ver())
         except:
-            getLogger().exception("Error generating OS version string")
+            getCoreLogger().exception("Error generating OS version string")
             
         if get_settings().get_next_lunch_begin():
             info_d[u"next_lunch_begin"] = get_settings().get_next_lunch_begin()
@@ -364,7 +364,7 @@ class lunch_server(object):
         return json.dumps(info_d)      
     
     def _enqueue_event(self, data, ip, eventTime):
-        getLogger().debug("Peer of IP %s is unknown, enqueuing message", ip)
+        getCoreLogger().debug("Peer of IP %s is unknown, enqueuing message", ip)
         
         with self.message_queues_lock:
             if ip in self._message_queues:
@@ -379,7 +379,7 @@ class lunch_server(object):
         with self.message_queues_lock:
             if ip in self._message_queues:
                 if len(self._message_queues[ip][1]) > 0:
-                    getLogger().debug("Processing enqueued messages of IP %s", ip)
+                    getCoreLogger().debug("Processing enqueued messages of IP %s", ip)
                 for eventTime, data in self._message_queues[ip][1]:
                     self._handle_event(data, ip, eventTime, newPeer=False, fromQueue=True)
                 del self._message_queues[ip]
@@ -388,7 +388,7 @@ class lunch_server(object):
         with self.message_queues_lock:
             for ip in set(self._message_queues.keys()):
                 if time() - self._message_queues[ip][0] > get_settings().get_peer_timeout():
-                    getLogger().debug("Removing queued messages from IP %s", ip)
+                    getCoreLogger().debug("Removing queued messages from IP %s", ip)
                     del self._message_queues[ip]
     
     def _should_call_info_on_event(self, data):
@@ -434,15 +434,15 @@ class lunch_server(object):
                 peerID = self._peers.getPeerID(pIP=ip)
                 if self._peers.isMember(pID=peerID):
                     if self._is_message_duplicate(peerID, ip, data):
-                        getLogger().debug("Dropping duplicate message from peer %s", peerID)
+                        getCoreLogger().debug("Dropping duplicate message from peer %s", peerID)
                         return
                     try:
                         self.getController().processMessage(data, ip, eventTime, newPeer, fromQueue)
                         self._cache_message(peerID, ip, data, eventTime)
                     except:
-                        getLogger().exception("Error while handling incoming message from %s: %s", ip, data)
+                        getCoreLogger().exception("Error while handling incoming message from %s: %s", ip, data)
                 else:
-                    getLogger().debug("Dropped a message from %s: %s", ip, data)
+                    getCoreLogger().debug("Dropped a message from %s: %s", ip, data)
             return
         
         cmd = u""
@@ -451,7 +451,7 @@ class lunch_server(object):
             # commands must always have additional info:
             (cmd, value) = data.split(" ", 1)
         except:
-            getLogger().error("Command of %s has no payload: %s", ip, data)
+            getCoreLogger().error("Command of %s has no payload: %s", ip, data)
         
         # if this packet has info about the peer, we record it and
         # are done. These events are always processed immediately and
@@ -469,8 +469,8 @@ class lunch_server(object):
             # now it's the plugins' turn:
             self.controller.processEvent(cmd, value, ip, eventTime, newPeer, fromQueue)
         except:
-            getLogger().exception("Unexpected error while handling event from group member %s call: %s", ip, str(sys.exc_info()))
-            getLogger().critical("The data received was: %s", data)
+            getCoreLogger().exception("Unexpected error while handling event from group member %s call: %s", ip, str(sys.exc_info()))
+            getCoreLogger().critical("The data received was: %s", data)
     
     def _updateInfoDict(self, ip, value):
         self._peers.updatePeerInfoByIP(ip, json.loads(value))
@@ -548,11 +548,11 @@ class lunch_server(object):
             if u"avatar" in info:
                 file_name = os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])
             else:
-                getLogger().error("%s tried to send his avatar, but I don't know where to safe it", ip)
+                getCoreLogger().error("%s tried to send his avatar, but I don't know where to safe it", ip)
             
             if len(file_name):
                 pID = self._peers.getPeerID(pIP=ip)
-                getLogger().info("Receiving avatar from peer with ID %s, IP %s", pID, ip)
+                getCoreLogger().info("Receiving avatar from peer with ID %s, IP %s", pID, ip)
                 self.controller.receiveFile(ip,
                                             file_size,
                                             file_name,
@@ -568,18 +568,18 @@ class lunch_server(object):
             try:                    
                 other_tcp_port = int(value.strip())
             except:
-                getLogger().exception("%s requested avatar, I could not parse the port from value %s, using standard %d", str(ip), str(value), other_tcp_port)
+                getCoreLogger().exception("%s requested avatar, I could not parse the port from value %s, using standard %d", str(ip), str(value), other_tcp_port)
                 
             fileToSend = os.path.join(get_settings().get_avatar_dir(), get_settings().get_avatar_file())
             if os.path.exists(fileToSend):
                 fileSize = os.path.getsize(fileToSend)
-                getLogger().info("Sending file of size %d to %s : %d", fileSize, str(ip), other_tcp_port)
+                getCoreLogger().info("Sending file of size %d to %s : %d", fileSize, str(ip), other_tcp_port)
                 self.call("HELO_AVATAR %s" % fileSize, peerIPs = [ip])
                 # TODO in a future release, send TCP port
                 # self.call("HELO_AVATAR %s %s" % (fileSize, other_tcp_port), ip)
                 self.controller.sendFile(ip, fileToSend, other_tcp_port)
             else:
-                getLogger().error("Want to send file %s, but cannot find it", fileToSend)   
+                getCoreLogger().error("Want to send file %s, but cannot find it", fileToSend)   
             
         elif cmd == "HELO_REQUEST_LOGFILE":
             # someone wants my logfile 
@@ -588,7 +588,7 @@ class lunch_server(object):
                 (oport, _) = value.split(" ", 1)    
                 other_tcp_port = int(oport.strip())
             except:
-                getLogger().exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0", str(ip), str(value), other_tcp_port)
+                getCoreLogger().exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0", str(ip), str(value), other_tcp_port)
             
             fileToSend = StringIO()
             with contextlib.closing(tarfile.open(mode='w:gz', fileobj=fileToSend)) as tarWriter:
@@ -600,12 +600,12 @@ class lunch_server(object):
                     logIndex = logIndex + 1
             
             fileSize = fileToSend.tell()
-            getLogger().info("Sending file of size %d to %s : %d", fileSize, str(ip), other_tcp_port)
+            getCoreLogger().info("Sending file of size %d to %s : %d", fileSize, str(ip), other_tcp_port)
             self.call("HELO_LOGFILE_TGZ %d %d" % (fileSize, other_tcp_port), peerIPs=[ip])
             self.controller.sendFile(ip, fileToSend.getvalue(), other_tcp_port, True)      
             
     def _finish(self):
-        getLogger().info("%s - Stopping the lunch notifier service", strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"))
+        getCoreLogger().info("%s - Stopping the lunch notifier service", strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"))
         self._peers.finish()
         if self._messages:
             self._messages.finish()

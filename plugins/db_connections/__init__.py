@@ -1,8 +1,22 @@
 from lunchinator.plugin import iface_general_plugin
 from lunchinator import get_plugin_manager, get_settings, get_notification_center
-from lunchinator.log import getLogger
 from lunchinator.logging_mutex import loggingMutex
 import logging
+from functools import wraps
+from types import MethodType
+
+class _LoggerWrapper(object):
+    def __init__(self, obj, logger):
+        self._obj = obj
+        self._logger = logger
+    
+    def __getattr__(self, name):
+        inner = getattr(self._obj, name)
+        if not isinstance(inner, MethodType):
+            return inner
+        def loggingFunc(*args, **kwargs):
+            return inner(self._logger, *args, **kwargs)
+        return loggingFunc
 
 class db_connections(iface_general_plugin):
     STANDARD_PLUGIN = "SQLite Connection"
@@ -41,7 +55,7 @@ class db_connections(iface_general_plugin):
                     if p != None and p.plugin_object.is_activated:
                         self.conn_plugins[conn_name] = p.plugin_object
                     else:
-                        getLogger().error("DB Connection %s requires plugin of type \
+                        self.logger.error("DB Connection %s requires plugin of type \
                         %s which is not available", conn_name, plugin_type)
                         continue
                     p_options = p.plugin_object.options
@@ -73,12 +87,12 @@ class db_connections(iface_general_plugin):
     def deactivate(self):
         for name,conn in self.open_connections.iteritems():
             try:
-                conn.close()
+                conn.close(self.logger)
             except:
-                getLogger().exception("While deactivating: Could not close connection %s", name)   
+                self.logger.exception("While deactivating: Could not close connection %s", name)   
         iface_general_plugin.deactivate(self)
     
-    def getDBConnection(self,name=""):        
+    def getDBConnection(self, logger, name=""):        
         """returns tuple (connection_handle, connection_type) of the given connection"""
         if len(name)==0:
             name = get_settings().get_default_db_connection()
@@ -88,10 +102,10 @@ class db_connections(iface_general_plugin):
         
         ob, props = self.getProperties(name)
         if name not in self.open_connections:
-            getLogger().debug("DB Connections: opening connection %s of type %s", name, props["plugin_type"])
+            self.logger.debug("DB Connections: opening connection %s of type %s", name, props["plugin_type"])
             self.open_connections[name] = ob.create_connection(props)
         
-        return self.open_connections[name], props["plugin_type"]
+        return _LoggerWrapper(self.open_connections[name], logger), props["plugin_type"]
     
     def has_options_widget(self):
         return True
@@ -117,16 +131,16 @@ class db_connections(iface_general_plugin):
         for conn_name, props in new_props.iteritems():
             section_name = "DB Connection: "+str(conn_name)
             if conn_name not in self.conn_properties:
-                getLogger().debug("DB Connection: new connection %s", conn_name)
+                self.logger.debug("DB Connection: new connection %s", conn_name)
                 if self.config_file.has_section(section_name):
-                    getLogger().warning("DB Connection: a section with the name %s already \
+                    self.logger.warning("DB Connection: a section with the name %s already \
                     exists although it is supposed to be a new connection, maybe a bug...", conn_name)
                 else:
                     self.config_file.add_section(section_name)
                 self.conn_properties[conn_name] = {"plugin_type": props["plugin_type"]}
             
             if props != self.conn_properties[conn_name]:
-                getLogger().debug("DB Connection: updated properties for %s", conn_name)
+                self.logger.debug("DB Connection: updated properties for %s", conn_name)
                 
                 if not self.config_file.has_section(section_name):
                     self.config_file.add_section(section_name)

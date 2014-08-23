@@ -75,21 +75,22 @@ class ErrorLogDialog(QDialog):
                     self.raise_()
                     self.activateWindow()
         except:
-            getLogger().info(formatException())
+            from lunchinator.log import getCoreLogger
+            getCoreLogger().info(formatException())
             
 if __name__ == '__main__':
     from PyQt4.QtGui import QApplication
     import sys
-    from lunchinator.log import getLogger, initializeLogger
+    from lunchinator.log import initializeLogger, getCoreLogger
 
     initializeLogger()
     app = QApplication(sys.argv)
     window = ErrorLogDialog(None)
-    getLogger().error(u"Foo error")
+    getCoreLogger().error(u"Foo error")
     try:
         raise ValueError("foo")
     except:
-        getLogger().exception("An exception occurred")
+        getCoreLogger().exception("An exception occurred")
     
     app.exec_()
 

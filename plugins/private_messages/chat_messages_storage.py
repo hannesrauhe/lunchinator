@@ -1,5 +1,4 @@
 from lunchinator import get_db_connection
-from lunchinator.log import getLogger
 from private_messages.chat_messages_model import ChatMessagesModel
 
 class InconsistentIDError(Exception):
@@ -56,15 +55,16 @@ class ChatMessagesStorage(object):
         )
     """
     
-    def __init__(self):
-        self._db, plugin_type = get_db_connection()
+    def __init__(self, logger):
+        self.logger = logger
+        self._db, plugin_type = get_db_connection(self.logger)
         
         if self._db == None:
-            getLogger().error("Unable to get database connection.")
+            self.logger.error("Unable to get database connection.")
             return
         
         if plugin_type != "SQLite Connection":
-            getLogger().warning("Your standard connection is not of type SQLite. " + \
+            self.logger.warning("Your standard connection is not of type SQLite. " + \
                 "Using Private Messages with another type is experimental.")
         
         if not self._db.existsTable("PRIVATE_MESSAGES_VERSION"):
