@@ -308,7 +308,9 @@ class MembersWidget(QWidget):
         self.request_log()
             
     def listLogFilesForMember(self, member):
-        logDir = "%s/logs/%s" % (get_settings().get_main_config_dir(), member)
+        if member is None:
+            return []
+        logDir = os.path.join(get_settings().get_main_config_dir(), "logs", member)
         if not os.path.exists(logDir):
             return []
         return self.listLogfiles(logDir)
