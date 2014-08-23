@@ -81,11 +81,13 @@ class _lunchinatorLogger(object):
     def newLogger(cls, name):
         name = u"lunchinator." + name
         logger = logging.getLogger(name)
-        logger.setLevel(cls._globalLevel)
-        logger.addHandler(cls.streamHandler)
-        if cls.logfileHandler:
-            logger.addHandler(cls.logfileHandler)
-        logger.addHandler(cls.notificationHandler)
+        if len(logger.handlers) is 0:
+            # not yet initialized
+            logger.setLevel(cls._globalLevel)
+            logger.addHandler(cls.streamHandler)
+            if cls.logfileHandler:
+                logger.addHandler(cls.logfileHandler)
+            logger.addHandler(cls.notificationHandler)
         
         cls._loggers[name] = logger
         return logger
