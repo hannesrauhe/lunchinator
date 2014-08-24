@@ -2,7 +2,6 @@
 from lunchinator.log import getCoreLogger, initializeLogger
 from PyQt4.QtCore import QObject, pyqtSignal, Qt, pyqtSlot
 from lunchinator.log.logging_slot import loggingSlot
-from functools import partial
 from lunchinator.log.lunch_logger import newLogger
 from lunchinator.log.logging_func import loggingFunc
 
@@ -50,3 +49,34 @@ sig = SignalTest()
 sig.s.connect(sig.testFunc, type=Qt.DirectConnection)
 #sig.s.connect(partial(sig.testSlotArg, 42))
 sig.emitSignal()
+
+
+from PyQt4.QtCore import QThread
+from PyQt4.QtGui import QApplication
+from functools import partial
+import threading
+class FooClass(QObject):
+    fooS = pyqtSignal(unicode)
+    @loggingSlot(unicode)
+    def foo(self, i, s):
+        for _ in range(3):
+            QThread.sleep(1)
+            print i, str(s.toUtf8()).encode('utf-8').strip(), threading.currentThread().ident
+import sys
+app = QApplication(sys.argv)
+
+thread = QThread()
+scanner = FooClass()
+scanner.moveToThread(thread)
+thread.start()
+
+scanner.fooS.connect(partial(scanner.foo, 1))
+
+print "enter text and check if it  appears immediately after you Enter:"
+
+while True:
+    line = sys.stdin.readline()
+    print "you entered", line, threading.currentThread().ident
+    scanner.fooS.emit(line)
+
+sys.exit(0)

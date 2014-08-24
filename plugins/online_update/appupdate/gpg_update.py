@@ -113,7 +113,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             return self._version_info[u"Version String"] if u"Version String" in self._version_info else self._version_info["Commit Count"]
         
     @loggingFunc
-    def _versionInfoDownloaded(self, thread):
+    def _versionInfoDownloaded(self, thread, _url):
         try:
             signedString = thread.getResult()
         except:
@@ -180,7 +180,7 @@ class GPGUpdateHandler(AppUpdateHandler):
             self._setStatus("No new version available")
             
     @loggingFunc
-    def _installerDownloaded(self, thread):
+    def _installerDownloaded(self, thread, _url):
         try:
             # close the file object that keeps the downloaded data
             thread.getResult().close()
@@ -190,8 +190,8 @@ class GPGUpdateHandler(AppUpdateHandler):
         self._checkHash()
     
     @loggingFunc
-    def _errorDownloading(self):
-        self._setStatus("Download failed", True)
+    def _errorDownloading(self, _th, err):
+        self._setStatus("Download failed: " + err, True)
         
     def _hasNewVersion(self):
         return self._version_info and \
