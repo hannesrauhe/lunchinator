@@ -2,9 +2,8 @@ from lunchinator.plugin import iface_gui_plugin
 from lunchinator.utilities import canUseBackgroundQThreads, getValidQtParent,\
     formatSize
 from lunchinator.peer_actions import PeerAction
-import os, json
-from PyQt4.Qt import QFileDialog
 from lunchinator import convert_string
+import os, json
 
 class _TransferFileAction(PeerAction):
     def getName(self):
@@ -142,6 +141,7 @@ class file_transfer(iface_gui_plugin):
         return self._sendFileAction
             
     def chooseAndSendFilesToPeer(self, peerID, parent):
+        from PyQt4.Qt import QFileDialog
         selectedFiles = QFileDialog.getOpenFileNames(parent, u"Chooses files to upload")
         if len(selectedFiles) > 0:
             self._handler.sendFilesToPeer([convert_string(f) for f in selectedFiles], peerID)

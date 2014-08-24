@@ -5,7 +5,6 @@ from lunchinator.utilities import canUseBackgroundQThreads
 from StringIO import StringIO
 from lunchinator.peer_actions import PeerAction
 from lunchinator.privacy import PrivacySettings
-from remote_pictures.remote_pictures_dialog import RemotePicturesDialog
 import contextlib, csv
     
 class _RemotePictureAction(PeerAction):
@@ -207,6 +206,7 @@ class remote_pictures(iface_gui_plugin):
         return self._handler.willIgnorePeerAction(category, url)
     
     def sendRemotePicture(self, peerID, peerInfo, parent):
+        from remote_pictures.remote_pictures_dialog import RemotePicturesDialog
         dialog = RemotePicturesDialog(parent, peerID, peerInfo)
         result = dialog.exec_()
         if result == RemotePicturesDialog.Accepted:
