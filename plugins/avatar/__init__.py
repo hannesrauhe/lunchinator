@@ -1,5 +1,4 @@
 from lunchinator.plugin import iface_general_plugin
-from avatar.l_avatar import l_avatar
 import mimetypes
 from lunchinator import get_server, get_settings, convert_string
 from lunchinator.log import loggingFunc
@@ -24,6 +23,7 @@ class avatar(iface_general_plugin):
     def _setImage(self, selectedFile, label):
         from PyQt4.QtGui import QImage, QPixmap
         from PyQt4.QtCore import Qt
+        from avatar.l_avatar import l_avatar
         qimg = QImage(selectedFile)
         pixmap = QPixmap.fromImage(qimg).scaled(l_avatar.width,l_avatar.height,Qt.KeepAspectRatio,Qt.SmoothTransformation)
         label.setPixmap(pixmap)
@@ -103,6 +103,7 @@ class avatar(iface_general_plugin):
         return widget
 
     def save_options_widget_data(self, **_kwargs):
+        from avatar.l_avatar import l_avatar
         if self.selectedFile != None:
             l = l_avatar(self.logger)
             l.use_as_avatar(self.selectedFile)

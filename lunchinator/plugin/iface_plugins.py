@@ -605,6 +605,7 @@ class iface_gui_plugin(iface_plugin):
         sys.exit(app.exec_())
         
     def run_in_window(self, callAfterCreate=None):
+        self.setPluginName(u"GUI Test")
         _window, app = iface_gui_plugin.prepare_application(self.activate, lambda window : self.create_widget(window))
         if callAfterCreate:
             callAfterCreate()

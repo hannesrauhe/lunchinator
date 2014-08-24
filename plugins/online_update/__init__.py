@@ -1,11 +1,3 @@
-from online_update.online_update_gui import OnlineUpdateGUI
-from online_update.appupdate.git_update import GitUpdateHandler
-from online_update.appupdate.mac_update import MacUpdateHandler
-from online_update.appupdate.external_update import ExternalUpdateHandler
-from online_update.appupdate.win_update import WinUpdateHandler
-from online_update.appupdate.app_update_handler import AppUpdateHandler
-from online_update.repoupdate.repo_update_handler import RepoUpdateHandler
-
 from lunchinator import get_server, get_notification_center
 from lunchinator.plugin import iface_general_plugin
 from lunchinator.utilities import getValidQtParent, restartWithCommands
@@ -20,10 +12,25 @@ class online_update(iface_general_plugin):
         self.hidden_options = {"check_url": "http://update.lunchinator.de"}
         self._scheduleTimer = None
         self.force_activation = True
+        self._appUpdateHandler = None
+        self._repoUpdateHandler = None
     
     def activate(self):
-        from PyQt4.QtCore import QTimer
         iface_general_plugin.activate(self)
+        
+        try:
+            from PyQt4.QtCore import QTimer
+            from online_update.appupdate.git_update import GitUpdateHandler
+            from online_update.appupdate.mac_update import MacUpdateHandler
+            from online_update.appupdate.external_update import ExternalUpdateHandler
+            from online_update.appupdate.win_update import WinUpdateHandler
+            from online_update.appupdate.app_update_handler import AppUpdateHandler
+            from online_update.repoupdate.repo_update_handler import RepoUpdateHandler
+            self._activated = True
+        except ImportError:
+            self._activated = False
+            self.logger.warning("ImportError, cannot activate Auto Update")
+            return
         
         if GitUpdateHandler.appliesToConfiguration(self.logger):
             self._appUpdateHandler = GitUpdateHandler(self.logger)
@@ -50,22 +57,26 @@ class online_update(iface_general_plugin):
             self._scheduleTimer.start(online_update.CHECK_INTERVAL)
         
     def deactivate(self):
-        if self._scheduleTimer != None:
-            self._scheduleTimer.stop()
-            self._scheduleTimer.deleteLater()
+        if self._activated:
+            if self._scheduleTimer is not None:
+                self._scheduleTimer.stop()
+                self._scheduleTimer.deleteLater()
+                
+            get_notification_center().emitUpdatesDisabled()
+            get_notification_center().disconnectInstallUpdates(self.installUpdates)
+            get_notification_center().disconnectRepositoriesChanged(self._repoUpdateHandler.checkForUpdates)
             
-        get_notification_center().emitUpdatesDisabled()
-        get_notification_center().disconnectInstallUpdates(self.installUpdates)
-        get_notification_center().disconnectRepositoriesChanged(self._repoUpdateHandler.checkForUpdates)
-        
-        self._appUpdateHandler.deactivate()
-        self._repoUpdateHandler.deactivate()
+            if self._appUpdateHandler is not None:
+                self._appUpdateHandler.deactivate()
+            if self._repoUpdateHandler is not None:
+                self._repoUpdateHandler.deactivate()
         iface_general_plugin.deactivate(self)
     
     def has_options_widget(self):
         return True
     
     def create_options_widget(self, parent):
+        from online_update.online_update_gui import OnlineUpdateGUI
         self._ui = OnlineUpdateGUI(self._appUpdateHandler.getInstalledVersion(), parent)
         self._ui.setCanCheckForAppUpdate(self._appUpdateHandler.canCheckForUpdate())
         self._ui.installUpdates.connect(self.installUpdates)

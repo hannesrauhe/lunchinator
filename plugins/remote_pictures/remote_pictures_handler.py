@@ -153,7 +153,7 @@ class RemotePicturesHandler(QObject):
         
     def storeLocallyChanged(self, newValue):
         self._storeLocallyChanged.emit(newValue)
-    @loggingSlot(int)
+    @loggingSlot(bool)
     def _storeLocallyChangedSlot(self, newValue):
         self._storeLocally = newValue
 

@@ -83,9 +83,9 @@ if __name__ == '__main__':
     if lunchinatorPath:
         sys.path.insert(0, lunchinatorPath)
     
-    from lunchinator import get_settings
+    from lunchinator import MAIN_CONFIG_DIR
     from lunchinator.log import initializeLogger, getCoreLogger
-    initializeLogger(get_settings().get_config("update.log"))
+    initializeLogger(os.path.join(MAIN_CONFIG_DIR, "update.log"))
     
     try:
         from lunchinator.commands import Commands

@@ -47,7 +47,7 @@ class ConsoleWidget(QWidget):
         
         console.setModel(self._logModel)
         console.header().setStretchLastSection(False)
-        console.header().setResizeMode(2, QHeaderView.Stretch)
+        console.header().setResizeMode(3, QHeaderView.Stretch)
         console.selectionModel().selectionChanged.connect(self._selectionChanged)
         split.addWidget(console)
         
@@ -89,8 +89,8 @@ class ConsoleWidget(QWidget):
         
     def _initModel(self):
         self._logModel = QStandardItemModel(self)
-        self._logModel.setColumnCount(4)
-        self._logModel.setHorizontalHeaderLabels([u"Time", u"Level", u"Message", u"Source"])
+        self._logModel.setColumnCount(5)
+        self._logModel.setHorizontalHeaderLabels([u"Time", u"Level", u"Component", u"Message", u"Source"])
         for record in getCachedLogRecords():
             self._addLogMessage(record)
     
@@ -118,9 +118,13 @@ class ConsoleWidget(QWidget):
         dirname = os.path.dirname(record.pathname)
         source = u"%s:%d" % (os.path.join(os.path.basename(dirname), os.path.basename(record.pathname)), record.lineno)
         fullsource = u"%s:%d" % (record.pathname, record.lineno)
+        component = record.name
+        if component.startswith("lunchinator."):
+            component = component[12:]
         error = 1 if record.levelno == logging.WARNING else 2 if record.levelno == logging.ERROR else 0
         self._logModel.appendRow([self._createItem(strftime("%H:%M:%S", localtime(record.created)), error),
                                   self._createItem(record.levelname, error),
+                                  self._createItem(component, error),
                                   self._createItem(msg, error),
                                   self._createItem(source, error, fullsource)])
     

@@ -169,7 +169,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.statusicon.show()
         return True
         
-    @loggingSlot(int)
+    @loggingSlot(QSystemTrayIcon.ActivationReason)
     def trayActivated(self, reason):
         if getPlatform() == PLATFORM_MAC:
             # Trigger is sent even though the context menu is shown.

@@ -2,8 +2,7 @@ from lunchinator import get_settings, get_notification_center,\
     get_plugin_manager, convert_string, get_peers
 from lunchinator.logging_mutex import loggingMutex
 from lunchinator.peer_actions.standard_peer_actions import getStandardPeerActions
-from lunchinator.privacy.privacy_settings import PrivacySettings
-from lunchinator.privacy import PrivacyConfirmationDialog
+from lunchinator.privacy import PrivacySettings
 from lunchinator.log import loggingFunc
 
 class PeerActions(object):
@@ -142,6 +141,7 @@ class PeerActions(object):
             if mainGUI is None:
                 # no gui -> no confirmation
                 return False
+            from lunchinator.privacy.confirmation_dialog import PrivacyConfirmationDialog
             peerName = get_peers().getDisplayedPeerName(peerID)
             dialog = PrivacyConfirmationDialog(mainGUI,
                                                "Confirmation",

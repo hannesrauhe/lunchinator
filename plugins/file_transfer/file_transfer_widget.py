@@ -474,7 +474,7 @@ class FileTransferWidget(QWidget):
             widget.cancelBeforeTransfer.disconnect(self.cancel)
             widget.canceledBeforeTransfer(isTimeout)
     
-    @loggingSlot(object, int, int, int, object, object)
+    @loggingSlot(object, int, object, int, int, object, object)
     def incomingTransferStarted(self, peerID, transferID, targetDir, numFiles, fileSize, name, dataThread):
         widget = self._addTransfer(None, name, targetDir, numFiles, fileSize, transferID, peerID, True)
         widget.connectDataThread(dataThread)

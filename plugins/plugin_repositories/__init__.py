@@ -1,9 +1,7 @@
-from plugin_repositories.plugin_repositories_gui import PluginRepositoriesGUI
 from lunchinator import convert_string, get_notification_center, get_settings
 from lunchinator.plugin import iface_general_plugin
 from lunchinator.utilities import getValidQtParent
 from lunchinator.git import GitHandler
-from lunchinator.callables import AsyncCall
 from lunchinator.log.logging_func import loggingFunc
 import os
 from functools import partial
@@ -34,7 +32,8 @@ class plugin_repositories(iface_general_plugin):
         return True
         
     def create_options_widget(self, parent):
-        self._ui = PluginRepositoriesGUI(parent)
+        from plugin_repositories.plugin_repositories_gui import PluginRepositoriesGUI
+        self._ui = PluginRepositoriesGUI(self.logger, parent)
         
         self._initRepositories()
         self._ui.resizeColumns()
@@ -97,6 +96,7 @@ class plugin_repositories(iface_general_plugin):
         if self._ui.getTable().model().rowCount() == 0:
             return
         
+        from lunchinator.callables import AsyncCall
         self._setStatus("Checking for updates...", True)
         AsyncCall(getValidQtParent(),
                   self.logger,
@@ -106,6 +106,7 @@ class plugin_repositories(iface_general_plugin):
         
     def _checkAllRepositories(self):
         from PyQt4.QtCore import Qt
+        from plugin_repositories.plugin_repositories_gui import PluginRepositoriesGUI
         model = self._ui.getTable().model()
         outdated = set()
         upToDate = {}
@@ -137,6 +138,7 @@ class plugin_repositories(iface_general_plugin):
     def save_options_widget_data(self, **_kwargs):
         if self._modified:
             from PyQt4.QtCore import Qt
+            from plugin_repositories.plugin_repositories_gui import PluginRepositoriesGUI
             repos = []
             model = self._ui.getTable().model() 
             for row in xrange(model.rowCount()):

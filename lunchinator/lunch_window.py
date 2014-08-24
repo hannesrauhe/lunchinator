@@ -1,11 +1,12 @@
 from PyQt4.QtGui import QTabWidget, QMainWindow, QTextEdit, QDockWidget, QApplication, QMenu, QKeySequence, QIcon
 from PyQt4.QtCore import Qt, QSettings, QVariant, QEvent, pyqtSignal
 from lunchinator import get_settings, convert_string, get_plugin_manager, get_notification_center
+from lunchinator.utilities import restart
 from lunchinator.log import getCoreLogger
 from lunchinator.log.logging_slot import loggingSlot
-import sys
+import sys, traceback
 from StringIO import StringIO
-import traceback
+from functools import partial
 
 class PluginDockWidget(QDockWidget):
     closePressed = pyqtSignal(object) # plugin name
@@ -126,6 +127,7 @@ class LunchinatorWindow(QMainWindow):
         self.windowMenu.addAction("Settings", self.guiHandler.openSettingsClicked)
         self.windowMenu.addSeparator()
         self.windowMenu.addAction("Close Window", self.close, QKeySequence(QKeySequence.Close))
+        self.windowMenu.addAction("Restart",partial(restart, getCoreLogger()))
         self.windowMenu.addAction("Exit Lunchinator", self.guiHandler.quit)
         
         if type(pluginActions) == list:

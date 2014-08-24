@@ -1,8 +1,7 @@
-from privacy_gui.gui import PrivacyGUI
 from lunchinator import get_notification_center
 from lunchinator.plugin import iface_general_plugin
 from lunchinator.privacy import PrivacySettings
-from lunchinator.log.logging_slot import loggingSlot
+from lunchinator.log import loggingFunc
 
 class privacy(iface_general_plugin):
     def __init__(self):
@@ -25,6 +24,7 @@ class privacy(iface_general_plugin):
         return True
 
     def create_options_widget(self, parent):
+        from privacy_gui.gui import PrivacyGUI
         self._ui = PrivacyGUI(parent, self.logger)
         return self._ui  
     
@@ -38,7 +38,7 @@ class privacy(iface_general_plugin):
     def discard_changes(self):
         PrivacySettings.get().discard()
         
-    @loggingSlot(object, object)
+    @loggingFunc
     def _settingsChanged(self, _=None, __=None):
         self.set_hidden_option(u"json", PrivacySettings.get().getJSON(), convert=False)
         

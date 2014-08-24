@@ -1,5 +1,4 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator.callables import AsyncCall
 from lunchinator.utilities import getValidQtParent
 from lunchinator.log import loggingFunc
 import urllib2, contextlib
@@ -18,6 +17,7 @@ class lunch_menu(iface_gui_plugin):
     
     def create_widget(self, parent):
         from PyQt4.QtGui import QTextEdit, QSizePolicy
+        from lunchinator.callables import AsyncCall
         self._textview = QTextEdit(parent)
         self._textview.setLineWrapMode(QTextEdit.WidgetWidth)
         self._textview.setReadOnly(True)

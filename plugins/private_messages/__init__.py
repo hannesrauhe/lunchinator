@@ -102,13 +102,20 @@ class private_messages(iface_gui_plugin):
         
     def get_displayed_name(self):
         return u"Chat"
-        
+    
     def activate(self):
         iface_gui_plugin.activate(self)
+        if get_server().has_gui():
+            sendMessageAction = _SendMessageAction()
+            self._openChatAction = _OpenChatAction(sendMessageAction)
+            self._peerActions = [self._openChatAction, _BlockAction(sendMessageAction), sendMessageAction]
+        else:
+            self._peerActions = None
+        
+    def create_widget(self, parent):
+        from private_messages.chat_history_view import ChatHistoryWidget
+        
         self._lock = loggingMutex("Private Messages", logging=get_settings().get_verbose())
-        sendMessageAction = _SendMessageAction()
-        self._openChatAction = _OpenChatAction(sendMessageAction)
-        self._peerActions = [self._openChatAction, _BlockAction(sendMessageAction), sendMessageAction]
         
         from PyQt4.QtCore import QThread
         from private_messages.chat_messages_handler import ChatMessagesHandler
@@ -127,7 +134,14 @@ class private_messages(iface_gui_plugin):
         self._messagesHandler.displayOwnMessage.connect(self._displayOwnMessage)
         self._messagesHandler.newMessage.connect(self._displayMessage)
         
-    def deactivate(self):
+        self._openChats = {} # mapping peer ID -> ChatDockWidget
+        self._history = ChatHistoryWidget(self, parent, self.logger)
+        return self._history
+    
+    def destroy_widget(self):
+        for chatWindow in self._openChats.values():
+            chatWindow.close()
+            
         self.set_hidden_option(u"next_msgid", self._messagesHandler.getNextMessageIDForStorage(), convert=False)
         self._messagesHandler.deactivate()
         if self._messagesThread is not None:
@@ -138,17 +152,7 @@ class private_messages(iface_gui_plugin):
         self._messagesHandler = None
         self._storage = None
         self._lock = None
-        iface_gui_plugin.deactivate(self)
-    
-    def create_widget(self, parent):
-        from private_messages.chat_history_view import ChatHistoryWidget
-        self._openChats = {} # mapping peer ID -> ChatDockWidget
-        self._history = ChatHistoryWidget(self, parent, self.logger)
-        return self._history
-    
-    def destroy_widget(self):
-        for chatWindow in self._openChats.values():
-            chatWindow.close()
+            
         iface_gui_plugin.destroy_widget(self)
         
     def _enableMarkdownChanged(self, _setting, newVal):
@@ -156,7 +160,7 @@ class private_messages(iface_gui_plugin):
             chatWindow.getChatWidget().setMarkdownEnabled(newVal)
     
     def extendsInfoDict(self):
-        return True
+        return get_server().has_gui()
         
     def extendInfoDict(self, infoDict):
         infoDict[u"PM_v"] = self.VERSION_CURRENT
