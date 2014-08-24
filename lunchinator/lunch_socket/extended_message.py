@@ -56,8 +56,11 @@ class extMessage(object):
         return hashstr
     
 class extMessageIncoming(extMessage):       
-    """ @param outgoingMessage as unicode object """
     def __init__(self, incomingMessage):
+        """ transform raw data received by a socket to an extended Message
+        
+        @type incomingMessage: str 
+        """
         super(extMessageIncoming, self).__init__()
         f = incomingMessage
         
