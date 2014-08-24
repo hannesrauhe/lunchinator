@@ -36,9 +36,14 @@ class ComboboxDelegate(QItemDelegate):
     
     def editorClosing(self, _editor, _hint):
         self._editor = None
+    
+    class OpeningComboBox(QComboBox):
+        def showEvent(self, event):
+            QComboBox.showEvent(self, event)
+            self.showPopup()
      
     def createEditor(self, parent, _option, index):
-        editor = QComboBox(parent)
+        editor = self.OpeningComboBox(parent)
         if index.column() is self._column:
             editor.addItems([u"Default",
                              u"Debug",
