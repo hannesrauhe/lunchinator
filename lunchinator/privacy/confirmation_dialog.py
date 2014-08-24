@@ -15,7 +15,7 @@ class PrivacyConfirmationDialog(QDialog):
     SCOPE_EVERYONE_CATEGORY = 2
     SCOPE_EVERYONE = 3
     
-    def __init__(self, parent, title, peerName, peerID, action, category, msgData, timeout=None):
+    def __init__(self, parent, title, peerName, peerID, action, category, msgData):
         super(PrivacyConfirmationDialog, self).__init__(parent)
         
         self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
@@ -54,8 +54,8 @@ class PrivacyConfirmationDialog(QDialog):
         self.setMaximumHeight(size.height())
         
         self._setPolicy(0)
-        if timeout:
-            self._timeout = timeout
+        if action.getTimeout() is not None and action.getTimeout() > 0:
+            self._timeout = action.getTimeout()
             self._timer = QTimer(self)
             self._timer.timeout.connect(self._decrementTimer)
             self._timer.start(1000)
@@ -65,7 +65,7 @@ class PrivacyConfirmationDialog(QDialog):
     @loggingSlot()
     def _decrementTimer(self):
         self._timeout -= 1
-        if self._timeout == 0:
+        if self._timeout <= 0:
             self.reject()
         self._timeoutLabel.setText(u"%d s" % self._timeout)
             
@@ -258,6 +258,9 @@ if __name__ == '__main__':
         
         def usesPrivacyCategories(self):
             return False
+        
+        def getTimeout(self):
+            return 5
 
     app = QApplication(sys.argv)
     window = PrivacyConfirmationDialog(None,
@@ -266,8 +269,7 @@ if __name__ == '__main__':
                                        "guy'sID",
                                        TestAction(),
                                        "Weird",
-                                       None,
-                                       10)
+                                       None)
     
     window.showNormal()
     window.raise_()
