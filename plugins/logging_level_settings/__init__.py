@@ -1,4 +1,4 @@
-from lunchinator import convert_string
+from lunchinator import convert_string, get_settings
 from lunchinator.plugin import iface_general_plugin
 from lunchinator.log.lunch_logger import setLoggingLevel, setGlobalLoggingLevel
     
@@ -35,11 +35,7 @@ class plugin_repositories(iface_general_plugin):
     def save_options_widget_data(self, **_kwargs):
         from PyQt4.QtCore import Qt
         from logging_level_settings.logging_level_gui import LogLevelModel
-        globalLevel = self._getLevelFromText(self._ui.getGlobalLevelText())
-        if globalLevel:
-            setGlobalLoggingLevel(globalLevel)
-        else:
-            self.logger.error("Invalid logging level: " + self._ui.getGlobalLevelText())
+        get_settings().set_logging_level(self._ui.getGlobalLevelText())
         
         model = self._ui.getModel() 
         for row in xrange(model.rowCount()):

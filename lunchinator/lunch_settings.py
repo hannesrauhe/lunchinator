@@ -541,15 +541,15 @@ class lunch_settings(object):
     @hidden_setting()
     def set_logging_level(self, newValue):
         self._logging_level = convert_string(newValue)
-        if self._logging_level == u"CRITICAL":
+        if self._logging_level.upper() == u"CRITICAL":
             setGlobalLoggingLevel(logging.CRITICAL)
-        elif self._logging_level == u"ERROR":
+        elif self._logging_level.upper() == u"ERROR":
             setGlobalLoggingLevel(logging.ERROR)
-        elif self._logging_level == u"WARNING":
+        elif self._logging_level.upper() == u"WARNING":
             setGlobalLoggingLevel(logging.WARNING)
-        elif self._logging_level == u"INFO":
+        elif self._logging_level.upper() == u"INFO":
             setGlobalLoggingLevel(logging.INFO)
-        elif self._logging_level == u"DEBUG":
+        elif self._logging_level.upper() == u"DEBUG":
             setGlobalLoggingLevel(logging.DEBUG)
         
     def get_log_cache_size(self):

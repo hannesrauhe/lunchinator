@@ -55,8 +55,8 @@ class ComboboxDelegate(QItemDelegate):
     @loggingSlot(int)
     def _commitEditor(self, _newIndex):
         self.commitData.emit(self._editor)
-        self.closeEditor.emit(self._editor, QItemDelegate.SubmitModelCache)
-        self._editor = None
+        #self.closeEditor.emit(self._editor, QItemDelegate.SubmitModelCache)
+        #self._editor = None
 
     def setEditorData(self, comboBox, index):
         if index.column() is self._column:

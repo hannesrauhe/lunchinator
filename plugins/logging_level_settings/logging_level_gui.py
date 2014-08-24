@@ -63,9 +63,6 @@ class LogLevelTable(QTreeView):
     
     def mouseMoveEvent(self, event):
         event.ignore()
-        
-    def wheelEvent(self, event):
-        event.ignore()
     
 class LoggingLevelGUI(QWidget):
     def __init__(self, logger, parent):
@@ -110,6 +107,7 @@ class LoggingLevelGUI(QWidget):
         self._logTable.setFocusPolicy(Qt.NoFocus)
         self._logTable.setSortingEnabled(True)
         self._logTable.setSelectionMode(QTreeView.NoSelection)
+        self._logTable.setVerticalScrollMode(LogLevelTable.ScrollPerPixel)
         layout.addWidget(self._logTable)
 
     def _initModel(self):                
