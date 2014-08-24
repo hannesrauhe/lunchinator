@@ -59,10 +59,15 @@ class ErrorLogDialog(QDialog):
                 if not isinstance(recMsg, basestring):
                     recMsg = unicode(recMsg)
                 err = convert_string(recMsg) % record.args
-                msg = u"%s - In %s:%d: %s" % (strftime("%H:%M:%S", localtime(record.created)),
-                                              record.pathname,
-                                              record.lineno,
-                                              err)
+                component = record.name
+                if component.startswith("lunchinator."):
+                    component = component[12:]
+                    
+                msg = u"%s - In component %s (%s:%d):\n%s" % (strftime("%H:%M:%S", localtime(record.created)),
+                                                              component,
+                                                              record.pathname,
+                                                              record.lineno,
+                                                              err)
                 if record.exc_info:
                     out = StringIO()
                     traceback.print_tb(record.exc_info[2], file=out)
