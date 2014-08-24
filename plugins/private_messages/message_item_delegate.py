@@ -5,7 +5,7 @@ from lunchinator.utilities import formatTime
 from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QTextDocument,\
     QStyle, QAbstractTextDocumentLayout, QPalette,\
     QBrush, QColor, QLinearGradient, QPainter,\
-    QTextEdit, QFrame, QSizePolicy, QIcon, QFont
+    QTextEdit, QFrame, QSizePolicy, QIcon, QFont, QAbstractItemDelegate
 from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
     QRectF, QSizeF, pyqtSignal, QModelIndex, QMetaType
 from PyQt4.Qt import QWidget
@@ -108,7 +108,7 @@ class MessageItemDelegate(QStyledItemDelegate):
     def getEditIndex(self):
         return self._editIndex
         
-    @loggingSlot(QWidget, int)
+    @loggingSlot(QWidget, QAbstractItemDelegate.EndEditHint)
     def editorClosing(self, _editor, _hint):
         self._editor = None
         self.setEditIndex(None)

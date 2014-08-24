@@ -1,6 +1,6 @@
 import time, math
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QString
 from PyQt4.QtGui import QGridLayout, QLabel, QSpinBox, QLineEdit
 from lunchinator.log.logging_slot import loggingSlot
 from lunchinator import convert_string
@@ -132,7 +132,7 @@ class statSwarmWidget(QtGui.QWidget):
     def getPeriod(self):
         return self.period
     
-    @loggingSlot(object)
+    @loggingSlot(QString)
     def setmType(self, i):
         self.mtype = convert_string(i)
         self.update()
