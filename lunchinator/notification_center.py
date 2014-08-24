@@ -425,6 +425,43 @@ class NotificationCenter(object):
     def emitLogMessage(self, logRecord):
         pass
 
+    """Emitted when the logging level changes.
+    
+    If the global level changes, loggerName is None.
+    If a logger is reset to the default (global) level, newLevel is None.
+    """    
+    @_connectFunc
+    def connectLoggingLevelChanged(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectLoggingLevelChanged(self, callback):
+        pass
+    @_emitFunc
+    def emitLoggingLevelChanged(self, loggerName, newLevel):
+        pass
+    
+    """Emitted when a new logger is added."""    
+    @_connectFunc
+    def connectLoggerAdded(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectLoggerAdded(self, callback):
+        pass
+    @_emitFunc
+    def emitLoggerAdded(self, loggerName):
+        pass
+    
+    """Emitted when a logger is removed."""    
+    @_connectFunc
+    def connectLoggerRemoved(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectLoggerRemoved(self, callback):
+        pass
+    @_emitFunc
+    def emitLoggerRemoved(self, loggerName):
+        pass
+    
 if __name__ == '__main__':
     def _testCallback(a, b, c):
         print a, b, c

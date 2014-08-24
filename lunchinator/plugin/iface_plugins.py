@@ -500,7 +500,8 @@ class iface_plugin(IPlugin):
     def prepare_application(cls, beforeCreate, factory):
         from PyQt4.QtGui import QApplication, QMainWindow
         from lunchinator import get_settings
-        from lunchinator.log import setGlobalLoggingLevel, initializeLogger
+        from lunchinator.log import initializeLogger
+        from lunchinator.log.lunch_logger import setGlobalLoggingLevel
         from lunchinator.utilities import setValidQtParent
     
         initializeLogger()
@@ -527,6 +528,7 @@ class iface_plugin(IPlugin):
         return self.create_options_widget(parent)
     
     def run_options_widget(self):
+        self.setPluginName(u"Settings Test")
         _window, app = iface_general_plugin.prepare_application(self.activate, self._init_run_options_widget)
         return app.exec_()
                     
