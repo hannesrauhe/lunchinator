@@ -3,7 +3,8 @@ from collections import deque
 
 class NotificationLogHandler(Handler):
     def __init__(self):
-        super(NotificationLogHandler, self).__init__()
+        # handler is old-style class in older Python versions
+        Handler.__init__(self)
         self._buf = deque(maxlen=100)
     
     def emit(self, record):
