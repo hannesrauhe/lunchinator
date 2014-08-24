@@ -270,9 +270,11 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def processEvent(self, cmd, hostName, senderIP, eventTime, newPeer, fromQueue):
         self._processEvent.emit(cmd, hostName, senderIP, eventTime, newPeer, fromQueue)
     
-    """ process any message event, including lunch calls """
-    def processMessage(self, msg, addr, eventTime, newPeer, fromQueue):
-        self._processMessage.emit(msg, addr, eventTime, newPeer, fromQueue)
+    
+    def processMessage(self, xmsg, addr, eventTime, newPeer, fromQueue):
+        """ process any message event, including lunch calls 
+        @todo @type xmsg: extMessageIncoming"""
+        self._processMessage.emit(xmsg, addr, eventTime, newPeer, fromQueue)
     
     def getMainGUI(self):
         return self.mainWindow

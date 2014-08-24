@@ -47,7 +47,7 @@ class extMessage(object):
         return bool(self._statusByte & 0b00110000)
     
     def isComplete(self):
-        return len(self._fragments) and all(len(f) > 0 for f in self._fragments)
+        return all(len(f) > 0 for f in self._fragments)
     
     def getCompleteness(self):
         completeFragments = 0
@@ -90,21 +90,23 @@ class extMessageIncoming(extMessage):
         f = incomingMessage
         
         if not f.startswith("HELOX"):
-            raise Exception("Malformed Message: Not an extended message fragment (no HELOX)")
-        
-        self._protocol_version = ord(f[self.BYTE_VERSION])
-        
-        if self._protocol_version > self.MAX_SUPPORTED_VERSION:
-            raise Exception("Message sent by peer that uses a newer protocol version")
-            #at this point we should send an extended message ourself to tell 
-            #the other peer our version
-        
-        expectedFragments = ord(f[self.BYTE_EXPECTED_NUM])
-        self._fragments = expectedFragments * [""]
-        self._splitID = f[self.BYTE_HASH_START:self.BYTE_HASH_END]
-        
-        self._insertFragment(f)
-        self._finalize()
+            self._protocol_version = -1
+            self._plainMsg = incomingMessage
+        else:        
+            self._protocol_version = ord(f[self.BYTE_VERSION])        
+            if self._protocol_version > self.MAX_SUPPORTED_VERSION:
+                raise Exception("Message sent by peer that uses a newer protocol version")
+                #at this point we should send an extended message ourself to tell 
+                #the other peer our version
+            
+            expectedFragments = ord(f[self.BYTE_EXPECTED_NUM])
+            if expectedFragments<1:
+                raise Exception("Malformed extended Message: expected Fragments < 1")
+            self._fragments = expectedFragments * [""]
+            self._splitID = f[self.BYTE_HASH_START:self.BYTE_HASH_END]
+            
+            self._insertFragment(f)
+            self._finalize()
         
     def addFragment(self, f):
         if self.isComplete():

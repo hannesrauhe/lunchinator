@@ -140,9 +140,10 @@ class lunch_server(object):
     
     def getController(self):
         return self.controller
-
-    '''listening method - should be started in its own thread'''    
+    
     def start_server(self):
+        """listening method - should be started in its own thread"""
+        
         getCoreLogger().info("%s - Starting the lunch notifier service", strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"))
         
         self.my_master = -1  # the peer i use as master
@@ -164,17 +165,13 @@ class lunch_server(object):
             
             while self.running:
                 try:
-                    data, ip = self._recv_socket.recv()            
-                    try:
-                        data = data.decode('utf-8')
-                    except:
-                        getCoreLogger().error("Received illegal data from %s, maybe wrong encoding", ip)
-                        continue         
+                    xmsg, ip = self._recv_socket.recv()
+                    plainMsg = xmsg.getPlainMessage()
                      
                     # check for local address: only stop command allowed, else ignore
                     if ip.startswith("127."):
-                        if data.startswith("HELO_STOP"):
-                            getCoreLogger().info("Got Stop Command from localhost: %s", data)
+                        if plainMsg.startswith("HELO_STOP"):
+                            getCoreLogger().info("Got Stop Command from localhost: %s", plainMsg)
                             self.running = False
                             self.exitCode = EXIT_CODE_STOP
                         continue
@@ -184,11 +181,11 @@ class lunch_server(object):
 
                     # check if we know this peer          
                     isNewPeer = self._peers.getPeerInfo(pIP=ip) == None          
-                    if isNewPeer and self._should_call_info_on_event(data):
+                    if isNewPeer and self._should_call_info_on_event(plainMsg):
                         #this is a new member - we ask for info right away
                         self.call_request_info([ip])
                     
-                    self._handle_event(data, ip, time(), isNewPeer, False)
+                    self._handle_event(xmsg, ip, time(), isNewPeer, False)
                 except splitCall as e:
                     getCoreLogger().debug(e.value)
                 except socket.timeout:                    
@@ -232,7 +229,9 @@ class lunch_server(object):
     def stop_server(self, stop_any=False):
         '''this stops a running server thread
         Usually this will not do anything if there is no running thread within the process
-        if stop_any is true it will send a stop call in case another instance has to be stopped'''
+        
+        @param: stop_any if true it will send a stop call in case another instance has to be stopped
+        '''
         
         if stop_any or self.running:
             self.perform_call("HELO_STOP shutdown", peerIPs=set([u"127.0.0.1"]), peerIDs=set())
@@ -423,7 +422,16 @@ class lunch_server(object):
                 while len(queue) > 0 and curTime - queue[0][0] > get_settings().get_message_cache_timeout():
                     queue.popleft()
         
-    def _handle_event(self, data, ip, eventTime, newPeer, fromQueue):
+    def _handle_event(self, xmsg, ip, eventTime, newPeer, fromQueue):
+        """ processes a call received by the lunch_socket
+        
+        @type xmsg: extMessageIncoming
+        @type ip: unicode
+        @type eventTime: float
+        @type newPeer: boolean
+        @type fromQueue: boolean 
+        """
+        data = xmsg.getPlainMessage()
         # if there is no HELO in the beginning, it's just a message and 
         # we handle it, if the peer is in our group
         if not data.startswith("HELO"):

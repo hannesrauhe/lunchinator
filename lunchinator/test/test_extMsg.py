@@ -145,6 +145,18 @@ class extMsgTest(unittest.TestCase):
         self.assertTrue(eMsgIn.isEncrypted(), "Status byte says not encrypted")
         self.assertEqual(eMsgIn.getSignatureInfo()['fingerprint'], self.test_key)
         self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
+        
+    def testSimpleMessage(self):
+        self.test_str = self.string_generator(40).encode('utf-8')
+
+        eMsgIn = extMessageIncoming(self.test_str)
+        self.assertRaises(Exception, eMsgIn.addFragment, "kjfds")
+            
+        self.assertTrue(eMsgIn.isComplete())
+        self.assertFalse(eMsgIn.isSigned(), "Status byte says signed")
+        self.assertFalse(eMsgIn.isEncrypted(), "Status byte says encrypted")
+        self.assertEqual(eMsgIn.getVersion(), -1, "Simple Message should be version -1")
+        self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

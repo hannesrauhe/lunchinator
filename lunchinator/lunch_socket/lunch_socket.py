@@ -8,11 +8,12 @@ from lunchinator.lunch_socket.extended_message import extMessageOutgoing,\
     extMessageIncoming
 import itertools, time
 
-""" lunch_socket is the class to 
-1. abstract sockets to support IPv6 and IPv4 sockets transparently (TODO)
-2. provide extended messages (HELOX) to enable encrypted and signed messages 
-as well as splitting of long messages"""
 class lunchSocket(object):    
+    """ lunch_socket is the class to 
+    1. abstract sockets to support IPv6 and IPv4 sockets transparently (TODO)
+    2. provide extended messages (HELOX) to enable encrypted and signed messages 
+    as well as splitting of long messages"""
+    
     LEGACY_MAX_LEN = 1024
     EXT_MSG_VERSION = 1660
     
@@ -31,22 +32,24 @@ class lunchSocket(object):
         
         self._incMsgLock = loggingMutex("dropIncompleteMsg", logging=get_settings().get_verbose())
     
-    """ sends a message to an IP on the configured port, 
-    
-    @long If only message and IP are given and the message string is shorter than 
-    the maximum length, it will be sent as is.    
-    If the message is longer or encryption/signatures are enabled, the message
-    will be send as HELOX call.
-    
-    Split messages will be hashed and the hash becomes the messages identifier 
-    for the receiver.
-    If the message is split and signed, the signature will be used instead of the hash.
-    
-    @param msg messge as unicode object
-    @param ip IP or hostname of receiver
-    @param disable_split automatic message splitting can be disabled by setting to True 
-    """        
+          
     def sendto(self, msg, ip, disable_extended=False):
+        """ sends a message to an IP on the configured port, 
+    
+        @long If only message and IP are given and the message string is shorter than 
+        the maximum length, it will be sent as is.    
+        If the message is longer or encryption/signatures are enabled, the message
+        will be send as HELOX call.
+        
+        Split messages will be hashed and the hash becomes the messages identifier 
+        for the receiver.
+        If the message is split and signed, the signature will be used instead of the hash.
+        
+        @param msg messge as unicode object
+        @param ip IP or hostname of receiver
+        @param disable_split automatic message splitting can be disabled by setting to True 
+        """  
+        
         if not self._s:
             raise Exception("Cannot send. There is no open lunch socket")
         
@@ -101,45 +104,40 @@ class lunchSocket(object):
             getCoreLogger().exception("Problem while broadcasting")
     
 
-    """ receives a message from a socket and returns the received data and the sender's 
-    address
-    
-    If the received message was split (HELOX) and is still incomplete
-    the socket throws the split_call exception -> recv should be called again""" 
     def recv(self):
+        """ receives a message from a socket and returns the received data and the sender's 
+        address
+        
+        If the received message was split (HELOX) and is still incomplete
+        the socket throws the split_call exception -> recv should be called again
+        
+        @rtype: (extMessageIncoming, unicode)
+        """
+        
         if not self._s:
             raise Exception("Cannot recv. There is no open lunch socket")
         
         for _ in itertools.repeat(None, 5):
             try:
-                data, addr = self._s.recvfrom(self.LEGACY_MAX_LEN)                
+                rawdata, addr = self._s.recvfrom(self.LEGACY_MAX_LEN)                
                 ip = unicode(addr[0])
                 
-                msg = u""
-                if data.startswith("HELOX"):
-                    xmsg = extMessageIncoming(data)
-                    if not xmsg.isComplete():
-                        #it's a split message
-                        s = xmsg.getSplitID()
-                        with self._incMsgLock:
-                            if (ip,s) in self._incomplete_messages:
-                                incompMsg, _ = self._incomplete_messages[(ip,s)]
-                                xmsg.merge(incompMsg)                       
-                        
-                            if not xmsg.isComplete():
-                                self._incomplete_messages[(ip,s)] = (xmsg, time.time())
-                                raise splitCall(ip, xmsg)
-                            else:
-                                del self._incomplete_messages[(ip,s)]
-                    msg = xmsg.getPlainMessage()
-                else:
-                    try:
-                        msg = data
-                    except:
-                        getCoreLogger().error("Received illegal data from %s, maybe wrong encoding", ip)
-                        continue    
+                xmsg = extMessageIncoming(rawdata)
+                if not xmsg.isComplete():
+                    #it's a split message
+                    s = xmsg.getSplitID()
+                    with self._incMsgLock:
+                        if (ip,s) in self._incomplete_messages:
+                            incompMsg, _ = self._incomplete_messages[(ip,s)]
+                            xmsg.merge(incompMsg)                       
                     
-                return msg, ip
+                        if not xmsg.isComplete():
+                            self._incomplete_messages[(ip,s)] = (xmsg, time.time())
+                            raise splitCall(ip, xmsg)
+                        else:
+                            del self._incomplete_messages[(ip,s)]  
+                
+                return xmsg, ip
             except socket.error as e:
                 if e.errno != errno.EINTR:
                     raise
