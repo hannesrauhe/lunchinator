@@ -3,7 +3,9 @@ import sys, os, getpass, ConfigParser, types, logging, codecs, contextlib, uuid
 '''integrate the cli-parser into the default_config sooner or later'''
 from lunchinator import convert_string, MAIN_CONFIG_DIR,\
     get_notification_center
-from lunchinator.log import getCoreLogger, setGlobalLoggingLevel
+from lunchinator.log import getCoreLogger
+from lunchinator.log.lunch_logger import getLoggingLevel, serializeLoggingLevels,\
+    deserializeLoggingLevels, setGlobalLoggingLevel
 from datetime import datetime
 import json
 from lunchinator.repositories import PluginRepositories
@@ -246,6 +248,11 @@ class lunch_settings(object):
         self._ID = self.read_value_from_config_file(self._ID, "general", "ID")      
         self._available_db_connections = self.read_value_from_config_file(self._available_db_connections, "general", "available_db_connections")
         externalRepos = self.read_value_from_config_file(None, "general", "external_plugin_repos")
+        
+        componentLoggingLevels = self.read_value_from_config_file(None, "general", "comp_logging_levels")
+        if componentLoggingLevels:
+            deserializeLoggingLevels(componentLoggingLevels)
+            
         if externalRepos == None:
             if os.path.isdir(self.get_config("plugins")):
                 externalRepos = [(self.get_config("plugins"), True, False)]  # active, but no auto update
@@ -281,6 +288,11 @@ class lunch_settings(object):
         
     def write_config_to_hd(self):
         self.get_config_file().set('general', 'external_plugin_repos', json.dumps(self.get_plugin_repositories().getExternalRepositories()))
+        levels = serializeLoggingLevels()
+        if levels:
+            self.get_config_file().set('general', 'comp_logging_levels', levels)
+        else:
+            self.get_config_file().remove_option('general', 'comp_logging_levels')
         with codecs.open(self._main_config_dir + '/settings.cfg', 'w', 'utf-8') as f: 
             self._config_file.write(f)
     
@@ -526,18 +538,18 @@ class lunch_settings(object):
     
     def get_logging_level(self):
         return self._logging_level
-    @gui_setting(u"Logging level", choice=(u"CRITICAL", u"ERROR", u"WARNING", u"INFO", u"DEBUG"))
+    @hidden_setting()
     def set_logging_level(self, newValue):
         self._logging_level = convert_string(newValue)
-        if self._logging_level == u"CRITICAL":
+        if self._logging_level.upper() == u"CRITICAL":
             setGlobalLoggingLevel(logging.CRITICAL)
-        elif self._logging_level == u"ERROR":
+        elif self._logging_level.upper() == u"ERROR":
             setGlobalLoggingLevel(logging.ERROR)
-        elif self._logging_level == u"WARNING":
+        elif self._logging_level.upper() == u"WARNING":
             setGlobalLoggingLevel(logging.WARNING)
-        elif self._logging_level == u"INFO":
+        elif self._logging_level.upper() == u"INFO":
             setGlobalLoggingLevel(logging.INFO)
-        elif self._logging_level == u"DEBUG":
+        elif self._logging_level.upper() == u"DEBUG":
             setGlobalLoggingLevel(logging.DEBUG)
         
     def get_log_cache_size(self):
@@ -552,7 +564,7 @@ class lunch_settings(object):
         """Set True to override logging level"""
         self._verbose = verbose
     def get_verbose(self):
-        return self._verbose or self._logging_level == u"DEBUG"
+        return self._verbose or getLoggingLevel(None) == logging.DEBUG
         
     def get_group_plugins(self):
         return self._group_plugins
@@ -578,9 +590,6 @@ class lunch_settings(object):
         self._available_db_connections = ";;".join(newValue)
         self._config_file.set('general', 'available_db_connections', str(self._available_db_connections))
             
-    def get_advanced_gui_enabled(self):
-        return self._logging_level == u"DEBUG"
-        
     def get_proxy(self):
         return self._proxy
     @gui_setting(u"Proxy server (usually detected automatically)", restart=True)

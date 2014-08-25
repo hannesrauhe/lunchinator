@@ -34,6 +34,15 @@ class PeerAction(object):
         """Override this method if the action only applies to specific peers."""
         return True
     
+    def getTimeout(self):
+        """Returns the time in seconds until the action times out.
+        
+        If this method returns a positive number, the confirmation dialog
+        on the receiver side will time out after the given number of
+        seconds.
+        """
+        return None
+    
     def getMessagePrefix(self):
         """Returns the prefix of the message sent to other peers.
         

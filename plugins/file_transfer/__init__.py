@@ -40,6 +40,9 @@ class _TransferFileAction(PeerAction):
         else:
             return u"%s wants to send you %d files with a total size of %s." % (peerName, numFiles, formatSize(size))
 
+    def getTimeout(self):
+        return 60
+
     def sendFilesToPeer(self, files, peerID):
         self.getPluginObject().sendFilesToPeer(files, peerID)
 

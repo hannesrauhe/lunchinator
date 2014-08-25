@@ -104,7 +104,7 @@ class Notify(iface_called_plugin):
             return
         else:
             self.logger.debug("Starting new attention thread.")
-            self.attentionThread = self.AttentionThread(audioFile, openTray)
+            self.attentionThread = AttentionThread(audioFile, openTray, self.logger)
             self.attentionThread.start()
     
     def process_message(self, msg, ip, _member_info):

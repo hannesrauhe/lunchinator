@@ -1,8 +1,8 @@
-import subprocess, sys, os, contextlib, json, shutil, socket, time
+import subprocess, sys, os, contextlib, json, shutil, time
 from datetime import datetime, timedelta 
 from time import mktime, strftime
 from lunchinator import get_settings
-from lunchinator.log import loggingFunc, getCoreLogger
+from lunchinator.log import getCoreLogger
 import locale
 import platform
 from tempfile import NamedTemporaryFile
@@ -129,7 +129,7 @@ def _processCallOnPlugin(pluginObject, pluginName, ip, call, newPeer, fromQueue,
                (not pluginObject.processes_events_immediately() and not newPeer):
                 call(pluginObject, ip, member_info)
         except:
-            getCoreLogger().exception(u"plugin error in %s while processing event" % pluginName)
+            pluginObject.logger.exception(u"plugin error in %s while processing event" % pluginName)
     
 def processPluginCall(ip, call, newPeer, fromQueue, action=None):
     if not get_settings().get_plugins_enabled():

@@ -241,3 +241,27 @@ class NotificationCenterQt(QObject):
         self._signalLogMessage.disconnect(callback)
     def emitLogMessage(self, logRecord):
         self._signalLogMessage.emit(logRecord)
+        
+    _signalLoggingLevelChanged = pyqtSignal(object, object)
+    def connectLoggingLevelChanged(self, callback):
+        self._signalLoggingLevelChanged.connect(callback, type=Qt.QueuedConnection)
+    def disconnectLoggingLevelChanged(self, callback):
+        self._signalLoggingLevelChanged.disconnect(callback)
+    def emitLoggingLevelChanged(self, loggerName, newLevel):
+        self._signalLoggingLevelChanged.emit(loggerName, newLevel)
+
+    _signalLoggerAdded = pyqtSignal(object)
+    def connectLoggerAdded(self, callback):
+        self._signalLoggerAdded.connect(callback, type=Qt.QueuedConnection)
+    def disconnectLoggerAdded(self, callback):
+        self._signalLoggerAdded.disconnect(callback)
+    def emitLoggerAdded(self, loggerName):
+        self._signalLoggerAdded.emit(loggerName)
+
+    _signalLoggerRemoved = pyqtSignal(object)
+    def connectLoggerRemoved(self, callback):
+        self._signalLoggerRemoved.connect(callback, type=Qt.QueuedConnection)
+    def disconnectLoggerRemoved(self, callback):
+        self._signalLoggerRemoved.disconnect(callback)
+    def emitLoggerRemoved(self, loggerName):
+        self._signalLoggerRemoved.emit(loggerName)

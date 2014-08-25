@@ -6,7 +6,8 @@ import platform, sys, subprocess, os, re, logging, signal
 from functools import partial
 from optparse import OptionParser
 from lunchinator import get_settings, get_server, MAIN_CONFIG_DIR
-from lunchinator.log import getCoreLogger, initializeLogger, setGlobalLoggingLevel
+from lunchinator.log import getCoreLogger, initializeLogger
+from lunchinator.log.lunch_logger import setGlobalLoggingLevel
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
 from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS, restart
 

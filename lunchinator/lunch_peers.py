@@ -372,19 +372,26 @@ class LunchPeers(object):
             # no lunch time information (only happening with very old lunchinators), assume ready
             return True
         
-    def getPeerIDsByName(self, peerName):
+    def getPeerIDsByName(self, peerName, sensitive=True):
         """Returns a list of peer IDs of peers with the given name.
         
         The name can either be a peer's real name or a custom name.
         """
         if self._peerNames != None:
-            return [peerID for peerID in self._peerNames.iterPeerIDsByName(peerName)]
+            return [peerID for peerID in self._peerNames.iterPeerIDsByName(peerName, sensitive)]
         else:
+            if not sensitive:
+                peerName = peerName.lower()
             names = []
             with self._lock:
-                for anID, aDict in self._peer_info.iteritems():
-                    if self.PEER_NAME_KEY in aDict and aDict[self.PEER_NAME_KEY] == peerName:
-                        names.append(anID)
+                if sensitive:
+                    for anID, aDict in self._peer_info.iteritems():
+                        if self.PEER_NAME_KEY in aDict and aDict[self.PEER_NAME_KEY] == peerName:
+                            names.append(anID)
+                else:
+                    for anID, aDict in self._peer_info.iteritems():
+                        if self.PEER_NAME_KEY in aDict and aDict[self.PEER_NAME_KEY].lower() == peerName:
+                            names.append(anID)
             return names
     
     def getPeers(self):
