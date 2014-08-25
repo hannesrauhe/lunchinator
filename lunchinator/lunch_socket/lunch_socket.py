@@ -46,6 +46,7 @@ class lunchSocket(object):
         If the message is split and signed, the signature will be used instead of the hash.
         
         @param msg messge as unicode object
+        @type msg: unicode
         @param ip IP or hostname of receiver
         @param disable_split automatic message splitting can be disabled by setting to True 
         """  
@@ -75,7 +76,7 @@ class lunchSocket(object):
                 if len(msg) > self.LEGACY_MAX_LEN:
                     raise Exception("Message too large to be send over socket in one piece")
                 else:
-                    self._s.sendto(msg, (ip, self._port))
+                    self._s.sendto(msg.encode('utf-8'), (ip, self._port))
             else:
                 getCoreLogger().debug("Sending as extended Message")
                 xmsg = extMessageOutgoing(msg, self._max_msg_length)
@@ -89,6 +90,10 @@ class lunchSocket(object):
                 raise
         
     def broadcast(self, msg):
+        """
+        @type msg: unicode
+        """
+         
         try:
             self._s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self._s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -99,7 +104,7 @@ class lunchSocket(object):
                 for f in xmsg.getFragments():
                     self._s.sendto(f, ('255.255.255.255', self._port))
             else:
-                self._s.sendto(msg, ('255.255.255.255', self._port))
+                self._s.sendto(msg.encode('utf-8'), ('255.255.255.255', self._port))
         except:
             getCoreLogger().exception("Problem while broadcasting")
     

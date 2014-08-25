@@ -166,7 +166,11 @@ class lunch_server(object):
             while self.running:
                 try:
                     xmsg, ip = self._recv_socket.recv()
-                    plainMsg = xmsg.getPlainMessage()
+                    try:
+                        plainMsg = xmsg.getPlainMessage()
+                    except:
+                        getCoreLogger().exception("There was an error when trying to parse a message from %s", ip)
+                        continue
                      
                     # check for local address: only stop command allowed, else ignore
                     if ip.startswith("127."):
@@ -298,7 +302,7 @@ class lunch_server(object):
                 try:
                     short = msg if len(msg)<15 else msg[:14]+"..."
                     getCoreLogger().debug("Sending %s to %s", short, ip.strip())
-                    s.sendto(msg.encode('utf-8'), ip.strip())
+                    s.sendto(msg, ip.strip())
                     i += 1
                 except Exception as e:
                     getCoreLogger().exception("The following message could not be delivered to %s: %s\n%s", ip, str(sys.exc_info()[0]), msg)

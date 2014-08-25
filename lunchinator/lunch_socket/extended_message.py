@@ -90,12 +90,12 @@ class extMessageIncoming(extMessage):
         @type incomingMessage: str 
         """
         super(extMessageIncoming, self).__init__()
-        f = incomingMessage
         
-        if not f.startswith("HELOX"):
+        if not incomingMessage.startswith("HELOX"):
             self._protocol_version = -1
-            self._plainMsg = incomingMessage
-        else:        
+            self._plainMsg = incomingMessage.decode('utf-8')
+        else:     
+            f = incomingMessage   
             self._protocol_version = ord(f[self.BYTE_VERSION])        
             if self._protocol_version > self.MAX_SUPPORTED_VERSION:
                 raise Exception("Message sent by peer that uses a newer protocol version")
@@ -174,17 +174,24 @@ class extMessageIncoming(extMessage):
         self._finalize()
             
             
-"""builds the extMessage from a plain message"""
+
 class extMessageOutgoing(extMessage):    
-    """ @param outgoingMessage as unicode object """
     def __init__(self, outgoingMessage, fragment_size, sign_key=None, encrypt_key=None, compress="zlib"):
+        """builds the extMessage to be send via UDP from a plain message
+        @type outgoingMessage: unicode
+        @type fragment_size: int
+        @type signe_key: str
+        @type encrypt_key: str
+        @type compress: str
+         """
+         
         super(extMessageOutgoing, self).__init__()
         self._plainMsg = outgoingMessage
         self._fragment_size = fragment_size - self.HEADER_SIZE
         if self._fragment_size < 1:
             raise Exception("Fragment size %d to small to hold header"%fragment_size)
         
-        pipe_value = outgoingMessage
+        pipe_value = outgoingMessage.encode("utf-8")
         if encrypt_key:
             pipe_value = self._encrypt_sign(pipe_value, encrypt_key, sign_key)
         elif sign_key:
