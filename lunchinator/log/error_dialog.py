@@ -54,7 +54,7 @@ class ErrorLogDialog(QDialog):
         try:
             if self._notAgain.checkState() == Qt.Checked:
                 return
-            if record.levelno == logging.ERROR:
+            if record.levelno >= logging.ERROR:
                 recMsg = record.msg
                 if not isinstance(recMsg, basestring):
                     recMsg = unicode(recMsg)
