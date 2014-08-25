@@ -80,12 +80,12 @@ class CLIPrivacyHandling(LunchCLIModule):
         if len(args) == 0:
             self.appendOutput(u"Plugin Name", u"Action Name", u"Policy")
             self.appendSeparator()
-            for dPluginName, actions in PeerActions.get().getAllPeerActions().iteritems():
+            for dPluginName, actions in PeerActions.get().getAllPeerActions(filterFunc=self.__peerActionHasPrivacy).iteritems():
                 for action in actions:
                     if action.getMessagePrefix() is None:
                         continue
                     if action.getPluginObject() is not None:
-                        pluginName =  action.getPluginObject().get_displayed_name()
+                        pluginName = action.getPluginObject().get_displayed_name()
                     else:
                         pluginName = dPluginName
                     self.appendOutput(pluginName,
@@ -94,7 +94,7 @@ class CLIPrivacyHandling(LunchCLIModule):
             self.flushOutput()
            
     def __getPluginName(self, pluginName):
-        actionsDict = PeerActions.get().getAllPeerActions()
+        actionsDict = PeerActions.get().getAllPeerActions(filterFunc=self.__peerActionHasPrivacy)
         
         pluginName = pluginName.lower()
         for aPluginName, actions in actionsDict.iteritems():
@@ -115,7 +115,7 @@ class CLIPrivacyHandling(LunchCLIModule):
         if len(args) < 2:
             return self.printHelp("privacy")
         
-        actionsDict = PeerActions.get().getAllPeerActions()
+        actionsDict = PeerActions.get().getAllPeerActions(filterFunc=self.__peerActionHasPrivacy)
         
         pluginName = self.__getPluginName(args[0])
         if pluginName is None:
@@ -281,8 +281,11 @@ class CLIPrivacyHandling(LunchCLIModule):
         else:
             return self.printHelp("privacy")
        
+    def __peerActionHasPrivacy(self, _pluginName, peerAction):
+        return peerAction.getMessagePrefix() is not None
+       
     def _completePluginName(self, text):
-        actionsDict = PeerActions.get().getAllPeerActions()
+        actionsDict = PeerActions.get().getAllPeerActions(filterFunc=self.__peerActionHasPrivacy)
         for pluginName, actions in actionsDict.iteritems():
             pluginName = pluginName.replace(" ", "\\ ")
             if pluginName.lower().startswith(text):
@@ -292,9 +295,9 @@ class CLIPrivacyHandling(LunchCLIModule):
                 dispName = pluginObject.get_displayed_name().replace(" ", "\\ ")
                 if dispName.lower().startswith(text):
                     yield dispName
-       
+    
     def __completeActionName(self, pluginName, text):
-        actionsDict = PeerActions.get().getAllPeerActions()
+        actionsDict = PeerActions.get().getAllPeerActions(filterFunc=self.__peerActionHasPrivacy)
         actions = actionsDict[pluginName]
         for action in actions:
             actionName = action.getName().replace(" ", "\\ ")

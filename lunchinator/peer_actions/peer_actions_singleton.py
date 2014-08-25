@@ -102,18 +102,21 @@ class PeerActions(object):
         The dictionary contains plugin names as keys and a list of the
         plugin's peer actions as values.
         
-        filterFunc - Function that takes (plugin name, peer action) and
+        filterFunc -- Function that takes (plugin name, peer action) and
         returns True if the action should be added to the result. 
         """
         return self._getPeerActions(peerID, peerInfo, filterFunc=filterFunc)
     
-    def getAllPeerActions(self):
+    def getAllPeerActions(self, filterFunc=None):
         """Returns a dictionary of all peer actions.
         
         The dictionary contains plugin names as keys and a list of the
         plugin's peer actions as values.
+        
+        filterFunc -- Function that takes (plugin name, peer action) and
+        returns True if the action should be added to the result.
         """
-        return self._getPeerActions(ignoreApplies=True)
+        return self._getPeerActions(ignoreApplies=True, filterFunc=filterFunc)
         
     def getPeerAction(self, msgPrefix):
         with self._lock:
