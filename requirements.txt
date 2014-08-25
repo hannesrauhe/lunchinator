@@ -1,7 +1,2 @@
 Yapsy==1.10.323
-oauthlib==0.6.1
 python-gnupg==0.3.6
-python-twitter==1.3.1
-requests==2.2.1
-requests-oauthlib==0.4.0
-simplejson==3.4.0
