@@ -132,6 +132,13 @@ def _processCallOnPlugin(pluginObject, pluginName, ip, call, newPeer, fromQueue,
             pluginObject.logger.exception(u"plugin error in %s while processing event" % pluginName)
     
 def processPluginCall(ip, call, newPeer, fromQueue, action=None):
+    """ call plugins
+    @type ip: unicode
+    @type call: function
+    @type newPeer: bool
+    @type fromQueue: bool
+    @type action: PeerAction   
+    """
     if not get_settings().get_plugins_enabled():
         return
     from lunchinator import get_peers, get_plugin_manager
