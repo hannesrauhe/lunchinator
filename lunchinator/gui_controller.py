@@ -410,7 +410,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.memberStatusUpdateTimer.start(msecUntilNextMinute())
         
         anAction = menu.addAction('Call for lunch')
-        anAction.triggered.connect(partial(self.sendMessageClicked, u'lunch', None))
+        anAction.triggered.connect(partial(self.sendMessageClicked, u'lunch'))
         
         anAction = menu.addAction('Show Lunchinator')
         anAction.triggered.connect(self.openWindowClicked)
