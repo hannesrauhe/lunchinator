@@ -253,8 +253,14 @@ class CLIPrivacyHandling(LunchCLIModule):
                    specify the category to show the specific settings.
                privacy setpolicy <plugin> <action> [<category>] <policy>
                    Set the privacy policy for an action or an action's category. 
+                   Possible values for policy are:
+                     - Everybody
+                     - Nobody
+                     - Blacklist (Accept from everybody, with exceptions)
+                     - Whitelist (Accept from nobody, with exceptions)
+                     - Category (Settings per category, with exceptions)
                privacy set <plugin> <action> [<category>] <peer> allow|deny|default
-                   Set a peer's privacy state for an action or a action's category.
+                   Set a peer's privacy state for an action or an action's category.
                privacy test <plugin> <action> [<category>] <peer>
                    Test what happens if a peer performs an action on you.
         """
