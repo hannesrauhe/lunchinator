@@ -10,6 +10,7 @@ from lunchinator.cli.cli_plugin import CLIPluginHandling
 from lunchinator.cli.cli_privacy import CLIPrivacyHandling
 from lunchinator.lunch_server import EXIT_CODE_UPDATE
 from lunchinator.log.lunch_logger import newLogger
+from lunchinator.cli.cli_logging import CLILoggingHandling
 
 # enable tab completion on most platforms
 
@@ -46,6 +47,7 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
         self.addModule(CLIOptionHandling())
         self.addModule(CLIPluginHandling(self))
         self.addModule(CLIPrivacyHandling())
+        self.addModule(CLILoggingHandling())
         
         get_server().initialize(self)
         
