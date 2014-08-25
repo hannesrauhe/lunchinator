@@ -449,7 +449,7 @@ class lunch_server(object):
                         getCoreLogger().debug("Dropping duplicate message from peer %s", peerID)
                         return
                     try:
-                        self.getController().processMessage(data, ip, eventTime, newPeer, fromQueue)
+                        self.getController().processMessage(xmsg, ip, eventTime, newPeer, fromQueue)
                         self._cache_message(peerID, ip, data, eventTime)
                     except:
                         getCoreLogger().exception("Error while handling incoming message from %s: %s", ip, data)
@@ -470,7 +470,7 @@ class lunch_server(object):
         # not enqueued.
         if self._handle_structure_event(ip, cmd, value, newPeer):
             # now it's the plugins' turn:
-            self.controller.processEvent(cmd, value, ip, eventTime, False, False)
+            self.controller.processEvent(cmd, xmsg, ip, eventTime, False, False)
             return
                             
         try:
@@ -479,7 +479,7 @@ class lunch_server(object):
                 
             self._handle_core_event(ip, cmd, value, newPeer, fromQueue)
             # now it's the plugins' turn:
-            self.controller.processEvent(cmd, value, ip, eventTime, newPeer, fromQueue)
+            self.controller.processEvent(cmd, xmsg, ip, eventTime, newPeer, fromQueue)
         except:
             getCoreLogger().exception("Unexpected error while handling event from group member %s call: %s", ip, str(sys.exc_info()))
             getCoreLogger().critical("The data received was: %s", data)

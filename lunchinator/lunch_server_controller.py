@@ -90,47 +90,53 @@ class LunchServerController(object):
             ds = DataSenderThread.sendSingleFile(ip, otherTCPPort, fileOrData, getCoreLogger())
         ds.start()
     
-    def processEvent(self, cmd, value, addr, _eventTime, newPeer, fromQueue):
-        """ process any non-message event """
-        action = None
+    def processEvent(self, cmd, xmsg, addr, _eventTime, newPeer, fromQueue):
+        """ process any non-message event 
+        @type cmd: unicode
+        @type xmsg: extMessageIncoming
+        @type addr: unicode
+        @type _eventTime: float
+        @type newPeer: bool
+        @type fromQueue: bool
+        """
+
         msgData = None
         
-        #TODO: it this check necessary?
-        if cmd.startswith(u"HELO"):
-            prefix = cmd[5:]
-            action = PeerActions.get().getPeerAction(prefix)
+        prefix = cmd[5:]
+        _, value = xmsg.getPlainMessage().split(" ", 1)
+        action = PeerActions.get().getPeerAction(prefix)
+        
+        peerID = get_peers().getPeerID(pIP=addr)
+        if action is not None:
+            if peerID is None:
+                getCoreLogger().error(u"Could not get peer ID for IP %s", addr)
+                return
             
-            peerID = get_peers().getPeerID(pIP=addr)
-            if action is not None:
-                if peerID is None:
-                    getCoreLogger().error(u"Could not get peer ID for IP %s", addr)
-                    return
-                
-                try:
-                    msgData = action.preProcessMessageData(value)
-                except:
-                    getCoreLogger().error("Error preprocessing data for peer action %s: %s", action.getName(), formatException())
-                    return
-                
-                if action.willIgnorePeerAction(msgData):
-                    getCoreLogger().debug("Ignore peer action %s.%s from peer %s (message: %s)",
+            try:
+                msgData = action.preProcessMessageData(value)
+            except:
+                getCoreLogger().error("Error preprocessing data for peer action %s: %s", action.getName(), formatException())
+                return
+            
+            if action.willIgnorePeerAction(msgData):
+                getCoreLogger().debug("Ignore peer action %s.%s from peer %s (message: %s)",
+                          action.getPluginName(), action.getName(),
+                          peerID, value)
+            
+            if action.hasCategories():
+                category = action.getCategoryFromMessage(msgData)
+            else:
+                category = None
+            
+            shouldProcess = PeerActions.get().shouldProcessMessage(action, category, peerID, self.getMainGUI(), msgData)
+            
+            getCoreLogger().debug(u"%s peer action %s.%s from peer %s%s"
+                              "Accept" if shouldProcess else "Reject",
                               action.getPluginName(), action.getName(),
-                              peerID, value)
-                
-                if action.hasCategories():
-                    category = action.getCategoryFromMessage(msgData)
-                else:
-                    category = None
-                
-                shouldProcess = PeerActions.get().shouldProcessMessage(action, category, peerID, self.getMainGUI(), msgData)
-                
-                getCoreLogger().debug(u"%s peer action %s.%s from peer %s%s"
-                                  "Accept" if shouldProcess else "Reject",
-                                  action.getPluginName(), action.getName(),
-                                  peerID, ("" if category is None else " category " + category))
-                
-                if not shouldProcess:
-                    return
+                              peerID, ("" if category is None else " category " + category))
+            
+            if not shouldProcess:
+                return
         
         processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info, msgData), newPeer, fromQueue, action)
     
@@ -151,10 +157,17 @@ class LunchServerController(object):
         if get_server().get_messages() != None:
             get_server().get_messages().insert(mtime, addr, msg)
         
-    def processMessage(self, msg, addr, eventTime, newPeer, fromQueue):
-        """ process any message event, including lunch calls """
+    def processMessage(self, xmsg, addr, eventTime, newPeer, fromQueue):
+        """ process any message event, including lunch calls
+        @type xmsg: extMessageIncoming
+        @type addr: unicode
+        @type eventTime: float
+        @type newPeer: bool
+        @type fromQueue: bool
+        """
         mtime = localtime(eventTime)
-        t = strftime("%a, %d %b %Y %H:%M:%S", mtime).decode("utf-8")
+        t = strftime("%a, %d %b %Y %H:%M:%S", mtime).decode("utf-8")        
+        msg = xmsg.getPlainMessage()
         
         if not newPeer:
             with get_peers():

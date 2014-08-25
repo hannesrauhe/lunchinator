@@ -266,14 +266,27 @@ class LunchinatorGuiController(QObject, LunchServerController):
             fileOrData = fileOrData.encode('utf-8')
         self._sendFile.emit(ip, bytearray(fileOrData), otherTCPPort, isData)
 
-    """ process any non-message event """    
-    def processEvent(self, cmd, hostName, senderIP, eventTime, newPeer, fromQueue):
-        self._processEvent.emit(cmd, hostName, senderIP, eventTime, newPeer, fromQueue)
+    def processEvent(self, cmd, xmsg, addr, eventTime, newPeer, fromQueue):
+        """ process any non-message event 
+        @type cmd: unicode
+        @type xmsg: extMessageIncoming
+        @type addr: unicode
+        @type eventTime: float
+        @type newPeer: bool
+        @type fromQueue: bool
+        """
+        self._processEvent.emit(cmd, xmsg, addr, eventTime, newPeer, fromQueue)
     
     
     def processMessage(self, xmsg, addr, eventTime, newPeer, fromQueue):
         """ process any message event, including lunch calls 
-        @todo @type xmsg: extMessageIncoming"""
+        @type cmd: unicode
+        @type xmsg: extMessageIncoming
+        @type addr: unicode
+        @type eventTime: float
+        @type newPeer: bool
+        @type fromQueue: bool
+        """
         self._processMessage.emit(xmsg, addr, eventTime, newPeer, fromQueue)
     
     def getMainGUI(self):
@@ -691,14 +704,25 @@ class LunchinatorGuiController(QObject, LunchServerController):
         dr.start()
         
     @loggingSlot(object, object, object, float, bool, bool)
-    def processEventSlot(self, cmd, value, addr, eventTime, newPeer, fromQueue):
-        cmd = convert_string(cmd)
-        value = convert_string(value)
-        addr = convert_string(addr)
-        super(LunchinatorGuiController, self).processEvent(cmd, value, addr, eventTime, newPeer, fromQueue)
+    def processEventSlot(self, cmd, xmsg, addr, eventTime, newPeer, fromQueue):
+        """ process events that are not group messages
+        @type cmd: unicode 
+        @type xmsg: extendedMessageIncoming
+        @type addr: unicode
+        @type eventTime: float
+        @type newPeer: bool
+        @type fromQueue: bool
+        """
+        super(LunchinatorGuiController, self).processEvent(cmd, xmsg, addr, eventTime, newPeer, fromQueue)
      
     @loggingSlot(object, object, float, bool, bool)
-    def processMessageSlot(self, msg, addr, eventTime, newPeer, fromQueue):
-        msg = convert_string(msg)
-        addr = convert_string(addr)
-        super(LunchinatorGuiController, self).processMessage(msg, addr, eventTime, newPeer, fromQueue)
+    def processMessageSlot(self, xmsg, addr, eventTime, newPeer, fromQueue):
+        """ process any message event, including lunch calls
+        @type xmsg: extendedMessageIncoming
+        @type addr: unicode
+        @type eventTime: float
+        @type newPeer: bool
+        @type fromQueue: bool
+        """
+
+        super(LunchinatorGuiController, self).processMessage(xmsg, addr, eventTime, newPeer, fromQueue)
