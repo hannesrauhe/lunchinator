@@ -43,7 +43,11 @@ def convert_raw(string):
     if type(string) == str:
         return string
     elif type(string) == unicode:
-        return string.decode('utf-8')
+        return string.encode('utf-8')
+    try:
+        return str(string.toUtf8())
+    except:
+        pass
     return str(string)
     
 from lunchinator.notification_center import NotificationCenter
