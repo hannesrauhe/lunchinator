@@ -140,9 +140,10 @@ class lunch_server(object):
     
     def getController(self):
         return self.controller
-
-    '''listening method - should be started in its own thread'''    
+   
     def start_server(self):
+        '''listening method - should be started in its own thread''' 
+        
         getCoreLogger().info("%s - Starting the lunch notifier service", strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"))
         
         self.my_master = -1  # the peer i use as master
