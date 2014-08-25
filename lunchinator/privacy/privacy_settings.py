@@ -251,7 +251,7 @@ class PrivacySettings(object):
             return self.getWhitelist(action, category, useModified, categoryPolicy)
         if policy == self.POLICY_PEER_EXCEPTION:
             return self.getPeerExceptions(action, useModified)
-        self.logger().error("There are no exceptions for policy %d", policy)
+        self.logger.error("There are no exceptions for policy %s", policy)
                 
     def getPeerState(self, peerID, action, category):
         """Return the privacy state of a peer for a given action.
@@ -389,7 +389,7 @@ class PrivacySettings(object):
             key = u"blk"
         elif policy == self.POLICY_PEER_EXCEPTION:
             if category is not None:
-                self.logger().warning("There are no peer exceptions for individual categories. Please check what you're doing here.")
+                self.logger.warning("There are no peer exceptions for individual categories. Please check what you're doing here.")
             key = u"exc"
             
         if key not in settingsDict:

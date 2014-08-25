@@ -112,16 +112,22 @@ class PeerNames(object):
         else:
             return peerName
 
-    def iterPeerIDsByName(self, searchedName):
+    def iterPeerIDsByName(self, searchedName, sensitive=True):
         """Iterates over peer IDs with a given name.
         
         The name can either be a real name or a custom name.
         This method does not block, use get_peers().getPeerIDsByName instead.
         """
+        if not sensitive:
+            searchedName = searchedName.lower()
         for peerID, aTuple in self._peerNameCache.iteritems():
             peerName, customName = aTuple
-            if peerName == searchedName or customName == searchedName:
-                yield peerID
+            if sensitive:
+                if peerName == searchedName or customName == searchedName:
+                    yield peerID
+            else:
+                if peerName.lower() == searchedName or customName.lower() == searchedName:
+                    yield peerID
                 
     def getAllPeerIDs(self):
         """Returns IDs of all peers ever known.
