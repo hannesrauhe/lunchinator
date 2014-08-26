@@ -7,3 +7,6 @@ Author = Hannes Rauhe, Cornelius Ratsch
 Version = 0.1
 Website = http://www.lunchinator.de
 Description = Allows you to chat directly with peers.
+
+[Requirements]
+pip = Markdown

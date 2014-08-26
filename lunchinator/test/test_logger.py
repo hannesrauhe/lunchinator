@@ -4,6 +4,9 @@ from PyQt4.QtCore import QObject, pyqtSignal, Qt, pyqtSlot
 from lunchinator.log.logging_slot import loggingSlot
 from lunchinator.log.lunch_logger import newLogger
 from lunchinator.log.logging_func import loggingFunc
+from pkg_resources import get_distribution
+
+get_distribution("python-twjitter > 23.0")
 
 class SignalTest(QObject):
     s = pyqtSignal()

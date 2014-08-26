@@ -53,6 +53,9 @@ class MembersTableModel(TableModelBase):
         self._grayOutIfNoMember(item, peerID)
         
     def _updateLunchTimeItem(self, peerID, infoDict, item):
+        if infoDict is None:
+            # peer is not there any more and should be removed soon anyways
+            return
         isMember = self.dataSource.isMember(pID=peerID)
         if self._LUNCH_BEGIN_KEY in infoDict and self._LUNCH_END_KEY in infoDict:
             item.setText(infoDict[self._LUNCH_BEGIN_KEY]+"-"+infoDict[self._LUNCH_END_KEY])
@@ -74,6 +77,9 @@ class MembersTableModel(TableModelBase):
         self._grayOutIfNoMember(item, peerID)
             
     def _updateGroupItem(self, peerID, infoDict, item):
+        if infoDict is None:
+            # peer is not there any more and should be removed soon anyways
+            return
         if self._GROUP_KEY in infoDict:
             item.setText(infoDict[self._GROUP_KEY])
         else:

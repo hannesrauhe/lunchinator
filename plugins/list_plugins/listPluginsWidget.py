@@ -39,7 +39,7 @@ class listPluginsWidget(QWidget):
             p["description"] = pluginInfo.description
             p["requirements"] = []
             if pluginInfo.details.has_option("Requirements", "pip"):
-                p["requirements"] = pluginInfo.details.get("Requirements", "pip").split(",")
+                p["requirements"] = [req.strip() for req in pluginInfo.details.get("Requirements", "pip").split(";;")]
             p["forced"] = pluginInfo.plugin_object.force_activation
             p["activated"] = pluginInfo.plugin_object.is_activated
             info[pluginInfo.name] = p

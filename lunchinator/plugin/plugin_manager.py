@@ -3,6 +3,8 @@ from lunchinator import get_notification_center
 from lunchinator.log import getCoreLogger
 from lunchinator.plugin import iface_general_plugin, iface_called_plugin, iface_gui_plugin, iface_db_plugin
 from yapsy import PLUGIN_NAME_FORBIDEN_STRING
+from lunchinator.utilities import INSTALL_SUCCESS, INSTALL_FAIL,\
+    INSTALL_CANCELED, INSTALL_RESTART
 
 class NotificationPluginManager(ConfigurablePluginManager):
     def __init__(self,
@@ -33,6 +35,7 @@ class NotificationPluginManager(ConfigurablePluginManager):
         return plugin_list_str.strip(" ").split("%s"%PLUGIN_NAME_FORBIDEN_STRING)
     
     def loadPlugins(self, callback=None):
+        from lunchinator.utilities import handleMissingDependencies
         self._emitSignals = False
         
         self._component.loadPlugins(callback)
@@ -71,14 +74,85 @@ class NotificationPluginManager(ConfigurablePluginManager):
                 loadSecond.append(pluginInfo)
             elif pluginInfo.name in pluginsToLoad:
                 loadThird.append(pluginInfo)
+
+        missing = {}
+        for piList in (loadFirst, loadSecond, loadThird):
+            newMissing = self.checkActivation(piList)
+            missing.update(newMissing)
+            
+        from lunchinator import get_server
+        result = handleMissingDependencies(missing, gui=get_server().has_gui())
+        if result == INSTALL_FAIL:
+            # maybe there were dependencies installed, better re-check
+            missing = {}
+            for piList in (loadFirst, loadSecond, loadThird):
+                newMissing = self.checkActivation(piList)
+                missing.update(newMissing)
+            self._deactivateMissing(missing)
+        elif result == INSTALL_CANCELED:
+            # user chose not to install -> deactivate
+            self._deactivateMissing(missing)
+        elif result == INSTALL_SUCCESS:
+            missing = {}
+        elif result == INSTALL_RESTART:
+            return
                     
         for piList in (loadFirst, loadSecond, loadThird):
             for pluginInfo in piList:
+                if (pluginInfo.name, pluginInfo.category) in missing:
+                    self._logCannotLoad(pluginInfo, missing)
+                    continue
                 self.activatePlugin(pluginInfo=pluginInfo, save_state=False)
         
         self._emitSignals = True
+        
+    def _deactivateMissing(self, missing):
+        for component in missing.keys():
+            pluginName, category = component
+            pluginInfo = self._component.getPluginByName(pluginName, category)
+            ConfigurablePluginManager.deactivatePluginByName(self, pluginInfo.name, category_name=pluginInfo.category, save_state=True)
+        
+    def checkActivation(self, plugins):
+        missing = {}
+        for pluginInfo in plugins:
+            if pluginInfo.details.has_option("Requirements", "pip"):
+                from lunchinator.utilities import checkRequirements
+                checkRequirements(pluginInfo.details.get("Requirements", "pip").split(";;"),
+                                  (pluginInfo.name, pluginInfo.category),
+                                  pluginInfo.plugin_object.get_displayed_name(),
+                                  missing)
+        return missing
+    
+    def _logCannotLoad(self, pluginInfo, missing):
+        getCoreLogger().warning("Cannot load plugin %s: Missing dependencies (%s)",
+                                pluginInfo.plugin_object.get_displayed_name(),
+                                [tup[1] for tup in missing.values()[0]])
     
     def activatePlugin(self, pluginInfo, save_state=True):
+        from lunchinator.utilities import handleMissingDependencies
+        from lunchinator import get_server
+        
+        missing = self.checkActivation([pluginInfo])
+        result = handleMissingDependencies(missing, gui=get_server().has_gui())
+        if result == INSTALL_FAIL:
+            # maybe there were dependencies installed, better re-check
+            missing = self.checkActivation([pluginInfo])
+            if missing:
+                self._logCannotLoad(pluginInfo, missing)
+                get_notification_center().emitPluginDeactivated(pluginInfo.name, pluginInfo.category)
+                return
+        elif result == INSTALL_CANCELED:
+            # user chose not to install -> deactivate
+            get_notification_center().emitPluginDeactivated(pluginInfo.name, pluginInfo.category)
+            self._deactivateMissing(missing)
+            return
+        elif result == INSTALL_SUCCESS:
+            missing = {}
+        elif result == INSTALL_RESTART:
+            # store that the plugin is activated now
+            ConfigurablePluginManager.activatePluginByName(self, pluginInfo.name, category_name=pluginInfo.category, save_state=True)
+            return
+        
         getCoreLogger().info("Activating plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
         try:
             pluginInfo.plugin_object.setPluginName(pluginInfo.name)
