@@ -37,7 +37,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _performCall = pyqtSignal(object, set, set)
     _sendFile = pyqtSignal(object, bytearray, int, bool)
     _receiveFile = pyqtSignal(object, int, object, int, object, object)
-    _processEvent = pyqtSignal(object, object, object, float, bool, bool)
+    _processEvent = pyqtSignal(object, object, float, bool, bool)
     _processMessage = pyqtSignal(object, object, float, bool, bool)
     _updateRequested = pyqtSignal()
     # -----------------------------
@@ -266,16 +266,15 @@ class LunchinatorGuiController(QObject, LunchServerController):
             fileOrData = fileOrData.encode('utf-8')
         self._sendFile.emit(ip, bytearray(fileOrData), otherTCPPort, isData)
 
-    def processEvent(self, cmd, xmsg, addr, eventTime, newPeer, fromQueue):
+    def processEvent(self, xmsg, addr, eventTime, newPeer, fromQueue):
         """ process any non-message event 
-        @type cmd: unicode
         @type xmsg: extMessageIncoming
         @type addr: unicode
         @type eventTime: float
         @type newPeer: bool
         @type fromQueue: bool
         """
-        self._processEvent.emit(cmd, xmsg, addr, eventTime, newPeer, fromQueue)
+        self._processEvent.emit(xmsg, addr, eventTime, newPeer, fromQueue)
     
     
     def processMessage(self, xmsg, addr, eventTime, newPeer, fromQueue):
@@ -703,17 +702,16 @@ class LunchinatorGuiController(QObject, LunchServerController):
         dr.finished.connect(dr.deleteLater)
         dr.start()
         
-    @loggingSlot(object, object, object, float, bool, bool)
-    def processEventSlot(self, cmd, xmsg, addr, eventTime, newPeer, fromQueue):
+    @loggingSlot(object, object, float, bool, bool)
+    def processEventSlot(self, xmsg, addr, eventTime, newPeer, fromQueue):
         """ process events that are not group messages
-        @type cmd: unicode 
         @type xmsg: extendedMessageIncoming
         @type addr: unicode
         @type eventTime: float
         @type newPeer: bool
         @type fromQueue: bool
         """
-        super(LunchinatorGuiController, self).processEvent(cmd, xmsg, addr, eventTime, newPeer, fromQueue)
+        super(LunchinatorGuiController, self).processEvent(xmsg, addr, eventTime, newPeer, fromQueue)
      
     @loggingSlot(object, object, float, bool, bool)
     def processMessageSlot(self, xmsg, addr, eventTime, newPeer, fromQueue):

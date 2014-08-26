@@ -90,9 +90,8 @@ class LunchServerController(object):
             ds = DataSenderThread.sendSingleFile(ip, otherTCPPort, fileOrData, getCoreLogger())
         ds.start()
     
-    def processEvent(self, cmd, xmsg, addr, _eventTime, newPeer, fromQueue):
+    def processEvent(self, xmsg, addr, _eventTime, newPeer, fromQueue):
         """ process any non-message event 
-        @type cmd: unicode
         @type xmsg: extMessageIncoming
         @type addr: unicode
         @type _eventTime: float
@@ -102,9 +101,10 @@ class LunchServerController(object):
 
         msgData = None
         
-        prefix = cmd[5:]
-        _, value = xmsg.getPlainMessage().split(" ", 1)
-        action = PeerActions.get().getPeerAction(prefix)
+        cmd = xmsg.getCommand()
+        value = xmsg.getCommandPayload()
+        
+        action = PeerActions.get().getPeerAction(cmd)
         
         peerID = get_peers().getPeerID(pIP=addr)
         if action is not None:

@@ -1,6 +1,7 @@
 from lunchinator.log import getCoreLogger
-import math, hashlib
 import encryption
+import math
+import hashlib
 """ Message classes """
     
 class extMessage(object):
@@ -33,6 +34,8 @@ class extMessage(object):
         self._protocol_version = self.MAX_SUPPORTED_VERSION
         self._fragments = []
         self._plainMsg = u""
+        self._cmd = u""         #contains the command without HELO_
+        self._cmdpayload = u""  #contains the value after HELO_*
         self._splitID = "0000"
         self._statusByte = 0b00000000
         self._signature_data = None
@@ -48,6 +51,15 @@ class extMessage(object):
     
     def isComplete(self):
         return all(len(f) > 0 for f in self._fragments)
+    
+    def isCommand(self):
+        return len(self._cmd)>0
+    
+    def getCommand(self):
+        return self._cmd
+    
+    def getCommandPayload(self):
+        return self._cmdpayload
     
     def getCompleteness(self):
         completeFragments = 0
@@ -109,7 +121,7 @@ class extMessageIncoming(extMessage):
             self._splitID = f[self.BYTE_HASH_START:self.BYTE_HASH_END]
             
             self._insertFragment(f)
-            self._finalize()
+        self._finalize()
         
     def addFragment(self, f):
         if self.isComplete():
@@ -135,7 +147,10 @@ class extMessageIncoming(extMessage):
         self._fragments[fragmentNum] = f
     
     def _finalize(self):            
-        if self.isComplete():
+        if not self.isComplete():
+            return
+        
+        if len(self._fragments):
             pipe_value = ""        
             for e in self._fragments:
                 pipe_value += e[self.BYTE_MSG_START:]
@@ -149,6 +164,18 @@ class extMessageIncoming(extMessage):
             if not self.isSigned():
                 if self.hashPlainMessage()!=self.getSplitID():
                     raise Exception("Malformed Message: Checksum of message invalid")
+        
+        if self._plainMsg.startswith("HELO"):
+            try:
+                # commands must always have additional info:
+                (self._cmd, self._cmdpayload) = self._plainMsg.split(" ", 1)
+            except:
+                raise Exception("Command of has no payload: %s"%self._plainMsg)
+            
+            if self._cmd.startswith("HELO_"):
+                #get rid of the prefix
+                self._cmd = self._cmd[5:]
+                
     
     def _decompress(self, value):
         if not self.isCompressed():

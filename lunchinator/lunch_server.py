@@ -174,7 +174,7 @@ class lunch_server(object):
                      
                     # check for local address: only stop command allowed, else ignore
                     if ip.startswith("127."):
-                        if plainMsg.startswith("HELO_STOP"):
+                        if xmsg.getCommand() == "STOP":
                             getCoreLogger().info("Got Stop Command from localhost: %s", plainMsg)
                             self.running = False
                             self.exitCode = EXIT_CODE_STOP
@@ -438,7 +438,7 @@ class lunch_server(object):
         data = xmsg.getPlainMessage()
         # if there is no HELO in the beginning, it's just a message and 
         # we handle it, if the peer is in our group
-        if not data.startswith("HELO"):
+        if not xmsg.isCommand():
             # only process message if we know the peer
             if newPeer:
                 self._enqueue_event(data, ip, eventTime)
@@ -457,29 +457,22 @@ class lunch_server(object):
                     getCoreLogger().debug("Dropped a message from %s: %s", ip, data)
             return
         
-        cmd = u""
-        value = u""
-        try:
-            # commands must always have additional info:
-            (cmd, value) = data.split(" ", 1)
-        except:
-            getCoreLogger().error("Command of %s has no payload: %s", ip, data)
         
         # if this packet has info about the peer, we record it and
         # are done. These events are always processed immediately and
         # not enqueued.
-        if self._handle_structure_event(ip, cmd, value, newPeer):
+        if self._handle_structure_event(ip, xmsg, newPeer):
             # now it's the plugins' turn:
-            self.controller.processEvent(cmd, xmsg, ip, eventTime, False, False)
+            self.controller.processEvent(xmsg, ip, eventTime, False, False)
             return
                             
         try:
             if newPeer:
                 self._enqueue_event(data, ip, eventTime)
                 
-            self._handle_core_event(ip, cmd, value, newPeer, fromQueue)
+            self._handle_core_event(ip, xmsg, newPeer, fromQueue)
             # now it's the plugins' turn:
-            self.controller.processEvent(cmd, xmsg, ip, eventTime, newPeer, fromQueue)
+            self.controller.processEvent(xmsg, ip, eventTime, newPeer, fromQueue)
         except:
             getCoreLogger().exception("Unexpected error while handling event from group member %s call: %s", ip, str(sys.exc_info()))
             getCoreLogger().critical("The data received was: %s", data)
@@ -489,27 +482,35 @@ class lunch_server(object):
         if self._peers.getAvatarOutdated(pIP=ip):
             self.request_avatar(ip)
     
-    def _handle_structure_event(self, ip, cmd, value, newPeer):
+    def _handle_structure_event(self, ip, xmsg, newPeer):
+        """ handle events that influence peer list and info
+        @type ip: unicode 
+        @type xmsg: extMessageIncoming 
+        @type newPeer: bool 
+        """
         r_value = True
         
-        if cmd == "HELO_INFO":
+        cmd = xmsg.getCommand()
+        value = xmsg.getCommandPayload()
+        
+        if cmd == "INFO":
             self._updateInfoDict(ip, value)
             if newPeer:
                 self._process_queued_messages(ip)
             
-        elif cmd == "HELO_REQUEST_INFO":
+        elif cmd == "REQUEST_INFO":
             self._updateInfoDict(ip, value)
             self.call_info()
             if newPeer:
                 self._process_queued_messages(ip)
         
-        elif cmd == "HELO_REQUEST_DICT":
+        elif cmd == "REQUEST_DICT":
             self._updateInfoDict(ip, value)
             self.call_dict(ip)           
             if newPeer:
                 self._process_queued_messages(ip)
 
-        elif cmd == "HELO_DICT":
+        elif cmd == "DICT":
             # the master send me the list of _members - yeah
             ext_members = json.loads(value)
             # add every entry and assume, the member is in my group
@@ -518,7 +519,7 @@ class lunch_server(object):
                     #this is a new peer - ask for info right away
                     self.call_request_info([m_ip])
 
-        elif cmd == "HELO_LEAVE":
+        elif cmd == "LEAVE":
             #the peer tells me that he leaves, I'll remove all of his IPs
             pID = self._peers.getPeerID(pIP=ip)
             self._peers.removePeer(pID)
@@ -541,14 +542,16 @@ class lunch_server(object):
             return True
         return False   
       
-    def _handle_core_event(self, ip, cmd, value, newPeer, _fromQueue):
+    def _handle_core_event(self, ip, xmsg, newPeer, _fromQueue):
         # todo: maybe from here on this should be in plugins?
         
         # I don't see any reason to process these events for unknown peers.
         if newPeer:
             return
+        cmd = xmsg.getCommand()
+        value = xmsg.getCommandValue()
         
-        if cmd == "HELO_AVATAR":
+        if cmd == "AVATAR":
             # someone wants to send me his pic via TCP
             values = value.split()
             file_size = int(values[0].strip())
@@ -573,7 +576,7 @@ class lunch_server(object):
                                                                 pID,
                                                                 info[u"avatar"]))
             
-        elif cmd == "HELO_REQUEST_AVATAR":
+        elif cmd == "REQUEST_AVATAR":
             # someone wants my pic 
             other_tcp_port = get_settings().get_tcp_port()
             
@@ -586,14 +589,14 @@ class lunch_server(object):
             if os.path.exists(fileToSend):
                 fileSize = os.path.getsize(fileToSend)
                 getCoreLogger().info("Sending file of size %d to %s : %d", fileSize, str(ip), other_tcp_port)
-                self.call("HELO_AVATAR %s" % fileSize, peerIPs = [ip])
+                self.call("AVATAR %s" % fileSize, peerIPs = [ip])
                 # TODO in a future release, send TCP port
-                # self.call("HELO_AVATAR %s %s" % (fileSize, other_tcp_port), ip)
+                # self.call("AVATAR %s %s" % (fileSize, other_tcp_port), ip)
                 self.controller.sendFile(ip, fileToSend, other_tcp_port)
             else:
                 getCoreLogger().error("Want to send file %s, but cannot find it", fileToSend)   
             
-        elif cmd == "HELO_REQUEST_LOGFILE":
+        elif cmd == "REQUEST_LOGFILE":
             # someone wants my logfile 
             other_tcp_port = get_settings().get_tcp_port()
             try:                
@@ -613,7 +616,7 @@ class lunch_server(object):
             
             fileSize = fileToSend.tell()
             getCoreLogger().info("Sending file of size %d to %s : %d", fileSize, str(ip), other_tcp_port)
-            self.call("HELO_LOGFILE_TGZ %d %d" % (fileSize, other_tcp_port), peerIPs=[ip])
+            self.call("LOGFILE_TGZ %d %d" % (fileSize, other_tcp_port), peerIPs=[ip])
             self.controller.sendFile(ip, fileToSend.getvalue(), other_tcp_port, True)      
             
     def _finish(self):

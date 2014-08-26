@@ -157,6 +157,23 @@ class extMsgTest(unittest.TestCase):
         self.assertFalse(eMsgIn.isEncrypted(), "Status byte says encrypted")
         self.assertEqual(eMsgIn.getVersion(), -1, "Simple Message should be version -1")
         self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
+        
+    def testCommand(self):
+        eMsgIn = extMessageIncoming("HELO_SOMETHING payload")
+        self.assertTrue(eMsgIn.isCommand())
+        self.assertEqual(eMsgIn.getCommand(), u"SOMETHING")
+        self.assertEqual(eMsgIn.getCommandPayload(), u"payload")
+        self.assertIsInstance(eMsgIn.getCommandPayload(), unicode)
+        
+        eMsgIn = extMessageIncoming("HELO payload")
+        self.assertTrue(eMsgIn.isCommand())
+        self.assertEqual(eMsgIn.getCommand(), u"HELO")
+        self.assertEqual(eMsgIn.getCommandPayload(), u"payload")
+        
+        eMsgIn = extMessageIncoming("payload")
+        self.assertFalse(eMsgIn.isCommand())
+        self.assertEqual(eMsgIn.getCommand(), u"")
+        self.assertEqual(eMsgIn.getCommandPayload(), u"")
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
