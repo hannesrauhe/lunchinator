@@ -5,8 +5,7 @@ from lunchinator import get_server, get_settings, get_notification_center,\
     get_peer_actions
 from lunchinator.log import getCoreLogger, loggingFunc
 from lunchinator.datathread.dt_threading import DataReceiverThread, DataSenderThread
-from lunchinator.utilities import processPluginCall, getTimeDifference,\
-    formatException
+from lunchinator.utilities import getTimeDifference, formatException
 from lunchinator.notification_center import NotificationCenter
 from time import localtime, strftime
 from lunchinator.peer_actions import PeerActions
@@ -98,7 +97,6 @@ class LunchServerController(object):
         @type newPeer: bool
         @type fromQueue: bool
         """
-
         msgData = None
         
         cmd = xmsg.getCommand()
@@ -138,8 +136,50 @@ class LunchServerController(object):
             if not shouldProcess:
                 return
         
-        processPluginCall(addr, lambda p, ip, member_info: p.process_event(cmd, value, ip, member_info, msgData), newPeer, fromQueue, action)
+        self.processPluginCall(addr, lambda p, ip, member_info: p.process_command(xmsg, ip, member_info, msgData), newPeer, fromQueue, action)
+        #deprecated:
+        self.processPluginCall(addr, lambda p, ip, member_info: p.process_event("HELO_"+cmd, value, ip, member_info, msgData), newPeer, fromQueue, action)
     
+    def _processCallOnPlugin(self, pluginObject, pluginName, ip, call, newPeer, fromQueue, member_info):
+        from lunchinator.plugin import iface_called_plugin, iface_gui_plugin
+        
+        # called also contains gui plugins
+        if not (isinstance(pluginObject, iface_called_plugin) or \
+                isinstance(pluginObject, iface_gui_plugin)):
+            getCoreLogger().warning("Plugin '%s' is not a called/gui plugin", pluginName)
+            return
+        if pluginObject.is_activated:
+            try:
+                if (pluginObject.processes_events_immediately() and not fromQueue) or \
+                   (not pluginObject.processes_events_immediately() and not newPeer):
+                    call(pluginObject, ip, member_info)
+            except:
+                pluginObject.logger.exception(u"plugin error in %s while processing event" % pluginName)
+        
+    def processPluginCall(self, ip, call, newPeer, fromQueue, action=None):
+        """ call plugins
+        @type ip: unicode
+        @type call: function
+        @type newPeer: bool
+        @type fromQueue: bool
+        @type action: PeerAction   
+        """
+        if not get_settings().get_plugins_enabled():
+            return
+        
+        member_info = get_peers().getPeerInfo(pIP=ip)
+        
+        # called also contains gui plugins
+        for pluginInfo in get_plugin_manager().getPluginsOfCategory("called")+get_plugin_manager().getPluginsOfCategory("gui"):
+            # if this is a peer action, only call special plugins
+            if action is None or (pluginInfo.plugin_object.processes_all_peer_actions() and \
+                                  pluginInfo.name != action.getPluginName()):
+                self._processCallOnPlugin(pluginInfo.plugin_object, pluginInfo.name, ip, call, newPeer, fromQueue, member_info)
+        
+        # perform peer action
+        if action is not None:
+            self._processCallOnPlugin(action.getPluginObject(), action.getPluginName(), ip, call, newPeer, fromQueue, member_info)
+            
     def getMainGUI(self):
         return None
     
@@ -185,7 +225,7 @@ class LunchServerController(object):
             m = {u"ID": addr}
         
         if not msg.startswith("ignore"):
-            processPluginCall(addr, lambda p, ip, member_info: p.process_message(msg, ip, member_info), newPeer, fromQueue)
+            self.processPluginCall(addr, lambda p, ip, member_info: p.process_message(msg, ip, member_info), newPeer, fromQueue)
             
             if get_settings().get_lunch_trigger() in msg.lower():
                 processLunchCall = False
@@ -201,7 +241,7 @@ class LunchServerController(object):
                 
                 if processLunchCall:
                     self.last_lunch_call = eventTime
-                    processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info), newPeer, fromQueue)
+                    self.processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info), newPeer, fromQueue)
                 else:
                     getCoreLogger().debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)", t, m, msg, strftime("%H:%M:%S", localtime(eventTime + get_settings().get_mute_timeout())))
         

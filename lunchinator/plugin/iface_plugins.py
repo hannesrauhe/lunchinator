@@ -585,6 +585,14 @@ class iface_called_plugin(iface_plugin):
     def process_event(self, cmd, value, ip, member_info, preprocessedData=None):
         pass 
         
+    def process_command(self, xmsg, ip, member_info, preprocessedData=None):
+        """process extended Messages - can be signed
+        @type xmsg: extMessageIncoming
+        @type ip: unicode
+        @type member_info: dict   
+        """
+        pass
+        
 class iface_gui_plugin(iface_plugin):
     def __init__(self):
         super(iface_gui_plugin, self).__init__()
@@ -634,5 +642,13 @@ class iface_gui_plugin(iface_plugin):
         pass
         
     def process_event(self, cmd, value, ip, member_info, preprocessedData=None):
+        pass
+        
+    def process_command(self, xmsg, ip, member_info, preprocessedData=None):
+        """process extended Messages - can be signed
+        @type xmsg: extMessageIncoming
+        @type ip: unicode
+        @type member_info: dict   
+        """
         pass
     

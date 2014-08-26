@@ -114,47 +114,6 @@ def canUseBackgroundQThreads():
         return LooseVersion(PYQT_VERSION_STR) > LooseVersion("4.7.2")
     except:
         return False
-    
-def _processCallOnPlugin(pluginObject, pluginName, ip, call, newPeer, fromQueue, member_info):
-    from lunchinator.plugin import iface_called_plugin, iface_gui_plugin
-    
-    # called also contains gui plugins
-    if not (isinstance(pluginObject, iface_called_plugin) or \
-            isinstance(pluginObject, iface_gui_plugin)):
-        getCoreLogger().warning("Plugin '%s' is not a called/gui plugin", pluginName)
-        return
-    if pluginObject.is_activated:
-        try:
-            if (pluginObject.processes_events_immediately() and not fromQueue) or \
-               (not pluginObject.processes_events_immediately() and not newPeer):
-                call(pluginObject, ip, member_info)
-        except:
-            pluginObject.logger.exception(u"plugin error in %s while processing event" % pluginName)
-    
-def processPluginCall(ip, call, newPeer, fromQueue, action=None):
-    """ call plugins
-    @type ip: unicode
-    @type call: function
-    @type newPeer: bool
-    @type fromQueue: bool
-    @type action: PeerAction   
-    """
-    if not get_settings().get_plugins_enabled():
-        return
-    from lunchinator import get_peers, get_plugin_manager
-    
-    member_info = get_peers().getPeerInfo(pIP=ip)
-    
-    # called also contains gui plugins
-    for pluginInfo in get_plugin_manager().getPluginsOfCategory("called")+get_plugin_manager().getPluginsOfCategory("gui"):
-        # if this is a peer action, only call special plugins
-        if action is None or (pluginInfo.plugin_object.processes_all_peer_actions() and \
-                              pluginInfo.name != action.getPluginName()):
-            _processCallOnPlugin(pluginInfo.plugin_object, pluginInfo.name, ip, call, newPeer, fromQueue, member_info)
-    
-    # perform peer action
-    if action is not None:
-        _processCallOnPlugin(action.getPluginObject(), action.getPluginName(), ip, call, newPeer, fromQueue, member_info)
                 
 def which(program):
     def is_exe(fpath):
