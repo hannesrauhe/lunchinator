@@ -549,7 +549,7 @@ class lunch_server(object):
         if newPeer:
             return
         cmd = xmsg.getCommand()
-        value = xmsg.getCommandValue()
+        value = xmsg.getCommandPayload()
         
         if cmd == "AVATAR":
             # someone wants to send me his pic via TCP
