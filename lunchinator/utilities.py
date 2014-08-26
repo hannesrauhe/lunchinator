@@ -9,6 +9,8 @@ from tempfile import NamedTemporaryFile
 import itertools
 import string
 import errno
+from pkg_resources import get_distribution, ResolutionError,\
+    DistributionNotFound, VersionConflict
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -551,3 +553,99 @@ def sanitizeForFilename(s):
     if _validFilenameChars is None:
         _validFilenameChars = set("-_.() %s%s" % (string.ascii_letters, string.digits))
     return ''.join(c for c in s if c in _validFilenameChars)
+
+REASON_PACKAGE_MISSING = 0
+REASON_VERSION_CONFLICT = 1
+REASON_UNKNOWN = 2
+
+def checkRequirements(reqs, component, dispName, missing={}):
+    """Checks Python environment for installed dependencies.
+    
+    Returns a dictionary {component name : (displayed name, requirement, reason, info)}
+    for each requirement that is not met by the current environment.
+    
+    reqs -- List of requirement strings
+    component -- Name of the component that requires the package
+    dispName -- Displayed name of the component
+    missing -- dictionary to update
+    """
+    for req in reqs:
+        req = req.strip()
+        try:
+            get_distribution(req)
+        except ResolutionError as e:
+            if type(e) is DistributionNotFound:
+                reason = REASON_PACKAGE_MISSING
+                info = None
+            elif type(e) is VersionConflict:
+                reason = REASON_VERSION_CONFLICT
+                info = e.args[0]
+            else:
+                reason = REASON_UNKNOWN
+                info = None
+            if component not in missing:
+                missing[component] = []
+            missing[component].append((dispName, req, reason, info))
+    return missing
+    
+INSTALL_SUCCESS = 0
+INSTALL_FAIL = 1
+INSTALL_RESTART = 2
+INSTALL_CANCELED = 3
+INSTALL_NONE = 4
+       
+def _installDependencies(requirements):
+    if not requirements:
+        getCoreLogger().info("No dependencies to install.")
+        return INSTALL_SUCCESS
+    
+    result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + requirements)
+    
+    from lunchinator.lunch_server import EXIT_CODE_UPDATE
+    if result == EXIT_CODE_UPDATE:
+        # need to restart
+        restart(getCoreLogger())
+        return INSTALL_RESTART
+    
+    for req in requirements:
+        try:
+            get_distribution(req)
+        except:
+            return INSTALL_FAIL
+    return INSTALL_SUCCESS
+ 
+def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True):
+    """If there are missing dependencies, asks and installs them.
+    
+    Returns a list of components whose requirements were not fully
+    installed.
+    
+    missing -- dictionary returned by checkRequirements(...)
+    optionalCallbacl -- function that takes a requirement string and returns
+                        True if the requirement is optional and False
+                        otherwise.
+    """
+    if missing:
+        if gui:
+            from lunchinator.req_error_dialog import RequirementsErrorDialog
+            requirements = []
+            for _component, missingList in missing.iteritems():
+                for dispName, req, reason, info in missingList:
+                    if reason == REASON_PACKAGE_MISSING:
+                        reasonStr = u"Not installed"
+                    elif reason == REASON_VERSION_CONFLICT:
+                        reasonStr = u"Wrong version (installed: %s)" % info.version
+                    else:
+                        reasonStr = u"Unknown"
+                    requirements.append((req,
+                                         dispName,
+                                         reasonStr,
+                                         optionalCallback(req)))
+            f = RequirementsErrorDialog(requirements, None)
+            res = f.exec_()
+            if res == RequirementsErrorDialog.Accepted:
+                return _installDependencies(f.getSelectedRequirements())
+            else:
+                return INSTALL_CANCELED
+        return INSTALL_FAIL
+    return INSTALL_NONE
