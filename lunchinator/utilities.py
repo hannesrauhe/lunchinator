@@ -593,6 +593,7 @@ def installPipDependencyWindows(package):
     """ installs dependecies for lunchinator working without pyinstaller on Win 
     """
     from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
+    import types
     
     getCoreLogger().debug("Trying to install %s", package)
     
@@ -606,7 +607,7 @@ def installPipDependencyWindows(package):
     params = '-m pip install %s' % (packageStr)
         
     try:
-        import win32api, win32con, win32event, win32process, types
+        import win32api, win32con, win32event, win32process
         from win32com.shell.shell import ShellExecuteEx
         from win32com.shell import shellcon
     except:
