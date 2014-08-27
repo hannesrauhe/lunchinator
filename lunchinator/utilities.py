@@ -593,14 +593,15 @@ def installPipDependencyWindows(package):
     """ installs dependecies for lunchinator working without pyinstaller on Win 
     """
     getCoreLogger().debug("Trying to install %s", package)
+    from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
         
     try:
         import win32api, win32con, win32event, win32process, types
         from win32com.shell.shell import ShellExecuteEx
         from win32com.shell import shellcon
     except:
-        getCoreLogger().error("You need pywin32 to install dependencies")        
-        return INSTALL_FAIL
+        getCoreLogger().error("You need pywin32 to install dependencies. Sorry!")        
+        return EXIT_CODE_ERROR
     
     try:
         python_exe = sys.executable
@@ -623,9 +624,9 @@ def installPipDependencyWindows(package):
         _obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
         rc = win32process.GetExitCodeProcess(procHandle)
         getCoreLogger().debug("DependencyInstall: Process handle %s returned code %s", procHandle, rc)
-        return INSTALL_RESTART
+        return EXIT_CODE_UPDATE
     except:
         getCoreLogger().exception("Installation with pip failed")
-        return INSTALL_FAIL
+        return EXIT_CODE_ERROR
         
     
