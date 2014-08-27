@@ -29,6 +29,9 @@ def getPlatform():
     else:
         return PLATFORM_OTHER
 
+def isPyinstallerBuild():
+    return getattr(sys, 'frozen', '')
+
 def checkBundleIdentifier(ident):
     res = subprocess.call([get_settings().get_resource('bin', 'check_bundle_identifier.sh'), ident])
     return res == 1
@@ -342,8 +345,7 @@ def _getStartCommand(logger):
 def _getPythonInterpreter():
     # sys.executable does not always return the python interpreter
     if getPlatform() == PLATFORM_WINDOWS: 
-        frozen = getattr(sys, 'frozen', '')
-        if frozen:
+        if isPyinstallerBuild():
             raise Exception("There is no python interpreter in pyinstaller packages.")
         else:
             return sys.executable
@@ -404,41 +406,6 @@ def restart(logger):
         restartWithCommands(None, logger)
     except:
         logger.exception("Error restarting")
-    
-def installPipDependencyWindows(package, notifyRestart=True):
-    getCoreLogger().debug("Trying to install %s", package)
-    
-    import win32api, win32con, win32event, win32process, types
-    from win32com.shell.shell import ShellExecuteEx
-    from win32com.shell import shellcon
-
-    python_exe = sys.executable
-    
-    if type(package)==types.ListType:
-        packageStr = " ".join(package)
-    else:
-        packageStr = package
-
-    params = '-m pip install %s' % (packageStr)
-
-    procInfo = ShellExecuteEx(nShow=win32con.SW_SHOWNORMAL,
-                              fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
-                              lpVerb='runas',
-                              lpFile='"%s"'%python_exe,
-                              lpParameters=params)
-
-    procHandle = procInfo['hProcess']    
-    _obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
-    rc = win32process.GetExitCodeProcess(procHandle)
-    getCoreLogger().debug("Process handle %s returned code %s", procHandle, rc)
-
-    if notifyRestart:
-        try:
-            from lunchinator import get_notification_center
-            get_notification_center().emitRestartRequired("Dependecies were installed, please restart")
-        except:
-            getCoreLogger().error("Restart Notification failed")
-    
 
 def formatTime(mTime):
     """Returns a human readable time representation given a struct_time"""
@@ -535,6 +502,7 @@ def checkRequirements(reqs, component, dispName, missing={}):
     dispName -- Displayed name of the component
     missing -- dictionary to update
     """
+    
     for req in reqs:
         req = req.strip()
         try:
@@ -565,7 +533,11 @@ def _installDependencies(requirements):
         getCoreLogger().info("No dependencies to install.")
         return INSTALL_SUCCESS
     
-    result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + requirements)
+    if getPlatform()==PLATFORM_WINDOWS:
+        installPipDependencyWindows(requirements)
+        result = INSTALL_RESTART
+    else:
+        result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + requirements)
     
     from lunchinator.lunch_server import EXIT_CODE_UPDATE
     if result == EXIT_CODE_UPDATE:
@@ -615,3 +587,37 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
                 return INSTALL_CANCELED
         return INSTALL_FAIL
     return INSTALL_NONE
+
+
+    
+def installPipDependencyWindows(package):
+    """ installs dependecies for lunchinator working without pyinstaller on Win 
+    @todo: make pip install stuff to python dir not home
+    """
+    getCoreLogger().debug("Trying to install %s", package)
+    
+    import win32api, win32con, win32event, win32process, types
+    from win32com.shell.shell import ShellExecuteEx
+    from win32com.shell import shellcon
+
+    python_exe = sys.executable
+    
+    if type(package)==types.ListType:
+        packageStr = " ".join(package)
+    else:
+        packageStr = package
+
+    params = '-m pip install %s' % (packageStr)
+
+    procInfo = ShellExecuteEx(nShow=win32con.SW_SHOWNORMAL,
+                              fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
+                              lpDirectory="C:",
+                              lpVerb='runas',
+                              lpFile='"%s"'%python_exe,
+                              lpParameters=params)
+
+    procHandle = procInfo['hProcess']    
+    _obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
+    rc = win32process.GetExitCodeProcess(procHandle)
+    getCoreLogger().debug("DependencyInstall: Process handle %s returned code %s", procHandle, rc)
+    
