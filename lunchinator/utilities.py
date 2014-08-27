@@ -611,9 +611,9 @@ def installPipDependencyWindows(package):
         from win32com.shell.shell import ShellExecuteEx
         from win32com.shell import shellcon
     except:
-        getCoreLogger().error("You need pywin32 to install dependencies automatically. \
-        You can try to install dependencies by running this as Administrator: \
-        %s %s", python_exe, params)        
+        getCoreLogger().error("You need pywin32 to install dependencies automatically." + \
+        "You can try to install dependencies by running this as Administrator:\n" + \
+        "%s %s", python_exe, params)        
         return EXIT_CODE_ERROR
     
     try:    
