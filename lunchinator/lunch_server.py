@@ -468,7 +468,7 @@ class lunch_server(object):
                             
         try:
             if newPeer:
-                self._enqueue_event(data, ip, eventTime)
+                self._enqueue_event(xmsg, ip, eventTime)
                 
             self._handle_core_event(ip, xmsg, newPeer, fromQueue)
             # now it's the plugins' turn:
