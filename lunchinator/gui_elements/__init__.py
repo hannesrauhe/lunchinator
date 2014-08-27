@@ -1,0 +1,1 @@
+from resizing_image_label import *

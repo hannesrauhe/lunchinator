@@ -1,7 +1,7 @@
 from remote_pictures.remote_pictures_storage import RemotePicturesStorage
 from remote_pictures.remote_pictures_category_model import CategoriesModel
 from lunchinator import convert_string, get_peers
-from lunchinator.resizing_image_label import ResizingWebImageLabel
+from lunchinator.gui_elements import ResizingWebImageLabel
 from lunchinator.utilities import formatTime
 from lunchinator.log.logging_slot import loggingSlot
 

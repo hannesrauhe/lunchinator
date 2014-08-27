@@ -44,17 +44,17 @@ class ResizingImageLabel(QLabel):
 class ResizingWebImageLabel(ResizingImageLabel):
     imageDownloaded = pyqtSignal(object, object) # url, image data as str
     
-    """Constructor
-    
-    parent -- parent QObject
-    pic_url -- URL to download and display
-    fallback_pic -- Picture to display if pic_url is not yet downloaded or is not available
-    smooth_scaling -- Use a smooth image resizing algorithm (slower)
-    update -- automatically update periodically
-    timeout -- number of seconds between updates
-    no_proxy -- True to disable proxy for pic_url
-    """
     def __init__(self, parent, logger, pic_url=None, fallback_pic=None, smooth_scaling=False, update=False, timeout=0, no_proxy=False):
+        """Constructor
+        
+        @param parent: parent QObject
+        @param pic_url -- URL to download and display
+        @param fallback_pic -- Picture to display if pic_url is not yet downloaded or is not available
+        @param smooth_scaling -- Use a smooth image resizing algorithm (slower)
+        @param update -- automatically update periodically
+        @param timeout -- number of seconds between updates
+        @param no_proxy -- True to disable proxy for pic_url
+        """
         super(ResizingWebImageLabel, self).__init__(parent, logger, smooth_scaling, QSize(640, 480))
         
         self.fallback_pic = fallback_pic

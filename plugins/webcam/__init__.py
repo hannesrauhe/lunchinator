@@ -22,7 +22,7 @@ class webcam(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
-        from lunchinator.resizing_image_label import ResizingWebImageLabel
+        from lunchinator.gui_elements import ResizingWebImageLabel
         self.webcam = ResizingWebImageLabel(parent=parent,
                                             logger=self.logger,
                                             fallback_pic=self.options["fallback_pic"],

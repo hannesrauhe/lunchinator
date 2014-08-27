@@ -160,6 +160,7 @@ setup(
                      'lunchinator.cli',
                      'lunchinator.peer_actions',
                      'lunchinator.privacy',
+                     'lunchinator.gui_elements',
                      'lunchinator.lunch_socket',
                      'lunchinator.datathread',
                      'lunchinator.log'],
