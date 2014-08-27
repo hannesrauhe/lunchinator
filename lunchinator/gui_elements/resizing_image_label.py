@@ -74,7 +74,7 @@ class ResizingWebImageLabel(ResizingImageLabel):
     def displayFallbackPic(self):
         if self.fallback_pic != None:
             try:
-                self.setImage(self.fallback_pic)
+                super(ResizingWebImageLabel, self).setImage(self.fallback_pic)
             except:
                 self.logger.exception("Something went wrong when trying to display the fallback image %s", self.fallback_pic)
         else:

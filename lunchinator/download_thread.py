@@ -61,18 +61,27 @@ class DownloadThread(QThread):
                 QThread.sleep(self.TIMEOUT)
             nTries += 1
             
-            try:
-                hdr = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
-                req = urllib2.Request(self.url.encode('utf-8'), headers=hdr)
-                if self._no_proxy:
-                    proxy_handler = urllib2.ProxyHandler({})
-                    opener = urllib2.build_opener(proxy_handler)                
-                    with contextlib.closing(opener.open(req)) as u:
-                        self._readData(u)
-                else:
-                    with contextlib.closing(urllib2.urlopen(req)) as u:
-                        self._readData(u)
+            hdr = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
+            req = urllib2.Request(self.url.encode('utf-8'), headers=hdr)
                 
+            
+            #try standard first (with proxy if environment variable is set)
+            try:
+                if not self._no_proxy:
+                    try:
+                        with contextlib.closing(urllib2.urlopen(req)) as u:
+                            self._readData(u)
+                        break
+                    except urllib2.URLError:
+                        #very likely a proxy error
+                        self.logger.info("Downloading %s failed, forcing without proxy now", self.url)
+            
+                #try again without proxy
+                proxy_handler = urllib2.ProxyHandler({})
+                no_proxy_opener = urllib2.build_opener(proxy_handler)
+                with contextlib.closing(no_proxy_opener.open(req)) as n_u:
+                    self._readData(n_u)
+                                    
                 # finished
                 break
             except HTTPError as e:
