@@ -472,9 +472,9 @@ class iface_plugin(IPlugin):
                 return False
             
             if plugin_type in self._supported_dbms:
-                self._specialized_db_conn = self._supported_dbms[plugin_type](dbPlugin)
+                self._specialized_db_conn = self._supported_dbms[plugin_type](dbPlugin, self.logger)
             elif "default" in self._supported_dbms:
-                self._specialized_db_conn = self._supported_dbms["default"](dbPlugin)
+                self._specialized_db_conn = self._supported_dbms["default"](dbPlugin, self.logger)
             else:
                 self.logger.error("DB Conn of type %s is not supported by this plugin", plugin_type)
                 self._specialized_db_conn = None
@@ -535,8 +535,9 @@ class iface_plugin(IPlugin):
 class db_for_plugin_iface(object):
     """to support different DBMS within a plugin, a class inherited from this one is needed"""
     
-    def __init__(self, newconn):
+    def __init__(self, newconn, logger):
         self.dbConn = newconn
+        self.logger = logger
         
         try:
             self.init_db()

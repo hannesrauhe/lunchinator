@@ -41,9 +41,9 @@ class statistics(iface_called_plugin):
         else:
             self.logger.warning("Statistics: DB not ready -- cannot process lunch_call")
     
-    def process_event(self,cmd,value,ip,_member_info,_prep):
+    def process_command(self, xmsg, ip, member_info, _prep):
         if self.is_db_ready():
-            self.specialized_db_conn().insert_call(cmd, value, ip)
+            self.specialized_db_conn().insert_message(xmsg, ip, member_info)
         else:
             self.logger.warning("Statistics: DB not ready -- cannot process event")
             
@@ -58,7 +58,7 @@ class statistics(iface_called_plugin):
 class statistics_sqlite(db_for_plugin_iface):
     version_schema = "CREATE TABLE statistics_version (commit_count INTEGER, migrate_time INTEGER)"
     messages_schema = "CREATE TABLE statistics_messages (m_id INTEGER PRIMARY KEY AUTOINCREMENT, \
-            mtype TEXT, message TEXT, sender TEXT, senderIP TEXT, rtime INTEGER)"
+            mtype TEXT, message TEXT, sender TEXT, senderIP TEXT, rtime INTEGER, fragments INTEGER)"
     members_schema = "CREATE TABLE statistics_members (peerID TEXT, name TEXT, avatar TEXT, lunch_begin TEXT, lunch_end TEXT, rtime INTEGER)"
     
     def init_db(self):                   
@@ -73,6 +73,11 @@ class statistics_sqlite(db_for_plugin_iface):
                 self.dbConn.execute("CREATE TABLE statistics_members (peerID TEXT, name TEXT, avatar TEXT, lunch_begin TEXT, lunch_end TEXT, rtime INTEGER)")
                 self.dbConn.execute("INSERT INTO statistics_members SELECT * FROM members") 
                 self.dbConn.execute("INSERT INTO statistics_version VALUES (1300, strftime('%s', 'now'))")
+        q = self.dbConn.query("SELECT max(commit_count) as version FROM statistics_version")
+        if len(q)==0 or q[0][0]<1778:
+            self.dbConn.execute("ALTER TABLE statistics_messages ADD COLUMN fragments INTEGER DEFAULT 0 ") 
+            self.dbConn.execute("INSERT INTO statistics_version(commit_count, migrate_time) VALUES(?, strftime('%s', 'now'))",1778)
+            #@todo remove "HELO_" from the mtype column
         
         #in case no migration has happened create empty tables
         if not self.dbConn.existsTable("statistics_members"):
@@ -83,6 +88,14 @@ class statistics_sqlite(db_for_plugin_iface):
     def insert_call(self,mtype,msg,senderIP):
         senderID = get_peers().getPeerID(pIP=senderIP)
         self.dbConn.execute("INSERT INTO statistics_messages(mtype,message,sender,senderIP,rtime) VALUES (?,?,?,?,strftime('%s', 'now'))",mtype,msg,senderID,senderIP)
+        
+    def insert_message(self, xmsg, senderIP, member_info):
+        senderID = get_peers().getPeerID(pIP=senderIP)
+        mtype = xmsg.getCommand()
+        msg = xmsg.getCommandPayload()
+        fragments = len(xmsg.getFragments())
+        self.dbConn.execute("INSERT INTO statistics_messages(mtype,message,sender,senderIP,rtime,fragments) VALUES (?,?,?,?,strftime('%s', 'now'),?)",
+                            mtype, msg, senderID, senderIP, fragments)
     
     def insert_members(self,peer_id,name,avatar,lunch_begin,lunch_end):
         self.dbConn.execute("INSERT INTO statistics_members(peerID, name, avatar, lunch_begin, lunch_end, rtime) VALUES (?,?,?,?,?,strftime('%s', 'now'))",peer_id,name,avatar,lunch_begin,lunch_end)
