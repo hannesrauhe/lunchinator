@@ -592,27 +592,30 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
 def installPipDependencyWindows(package):
     """ installs dependecies for lunchinator working without pyinstaller on Win 
     """
-    getCoreLogger().debug("Trying to install %s", package)
     from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
+    
+    getCoreLogger().debug("Trying to install %s", package)
+    
+    python_exe = sys.executable
+    
+    if type(package)==types.ListType:
+        packageStr = " ".join(package)
+    else:
+        packageStr = package
+
+    params = '-m pip install %s' % (packageStr)
         
     try:
         import win32api, win32con, win32event, win32process, types
         from win32com.shell.shell import ShellExecuteEx
         from win32com.shell import shellcon
     except:
-        getCoreLogger().error("You need pywin32 to install dependencies. Sorry!")        
+        getCoreLogger().error("You need pywin32 to install dependencies automatically. \
+        You can try to install dependencies by running this as Administrator: \
+        %s %s", python_exe, params)        
         return EXIT_CODE_ERROR
     
-    try:
-        python_exe = sys.executable
-        
-        if type(package)==types.ListType:
-            packageStr = " ".join(package)
-        else:
-            packageStr = package
-    
-        params = '-m pip install %s' % (packageStr)
-    
+    try:    
         procInfo = ShellExecuteEx(nShow=win32con.SW_SHOWNORMAL,
                                   fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
                                   lpDirectory="C:",
