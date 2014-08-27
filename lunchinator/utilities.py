@@ -534,8 +534,7 @@ def installDependencies(requirements):
         return INSTALL_SUCCESS
     
     if getPlatform()==PLATFORM_WINDOWS:
-        installPipDependencyWindows(requirements)
-        result = INSTALL_RESTART
+        result = installPipDependencyWindows(requirements)
     else:
         result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + requirements)
     
@@ -592,32 +591,41 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
     
 def installPipDependencyWindows(package):
     """ installs dependecies for lunchinator working without pyinstaller on Win 
-    @todo: make pip install stuff to python dir not home
     """
     getCoreLogger().debug("Trying to install %s", package)
+        
+    try:
+        import win32api, win32con, win32event, win32process, types
+        from win32com.shell.shell import ShellExecuteEx
+        from win32com.shell import shellcon
+    except:
+        getCoreLogger().error("You need pywin32 to install dependencies")        
+        return INSTALL_FAIL
     
-    import win32api, win32con, win32event, win32process, types
-    from win32com.shell.shell import ShellExecuteEx
-    from win32com.shell import shellcon
-
-    python_exe = sys.executable
+    try:
+        python_exe = sys.executable
+        
+        if type(package)==types.ListType:
+            packageStr = " ".join(package)
+        else:
+            packageStr = package
     
-    if type(package)==types.ListType:
-        packageStr = " ".join(package)
-    else:
-        packageStr = package
-
-    params = '-m pip install %s' % (packageStr)
-
-    procInfo = ShellExecuteEx(nShow=win32con.SW_SHOWNORMAL,
-                              fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
-                              lpDirectory="C:",
-                              lpVerb='runas',
-                              lpFile='"%s"'%python_exe,
-                              lpParameters=params)
-
-    procHandle = procInfo['hProcess']    
-    _obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
-    rc = win32process.GetExitCodeProcess(procHandle)
-    getCoreLogger().debug("DependencyInstall: Process handle %s returned code %s", procHandle, rc)
+        params = '-m pip install %s' % (packageStr)
+    
+        procInfo = ShellExecuteEx(nShow=win32con.SW_SHOWNORMAL,
+                                  fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
+                                  lpDirectory="C:",
+                                  lpVerb='runas',
+                                  lpFile='"%s"'%python_exe,
+                                  lpParameters=params)
+    
+        procHandle = procInfo['hProcess']    
+        _obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
+        rc = win32process.GetExitCodeProcess(procHandle)
+        getCoreLogger().debug("DependencyInstall: Process handle %s returned code %s", procHandle, rc)
+        return INSTALL_RESTART
+    except:
+        getCoreLogger().exception("Installation with pip failed")
+        return INSTALL_FAIL
+        
     
