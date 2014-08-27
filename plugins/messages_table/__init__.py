@@ -1,6 +1,6 @@
 from lunchinator.plugin import iface_gui_plugin
 from lunchinator import get_settings, get_server, get_notification_center
-import urllib2,sys
+import sys
 from datetime import datetime, timedelta
 from lunchinator.log import loggingFunc
     

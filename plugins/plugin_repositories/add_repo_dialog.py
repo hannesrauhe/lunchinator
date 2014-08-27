@@ -4,7 +4,7 @@ from PyQt4.QtGui import QDialog, QLabel, QHBoxLayout,\
 from PyQt4.Qt import Qt
 from lunchinator import convert_string, get_settings
 from lunchinator.git import GitHandler
-from lunchinator.error_message_dialog import ErrorMessageDialog
+from lunchinator.gui_elements import ErrorMessageDialog
 from lunchinator.callables import AsyncCall
 from lunchinator.utilities import getUniquePath
 from lunchinator.log.logging_slot import loggingSlot

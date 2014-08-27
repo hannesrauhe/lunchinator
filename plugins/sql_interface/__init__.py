@@ -1,6 +1,6 @@
 from lunchinator.plugin import iface_gui_plugin, db_for_plugin_iface
 from lunchinator import get_settings, get_server, get_db_connection
-import urllib2,sys
+import sys
 
     
 class sql_interface(iface_gui_plugin):
@@ -30,9 +30,14 @@ class sql_interface(iface_gui_plugin):
     def do_SQL(self, cmd):
         from lunchinator.cli import LunchCLIModule
         #l = LunchCLIModule()
-        for r in self.query(cmd):
-            print r
-        #l.flushOutput()
+        if None==self.db_connection:        
+            self.db_connection, _ = get_db_connection(self.logger, self.options["query_db_connection"])
+        try:
+            header, res = self.db_connection.queryWithHeader(cmd)
+            for r in res:
+                print r
+        except Exception as e:
+            print "Error in SQL statement",str(e)
         
     def empty(self,key,data,item):
         if key!=self.last_key:
@@ -54,7 +59,7 @@ class sql_interface(iface_gui_plugin):
             header, res = self.db_connection.queryWithHeader(sql_stat)
         except Exception as e:
             QMessageBox.warning(self.resultTable,"Error in SQL statement",str(e))
-            self.logger.error("SQL error:")
+#             self.logger.warning("SQL error:")
             return False
         
         columns = []

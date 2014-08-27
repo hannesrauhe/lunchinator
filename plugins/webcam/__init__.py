@@ -1,6 +1,6 @@
 from lunchinator.plugin import iface_gui_plugin
 from lunchinator import get_settings
-import urllib2,sys
+import sys
     
 class webcam(iface_gui_plugin):
     def __init__(self):

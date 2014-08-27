@@ -2,7 +2,7 @@ from lunchinator.plugin import iface_called_plugin
 from lunchinator import get_server, get_settings, convert_string
 
 import subprocess, sys, ctypes, logging
-import urllib2, tempfile, json, time, contextlib, csv
+import tempfile, json, time, contextlib, csv
 from cStringIO import StringIO
 
 from threading import Thread,Event,Lock

@@ -1,6 +1,6 @@
 from PyQt4.QtGui import QLabel, QLineEdit, QFormLayout
 from lunchinator import get_peers, convert_string
-from lunchinator.error_message_dialog import ErrorMessageDialog
+from lunchinator.gui_elements import ErrorMessageDialog
 from lunchinator.log.logging_slot import loggingSlot
 import re
 

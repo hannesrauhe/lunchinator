@@ -3,7 +3,7 @@ from PyQt4.Qt import Qt
 from PyQt4.QtCore import QTime
 from lunchinator.lunch_settings import lunch_settings
 from lunchinator.utilities import getTimeDifference
-from lunchinator.error_message_dialog import ErrorMessageDialog
+from lunchinator.gui_elements import ErrorMessageDialog
 from lunchinator.log.logging_slot import loggingSlot
 from lunchinator.log import getCoreLogger
 
