@@ -528,7 +528,7 @@ INSTALL_RESTART = 2
 INSTALL_CANCELED = 3
 INSTALL_NONE = 4
        
-def _installDependencies(requirements):
+def installDependencies(requirements):
     if not requirements:
         getCoreLogger().info("No dependencies to install.")
         return INSTALL_SUCCESS
@@ -582,7 +582,7 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
             f = RequirementsErrorDialog(requirements, None)
             res = f.exec_()
             if res == RequirementsErrorDialog.Accepted:
-                return _installDependencies(f.getSelectedRequirements())
+                return installDependencies(f.getSelectedRequirements())
             else:
                 return INSTALL_CANCELED
         return INSTALL_FAIL

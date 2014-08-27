@@ -60,80 +60,10 @@ def sendMessage(msg, cli):
     print "sent to",recv_nr,"clients"
     
 def handleInterrupt(lanschi, _signal, _frame):
-    lanschi.quit()
-    
+    lanschi.quit()    
 
     
-def installDependencies(deps=[], gui=False):
-    if len(deps)==0:    
-        req_file = get_settings().get_resource("requirements.txt")
-        if os.path.exists(req_file):
-            with open(req_file, 'r') as f:
-                deps = f.readlines()    
-            
-    if not deps:
-        getCoreLogger().info("No dependencies to install.")
-        return True
-    
-    result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + deps)
-    
-    if result == EXIT_CODE_UPDATE:
-        # need to restart
-        restart(getCoreLogger())
-        return False
-    
-    try:
-        import yapsy
-        if gui:
-            from PyQt4.QtGui import QMessageBox
-            if result == 0:
-                QMessageBox.information(None,
-                                        "Success",
-                                        "Dependencies were installed successfully.",
-                                        buttons=QMessageBox.Ok,
-                                        defaultButton=QMessageBox.Ok)
-            else:
-                QMessageBox.warning(None,
-                                    "Errors during installation",
-                                    "There were errors during installation, but Lunchinator might work anyways. If you experience problems with some plugins, try to install the required libraries manually using pip.")
-            return True
-        getCoreLogger().info("yapsy is working after dependency installation")
-        #without gui there are enough messages on the screen already
-    except:
-        if gui:
-            try:
-                from PyQt4.QtGui import QMessageBox
-                QMessageBox.critical(None,
-                                     "Error installing dependencies",
-                                     "There was an error, the dependencies could not be installed. Continuing without plugins.")
-            except:
-                getCoreLogger().error("There was an error, the dependencies could not be installed. Continuing without plugins.")
-        getCoreLogger().error("Dependencies could not be installed.")
-    return False
-        
-
-def checkDependencies(noPlugins, gui = False):
-    """ Returns whether or not to use plugins """
-    if noPlugins:
-        return False
-    
-    try:
-        import yapsy
-        return True
-    except:
-        pass
-    
-    if getPlatform()==PLATFORM_WINDOWS:
-        #not possible to install pip with admin rights on Windows (although get-pip.py looked promising)
-        msg = "There are missing dependencies. Install pip and run python -m pip install -r requirements.txt"
-        if gui:                
-            from PyQt4.QtGui import QMessageBox
-            QMessageBox.critical(None,
-                                     "Error: missing dependencies",
-                                     msg)
-        getCoreLogger().error(msg)
-        return False
-    
+def installCoreDependencies(gui=False):    
     req_file = get_settings().get_resource("requirements.txt")
     with open(req_file, 'r') as f:
         requirements = f.readlines()
@@ -171,6 +101,20 @@ def checkDependencies(noPlugins, gui = False):
                 getCoreLogger().error("There was an error, the dependencies could not be installed. Continuing without plugins.")
         getCoreLogger().error("Dependencies could not be installed.")
         return False
+        
+
+def checkDependencies(noPlugins, gui = False):
+    """ Returns whether or not to use plugins """
+    if noPlugins:
+        return False
+    
+    try:
+        import yapsy
+        return True
+    except:
+        pass
+    
+    return installCoreDependencies(gui)
 
 def startLunchinator():
     (options, _args) = parse_args()
@@ -195,7 +139,7 @@ def startLunchinator():
         print "Sent stop command to local lunchinator"
     elif options.installDep:
         initializeLogger()
-        installDependencies()
+        installCoreDependencies()
     elif options.cli:
         initializeLogger(defaultLogPath)
         usePlugins = checkDependencies(usePlugins)

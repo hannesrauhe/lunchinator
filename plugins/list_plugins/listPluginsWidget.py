@@ -91,8 +91,8 @@ class listPluginsWidget(QWidget):
     def install_req_clicked(self):
         plug = self.ui.pluginView.currentItem()
         reqs = self.p_info[str(plug.toolTip())]["requirements"]
-        from utilities import installPipDependencyWindows
-        installPipDependencyWindows(reqs)
+        from utilities import installDependencies
+        installDependencies(reqs)
         
     @loggingSlot(bool)
     def show_all_toggled(self, value):
