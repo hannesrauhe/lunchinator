@@ -366,7 +366,7 @@ class lunch_server(object):
         self.controller.extendMemberInfo(info_d)
         return json.dumps(info_d)      
     
-    def _enqueue_event(self, data, ip, eventTime):
+    def _enqueue_event(self, xmsg, ip, eventTime):
         getCoreLogger().debug("Peer of IP %s is unknown, enqueuing message", ip)
         
         with self.message_queues_lock:
@@ -375,7 +375,7 @@ class lunch_server(object):
             else:
                 queue = (time(), [])
             
-            queue[1].append((eventTime, data))
+            queue[1].append((eventTime, xmsg))
             self._message_queues[ip] = queue
         
     def _process_queued_messages(self, ip):
@@ -383,8 +383,8 @@ class lunch_server(object):
             if ip in self._message_queues:
                 if len(self._message_queues[ip][1]) > 0:
                     getCoreLogger().debug("Processing enqueued messages of IP %s", ip)
-                for eventTime, data in self._message_queues[ip][1]:
-                    self._handle_event(data, ip, eventTime, newPeer=False, fromQueue=True)
+                for eventTime, xmsg in self._message_queues[ip][1]:
+                    self._handle_event(xmsg, ip, eventTime, newPeer=False, fromQueue=True)
                 del self._message_queues[ip]
     
     def _remove_timed_out_queues(self):
@@ -441,7 +441,7 @@ class lunch_server(object):
         if not xmsg.isCommand():
             # only process message if we know the peer
             if newPeer:
-                self._enqueue_event(data, ip, eventTime)
+                self._enqueue_event(xmsg, ip, eventTime)
             else:
                 peerID = self._peers.getPeerID(pIP=ip)
                 if self._peers.isMember(pID=peerID):
