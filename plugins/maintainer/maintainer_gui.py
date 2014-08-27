@@ -32,7 +32,7 @@ class ExtendedMembersModel(TableModelBase):
         if y == LunchPeers.PEER_ID_KEY:
             return 1 
         
-        return cmp(x, y)
+        return cmp(x.lower(), y.lower())
         
     @loggingSlot(dict)
     def updateModel(self, peerID, infoDict, update=False, prepend=False):
