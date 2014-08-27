@@ -1,12 +1,13 @@
+from maintainer.members_widget import MembersWidget
+from maintainer.console_widget import ConsoleWidget
 from lunchinator import get_peers, get_notification_center, convert_string
+from lunchinator.lunch_peers import LunchPeers
 from lunchinator.table_models import TableModelBase
 from lunchinator.log.logging_slot import loggingSlot
+
 from PyQt4.QtGui import QTreeView, QTabWidget, QSortFilterProxyModel, QSizePolicy,\
     QStandardItem
 from PyQt4.QtCore import Qt, QVariant
-from maintainer.members_widget import MembersWidget
-from maintainer.console_widget import ConsoleWidget
-from lunch_peers import LunchPeers
 
 class ExtendedMembersModel(TableModelBase):
     def __init__(self, dataSource, logger):
