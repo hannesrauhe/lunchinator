@@ -61,14 +61,12 @@ class DownloadThread(QThread):
                 QThread.sleep(self.TIMEOUT)
             nTries += 1
             
-            hdr = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
-            req = urllib2.Request(self.url.encode('utf-8'), headers=hdr)
-                
-            
             #try standard first (with proxy if environment variable is set)
             try:
                 if not self._no_proxy:
                     try:
+                        hdr = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
+                        req = urllib2.Request(self.url.encode('utf-8'), headers=hdr)
                         with contextlib.closing(urllib2.urlopen(req)) as u:
                             self._readData(u)
                         break
@@ -77,9 +75,10 @@ class DownloadThread(QThread):
                         self.logger.info("Downloading %s failed, forcing without proxy now", self.url)
             
                 #try again without proxy
+                req2 = urllib2.Request(self.url.encode('utf-8'), headers=hdr)
                 proxy_handler = urllib2.ProxyHandler({})
                 no_proxy_opener = urllib2.build_opener(proxy_handler)
-                with contextlib.closing(no_proxy_opener.open(req)) as n_u:
+                with contextlib.closing(no_proxy_opener.open(req2)) as n_u:
                     self._readData(n_u)
                                     
                 # finished
