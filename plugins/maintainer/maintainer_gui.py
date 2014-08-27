@@ -6,6 +6,7 @@ from PyQt4.QtGui import QTreeView, QTabWidget, QSortFilterProxyModel, QSizePolic
 from PyQt4.QtCore import Qt, QVariant
 from maintainer.members_widget import MembersWidget
 from maintainer.console_widget import ConsoleWidget
+from lunch_peers import LunchPeers
 
 class ExtendedMembersModel(TableModelBase):
     def __init__(self, dataSource, logger):
@@ -17,20 +18,17 @@ class ExtendedMembersModel(TableModelBase):
             self.updateModel(peerID, self.dataSource.getPeerInfo(peerID))
     
     def _headerCmp(self, x, y):
-        x = x.lower()
-        y = y.lower()
-        
         if x == y:
             return 0
         
-        if x == u"name":
+        if x == LunchPeers.PEER_NAME_KEY:
             return -1
-        if y == u"name":
+        if y == LunchPeers.PEER_NAME_KEY:
             return 1
         
-        if x == u"id":
+        if x == LunchPeers.PEER_ID_KEY:
             return -1
-        if y == u"id":
+        if y == LunchPeers.PEER_ID_KEY:
             return 1 
         
         return cmp(x, y)
@@ -44,6 +42,7 @@ class ExtendedMembersModel(TableModelBase):
             self.headerNames = newHeaderNames
             for i, headerName in enumerate(newHeaderNames):
                 self.setHorizontalHeaderItem(i, QStandardItem(headerName))
+            self.updateTable()
             
         if update:
             if peerID in self.keys:
@@ -54,8 +53,13 @@ class ExtendedMembersModel(TableModelBase):
         else:
             self.appendContentRow(peerID, infoDict)
     
+    def _dataForKey(self, key):
+        return get_peers().getPeerInfo(pID=key)
+    
     """ may be called concurrently """
     def callItemInitializer(self, column, key, data, item):
+        if data is None:
+            return
         headerName = self.headerNames[column]
         text = ""
         if headerName in data:
@@ -127,5 +131,6 @@ class maintainer_gui(QTabWidget):
     
 if __name__ == "__main__":
     from lunchinator.plugin import iface_gui_plugin
-    iface_gui_plugin.run_standalone(lambda window : maintainer_gui(window))
+    from lunchinator.log import getCoreLogger
+    iface_gui_plugin.run_standalone(lambda window : maintainer_gui(window, getCoreLogger()))
     
