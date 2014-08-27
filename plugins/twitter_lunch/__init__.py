@@ -2,7 +2,7 @@ from lunchinator.plugin import iface_called_plugin
 from lunchinator import get_server, get_settings, convert_string
 
 import subprocess, sys, ctypes, logging
-import urllib2, tempfile, json, time, twitter, contextlib, csv
+import urllib2, tempfile, json, time, contextlib, csv
 from cStringIO import StringIO
 
 from threading import Thread,Event,Lock
@@ -68,6 +68,7 @@ class TwitterDownloadThread(Thread):
         return self._old_pic_urls
             
     def authenticate(self,key,secret,at_key,at_secret):
+        import twitter
         with self._lock:
             if len(key) and len(secret) and len(at_key) and len(at_secret):
                 try:
@@ -109,6 +110,7 @@ class TwitterDownloadThread(Thread):
             self.logger.exception("Twitter: was not able to post %s", message)
 
     def _get_pics_from_account(self,account_name):
+        import twitter
         with self._lock:
             try:
                 urls = []
@@ -135,6 +137,7 @@ class TwitterDownloadThread(Thread):
                 self.logger.error("Twitter: Error while trying to retrieve pics from %s: %s", account_name,str(t))
                 
     def _find_remote_calls(self):
+        import twitter
         get_server().call("HELO_TWITTER_REMOTE %s"%self._own_screen_name)          
         with self._lock:      
             try:  
