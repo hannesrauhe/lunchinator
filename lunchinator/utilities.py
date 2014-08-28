@@ -9,6 +9,7 @@ from tempfile import NamedTemporaryFile
 import itertools
 import string
 import errno
+import sys
 from pkg_resources import get_distribution, ResolutionError,\
     DistributionNotFound, VersionConflict
 
@@ -30,7 +31,8 @@ def getPlatform():
         return PLATFORM_OTHER
 
 def isPyinstallerBuild():
-    return getattr(sys, 'frozen', '')
+    frozen = getattr(sys, 'frozen', '')
+    return frozen
 
 def checkBundleIdentifier(ident):
     res = subprocess.call([get_settings().get_resource('bin', 'check_bundle_identifier.sh'), ident])
