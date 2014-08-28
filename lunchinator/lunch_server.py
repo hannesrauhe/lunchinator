@@ -616,7 +616,7 @@ class lunch_server(object):
             
             fileSize = fileToSend.tell()
             getCoreLogger().info("Sending file of size %d to %s : %d", fileSize, str(ip), other_tcp_port)
-            self.call("LOGFILE_TGZ %d %d" % (fileSize, other_tcp_port), peerIPs=[ip])
+            self.call("HELO_LOGFILE_TGZ %d %d" % (fileSize, other_tcp_port), peerIPs=[ip])
             self.controller.sendFile(ip, fileToSend.getvalue(), other_tcp_port, True)      
             
     def _finish(self):
