@@ -14,19 +14,39 @@ def parse_args():
                       help="Process ID of old Lunchinator instance.")
     return optionParser.parse_args()
 
+
+
+def win_procids():
+    #each instance is a process, you can have multiple processes w/same name
+    import win32pdh, string, win32api
+    
+    junk, instances = win32pdh.EnumObjectItems(None,None,'process', win32pdh.PERF_DETAIL_WIZARD)
+    proc_ids=[]
+    proc_dict={}
+    for instance in instances:
+        if instance in proc_dict:
+            proc_dict[instance] = proc_dict[instance] + 1
+        else:
+            proc_dict[instance]=0
+    for instance, max_instances in proc_dict.items():
+        for inum in xrange(max_instances+1):
+            hq = win32pdh.OpenQuery() # initializes the query handle 
+            path = win32pdh.MakeCounterPath( (None,'process',instance, None, inum,'ID Process') )
+            counter_handle=win32pdh.AddCounter(hq, path) 
+            win32pdh.CollectQueryData(hq) #collects data for the counter 
+            type, val = win32pdh.GetFormattedCounterValue(counter_handle, win32pdh.PDH_FMT_LONG)
+            proc_ids.append((instance,str(val)))
+            win32pdh.CloseQuery(hq) 
+
+    proc_ids.sort()
+    return proc_ids
+
 def isRunning(pid):
     if platform.system()=="Windows":
-        import ctypes
-        kernel32 = ctypes.windll.kernel32
-        SYNCHRONIZE = 0x100000
-    
-        process = kernel32.OpenProcess(SYNCHRONIZE, 0, pid)
-        if process != 0:
-            kernel32.CloseHandle(process)
+        if pid in win_procids():
             return True
-        else:
-            return False
-        
+        return False   
+         
     try:
         os.kill(pid, 0)
     except OSError as err:
