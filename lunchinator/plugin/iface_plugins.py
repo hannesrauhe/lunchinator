@@ -577,6 +577,24 @@ class iface_called_plugin(iface_plugin):
         """Override if plugin processes all (non-blocked) peer actions.""" 
         return False
         
+    def process_command(self, xmsg, ip, member_info, preprocessedData=None):
+        """process extended Messages - can be signed
+        @type xmsg: extMessageIncoming
+        @type ip: unicode
+        @type member_info: dict   
+        """
+        pass
+    
+    def process_group_message(self, xmsg, ip, member_info, lunch_call):
+        """process extended Messages - can be signed
+        @type xmsg: extMessageIncoming
+        @type ip: unicode
+        @type member_info: dict   
+        @type lunch_call: bool
+        """
+        pass
+    
+    """ deprecated interface that is still supported: """        
     def process_message(self, msg, ip, member_info):
         pass
         
@@ -585,14 +603,6 @@ class iface_called_plugin(iface_plugin):
         
     def process_event(self, cmd, value, ip, member_info, preprocessedData=None):
         pass 
-        
-    def process_command(self, xmsg, ip, member_info, preprocessedData=None):
-        """process extended Messages - can be signed
-        @type xmsg: extMessageIncoming
-        @type ip: unicode
-        @type member_info: dict   
-        """
-        pass
         
 class iface_gui_plugin(iface_plugin):
     def __init__(self):
@@ -635,7 +645,25 @@ class iface_gui_plugin(iface_plugin):
     def processes_all_peer_actions(self):
         """Override if plugin processes all (non-blocked) peer actions.""" 
         return False
+        
+    def process_command(self, xmsg, ip, member_info, preprocessedData=None):
+        """process extended Messages - can be signed
+        @type xmsg: extMessageIncoming
+        @type ip: unicode
+        @type member_info: dict   
+        """
+        pass    
     
+    def process_group_message(self, xmsg, ip, member_info, lunch_call):
+        """process extended Messages - can be signed
+        @type xmsg: extMessageIncoming
+        @type ip: unicode
+        @type member_info: dict   
+        @type lunch_call: bool
+        """
+        pass
+    
+    """ deprecated interface that is still supported: """    
     def process_message(self, msg, ip, member_info):
         pass
         
@@ -644,12 +672,3 @@ class iface_gui_plugin(iface_plugin):
         
     def process_event(self, cmd, value, ip, member_info, preprocessedData=None):
         pass
-        
-    def process_command(self, xmsg, ip, member_info, preprocessedData=None):
-        """process extended Messages - can be signed
-        @type xmsg: extMessageIncoming
-        @type ip: unicode
-        @type member_info: dict   
-        """
-        pass
-    

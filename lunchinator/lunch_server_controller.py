@@ -224,27 +224,31 @@ class LunchServerController(object):
         else:
             m = {u"ID": addr}
         
-        if not msg.startswith("ignore"):
-            self.processPluginCall(addr, lambda p, ip, member_info: p.process_message(msg, ip, member_info), newPeer, fromQueue)
-            
-            if get_settings().get_lunch_trigger() in msg.lower():
-                processLunchCall = False
-                # check if we should process the lunch call
-                diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time(), getCoreLogger())
-                if diff == None or 0 < diff:
-                    # either the time format is invalid or we are within the alarm time
-                    if eventTime - self.last_lunch_call > get_settings().get_mute_timeout() or \
-                       fromQueue and self.last_lunch_call == eventTime:
-                        # either the lunch call is within a mute timeout or
-                        # this is a queued lunch call that previously wasn't muted
-                        processLunchCall = True
-                
-                if processLunchCall:
-                    self.last_lunch_call = eventTime
-                    self.processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info), newPeer, fromQueue)
-                else:
-                    getCoreLogger().debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)", t, m, msg, strftime("%H:%M:%S", localtime(eventTime + get_settings().get_mute_timeout())))
         
+        processLunchCall = False
+        #deprecated:
+        self.processPluginCall(addr, lambda p, ip, member_info: p.process_message(msg, ip, member_info), newPeer, fromQueue)
+        
+        if get_settings().get_lunch_trigger() in msg.lower():
+            # check if we should process the lunch call
+            diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time(), getCoreLogger())
+            if diff == None or 0 < diff:
+                # either the time format is invalid or we are within the alarm time
+                if eventTime - self.last_lunch_call > get_settings().get_mute_timeout() or \
+                   fromQueue and self.last_lunch_call == eventTime:
+                    # either the lunch call is within a mute timeout or
+                    # this is a queued lunch call that previously wasn't muted
+                    processLunchCall = True
+            
+            if processLunchCall:
+                self.last_lunch_call = eventTime
+                #deprecated:
+                self.processPluginCall(addr, lambda p, ip, member_info: p.process_lunch_call(msg, ip, member_info), newPeer, fromQueue)
+            else:
+                getCoreLogger().debug("messages will not trigger alarm: %s: [%s] %s until %s (unless you change the setting, that is)", t, m, msg, strftime("%H:%M:%S", localtime(eventTime + get_settings().get_mute_timeout())))
+        
+        self.processPluginCall(addr, lambda p, ip, member_info: p.process_group_message(xmsg, ip, member_info, processLunchCall), newPeer, fromQueue)
+            
     def serverStopped(self, _exit_code):
         get_settings().write_config_to_hd()
         if get_settings().get_plugins_enabled():
