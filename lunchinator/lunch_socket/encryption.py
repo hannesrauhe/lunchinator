@@ -1,4 +1,3 @@
-from lunchinator.log import getCoreLogger
 from lunchinator.utilities import getGPG
 
 def decrypt(crypt, **kwargs):     
@@ -9,7 +8,7 @@ def decrypt(crypt, **kwargs):
     if str(r)=="":
         raise Exception(r.stderr)
     #is's not nice to strip, but gpg's decrypt adds a newline at the end
-    return str(r).strip(), {k: getattr(r, k) for k in ("username", "key_id", "signature_id", "fingerprint", "trust_level", "trust_text")}
+    return str(r).strip(), dict((k, getattr(r, k)) for k in ("username", "key_id", "signature_id", "fingerprint", "trust_level", "trust_text"))
 
 def encrypt(plain, recipients, **kwargs):       
     if 0==len(plain):
