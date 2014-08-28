@@ -113,14 +113,12 @@ class ChatWidget(QWidget):
         self._initMessageModel()
         self._initMessageTable()
         self._initTextEntry()
-        self._initStatusLabel()
         
         mainLayout = QVBoxLayout(self)
         mainLayout.setSpacing(0)
         
         self._addTopLayout(mainLayout)
         mainLayout.addWidget(self.table)
-        mainLayout.addWidget(self._statusLabel)
         mainLayout.addWidget(self.entry)
         
         # initialize GUI
@@ -282,6 +280,7 @@ class ChatWidget(QWidget):
     def _addTopLayout(self, mainLayout):
         topWidget = QWidget(self)
         topLayout = QHBoxLayout(topWidget)
+        topLayout.setSpacing(0)
         topLayout.setContentsMargins(0, 0, 0, 0)
         
         self._otherNameLabel = QToolButton(topWidget)
@@ -296,13 +295,19 @@ class ChatWidget(QWidget):
         
         self._otherPicLabel = QLabel(topWidget)
         topLayout.addWidget(self._otherPicLabel, 0, Qt.AlignLeft)
-        topLayout.addWidget(self._otherNameLabel, 1, Qt.AlignLeft)
+        topLayout.addSpacing(5)
+        topLayout.addWidget(self._otherNameLabel, 0, Qt.AlignLeft)
+        
+        self._otherStatusLabel = QLabel(topWidget)
+        topLayout.addSpacing(2)
+        topLayout.addWidget(self._otherStatusLabel, 1, Qt.AlignLeft)
         
         self._ownNameLabel = QToolButton(topWidget)
         self._ownNameLabel.setStyleSheet("QToolButton { text-align: left; font-size: 13pt; border: none; margin-right: -5px;}")
         self._ownNameLabel.setToolButtonStyle(Qt.ToolButtonTextOnly)
         self._ownPicLabel = QLabel(topWidget)
         topLayout.addWidget(self._ownNameLabel, 1, Qt.AlignRight)
+        topLayout.addSpacing(5)
         topLayout.addWidget(self._ownPicLabel, 0, Qt.AlignRight)
         
         mainLayout.addWidget(topWidget)
@@ -316,11 +321,6 @@ class ChatWidget(QWidget):
     def _initTextEntry(self):
         self.entry = HistoryTextEdit(self, True)
         self.entry.textChanged.connect(self._textChangedSlot)
-        
-    def _initStatusLabel(self):
-        self._statusLabel = QLabel(self)
-        self._statusLabel.setContentsMargins(0, 5, 0, 5)
-        self._statusLabel.setVisible(False)
         
     def _initMessageModel(self):
         self._model = ChatMessagesModel(self, self)
@@ -356,7 +356,7 @@ class ChatWidget(QWidget):
             self._selfWasTyping = False    
             
         if self._otherWasTyping and curTime - self._lastTimePartnerTyped > 3:
-            self.setStatus(self.getOtherName() + " paused typing.")
+            self.setStatus("paused typing")
             self._otherWasTyping = False
             
     def _informTyping(self):
@@ -371,7 +371,7 @@ class ChatWidget(QWidget):
     def otherIsTyping(self):
         if not self._otherWasTyping:
             self._otherWasTyping = True
-            self.setStatus(self.getOtherName() + " is typing a message...")
+            self.setStatus("typing...")
         self._lastTimePartnerTyped = time()
     
     @loggingSlot()
@@ -466,10 +466,10 @@ class ChatWidget(QWidget):
     
     def setStatus(self, statusText):
         if statusText:
-            self._statusLabel.setText(statusText)
-            self._statusLabel.setVisible(True)
+            title = u"(%s)" % (statusText)
         else:
-            self._statusLabel.setVisible(False)
+            title = u""
+        self._otherStatusLabel.setText(title)
         
     def _getMD(self):
         if self._md is None:
@@ -587,11 +587,12 @@ class ChatWidget(QWidget):
         
 if __name__ == '__main__':
     from lunchinator.plugin import iface_gui_plugin
+    from lunchinator.log import getCoreLogger
     
     def createTable(window):
         ownIcon = get_settings().get_resource("images", "me.png")
         otherIcon = get_settings().get_resource("images", "lunchinator.png")
-        tw = ChatWidget(window, "Me", "Other Guy", ownIcon, otherIcon, "ID")
+        tw = ChatWidget(window, getCoreLogger(), "Me", "Other Guy", ownIcon, otherIcon, "ID")
         tw.setMarkdownEnabled(False)
         
         tw.addOwnMessage(0, time(),
