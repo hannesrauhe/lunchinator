@@ -36,6 +36,11 @@ class PeerActions(object):
         for action in actions:
             if action.getMessagePrefix():
                 self._msgPrefixes[action.getMessagePrefix()] = action
+                
+    def _removeMessagePrefixes(self, actions):
+        for action in actions:
+            if action.getMessagePrefix():
+                self._msgPrefixes.pop(action.getMessagePrefix(), None)
         
     def _addActionsForPlugin(self, pi):
         peerActions = pi.plugin_object.get_peer_actions()
@@ -49,8 +54,10 @@ class PeerActions(object):
         
     def _removeActionsForPlugin(self, pi):
         if pi.name in self._peerActions:
-            removed = {pi.name : [peerAction.getName() for peerAction in self._peerActions[pi.name]]}
+            peerActions = self._peerActions[pi.name]
+            removed = {pi.name : [peerAction.getName() for peerAction in peerActions]}
             del self._peerActions[pi.name]
+            self._removeMessagePrefixes(peerActions)
             return removed
         return None
         
