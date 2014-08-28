@@ -16,3 +16,4 @@ if __name__ == '__main__':
             QMessageBox.critical(None, "Lunchinator Critical Error", msg)
         except:
             print msg
+        sys.exit(1)
