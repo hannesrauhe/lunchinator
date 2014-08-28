@@ -9,7 +9,7 @@ class RequirementsErrorDialog(QDialog):
     IGNORED = QDialog.Accepted + 1
     _REQUIREMENT_ROLE = Qt.UserRole + 1
     
-    def __init__(self, requirements, parent):
+    def __init__(self, requirements, parent, canInstall, text=None):
         """Constructor
         
         requirements -- List of (requirement (string),
@@ -21,8 +21,9 @@ class RequirementsErrorDialog(QDialog):
         super(RequirementsErrorDialog, self).__init__(parent, Qt.WindowStaysOnTopHint)
         self._empty = True
         self._requirements = requirements
+        self._canInstall = canInstall
         
-        self._initUI()
+        self._initUI(text)
         self._addRequirements()
         self._reqTable.resizeColumnToContents(0)
         self._reqTable.resizeColumnToContents(1)
@@ -51,13 +52,15 @@ class RequirementsErrorDialog(QDialog):
     def sizeHint(self):
         return QSize(400, 200)
         
-    def _initUI(self):
+    def _initUI(self, text):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 10, 0, 0)
         layout.setSpacing(5)
         
         labelLayout = QHBoxLayout()
-        label = QLabel(u"Some plugins cannot be activated due to missing requirements:", self)
+        if not text:
+            text = u"Some plugins cannot be activated due to missing requirements:"
+        label = QLabel(text, self)
         label.setWordWrap(True)
         labelLayout.addWidget(label)
         labelLayout.setContentsMargins(10, 0, 0, 0)
@@ -84,6 +87,7 @@ class RequirementsErrorDialog(QDialog):
         ignore = QPushButton(u"Ignore", self)
         deactivate = QPushButton(u"Deactivate", self)
         install = QPushButton(u"Install Selected", self)
+        install.setEnabled(self._canInstall)
         buttonBox.addButton(deactivate, QDialogButtonBox.DestructiveRole)
         buttonBox.addButton(ignore, QDialogButtonBox.RejectRole)
         buttonBox.addButton(install, QDialogButtonBox.AcceptRole)
@@ -111,7 +115,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     reqs = [(u"someReq > 1.1", u"Plugin 1", "missing", True),
             (u"anotherReq <= 0.4", u"Core", u"wrong version (installed: 0.5)", False)]
-    window = RequirementsErrorDialog(reqs, None)
+    window = RequirementsErrorDialog(reqs, None, True, None)
     
     if window.exec_() == window.Accepted:
         print window.getSelectedRequirements()

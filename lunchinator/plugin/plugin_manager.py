@@ -89,10 +89,10 @@ class NotificationPluginManager(ConfigurablePluginManager):
                 newMissing = self.checkActivation(piList)
                 missing.update(newMissing)
             self._deactivateMissing(missing)
-        elif result == INSTALL_CANCELED:
+        elif result == INSTALL_CANCEL:
             # user chose not to install -> deactivate
             self._deactivateMissing(missing)
-        elif result == INSTALL_SUCCESS:
+        elif result in (INSTALL_SUCCESS, INSTALL_IGNORE):
             missing = {}
         elif result == INSTALL_RESTART:
             return

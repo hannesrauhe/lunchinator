@@ -567,9 +567,12 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
     """
     if missing:
         if isPyinstallerBuild():
-            getCoreLogger().warning("There are missing dependencies in your PyInstaller build. " + \
-            "Contact the developers.\n%s",str(missing))
-            return INSTALL_NOT_POSSIBLE
+            canInstall = False
+            text = u"There are missing dependencies in your PyInstaller build. " +\
+                u"Unfortunately, you cannot install additional packages for a PyInstaller build."
+        else:
+            canInstall = True
+            text = None
         
         if gui:
             from lunchinator.req_error_dialog import RequirementsErrorDialog
@@ -586,9 +589,11 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
                                          dispName,
                                          reasonStr,
                                          optionalCallback(req)))
-            f = RequirementsErrorDialog(requirements, None)
+            f = RequirementsErrorDialog(requirements, None, canInstall, text)
             res = f.exec_()
             if res == RequirementsErrorDialog.Accepted:
+                if not canInstall:
+                    return INSTALL_NOT_POSSIBLE
                 return installDependencies(f.getSelectedRequirements())
             elif res == RequirementsErrorDialog.IGNORED:
                 return INSTALL_IGNORE
