@@ -563,6 +563,8 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
                         otherwise.
     """
     if isPyinstallerBuild():
+        getCoreLogger().warning("There are missing dependencies in your PyInstaller build. " + \
+        "Contact the developers.\n%s",str(missing))
         return INSTALL_NONE
     if missing:
         if gui:
