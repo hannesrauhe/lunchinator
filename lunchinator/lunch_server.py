@@ -288,12 +288,12 @@ class lunch_server(object):
                     result = QMessageBox.warning(None,
                                                  "Members not ready",
                                                  warn,
-                                                 buttons=QMessageBox.Yes | QMessageBox.No,
-                                                 defaultButton=QMessageBox.No)
+                                                 QMessageBox.Yes | QMessageBox.No,
+                                                 QMessageBox.No)
                     if result == QMessageBox.No:
                         return
-                except:
-                    print "WARNING: %s" % warn
+                except ImportError:
+                    print warn
 
         i = 0
         s = lunchSocket(self._peers)
