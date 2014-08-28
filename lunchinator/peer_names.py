@@ -12,6 +12,9 @@ class PeerNames(object):
         self._db, plugin_type = get_db_connection(self.logger)
         self._peerNameCache = {} # peer ID -> (peer name, custom name)
         
+        if self._db is None:
+            return
+        
         if plugin_type != "SQLite Connection":
             self.logger.warning("Your standard connection is not of type SQLite." + \
                 "Loading peer names from another type is experimental.")

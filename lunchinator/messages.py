@@ -14,6 +14,11 @@ class Messages(object):
         self._lock = loggingMutex("messages", logging=logging)
         self._db, plugin_type = get_db_connection(self.logger)
         
+        if self._db is None:
+            self._length = 0
+            self._latest = None
+            return
+        
         if plugin_type != "SQLite Connection":
             self.logger.warning("Your standard connection is not of type SQLite." + \
                 "Loading messages from another type is experimental.")
