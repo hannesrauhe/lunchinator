@@ -192,9 +192,10 @@ class ChatHistoryWidget(QWidget):
         self._historyTable.setModel(self._sortFilterModel)
 
     def _createHistoryModel(self, partnerID):
-        rows = self._delegate.getStorage().getMessages(partnerID) 
-        historyModel = ChatHistoryModel(partnerID, rows)
-        self._sortFilterModel.setSourceModel(historyModel)
+        rows = self._delegate.getStorage().getMessages(partnerID)
+        # have to store history model as instance variable, else it would be deleted by old PyQt versions
+        self.__historyModel = ChatHistoryModel(partnerID, rows)
+        self._sortFilterModel.setSourceModel(self.__historyModel)
 
     @loggingFunc
     def _fillPeersPopup(self, menu):
