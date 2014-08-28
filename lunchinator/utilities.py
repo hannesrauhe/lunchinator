@@ -562,11 +562,12 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
                         True if the requirement is optional and False
                         otherwise.
     """
-    if isPyinstallerBuild():
-        getCoreLogger().warning("There are missing dependencies in your PyInstaller build. " + \
-        "Contact the developers.\n%s",str(missing))
-        return INSTALL_NONE
     if missing:
+        if isPyinstallerBuild():
+            getCoreLogger().warning("There are missing dependencies in your PyInstaller build. " + \
+            "Contact the developers.\n%s",str(missing))
+            return INSTALL_NONE
+        
         if gui:
             from lunchinator.req_error_dialog import RequirementsErrorDialog
             requirements = []
