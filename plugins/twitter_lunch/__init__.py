@@ -194,6 +194,9 @@ class twitter_lunch(iface_called_plugin):
         self.dthread = None
         self.stopEvent = Event()
         
+    def get_displayed_name(self):
+        return u"Twitter"
+        
     def activate(self):        
         iface_called_plugin.activate(self)
         
@@ -220,15 +223,18 @@ class twitter_lunch(iface_called_plugin):
         for sname in self.options["twitter_pics"].split(";;"):
             self.dthread.add_screen_name(sname)
             
-    def process_lunch_call(self,msg,ip,member_info):
-        message = unicode("Lunchtime: ")+msg
-        if member_info.has_key(ip):
-            message+=u" ("+unicode(member_info[u'name'])+u")"
-        self.dthread.post(message)
+    def process_group_message(self, xmsg, ip, member_info, lunch_call):
+        if lunch_call:
+            message = unicode("Lunchtime: ") + xmsg.getPlainMessage()
+            if member_info.has_key(ip):
+                message+=u" ("+unicode(member_info[u'name'])+u")"
+            self.dthread.post(message)
         
-    def process_event(self,cmd,value,_,__,___):
-        if cmd.startswith("HELO_REQUEST_PIC"):
-            if cmd=="HELO_REQUEST_PIC_TWITTER":
+    def process_command(self,xmsg,_,__,___):
+        cmd = xmsg.getCommand()
+        value = xmsg.getCommandPayload()
+        if cmd.startswith("REQUEST_PIC"):
+            if cmd=="REQUEST_PIC_TWITTER":
                 self.dthread.add_screen_name(value)
                 self.logger.debug("Twitter: Now following these streams for pics: %s", str(self.dthread.get_screen_names()))
                 self.set_option("twitter_pics",";;".join(self.dthread.get_screen_names()))
@@ -238,9 +244,7 @@ class twitter_lunch(iface_called_plugin):
                 for account_name,u in self.dthread.get_old_pic_urls().iteritems():
                     self.dthread.announce_pic(account_name, u)            
             
-        elif cmd=="HELO_TWITTER_USER":
+        elif cmd=="TWITTER_USER":
             self.dthread.add_remote_caller(value)
             self.logger.debug("Twitter: Now accepting remote calls from: %s", str(self.dthread.get_remote_callers()))            
-
-    def process_message(self,msg,addr,member_info):
-        pass        
+      

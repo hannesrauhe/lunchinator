@@ -19,6 +19,9 @@ class webrelay(iface_called_plugin):
         self.timerRestartLock = threading.Lock()
         self.stop = False # set to True only on Deactivation of plugin
         
+    def get_displayed_name(self):
+        return u"WebRelay"
+        
     def activate(self):
         iface_called_plugin.activate(self)
         self.stop = False
