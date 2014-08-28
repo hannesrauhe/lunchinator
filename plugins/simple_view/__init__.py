@@ -26,3 +26,6 @@ class simple_view(iface_gui_plugin):
             menu = self.w.create_menu(menuBar)
             return [menu]
             
+if __name__ == '__main__':
+    sv = simple_view()
+    sv.run_in_window()
