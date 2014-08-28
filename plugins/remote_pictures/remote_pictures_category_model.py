@@ -24,6 +24,7 @@ class CategoriesModel(QStandardItemModel):
         self.logger = logger
         self.setColumnCount(1)
         self._categoryIcons = {}
+        self._categoryToRow = {}
         
     def _createThumbnail(self, imagePath, thumbnailSize, adding):
         """Called asynchronously, hence, no QPixmaps here."""
@@ -63,7 +64,21 @@ class CategoriesModel(QStandardItemModel):
         catv = QVariant(cat)
         item.setData(catv, self.SORT_ROLE)
         item.setData(catv, self.CAT_ROLE)
+        
+        self._categoryToRow[cat] = self.rowCount()
         self.appendRow([item])
+        
+    @loggingSlot(object, object, int)
+    def categoryThumbnailChanged(self, cat, thumbnailPath, thumbnailSize):
+        cat = convert_string(cat)
+        thumbnailPath = convert_string(thumbnailPath)
+        
+        row = self._categoryToRow.get(cat, None)
+        if row is None:
+            self.logger.warning("Invalid category (%s), cannot set thumbnail", cat)
+            return
+        item = self.item(row)
+        self._initializeItem(item, thumbnailPath, thumbnailSize, cat, adding=False)
         
     def thumbnailSizeChanged(self, thumbnailSize):
         for i in range(self.rowCount()):

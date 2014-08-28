@@ -19,6 +19,7 @@ from urlparse import urlparse
 
 class RemotePicturesHandler(QObject):
     addCategory = pyqtSignal(object, object, int) # category, thumbnail path, thumbnail size
+    categoryThumbnailChanged = pyqtSignal(object, object, int) # category, thumbnail path, thumbnail size
     categoriesChanged = pyqtSignal()
     # cat, picID, picRow, hasPrev, hasNext
     displayImageInGui = pyqtSignal(object, int, list, bool, bool)
@@ -42,6 +43,11 @@ class RemotePicturesHandler(QObject):
                                                         self.logger,
                                                         self._createThumbnail,
                                                         self._addCategoryAndCloseFile)
+        
+        self._createAndChangeThumbnail = AsyncCall(self,
+                                                   self.logger,
+                                                   self._createThumbnail,
+                                                   self._changeThumbnail)
         
         self._loadPictures.connect(self._loadPicturesSlot)
         self._processRemotePicture.connect(self._processRemotePictureSlot)
@@ -89,13 +95,31 @@ class RemotePicturesHandler(QObject):
         prefix = sanitizeForFilename(category)
         return tempfile.NamedTemporaryFile(suffix=ext, prefix=prefix, dir=self._getPicturesDirectory(), delete=False)
     
-    def _createThumbnail(self, inFile, inPath, inURL, category):
+    def _createThumbnail(self, inFile, inPath, inURL, inImage, category):
         """Called asynchronously"""
         try:
-            outFile = self._createPictureFile(category)
-            fileName = outFile.name
-    
-            if inFile:
+            fileName = None
+            
+            # if category already has a thumbnail, overwrite
+            curPath = self._storage.getCategoryThumbnail(category)
+            if curPath is not None:
+                try:
+                    # check if we can write the file
+                    open(curPath, 'wb').close()
+                    fileName = curPath
+                except:
+                    pass
+            
+            if fileName is None:
+                outFile = self._createPictureFile(category)
+                fileName = outFile.name
+                outFile.close()
+            
+            oldImage = None
+            imageData = None
+            if inImage:
+                oldImage = inImage
+            elif inFile:
                 imageData = inFile.read()
             elif inPath and os.path.exists(inPath):
                 with contextlib.closing(open(inPath, 'rb')) as inFile:
@@ -103,7 +127,8 @@ class RemotePicturesHandler(QObject):
             else:
                 imageData = urllib2.urlopen(inURL.encode('utf-8')).read()
             
-            oldImage = QImage.fromData(imageData)
+            if oldImage is None:
+                oldImage = QImage.fromData(imageData)
             if oldImage.width() > CategoriesModel.MAX_THUMBNAIL_SIZE or oldImage.height() > CategoriesModel.MAX_THUMBNAIL_SIZE:
                 newImage = oldImage.scaled(CategoriesModel.MAX_THUMBNAIL_SIZE,
                                            CategoriesModel.MAX_THUMBNAIL_SIZE,
@@ -118,16 +143,26 @@ class RemotePicturesHandler(QObject):
             self.logger.exception("Error trying to create thumbnail for category")
             return None, inFile, category
             
+    def __setCategoryThumbnail(self, thumbnailPath, imageFile, category):
+        if thumbnailPath is not None:
+            # store thumbnail path in database
+            self._storage.setCategoryThumbnail(category, thumbnailPath)
+        if imageFile is not None:
+            imageFile.close()
+    
     @loggingSlot(object)
     def _addCategoryAndCloseFile(self, aTuple):
         """Called synchronously, with result of _createThumbnail"""
         thumbnailPath, imageFile, category = aTuple
-        if thumbnailPath is not None:
-            # store thumbnail path in database
-            self._storage.setCategoryThumbnail(category, thumbnailPath)
+        self.__setCategoryThumbnail(thumbnailPath, imageFile, category)
         self.addCategory.emit(category, thumbnailPath, self._thumbnailSize)
-        if imageFile is not None:
-            imageFile.close()
+            
+    @loggingSlot(object)
+    def _changeThumbnail(self, aTuple):
+        """Called synchronously, with result of _createThumbnail"""
+        thumbnailPath, imageFile, category = aTuple
+        self.__setCategoryThumbnail(thumbnailPath, imageFile, category)
+        self.categoryThumbnailChanged.emit(category, thumbnailPath, self._thumbnailSize)
             
     def _addCategory(self, category, thumbnailPath=None, imageFile=None, imageURL=None):
         # cache category image
@@ -137,7 +172,7 @@ class RemotePicturesHandler(QObject):
                 self.addCategory.emit(category, thumbnailPath, self._thumbnailSize)
             elif (imageFile and os.path.exists(imageFile)) or imageURL is not None:
                 # create thumbnail asynchronously, then close imageFile
-                self._createThumbnailAndAddCategory(None, imageFile, imageURL, category)
+                self._createThumbnailAndAddCategory(None, imageFile, imageURL, None, category)
                 closeImmediately = False
             else:
                 raise Exception("No image path specified.")
@@ -182,7 +217,7 @@ class RemotePicturesHandler(QObject):
             if imageFile is not None:
                 imageFile.seek(0)
             # image file will be closed after thumbnail was created
-            self._createThumbnailAndAddCategory(imageFile, imagePath, url, category)
+            self._createThumbnailAndAddCategory(imageFile, imagePath, url, None, category)
         elif imageFile is not None:
             imageFile.close()
             
@@ -302,3 +337,7 @@ class RemotePicturesHandler(QObject):
                 picFile.write(picData)
                 self._storage.setPictureFile(category, url, picFile.name)
     
+    @loggingSlot(object, QImage)
+    def setCategoryThumbnail(self, category, image):
+        self._createAndChangeThumbnail(None, None, None, image, category)
+        

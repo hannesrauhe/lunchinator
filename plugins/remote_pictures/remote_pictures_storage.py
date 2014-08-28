@@ -233,6 +233,15 @@ class RemotePicturesStorage(object):
         categories = self.getCategories(alsoEmpty)
         return [row[0] for row in categories]
     
+    def getCategoryThumbnail(self, category):
+        if self._db is None:
+            return None
+        
+        rows = self._db.query("SELECT THUMBNAIL FROM REMOTE_PICTURES_CATEGORY WHERE TITLE=?", category)
+        if not rows:
+            return None
+        return rows[0][0]
+        
     def setCategoryThumbnail(self, category, thumbnailPath):
         if self._db is None:
             self.logger.error("Cannot set category thumbnail, no database connection")

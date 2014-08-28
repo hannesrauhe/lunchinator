@@ -134,8 +134,10 @@ class remote_pictures(iface_gui_plugin):
         self._gui.displayPrev.connect(self._handler.displayPrev)
         self._gui.displayNext.connect(self._handler.displayNext)
         self._gui.pictureDownloaded.connect(self._handler.pictureDownloaded)
+        self._gui.setCategoryThumbnail.connect(self._handler.setCategoryThumbnail)
         
         self._handler.addCategory.connect(self._gui.categoryModel.addCategory)
+        self._handler.categoryThumbnailChanged.connect(self._gui.categoryModel.categoryThumbnailChanged) 
         self._handler.displayImageInGui.connect(self._gui.displayImage)
         
         self._gui.categoryModel.categoriesChanged.connect(self._privacySettingsChanged)
@@ -151,8 +153,10 @@ class remote_pictures(iface_gui_plugin):
             self._gui.displayPrev.disconnect(self._handler.displayPrev)
             self._gui.displayNext.disconnect(self._handler.displayNext)
             self._gui.pictureDownloaded.disconnect(self._handler.pictureDownloaded)
+            self._gui.setCategoryThumbnail.disconnect(self._handler.setCategoryThumbnail)
             
             self._handler.addCategory.disconnect(self._gui.categoryModel.addCategory)
+            self._handler.categoryThumbnailChanged.disconnect(self._gui.categoryModel.categoryThumbnailChanged)
             self._handler.displayImageInGui.disconnect(self._gui.displayImage)
             
         if self._gui is not None:

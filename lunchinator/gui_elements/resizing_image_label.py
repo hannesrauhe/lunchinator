@@ -36,6 +36,9 @@ class ResizingImageLabel(QLabel):
     def setImage(self, path):
         self.setRawPixmap(QPixmap.fromImage(QImage(path)))
         
+    def getRawPixmap(self):
+        return self.rawPixmap
+        
     def setSmoothScaling(self, newValue):
         if self.smooth_scaling != newValue:
             self.smooth_scaling = newValue

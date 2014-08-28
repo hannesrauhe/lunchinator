@@ -3,17 +3,17 @@ from remote_pictures.remote_pictures_category_model import CategoriesModel
 from lunchinator import convert_string, get_peers
 from lunchinator.gui_elements import ResizingWebImageLabel
 from lunchinator.utilities import formatTime
+from lunchinator.log.logging_func import loggingFunc
 from lunchinator.log.logging_slot import loggingSlot
 
 from PyQt4.QtGui import QStackedWidget, QListView, QWidget, QHBoxLayout, \
     QVBoxLayout, QToolButton, QLabel, QFont, QColor, QSizePolicy, QSortFilterProxyModel, \
-    QFrame
-from PyQt4.QtCore import QTimer, QSize, Qt, pyqtSignal, QModelIndex
+    QFrame, QMenu, QCursor, QImage
+from PyQt4.QtCore import QTimer, QSize, Qt, pyqtSignal, QModelIndex, QPoint
 
 import sys, os
 from functools import partial
 from time import localtime
-from lunchinator.log.logging_func import loggingFunc
 
 class RemotePicturesGui(QStackedWidget):
     openCategory = pyqtSignal(object) # category
@@ -23,6 +23,8 @@ class RemotePicturesGui(QStackedWidget):
     
     minOpacityChanged = pyqtSignal(float)
     maxOpacityChanged = pyqtSignal(float)
+    
+    setCategoryThumbnail = pyqtSignal(object, QImage) # category, thumbnail pixmap
     
     _categoryOpened = pyqtSignal() # used to flash hidden widgets
     
@@ -57,6 +59,8 @@ class RemotePicturesGui(QStackedWidget):
         
         self.imageLabel = ResizingWebImageLabel(self, self.logger, smooth_scaling=smoothScaling)
         self.imageLabel.imageDownloaded.connect(self.pictureDownloadedSlot)
+        self.imageLabel.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.imageLabel.customContextMenuRequested.connect(self._showImageContextMenu)
         imageViewerLayout = QVBoxLayout(self.imageLabel)
         imageViewerLayout.setContentsMargins(0, 0, 0, 0)
         imageViewerLayout.setSpacing(0)
@@ -111,6 +115,31 @@ class RemotePicturesGui(QStackedWidget):
     
     def getCategoryIcon(self, cat):
         return self.categoryModel.getCategoryIcon(cat)
+        
+    @loggingSlot(QPoint)
+    def _showImageContextMenu(self, _point):
+        pixmap = self.imageLabel.getRawPixmap()
+        if pixmap is None or pixmap.isNull():
+            return
+        m = QMenu()
+        m.addAction(u"Set as category thumbnail", self._setCurrentPictureAsThumbnail)
+        m.exec_(QCursor.pos())
+        m.deleteLater()
+        
+    @loggingSlot()
+    def _setCurrentPictureAsThumbnail(self):
+        if self.currentCategory is None:
+            self.logger.error("Current category is None")
+            return
+        pixmap = self.imageLabel.getRawPixmap()
+        if pixmap is None or pixmap.isNull():
+            self.logger.error("NULL pixmap")
+            return
+        image = pixmap.toImage()
+        if image.isNull():
+            self.logger.error("Error converting pixmap to image")
+            return
+        self.setCategoryThumbnail.emit(self.currentCategory, image)
         
     def _initializeHiddenWidget(self, w):
         self._categoryOpened.connect(w.showTemporarily)
@@ -209,6 +238,7 @@ class HiddenWidgetBase(object):
         except:
             self.logger.debug(u"Could not enable opacity effects. %s: %s", sys.exc_info()[0].__name__, unicode(sys.exc_info()[1]))
         
+    # cannot use loggingSlot here because this is no QObject
     @loggingFunc
     def setMinOpacity(self, newVal):
         self.minOpacity = newVal
@@ -216,6 +246,7 @@ class HiddenWidgetBase(object):
         if self.fadingEnabled and not self.timer.isActive():
             self.timer.start(self.INTERVAL)
     
+    # cannot use loggingSlot here because this is no QObject
     @loggingFunc
     def setMaxOpacity(self, newVal):
         self.maxOpacity = newVal
@@ -223,6 +254,7 @@ class HiddenWidgetBase(object):
         if self.fadingEnabled and not self.timer.isActive():
             self.timer.start(self.INTERVAL)
         
+    # cannot use loggingSlot here because this is no QObject
     @loggingFunc
     def showTemporarily(self):
         if self.good:
@@ -236,6 +268,7 @@ class HiddenWidgetBase(object):
         self.fadingEnabled = True
         self.timer.start(self.INTERVAL * 1.5)
     
+    # cannot use loggingSlot here because this is no QObject
     @loggingFunc
     def _fade(self):
         if self.fadeIn:
