@@ -9,7 +9,7 @@ from lunchinator import get_settings, get_server, MAIN_CONFIG_DIR
 from lunchinator.log import getCoreLogger, initializeLogger
 from lunchinator.log.lunch_logger import setGlobalLoggingLevel
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
-from lunchinator.utilities import INSTALL_CANCELED, INSTALL_SUCCESS, INSTALL_FAIL, \
+from lunchinator.utilities import INSTALL_CANCEL, INSTALL_SUCCESS, INSTALL_FAIL, \
     installDependencies, checkRequirements, handleMissingDependencies
     
 
@@ -73,7 +73,7 @@ def installCoreDependencies(gui=False):
     requirements = getCoreDependencies()
     missing = checkRequirements(requirements, u"Lunchinator", u"Lunchinator")
     result = handleMissingDependencies(missing, gui, optionalCallback=lambda req : not "yapsy" in req.lower())
-    if result == INSTALL_CANCELED:
+    if result == INSTALL_CANCEL:
         return False
     
     try:

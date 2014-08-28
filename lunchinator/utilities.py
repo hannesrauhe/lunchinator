@@ -527,15 +527,16 @@ def checkRequirements(reqs, component, dispName, missing={}):
 INSTALL_SUCCESS = 0
 INSTALL_FAIL = 1
 INSTALL_RESTART = 2
-INSTALL_CANCELED = 3
-INSTALL_NONE = 4
+INSTALL_CANCEL = 3
+INSTALL_NOT_POSSIBLE = 4
+INSTALL_IGNORE = 5
        
 def installDependencies(requirements):
     if not requirements:
         getCoreLogger().info("No dependencies to install.")
         return INSTALL_SUCCESS
     
-    if getPlatform()==PLATFORM_WINDOWS:
+    if getPlatform() == PLATFORM_WINDOWS:
         result = installPipDependencyWindows(requirements)
     else:
         result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + requirements)
@@ -568,7 +569,7 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
         if isPyinstallerBuild():
             getCoreLogger().warning("There are missing dependencies in your PyInstaller build. " + \
             "Contact the developers.\n%s",str(missing))
-            return INSTALL_NONE
+            return INSTALL_NOT_POSSIBLE
         
         if gui:
             from lunchinator.req_error_dialog import RequirementsErrorDialog
@@ -589,10 +590,12 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
             res = f.exec_()
             if res == RequirementsErrorDialog.Accepted:
                 return installDependencies(f.getSelectedRequirements())
+            elif res == RequirementsErrorDialog.IGNORED:
+                return INSTALL_IGNORE
             else:
-                return INSTALL_CANCELED
+                return INSTALL_CANCEL
         return INSTALL_FAIL
-    return INSTALL_NONE
+    return INSTALL_NOT_POSSIBLE
 
 
     

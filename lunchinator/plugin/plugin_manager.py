@@ -4,7 +4,7 @@ from lunchinator.log import getCoreLogger
 from lunchinator.plugin import iface_general_plugin, iface_called_plugin, iface_gui_plugin, iface_db_plugin
 from yapsy import PLUGIN_NAME_FORBIDEN_STRING
 from lunchinator.utilities import INSTALL_SUCCESS, INSTALL_FAIL,\
-    INSTALL_CANCELED, INSTALL_RESTART
+    INSTALL_CANCEL, INSTALL_RESTART, INSTALL_IGNORE
 
 class NotificationPluginManager(ConfigurablePluginManager):
     def __init__(self,
@@ -141,12 +141,12 @@ class NotificationPluginManager(ConfigurablePluginManager):
                 self._logCannotLoad(pluginInfo, missing)
                 get_notification_center().emitPluginDeactivated(pluginInfo.name, pluginInfo.category)
                 return
-        elif result == INSTALL_CANCELED:
+        elif result == INSTALL_CANCEL:
             # user chose not to install -> deactivate
             get_notification_center().emitPluginDeactivated(pluginInfo.name, pluginInfo.category)
             self._deactivateMissing(missing)
             return
-        elif result == INSTALL_SUCCESS:
+        elif result in (INSTALL_SUCCESS, INSTALL_IGNORE):
             missing = {}
         elif result == INSTALL_RESTART:
             # store that the plugin is activated now

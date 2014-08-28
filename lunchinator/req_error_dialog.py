@@ -3,8 +3,10 @@ from PyQt4.QtGui import QVBoxLayout, QDialog, QDialogButtonBox, QLabel,\
 from PyQt4.QtCore import Qt, QSize, QVariant
 from lunchinator.utilities import PLATFORM_MAC, getPlatform
 from lunchinator import convert_string
+from lunchinator.log.logging_slot import loggingSlot
 
 class RequirementsErrorDialog(QDialog):
+    IGNORED = QDialog.Accepted + 1
     _REQUIREMENT_ROLE = Qt.UserRole + 1
     
     def __init__(self, requirements, parent):
@@ -79,15 +81,26 @@ class RequirementsErrorDialog(QDialog):
         layout.addWidget(self._reqTable)
         
         buttonBox = QDialogButtonBox(Qt.Horizontal, self)
-        dontload = QPushButton(u"Don't Load Plugins", self)
+        ignore = QPushButton(u"Ignore", self)
+        deactivate = QPushButton(u"Deactivate", self)
         install = QPushButton(u"Install Selected", self)
-        buttonBox.addButton(dontload, QDialogButtonBox.RejectRole)
+        buttonBox.addButton(deactivate, QDialogButtonBox.DestructiveRole)
+        buttonBox.addButton(ignore, QDialogButtonBox.RejectRole)
         buttonBox.addButton(install, QDialogButtonBox.AcceptRole)
-        buttonBox.rejected.connect(self.reject)
+        deactivate.clicked.connect(self._deactivate)
+        ignore.clicked.connect(self._ignore)
         buttonBox.accepted.connect(self.accept)
         bottomLayout = QHBoxLayout()
         bottomLayout.addWidget(buttonBox, 1, Qt.AlignRight)
         layout.addLayout(bottomLayout)
+        
+    @loggingSlot()
+    def _deactivate(self):
+        self.reject()
+        
+    @loggingSlot()
+    def _ignore(self):
+        self.done(self.IGNORED)
             
 if __name__ == '__main__':
     from PyQt4.QtGui import QApplication
