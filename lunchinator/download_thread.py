@@ -72,7 +72,7 @@ class DownloadThread(QThread):
                         break
                     except urllib2.URLError:
                         #very likely a proxy error
-                        self.logger.info("Downloading %s failed, forcing without proxy now", self.url)
+                        self.logger.debug("Downloading %s failed, forcing without proxy now", self.url)
             
                 #try again without proxy
                 req2 = urllib2.Request(self.url.encode('utf-8'), headers=hdr)
