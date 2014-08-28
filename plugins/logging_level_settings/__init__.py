@@ -6,6 +6,9 @@ class plugin_repositories(iface_general_plugin):
     def __init__(self):
         super(plugin_repositories, self).__init__()
         
+    def get_displayed_name(self):
+        return u"Logging Level Settings"
+    
     def activate(self):
         iface_general_plugin.activate(self)
         

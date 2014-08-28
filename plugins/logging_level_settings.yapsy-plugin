@@ -1,5 +1,5 @@
 [Core]
-Name = Logging Level
+Name = hannesrauhe.lunchinator.logging_level_settings
 Module = logging_level_settings
 
 [Documentation]

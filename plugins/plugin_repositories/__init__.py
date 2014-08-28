@@ -16,7 +16,10 @@ class plugin_repositories(iface_general_plugin):
         self.force_activation = True
         self._restartRequired = False
         self._outdated = set()
-        self._upToDate = set()
+        self._upToDate = set()    
+        
+    def get_displayed_name(self):
+        return u"Plugin Repositories"
         
     def activate(self):
         iface_general_plugin.activate(self)

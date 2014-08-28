@@ -1,5 +1,5 @@
 [Core]
-Name = Plugin Repositories
+Name = hannesrauhe.lunchinator.plugin_repositories
 Module = plugin_repositories
 
 [Documentation]
