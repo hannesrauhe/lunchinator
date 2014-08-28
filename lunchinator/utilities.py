@@ -562,6 +562,8 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
                         True if the requirement is optional and False
                         otherwise.
     """
+    if isPyinstallerBuild():
+        return INSTALL_NONE
     if missing:
         if gui:
             from lunchinator.req_error_dialog import RequirementsErrorDialog

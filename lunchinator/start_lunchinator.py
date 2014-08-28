@@ -9,9 +9,9 @@ from lunchinator import get_settings, get_server, MAIN_CONFIG_DIR
 from lunchinator.log import getCoreLogger, initializeLogger
 from lunchinator.log.lunch_logger import setGlobalLoggingLevel
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
-from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS, restart,\
-    checkRequirements, handleMissingDependencies, INSTALL_CANCELED,\
-    INSTALL_SUCCESS, INSTALL_FAIL
+from lunchinator.utilities import INSTALL_CANCELED, INSTALL_SUCCESS, INSTALL_FAIL, \
+    installDependencies, checkRequirements, handleMissingDependencies
+    
 
 def parse_args():
     usage = "usage: %prog [options]"
@@ -62,12 +62,15 @@ def sendMessage(msg, cli):
 def handleInterrupt(lanschi, _signal, _frame):
     lanschi.quit()    
 
-    
-def installCoreDependencies(gui=False):    
+def getCoreDependencies():
+    requirements = []  
     req_file = get_settings().get_resource("requirements.txt")
     with open(req_file, 'r') as f:
         requirements = f.readlines()
+    return requirements
         
+def installCoreDependencies(gui=False):  
+    requirements = getCoreDependencies()
     missing = checkRequirements(requirements, u"Lunchinator", u"Lunchinator")
     result = handleMissingDependencies(missing, gui, optionalCallback=lambda req : not "yapsy" in req.lower())
     if result == INSTALL_CANCELED:
@@ -104,7 +107,7 @@ def installCoreDependencies(gui=False):
         
 
 def checkDependencies(noPlugins, gui = False):
-    """ Returns whether or not to use plugins """
+    """ Returns whether or not to use plugins, tries to install dependencies"""
     if noPlugins:
         return False
     
@@ -139,7 +142,8 @@ def startLunchinator():
         print "Sent stop command to local lunchinator"
     elif options.installDep:
         initializeLogger()
-        installCoreDependencies()
+        req = getCoreDependencies()
+        installDependencies(req)
     elif options.cli:
         initializeLogger(defaultLogPath)
         usePlugins = checkDependencies(usePlugins)
