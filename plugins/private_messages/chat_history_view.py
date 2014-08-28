@@ -113,11 +113,11 @@ class ChatHistoryWidget(QWidget):
         self._delegate = delegate
         
         self._peerModel = HistoryPeersModel(None, self.logger)
-        self._updatePeers()
-        
         self._initPeerList()
         self._initHistoryTable()
         self._initSortFilterModel()
+        
+        self._updatePeers()
         
         topWidget = self._initTopWidget()
         mainWidget = self._initMainWidget()
@@ -219,10 +219,20 @@ class ChatHistoryWidget(QWidget):
         
         self._delegate.getOpenChatAction().performAction(peerID, peerInfo, self)
 
+    def _getSelectedPeer(self, selection=None):
+        if selection is None:
+            selection = self._peerList.selectionModel().selection()
+        if len(selection.indexes()) > 0:
+            index = iter(selection.indexes()).next()
+            return convert_string(index.data(HistoryPeersModel.KEY_ROLE).toString())
+        return None
+
     @loggingSlot()
     def _updatePeers(self):
         if get_peers() is None:
             return
+        
+        selectedBefore = self._getSelectedPeer()
         rows = self._delegate.getStorage().getPartners()
 
         newPeers = {}   
@@ -237,12 +247,15 @@ class ChatHistoryWidget(QWidget):
             else:
                 self._peerModel.externalRowAppended(pID, peerInfo)
                 
+        selectedAfter = self._getSelectedPeer()
+        if selectedAfter is not None and selectedBefore == selectedAfter:
+            self._createHistoryModel(selectedAfter)
+                
     @loggingSlot(QItemSelection, QItemSelection)
     def _displayHistory(self, newSelection, _oldSelection):
-        if len(newSelection.indexes()) > 0:
-            index = iter(newSelection.indexes()).next()
-            partnerID = convert_string(index.data(HistoryPeersModel.KEY_ROLE).toString())
-            self._createHistoryModel(partnerID)
+        selected = self._getSelectedPeer(newSelection)
+        if selected is not None:
+            self._createHistoryModel(selected)
             self._clearButton.setEnabled(True)
         else:
             self._sortFilterModel.setSourceModel(None)
