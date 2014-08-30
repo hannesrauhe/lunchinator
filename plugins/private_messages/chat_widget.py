@@ -336,13 +336,15 @@ class ChatWidget(QWidget):
     def _showContextMenu(self, point):
         index = self.table.indexAt(point)
         if index != None:
+            if index.column() != ChatMessagesModel.MESSAGE_COLUMN:
+                return
             isOwn = index.data(ChatMessagesModel.OWN_MESSAGE_ROLE).toBool()
+            menu = QMenu(self)
             if isOwn:
-                menu = QMenu(self)
                 menu.addAction(u"Send again", partial(self._sendAgain, index))
-                menu.addAction(u"Copy", partial(self._copy, index))
-                menu.exec_(QCursor.pos())
-                menu.deleteLater()
+            menu.addAction(u"Copy", partial(self._copy, index))
+            menu.exec_(QCursor.pos())
+            menu.deleteLater()
         
     @loggingSlot()
     def _sendAgain(self, index):
