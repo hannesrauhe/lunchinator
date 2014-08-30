@@ -31,6 +31,7 @@ class ChatMessagesHandler(QObject):
         self._delegate = delegate
         self._ackTimeout = ackTimeout
         self._waitingForAck = {} # message ID : (otherID, time, message, isResend)
+        self._hasUndelivered = True # just assume until proven otherwise
         
         nextIDFromDB = self._getStorage().getLastSentMessageID() + 1
         self._nextMessageID = max(nextMsgID, nextIDFromDB)
@@ -65,8 +66,15 @@ class ChatMessagesHandler(QObject):
         peerID = convert_string(peerID)
         self._resendUndeliveredMessages(curTime=None, partner=peerID, force=True)
         
-    def _resendUndeliveredMessages(self, curTime, partner=None, force=False):    
-        for msgTuple in self._getStorage().getRecentUndeliveredMessages(partner):
+    def _resendUndeliveredMessages(self, curTime, partner=None, force=False):
+        if not partner and not self._hasUndelivered:
+            return
+        
+        undelivered = self._getStorage().getRecentUndeliveredMessages(partner)
+        if not partner and not undelivered:
+            self._hasUndelivered=False
+        
+        for msgTuple in undelivered:
             msgTime = msgTuple[ChatMessagesStorage.MSG_TIME_COL]
             if not force:
                 timeout = int(curTime - msgTime)
@@ -107,6 +115,7 @@ class ChatMessagesHandler(QObject):
                 self._waitingForAck.pop(msgID)
     
     def _deliveryTimedOut(self, otherID, msgID, msgHTML, msgTime):
+        self._hasUndelivered = True
         self._addOwnMessage(otherID, msgID, msgHTML, msgTime, ChatMessagesModel.MESSAGE_STATE_NOT_DELIVERED, u"", -1)
         
     def _checkAndResendValidID(self, otherID, oldMsgID, answerDict, isNoResend=False, msgHTML=None, recvTime=None):
