@@ -162,6 +162,8 @@ class lunch_settings(object):
         self._udp_port = 50000
         # size of a single UDP package (best value depends on the network)
         self._max_fragment_length = 512
+        # allow multiple lunchinators with the same ID in the network (experimental)
+        self._multiple_machines_allowed = False
         
         self._next_lunch_begin = None
         self._next_lunch_end = None
@@ -603,4 +605,11 @@ class lunch_settings(object):
             if "https_proxy" in os.environ:
                 del os.environ["https_proxy"]
         self._proxy = newValue
+        
+    
+    def get_multiple_machines_allowed(self):
+        return self._multiple_machines_allowed
+    @hidden_setting()
+    def set_multiple_machines_allowed(self, newValue):
+        self._multiple_machines_allowed = newValue
         

@@ -441,6 +441,9 @@ class LunchPeers(object):
         If the peer is in the same group it will be promoted to member, otherwise it 
         will be removed from the list of members. Further signals are emitted if the peer
         is in a group we do not know yet and for member append/remove/update
+        
+        @type ip: unicode
+        @type newInfo: dict 
         """
         # Make sure the required keys are in the dict
         if u'group' not in newInfo:
@@ -469,6 +472,7 @@ class LunchPeers(object):
                 elif ip not in self._peer_info and newPID in self._idToIp:
                     # this is a new IP for an existing peer
                     self.logger.debug("New IP: %s for ID: %s", ip, newPID)
+                    self._alertIfIPnotMyself(newPID, ip)
                     existing_info = self._peer_info[self._idToIp[newPID][-1]]
                     self._peer_info[ip] = existing_info
                     self._addPeerIPtoID(newPID, ip)
@@ -586,7 +590,39 @@ class LunchPeers(object):
                     f.truncate()
                     f.write(u"\n".join(sorted(self._potentialPeers)))
         except:
-            self.logger.exception("Could not write peers to %s", get_settings().get_peers_file())    
+            self.logger.exception("Could not write peers to %s", get_settings().get_peers_file())
+            
+    def _alertIfIPnotMyself(self, newPID, ip):
+        """ alert if ID is mine but ip is not from my machine
+        @return: True if that's my ID from another machine
+        
+        @type ID: unicode
+        @type ip: unicdode
+        @rtype: bool
+        """
+        if get_settings().get_multiple_machines_allowed():
+            return False
+        
+        if newPID != get_settings().get_ID():
+            #that not me!
+            return False
+        
+        myname = socket.getfqdn(socket.gethostname())
+        othername = socket.gethostbyaddr(ip)[0]
+        if myname==othername:
+            #that seems to be me from another, maybe on a second
+            #network interface
+            return False
+        
+        #that seems to be coming from another machine      
+        self.logger.critical("Another lunchinator on the network (%s: %s)" + \
+                  "is identifying itself with your ID. "+\
+                  "It will get all messages you get, also private ones! " +\
+                  "If you are sure that this is right you can set "+\
+                  "multiple_machines_allowed = True in your settings.cfg \n"+\
+                  "Otherwise you should create a new ID in settings immediately.\n"\
+                  , ip, othername)
+        return True
         
     def __len__(self):
         return len(self._idToIp)    
