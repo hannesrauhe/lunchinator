@@ -7,7 +7,8 @@ from lunchinator.log.lunch_logger import getSpecificLoggingLevel,\
     getLoggingLevel
     
 from PyQt4.QtGui import QWidget, QVBoxLayout, QTreeView,\
-    QSortFilterProxyModel, QHBoxLayout, QLabel, QComboBox, QHeaderView
+    QSortFilterProxyModel, QHBoxLayout, QLabel, QComboBox, QHeaderView,\
+    QLineEdit
 from PyQt4.QtCore import Qt
 import logging
 from functools import partial
@@ -71,6 +72,8 @@ class LoggingLevelGUI(QWidget):
         self._initUI()
         self._initModel()
         
+        self._searchField.textChanged.connect(self._sortFilterModel.setFilterRegExp)
+        
         self._logTable.setModel(self._sortFilterModel)
         self._logTable.sortByColumn(LogLevelModel.NAME_COLUMN, Qt.AscendingOrder)
         
@@ -87,7 +90,7 @@ class LoggingLevelGUI(QWidget):
         globalLevelWidget = QWidget(self)
         glLayout = QHBoxLayout(globalLevelWidget)
         glLayout.setContentsMargins(0, 0, 0, 0)
-        glLayout.addWidget(QLabel(u"Default Logging Level:", globalLevelWidget))
+        glLayout.addWidget(QLabel(u"Default Level:", globalLevelWidget))
         
         self._globalLevelCombo = QComboBox()
         self._globalLevelCombo.addItems([u"Debug",
@@ -99,6 +102,11 @@ class LoggingLevelGUI(QWidget):
         self._setGlobalLevel(globalLevel)
         glLayout.addWidget(self._globalLevelCombo, 1, Qt.AlignLeft)
         
+        self._searchField = QLineEdit(self)
+        if hasattr(self._searchField, "setPlaceholderText"):
+            self._searchField.setPlaceholderText(u"Search")
+        glLayout.addWidget(self._searchField, 0)
+            
         layout.addWidget(globalLevelWidget)
         
         self._logTable = LogLevelTable(self) 
@@ -118,6 +126,8 @@ class LoggingLevelGUI(QWidget):
         self._sortFilterModel.setSortCaseSensitivity(Qt.CaseInsensitive)
         self._sortFilterModel.setSortRole(Qt.DisplayRole)
         self._sortFilterModel.setDynamicSortFilter(True)
+        self._sortFilterModel.setFilterKeyColumn(0)
+        self._sortFilterModel.setFilterCaseSensitivity(Qt.CaseInsensitive)
         
     def _setGlobalLevel(self, globalLevel):
         globalLevelText = LogLevelModel._LEVEL_TEXT[globalLevel]
