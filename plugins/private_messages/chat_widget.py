@@ -1,7 +1,9 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
     QFrame, QIcon, QHBoxLayout,\
-    QLabel, QPixmap, QTextCharFormat, QTextCursor, QToolButton, QMenu
-from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp, QTimer
+    QLabel, QPixmap, QTextCharFormat, QTextCursor, QToolButton, QMenu, QCursor,\
+    QTextDocument, QApplication
+from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp, QTimer, QPoint,\
+    QMimeData
 
 from private_messages.chat_messages_view import ChatMessagesView
 from private_messages.chat_messages_model import ChatMessagesModel
@@ -327,6 +329,34 @@ class ChatWidget(QWidget):
         
     def _initMessageTable(self):
         self.table = ChatMessagesView(self._model, self, self.logger)
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self._showContextMenu)
+        
+    @loggingSlot(QPoint)
+    def _showContextMenu(self, point):
+        index = self.table.indexAt(point)
+        if index != None:
+            isOwn = index.data(ChatMessagesModel.OWN_MESSAGE_ROLE).toBool()
+            if isOwn:
+                menu = QMenu(self)
+                menu.addAction(u"Send again", partial(self._sendAgain, index))
+                menu.addAction(u"Copy", partial(self._copy, index))
+                menu.exec_(QCursor.pos())
+                menu.deleteLater()
+        
+    @loggingSlot()
+    def _sendAgain(self, index):
+        self.sendMessage.emit(self._otherID, convert_string(index.data(Qt.DisplayRole).toString()))
+        
+    @loggingSlot()
+    def _copy(self, index):
+        doc = QTextDocument()
+        doc.setHtml(index.data(Qt.DisplayRole).toString())
+        clipboard = QApplication.clipboard()
+        richTextData = QMimeData()
+        richTextData.setHtml(index.data(Qt.DisplayRole).toString())
+        richTextData.setText(doc.toPlainText())
+        clipboard.setMimeData(richTextData)
         
     @loggingSlot()
     def _textChangedSlot(self):
@@ -593,7 +623,7 @@ if __name__ == '__main__':
         ownIcon = get_settings().get_resource("images", "me.png")
         otherIcon = get_settings().get_resource("images", "lunchinator.png")
         tw = ChatWidget(window, getCoreLogger(), "Me", "Other Guy", ownIcon, otherIcon, "ID")
-        tw.setMarkdownEnabled(False)
+        tw.setMarkdownEnabled(True)
         
         tw.addOwnMessage(0, time(),
                          "foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten",
