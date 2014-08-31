@@ -68,7 +68,7 @@ def getCoreDependencies():
         with open(req_file, 'r') as f:
             requirements = f.readlines()
     except IOError:
-        log_warning("requirements.txt does not exist")
+        getCoreLogger().warning("requirements.txt does not exist")
         requirements = []
     return requirements
         
