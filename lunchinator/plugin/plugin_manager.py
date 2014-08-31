@@ -33,6 +33,71 @@ class NotificationPluginManager(ConfigurablePluginManager):
         to discover their actual names and return them.
         """
         return plugin_list_str.strip(" ").split("%s"%PLUGIN_NAME_FORBIDEN_STRING)
+
+    def __getCategoryPluginsConfigFromList(self, plugin_list):
+        """
+        Compose a string describing the list of plugins to activate
+        """
+        return PLUGIN_NAME_FORBIDEN_STRING.join(plugin_list)
+        
+    def __getCategoryOptionsName(self,category_name):
+        """
+        Return the appropirately formated version of the category's
+        option.
+        """
+        return "%s_plugins_to_load" % category_name.replace(" ","_")
+
+    def __addPluginToConfig(self,category_name, plugin_name):
+        """
+        Utility function to add a plugin to the list of plugin to be
+        activated.
+        """
+        # check that the section is here
+        if not self.config_parser.has_section(self.CONFIG_SECTION_NAME):
+            self.config_parser.add_section(self.CONFIG_SECTION_NAME)
+        # check that the category's list of activated plugins is here too
+        option_name = self.__getCategoryOptionsName(category_name)
+        if not self.config_parser.has_option(self.CONFIG_SECTION_NAME, option_name):
+            # if there is no list yet add a new one
+            self.config_parser.set(self.CONFIG_SECTION_NAME,option_name,plugin_name)
+            return self.config_has_changed()
+        else:
+            # get the already existing list and append the new
+            # activated plugin to it.
+            past_list_str = self.config_parser.get(self.CONFIG_SECTION_NAME,option_name)
+            past_list = self.__getCategoryPluginsListFromConfig(past_list_str)
+            # make sure we don't add it twice
+            if plugin_name not in past_list: 
+                past_list.append(plugin_name)
+                new_list_str = self.__getCategoryPluginsConfigFromList(past_list)
+                self.config_parser.set(self.CONFIG_SECTION_NAME,option_name,new_list_str)
+                return self.config_has_changed()
+
+    def __removePluginFromConfig(self,category_name, plugin_name):
+        """
+        Utility function to add a plugin to the list of plugin to be
+        activated.
+        """
+        # check that the section is here
+        if not self.config_parser.has_section(self.CONFIG_SECTION_NAME):
+            # then nothing to remove :)
+            return 
+        # check that the category's list of activated plugins is here too
+        option_name = self.__getCategoryOptionsName(category_name)
+        if not self.config_parser.has_option(self.CONFIG_SECTION_NAME, option_name):
+            # if there is no list still nothing to do
+            return
+        else:
+            # get the already existing list
+            past_list_str = self.config_parser.get(self.CONFIG_SECTION_NAME,option_name)
+            past_list = self.__getCategoryPluginsListFromConfig(past_list_str)
+            if plugin_name in past_list:
+                past_list.remove(plugin_name)
+                new_list_str = self.__getCategoryPluginsConfigFromList(past_list)
+                self.config_parser.set(self.CONFIG_SECTION_NAME,option_name,new_list_str)
+                self.config_has_changed()        
+            
+
     
     def loadPlugins(self, callback=None):
         from lunchinator.utilities import handleMissingDependencies
@@ -110,7 +175,7 @@ class NotificationPluginManager(ConfigurablePluginManager):
         for component in missing.keys():
             pluginName, category = component
             pluginInfo = self._component.getPluginByName(pluginName, category)
-            ConfigurablePluginManager.deactivatePluginByName(self, pluginInfo.name, category_name=pluginInfo.category, save_state=True)
+            self.__removePluginFromConfig(pluginInfo.category, pluginInfo.name)
         
     def checkActivation(self, plugins):
         missing = {}
@@ -150,7 +215,7 @@ class NotificationPluginManager(ConfigurablePluginManager):
             missing = {}
         elif result == INSTALL_RESTART:
             # store that the plugin is activated now
-            ConfigurablePluginManager.activatePluginByName(self, pluginInfo.name, category_name=pluginInfo.category, save_state=True)
+            self.__addPluginToConfig(pluginInfo.category, pluginInfo.name)
             return
         
         getCoreLogger().info("Activating plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
