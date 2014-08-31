@@ -5,7 +5,7 @@
 import platform, sys, os, logging, signal
 from functools import partial
 from optparse import OptionParser
-from lunchinator import get_settings, get_server, MAIN_CONFIG_DIR
+from lunchinator import get_settings, get_server, MAIN_CONFIG_DIR, HAS_GUI
 from lunchinator.log import getCoreLogger, initializeLogger
 from lunchinator.log.lunch_logger import setGlobalLoggingLevel
 from lunchinator.lunch_server import EXIT_CODE_STOP, EXIT_CODE_NO_QT
@@ -72,16 +72,16 @@ def getCoreDependencies():
         requirements = []
     return requirements
         
-def installCoreDependencies(gui=False):  
+def installCoreDependencies():  
     requirements = getCoreDependencies()
     missing = checkRequirements(requirements, u"Lunchinator", u"Lunchinator")
-    result = handleMissingDependencies(missing, gui, optionalCallback=lambda req : not "yapsy" in req.lower())
+    result = handleMissingDependencies(missing, optionalCallback=lambda req : not "yapsy" in req.lower())
     if result == INSTALL_CANCEL:
         return False
     
     try:
         import yapsy
-        if gui:
+        if HAS_GUI:
             from PyQt4.QtGui import QMessageBox
             if result == INSTALL_SUCCESS:
                 QMessageBox.information(None,
@@ -97,7 +97,7 @@ def installCoreDependencies(gui=False):
         getCoreLogger().info("yapsy is working after dependency installation")
         #without gui there are enough messages on the screen already
     except:
-        if gui:
+        if HAS_GUI:
             try:
                 from PyQt4.QtGui import QMessageBox
                 QMessageBox.critical(None,
@@ -109,7 +109,7 @@ def installCoreDependencies(gui=False):
         return False
         
 
-def checkDependencies(noPlugins, gui = False):
+def checkDependencies(noPlugins):
     """ Returns whether or not to use plugins, tries to install dependencies"""
     if noPlugins:
         return False
@@ -120,7 +120,7 @@ def checkDependencies(noPlugins, gui = False):
     except:
         pass
     
-    return installCoreDependencies(gui)
+    return installCoreDependencies()
 
 def startLunchinator():
     (options, _args) = parse_args()
@@ -135,12 +135,12 @@ def startLunchinator():
     elif options.lunchCall or options.message != None:
         initializeLogger()
         get_settings().set_plugins_enabled(False)
-        get_server().set_has_gui(False)
+        HAS_GUI = False
         sendMessage(options.message, options.client)
     elif options.stop:
         initializeLogger()
         get_settings().set_plugins_enabled(False)
-        get_server().set_has_gui(False)
+        HAS_GUI = False
         get_server().stop_server(stop_any=True)
         print "Sent stop command to local lunchinator"
     elif options.installDep:
@@ -155,7 +155,7 @@ def startLunchinator():
         try:
             from lunchinator import lunch_cli
             get_settings().set_plugins_enabled(usePlugins)
-            get_server().set_has_gui(False)
+            HAS_GUI = False
             get_server().set_disable_broadcast(options.noBroadcast)
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
@@ -169,7 +169,7 @@ def startLunchinator():
         
     #    sys.settrace(trace)
         get_settings().set_plugins_enabled(usePlugins)
-        get_server().set_has_gui(False)
+        HAS_GUI = False
         get_server().set_disable_broadcast(options.noBroadcast)
         get_server().initialize()
         get_server().start_server()
@@ -197,7 +197,7 @@ def startLunchinator():
                     return False
                         
         app = LunchApplication(sys.argv)
-        usePlugins = checkDependencies(usePlugins, gui=True)
+        usePlugins = checkDependencies(usePlugins)
 
         get_settings().set_plugins_enabled(usePlugins)
         get_server().set_disable_broadcast(options.noBroadcast)

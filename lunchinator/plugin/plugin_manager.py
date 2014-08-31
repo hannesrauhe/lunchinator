@@ -146,7 +146,7 @@ class NotificationPluginManager(ConfigurablePluginManager):
             missing.update(newMissing)
             
         from lunchinator import get_server
-        result = handleMissingDependencies(missing, gui=get_server().has_gui())
+        result = handleMissingDependencies(missing)
         if result == INSTALL_FAIL:
             # maybe there were dependencies installed, better re-check
             missing = {}
@@ -202,7 +202,7 @@ class NotificationPluginManager(ConfigurablePluginManager):
         
         if checkDependencies:
             missing = self.checkActivation([pluginInfo])
-            result = handleMissingDependencies(missing, gui=get_server().has_gui())
+            result = handleMissingDependencies(missing)
             if result == INSTALL_FAIL:
                 # maybe there were dependencies installed, better re-check
                 missing = self.checkActivation([pluginInfo])

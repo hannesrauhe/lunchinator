@@ -1,12 +1,12 @@
 from online_update.appupdate.gpg_update import GPGUpdateHandler
 from lunchinator.utilities import PLATFORM_WINDOWS, getPlatform, stopWithCommands
-from lunchinator import get_server
+from lunchinator import HAS_GUI
 import os
 
 class WinUpdateHandler(GPGUpdateHandler):
     @classmethod
     def appliesToConfiguration(cls, _logger):
-        return get_server().has_gui() and getPlatform() == PLATFORM_WINDOWS
+        return HAS_GUI and getPlatform() == PLATFORM_WINDOWS
     
     def _getCheckURLBase(self):
         return self._urlBase + "/win/"

@@ -1,4 +1,4 @@
-from lunchinator import get_server, get_notification_center
+from lunchinator import get_notification_center, HAS_GUI
 from lunchinator.plugin import iface_general_plugin
 from lunchinator.utilities import getValidQtParent, restartWithCommands
 from lunchinator.commands import Commands
@@ -51,7 +51,7 @@ class online_update(iface_general_plugin):
         get_notification_center().connectInstallUpdates(self.installUpdates)
         get_notification_center().connectRepositoriesChanged(self._repoUpdateHandler.checkForUpdates)
             
-        if get_server().has_gui():
+        if HAS_GUI:
             self._scheduleTimer = QTimer(getValidQtParent())
             self._scheduleTimer.timeout.connect(self.checkForUpdate)
             self._scheduleTimer.start(online_update.CHECK_INTERVAL)

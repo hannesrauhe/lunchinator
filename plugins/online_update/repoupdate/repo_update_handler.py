@@ -1,4 +1,4 @@
-from lunchinator import get_settings, get_notification_center, get_server
+from lunchinator import get_settings, get_notification_center, HAS_GUI
 from lunchinator.utilities import getValidQtParent, displayNotification
 from lunchinator.callables import AsyncCall
 from lunchinator.log.logging_func import loggingFunc
@@ -12,7 +12,7 @@ class RepoUpdateHandler(object):
     
     def activate(self):
         get_notification_center().connectOutdatedRepositoriesChanged(self._processOutdated)
-        if get_server().has_gui():
+        if HAS_GUI:
             self.checkForUpdates()
     
     def deactivate(self):

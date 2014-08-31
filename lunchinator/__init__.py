@@ -3,6 +3,7 @@ __all__ = ["gui_general", "lunch_settings", "lunch_server", "iface_plugins"]
 import os
 
 MAIN_CONFIG_DIR = unicode(os.path.join(os.getenv("HOME"), ".lunchinator") if os.getenv("HOME") else os.path.join(os.getenv("USERPROFILE"), ".lunchinator"))
+HAS_GUI = True
 
 """ The following methods are deprecated and will be removed soon """
 def _generate_string(*s):

@@ -7,7 +7,7 @@ from cStringIO import StringIO
 
 from lunchinator.log import getCoreLogger
 from lunchinator.lunch_socket import lunchSocket, splitCall
-from lunchinator import get_settings, convert_string, get_notification_center
+from lunchinator import get_settings, convert_string, get_notification_center, HAS_GUI
 from lunchinator.logging_mutex import loggingMutex
 from collections import deque
 from threading import Timer
@@ -31,7 +31,6 @@ class lunch_server(object):
         super(lunch_server, self).__init__()
         self.controller = None
         self.initialized = False
-        self._has_gui = True
         self._disable_broadcast = False
         self.running = False
         self._peer_nr = 0
@@ -122,12 +121,6 @@ class lunch_server(object):
     
     def is_running(self):
         return self.running
-        
-    def has_gui(self):
-        return self._has_gui
-    
-    def set_has_gui(self, enable):
-        self._has_gui = enable
         
     def set_disable_broadcast(self, disable):
         self._disable_broadcast = disable
@@ -266,7 +259,7 @@ class lunch_server(object):
         if 0 == len(target):            
             getCoreLogger().warning("Cannot send message (%s), there is no peer given or none found", msg)
             
-        if self.has_gui() and \
+        if HAS_GUI and \
            get_settings().get_warn_if_members_not_ready() and \
            not msg.startswith(u"HELO") and \
            get_settings().get_lunch_trigger().upper() in msg.upper():
@@ -625,3 +618,9 @@ class lunch_server(object):
         if self._messages:
             self._messages.finish()
         self.controller.serverStopped(self.exitCode)
+        
+    def has_gui(self):
+        """ returns if a GUI and qt is present
+        @deprecated: use lunchinator.HAS_GUI instead
+        """
+        return HAS_GUI

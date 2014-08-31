@@ -1,7 +1,7 @@
 import subprocess, sys, os, contextlib, json, shutil, time
 from datetime import datetime, timedelta 
 from time import mktime, strftime
-from lunchinator import get_settings
+from lunchinator import get_settings, HAS_GUI
 from lunchinator.log import getCoreLogger
 import locale
 import platform
@@ -49,7 +49,7 @@ def displayNotification(name, msg, logger, icon=None):
     myPlatform = getPlatform()
     try: 
         from lunchinator import get_server
-        if not get_server().has_gui():
+        if not HAS_GUI:
             print time.strftime("%Y-%m-%d %H:%M"),name, msg
     except:
         print time.strftime("%Y-%m-%d %H:%M"),name, msg
@@ -554,7 +554,7 @@ def installDependencies(requirements):
             return INSTALL_FAIL
     return INSTALL_SUCCESS
  
-def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True):
+def handleMissingDependencies(missing, optionalCallback=lambda _req : True):
     """If there are missing dependencies, asks and installs them.
     
     Returns a list of components whose requirements were not fully
@@ -574,7 +574,7 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
             canInstall = True
             text = None
         
-        if gui:
+        if HAS_GUI:
             from lunchinator.req_error_dialog import RequirementsErrorDialog
             requirements = []
             for _component, missingList in missing.iteritems():
@@ -602,8 +602,6 @@ def handleMissingDependencies(missing, gui, optionalCallback=lambda _req : True)
         return INSTALL_FAIL
     return INSTALL_NOT_POSSIBLE
 
-
-    
 def installPipDependencyWindows(package):
     """ installs dependecies for lunchinator working without pyinstaller on Win 
     """
