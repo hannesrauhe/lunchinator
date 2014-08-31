@@ -266,9 +266,7 @@ class lunch_settings(object):
         self._plugin_repos = PluginRepositories(self.get_resource("plugins"), externalRepos, logging=self.get_verbose())
         
         if len(self._ID)==0:
-            self._ID = unicode(uuid.uuid4())
-            self._config_file.set('general', 'ID', self._ID )
-        
+            self.generate_ID()       
             
     def read_value_from_config_file(self, value, section, name):
         try:
@@ -371,6 +369,14 @@ class lunch_settings(object):
     
     def get_ID(self):
         return self._ID
+    @hidden_setting(sendInfoDict=True)
+    def set_ID(self, v):
+        """to generate a new ID use generate_ID instead
+        """
+        self._ID = v
+    
+    def generate_ID(self):        
+        self.set_ID(unicode(uuid.uuid4()))
     
     # the rest is read from/written to the config file
     def get_user_name(self):

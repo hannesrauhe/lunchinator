@@ -614,14 +614,32 @@ class LunchPeers(object):
             #network interface
             return False
         
-        #that seems to be coming from another machine      
-        self.logger.critical("Another lunchinator on the network (%s: %s)" + \
-                  "is identifying itself with your ID. "+\
-                  "It will get all messages you get, also private ones! " +\
-                  "If you are sure that this is right you can set "+\
-                  "multiple_machines_allowed = True in your settings.cfg \n"+\
-                  "Otherwise you should create a new ID in settings immediately.\n"\
-                  , ip, othername)
+        #that seems to be coming from another machine and has to be reported
+        from lunchinator import HAS_GUI
+        msg ="Another lunchinator on the network (%s: %s)"%( ip, othername) + \
+              "is identifying itself with your ID. "+\
+              "It will get all messages you get, also private ones!\n"
+              
+        if False:#HAS_GUI:
+            #has to be moved to another thread of course...
+            msg += "If this is not what you want, you should create a new ID immediately."
+            from PyQt4.QtGui import QMessageBox, QPushButton
+            msgBox = QMessageBox(None)
+#             msgBox.setIcon(QMessageBox.Warning)
+#             msgBox.setWindowTitle("Another Lunchinator with your ID detected")
+            msgBox.setText(msg)
+            msgBox.addButton(QPushButton('Create New ID'), QMessageBox.YesRole)
+            msgBox.addButton(QPushButton('Allow host to get my messages'), QMessageBox.RejectRole)
+            ret = msgBox.exec_();
+            if ret==QMessageBox.Yes:
+                get_settings().generate_ID()
+            else:
+                get_settings().set_multiple_machines_allowed(True)
+        else:
+            msg += "If you are sure that this is right you can set "+\
+              "multiple_machines_allowed = %s in your settings.cfg \n"%ip+\
+              "Otherwise you should create a new ID immediately.\n"
+            self.logger.critical(msg)
         return True
         
     def __len__(self):
