@@ -69,6 +69,7 @@ class lunch_server(object):
              
         from lunchinator.lunch_peers import LunchPeers
         self._peers = LunchPeers()
+        get_notification_center().connectPeerUpdated(self._peers._alertIfIPnotMyself)
             
     """ -------------------------- CALLED FROM ARBITRARY THREAD -------------------------- """
     def call(self, msg, peerIDs=[], peerIPs=[]):

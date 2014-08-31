@@ -145,7 +145,7 @@ class lunch_settings(object):
         self._log_cache_size = 100
         self._group_plugins = False
         self._default_db_connection = u"Standard"
-        self._available_db_connections = u"Standard"  # list separated by ;; (like yapsy)
+        self._available_db_connections = [u"Standard"]  # list separated by ;; (like yapsy)
         self._proxy = u""
         self._warn_if_members_not_ready = True
         self._notification_if_everybody_ready = False
@@ -163,7 +163,7 @@ class lunch_settings(object):
         # size of a single UDP package (best value depends on the network)
         self._max_fragment_length = 512
         # allow multiple lunchinators with the same ID in the network (experimental)
-        self._multiple_machines_allowed = False
+        self._multiple_machines_allowed = []
         
         self._next_lunch_begin = None
         self._next_lunch_end = None
@@ -249,6 +249,7 @@ class lunch_settings(object):
         # load settings that don't fit the default schema        
         self._ID = self.read_value_from_config_file(self._ID, "general", "ID")      
         self._available_db_connections = self.read_value_from_config_file(self._available_db_connections, "general", "available_db_connections")
+        self._multiple_machines_allowed = self.read_value_from_config_file(self._multiple_machines_allowed , "general", "multiple_machines_allowed")
         externalRepos = self.read_value_from_config_file(None, "general", "external_plugin_repos")
         
         componentLoggingLevels = self.read_value_from_config_file(None, "general", "comp_logging_levels")
@@ -274,6 +275,8 @@ class lunch_settings(object):
                 value = self._config_file.getboolean(section, name)
             elif type(value) is types.IntType:
                 value = self._config_file.getint(section, name)
+            elif type(value) is types.ListType:                
+                value = [unicode(x) for x in self._config_file.get(section, name).split(";;")]
             else:
                 value = unicode(self._config_file.get(section, name))
         except ConfigParser.NoSectionError:
@@ -588,15 +591,15 @@ class lunch_settings(object):
         
     # always force at least one connection
     def get_available_db_connections(self):
-        conn = [unicode(x) for x in self._available_db_connections.split(";;")]
+        conn = self._available_db_connections
         if len(conn):
             return conn
         else:
             return [u'Standard']
     
     def set_available_db_connections(self, newValue):
-        self._available_db_connections = ";;".join(newValue)
-        self._config_file.set('general', 'available_db_connections', str(self._available_db_connections))
+        self._available_db_connections = newValue
+        self._config_file.set('general', 'available_db_connections', str(";;".join(newValue)))
             
     def get_proxy(self):
         return self._proxy
@@ -615,7 +618,8 @@ class lunch_settings(object):
     
     def get_multiple_machines_allowed(self):
         return self._multiple_machines_allowed
-    @hidden_setting()
-    def set_multiple_machines_allowed(self, newValue):
-        self._multiple_machines_allowed = newValue
+    def add_multiple_machines_allowed(self, newValue):
+        self._multiple_machines_allowed += [newValue]
+        v = ";;".join(self._multiple_machines_allowed)
+        self._config_file.set('general', 'multiple_machines_allowed', str(v))
         

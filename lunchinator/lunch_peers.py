@@ -5,7 +5,7 @@ from lunchinator import get_settings, get_notification_center
 from lunchinator.utilities import getTimeDifference
 from lunchinator.logging_mutex import loggingMutex
 from lunchinator.peer_names import PeerNames
-from lunchinator.log import newLogger
+from lunchinator.log import newLogger, loggingFunc
         
 def peerGetter(needsID=False):
     def peerDecorator(func):
@@ -472,7 +472,6 @@ class LunchPeers(object):
                 elif ip not in self._peer_info and newPID in self._idToIp:
                     # this is a new IP for an existing peer
                     self.logger.debug("New IP: %s for ID: %s", ip, newPID)
-                    self._alertIfIPnotMyself(newPID, ip)
                     existing_info = self._peer_info[self._idToIp[newPID][-1]]
                     self._peer_info[ip] = existing_info
                     self._addPeerIPtoID(newPID, ip)
@@ -546,7 +545,10 @@ class LunchPeers(object):
         else:
             # last one is last seen one
             self._idToIp[pID].append(ip)
-            get_notification_center().emitPeerUpdated(pID, deepcopy(self._peer_info[ip]))
+            #workaround to get the IP over to the slots
+            cp = deepcopy(self._peer_info[ip])
+            cp["triggerIP"] = ip
+            get_notification_center().emitPeerUpdated(pID, cp)
             
     def initPeersFromFile(self):
         """Initializes peer IPs from file and returns a list of IPs
@@ -592,49 +594,56 @@ class LunchPeers(object):
         except:
             self.logger.exception("Could not write peers to %s", get_settings().get_peers_file())
             
-    def _alertIfIPnotMyself(self, newPID, ip):
+    @loggingFunc
+    def _alertIfIPnotMyself(self, newPID, peerInfo):
         """ alert if ID is mine but ip is not from my machine
+        
+        this function has to be called from the main thread
+        
         @return: True if that's my ID from another machine
         
-        @type ID: unicode
-        @type ip: unicdode
+        @type newPID: unicode
+        @type peerInfo: dict
         @rtype: bool
         """
-        if get_settings().get_multiple_machines_allowed():
+        
+        if not peerInfo.has_key("triggerIP") or newPID != get_settings().get_ID():
+            #that's not me!
             return False
         
-        if newPID != get_settings().get_ID():
-            #that not me!
-            return False
-        
+        ip = peerInfo["triggerIP"]
         myname = socket.getfqdn(socket.gethostname())
         othername = socket.gethostbyaddr(ip)[0]
+    
         if myname==othername:
             #that seems to be me from another, maybe on a second
             #network interface
+            return False        
+        
+        if othername in get_settings().get_multiple_machines_allowed():
+            #he is allowed to do that
             return False
         
-        #that seems to be coming from another machine and has to be reported
+        #that seems to be coming from an unknown machine and has to be reported
         from lunchinator import HAS_GUI
         msg ="Another lunchinator on the network (%s: %s)"%( ip, othername) + \
               "is identifying itself with your ID. "+\
               "It will get all messages you get, also private ones!\n"
               
-        if False:#HAS_GUI:
-            #has to be moved to another thread of course...
+        if HAS_GUI:
             msg += "If this is not what you want, you should create a new ID immediately."
             from PyQt4.QtGui import QMessageBox, QPushButton
             msgBox = QMessageBox(None)
 #             msgBox.setIcon(QMessageBox.Warning)
 #             msgBox.setWindowTitle("Another Lunchinator with your ID detected")
             msgBox.setText(msg)
-            msgBox.addButton(QPushButton('Create New ID'), QMessageBox.YesRole)
+            msgBox.addButton(QPushButton('Create New ID'), QMessageBox.AcceptRole)
             msgBox.addButton(QPushButton('Allow host to get my messages'), QMessageBox.RejectRole)
             ret = msgBox.exec_();
-            if ret==QMessageBox.Yes:
+            if ret==QMessageBox.AcceptRole:
                 get_settings().generate_ID()
             else:
-                get_settings().set_multiple_machines_allowed(True)
+                get_settings().add_multiple_machines_allowed(othername)
         else:
             msg += "If you are sure that this is right you can set "+\
               "multiple_machines_allowed = %s in your settings.cfg \n"%ip+\
