@@ -5,7 +5,7 @@
 import platform, sys, subprocess, os, re, logging, signal
 from functools import partial
 from optparse import OptionParser
-from lunchinator import get_settings, get_server, MAIN_CONFIG_DIR
+from lunchinator import get_settings, get_server, MAIN_CONFIG_DIR, log_warning
 from lunchinator.log import getCoreLogger, initializeLogger
 from lunchinator.log.lunch_logger import setGlobalLoggingLevel
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_STOP, EXIT_CODE_NO_QT
@@ -63,10 +63,13 @@ def handleInterrupt(lanschi, _signal, _frame):
     lanschi.quit()    
 
 def getCoreDependencies():
-    requirements = []  
-    req_file = get_settings().get_resource("requirements.txt")
-    with open(req_file, 'r') as f:
-        requirements = f.readlines()
+    try:
+        req_file = get_settings().get_resource("requirements.txt")
+        with open(req_file, 'r') as f:
+            requirements = f.readlines()
+    except IOError:
+        log_warning("requirements.txt does not exist")
+        requirements = []
     return requirements
         
 def installCoreDependencies(gui=False):  

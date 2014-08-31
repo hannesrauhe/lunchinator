@@ -307,7 +307,7 @@ class lunch_settings(object):
     def get_resource(self, *args):
         res = unicode(os.path.join(self.get_resources_path(), *args))
         if not os.path.exists(res):
-            raise Exception("Resource %s does not exist." % res)
+            raise IOError("Resource %s does not exist." % res)
         return res
     
     def get_main_config_dir(self):
