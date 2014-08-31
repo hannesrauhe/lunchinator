@@ -167,7 +167,7 @@ class NotificationPluginManager(ConfigurablePluginManager):
                 if (pluginInfo.name, pluginInfo.category) in missing:
                     self._logCannotLoad(pluginInfo, missing)
                     continue
-                self.activatePlugin(pluginInfo=pluginInfo, save_state=False)
+                self.activatePlugin(pluginInfo=pluginInfo, save_state=False, checkDependencies=False)
         
         self._emitSignals = True
         
@@ -175,7 +175,10 @@ class NotificationPluginManager(ConfigurablePluginManager):
         for component in missing.keys():
             pluginName, category = component
             pluginInfo = self._component.getPluginByName(pluginName, category)
-            self.__removePluginFromConfig(pluginInfo.category, pluginInfo.name)
+            try:
+                self.__removePluginFromConfig(pluginInfo.category, pluginInfo.name)
+            except:
+                getCoreLogger().exception("Error removing plugin %s (%s) from list of plugins to load", pluginInfo.name, pluginInfo.category)
         
     def checkActivation(self, plugins):
         missing = {}
@@ -193,30 +196,31 @@ class NotificationPluginManager(ConfigurablePluginManager):
                                 pluginInfo.plugin_object.get_displayed_name(),
                                 [tup[1] for tup in missing.values()[0]])
     
-    def activatePlugin(self, pluginInfo, save_state=True):
+    def activatePlugin(self, pluginInfo, save_state=True, checkDependencies=True):
         from lunchinator.utilities import handleMissingDependencies
         from lunchinator import get_server
         
-        missing = self.checkActivation([pluginInfo])
-        result = handleMissingDependencies(missing, gui=get_server().has_gui())
-        if result == INSTALL_FAIL:
-            # maybe there were dependencies installed, better re-check
+        if checkDependencies:
             missing = self.checkActivation([pluginInfo])
-            if missing:
-                self._logCannotLoad(pluginInfo, missing)
+            result = handleMissingDependencies(missing, gui=get_server().has_gui())
+            if result == INSTALL_FAIL:
+                # maybe there were dependencies installed, better re-check
+                missing = self.checkActivation([pluginInfo])
+                if missing:
+                    self._logCannotLoad(pluginInfo, missing)
+                    get_notification_center().emitPluginDeactivated(pluginInfo.name, pluginInfo.category)
+                    return
+            elif result == INSTALL_CANCEL:
+                # user chose not to install -> deactivate
                 get_notification_center().emitPluginDeactivated(pluginInfo.name, pluginInfo.category)
+                self._deactivateMissing(missing)
                 return
-        elif result == INSTALL_CANCEL:
-            # user chose not to install -> deactivate
-            get_notification_center().emitPluginDeactivated(pluginInfo.name, pluginInfo.category)
-            self._deactivateMissing(missing)
-            return
-        elif result in (INSTALL_SUCCESS, INSTALL_IGNORE):
-            missing = {}
-        elif result == INSTALL_RESTART:
-            # store that the plugin is activated now
-            self.__addPluginToConfig(pluginInfo.category, pluginInfo.name)
-            return
+            elif result in (INSTALL_SUCCESS, INSTALL_IGNORE):
+                missing = {}
+            elif result == INSTALL_RESTART:
+                # store that the plugin is activated now
+                self.__addPluginToConfig(pluginInfo.category, pluginInfo.name)
+                return
         
         getCoreLogger().info("Activating plugin '%s' of type '%s'", pluginInfo.name, pluginInfo.category)
         try:
