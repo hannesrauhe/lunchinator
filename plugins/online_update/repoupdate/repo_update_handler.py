@@ -9,6 +9,7 @@ class RepoUpdateHandler(object):
     def __init__(self, logger):
         self._ui = None
         self.logger = logger
+        self._nOutdated = None
     
     def activate(self):
         get_notification_center().connectOutdatedRepositoriesChanged(self._processOutdated)
@@ -27,7 +28,8 @@ class RepoUpdateHandler(object):
     def setUI(self, ui):
         self._ui = ui
         self._ui.checkForRepoUpdates.connect(self.checkForUpdates)
-        self._updateRepoStatus()
+        self._updateRepoStatus(self._nOutdated)
+        self._ui.setRepoUpdatesAvailable(self._nOutdated > 0)
         
     def _getRepoStatus(self, nOutdated=None):
         if nOutdated == None:
@@ -55,6 +57,7 @@ class RepoUpdateHandler(object):
         if self._ui != None:
             self._ui.setRepoUpdatesAvailable(nOutdated > 0)
             self._updateRepoStatus(nOutdated)
+        self._nOutdated = nOutdated
     
     def prepareInstallation(self, commands):
         toUpdate = get_settings().get_plugin_repositories().getOutdated()
