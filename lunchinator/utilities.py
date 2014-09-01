@@ -570,6 +570,7 @@ def handleMissingDependencies(missing, optionalCallback=lambda _req : True):
             canInstall = False
             text = u"There are missing dependencies in your PyInstaller build. " +\
                 u"Unfortunately, you cannot install additional packages for a PyInstaller build."
+            getCoreLogger().warning(text + u"\n The missing dependencies are: \n" + unicode(str(missing)))
         else:
             canInstall = True
             text = None
