@@ -57,7 +57,7 @@ class plugin_repositories(iface_general_plugin):
     @loggingFunc
     def _addRepository(self):
         from plugin_repositories.add_repo_dialog import AddRepoDialog
-        dialog = AddRepoDialog(self.logger, self._ui)
+        dialog = AddRepoDialog(self._ui, self.logger)
         dialog.exec_()
         if dialog.result() == AddRepoDialog.Accepted:
             self._ui.appendRepository(dialog.getPath(),
