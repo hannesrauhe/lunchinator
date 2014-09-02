@@ -153,12 +153,18 @@ class RemotePicturesGui(QStackedWidget):
         cat = item.data(CategoriesModel.CAT_ROLE).toString()
         self.openCategory.emit(cat)
         
+    def _deactivateButtons(self):
+        self.nextButton.setEnabled(False)
+        self.prevButton.setEnabled(False)
+        
     @loggingSlot()
     def _displayNextImage(self):
+        self._deactivateButtons()
         self.displayNext.emit(self.currentCategory, self.curPicIndex)
     
     @loggingSlot()
     def _displayPreviousImage(self):
+        self._deactivateButtons()
         self.displayPrev.emit(self.currentCategory, self.curPicIndex)
     
     @loggingSlot(object, int, list, bool, bool)
