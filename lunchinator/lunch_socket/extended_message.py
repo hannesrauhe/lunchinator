@@ -1,6 +1,6 @@
 from lunchinator.log import getCoreLogger
 import encryption
-import math
+import math, types
 import hashlib
 """ Message classes """
     
@@ -14,9 +14,10 @@ class extMessage(object):
     b - 1 byte Number of expected fragments for this message
     hash - 4 byte hash to identify message
     
-    <Message> starts with 1 Byte stating compression,signature,encryption and hash used,
-    2 bit each for first protocol version
-    hash:        00 - MD5[0:4]
+    <Message> starts with 1 Byte stating format, compression, signature, 
+    encryption, and hash used, distributed as follows:
+    format:      0 - text,      1  - binary
+    hash:        0 - MD5[0:4]
     compression: 00 - None,     01 - zlib
     encryption:  00 - None,     01 - GPG
     signature:   00 - None,     01 - GPG"""
@@ -33,31 +34,34 @@ class extMessage(object):
     def __init__(self):
         self._protocol_version = self.MAX_SUPPORTED_VERSION
         self._fragments = []
-        self._plainMsg = u""
+        self._plainMsg = u""    #contains unicode message if format==text
+        self._binaryMsg = ""    #contains byte str if format==binary
         self._cmd = u""         #contains the command without HELO_
         self._cmdpayload = u""  #contains the value after HELO_*
         self._splitID = "0000"
         self._statusByte = 0b00000000
         self._signature_data = None
-        self._isBinary = False
     
-    def isSigned(self):
-        return bool(self._statusByte & 0b00000011)
-    
-    def isEncrypted(self):
-        return bool(self._statusByte & 0b00001100)
-    
-    def isCompressed(self):
-        return bool(self._statusByte & 0b00110000)
-    
-    def isComplete(self):
-        return all(len(f) > 0 for f in self._fragments)
+    def isBinary(self):
+        return bool(self._statusByte & 0b10000000)
     
     def isCommand(self):
         return len(self._cmd)>0
     
-    def isBinary(self):
-        return self._isBinary
+    def isComplete(self):
+        return all(len(f) > 0 for f in self._fragments)
+    
+    def isCompressed(self):
+        return bool(self._statusByte & 0b00110000)
+    
+    def isEncrypted(self):
+        return bool(self._statusByte & 0b00001100)
+    
+    def isSigned(self):
+        return bool(self._statusByte & 0b00000011)    
+    
+    def getBinaryMessage(self):
+        return self._binaryMsg
     
     def getCommand(self):
         return self._cmd
@@ -78,22 +82,23 @@ class extMessage(object):
     def getPlainMessage(self):
         return self._plainMsg
     
+    def getSignatureInfo(self):
+        return self._signature_data
+    
     def getSplitID(self):
         return self._splitID
     
     def getVersion(self):
         return self._protocol_version
-    
-    def getSignatureInfo(self):
-        return self._signature_data
         
-    """ @brief returns a 4-character string used as message ID,
-    uses the hash function according to the status byte"""
     def hashPlainMessage(self):
-        """TODO replace with real non-crypto hash function 
+        """ return a 4-character string used as message ID
+        uses the hash function according to the status byte
+        
+        @todo replace with real non-crypto hash function 
         such as http://pypi.python.org/pypi/mmh3/2.0"""
         
-        if 0b00000000 == (self._statusByte & 0b11000000):
+        if 0b00000000 == (self._statusByte & 0b01000000):
             hashstr = hashlib.md5(self._plainMsg).digest()[:4]
         else:
             raise Exception("Hash function used for Split ID unknown")
@@ -164,8 +169,13 @@ class extMessageIncoming(extMessage):
             pipe_value = self._decompress(pipe_value)
             pipe_value = self._decrypt_and_verify(pipe_value)
             
-            self._plainMsg = pipe_value
+            if self.isBinary():
+                self._binaryMsg = pipe_value
+            else:
+                self._plainMsg = pipe_value.decode('utf-8')
+                
             if not self.isSigned():
+                #no need to check checksum if message is signed
                 if self.hashPlainMessage()!=self.getSplitID():
                     raise Exception("Malformed Message: Checksum of message invalid")
         
@@ -207,9 +217,9 @@ class extMessageIncoming(extMessage):
             
 
 class extMessageOutgoing(extMessage):    
-    def __init__(self, outgoingMessage, fragment_size, sign_key=None, encrypt_key=None, compress="zlib"):
+    def __init__(self, outgoingMessage, fragment_size, sign_key=None, encrypt_key=None, compress="zlib", binary=False):
         """builds the extMessage to be send via UDP from a plain message
-        @type outgoingMessage: unicode
+        @type outgoingMessage: unicode | str (if binary message)
         @type fragment_size: int
         @type signe_key: str
         @type encrypt_key: str
@@ -217,12 +227,20 @@ class extMessageOutgoing(extMessage):
          """
          
         super(extMessageOutgoing, self).__init__()
-        self._plainMsg = outgoingMessage
         self._fragment_size = fragment_size - self.HEADER_SIZE
         if self._fragment_size < 1:
             raise Exception("Fragment size %d to small to hold header"%fragment_size)
         
-        pipe_value = outgoingMessage.encode("utf-8")
+        if not binary:
+            self._plainMsg = outgoingMessage  
+            pipe_value = outgoingMessage.encode("utf-8")      
+        else:
+            if type(outgoingMessage) is unicode:
+                raise Exception("Binary Messages cannot be of type unicode")
+            self._statusByte = 0b10000000 | self._statusByte
+            self._binaryMsg = outgoingMessage
+            pipe_value = outgoingMessage
+        
         if encrypt_key:
             pipe_value = self._encrypt_sign(pipe_value, encrypt_key, sign_key)
         elif sign_key:

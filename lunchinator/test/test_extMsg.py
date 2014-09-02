@@ -60,6 +60,7 @@ class extMsgTest(unittest.TestCase):
         self.assertFalse(eMsgIn.isEncrypted(), "Message status byte says encrpyted; shouldn't be")
         self.assertFalse(eMsgIn.isSigned(), "Message status byte says signed; shouldn't be")
         self.assertTrue(eMsgIn.isCompressed(), "Message status byte says not compressed; should be")
+        self.assertFalse(eMsgIn.isBinary(), "Message status byte says binary; shouldn't be")
         
         self.assertRaises(Exception, eMsgIn.addFragment, "fdjaf")
         
@@ -95,11 +96,26 @@ class extMsgTest(unittest.TestCase):
         self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
         
     def testUnicode(self):
-        self.test_str = self.string_generator(self.split_size-100, string.printable).encode('utf-8')
+        t = self.string_generator(self.split_size-100, string.printable)
+        self.test_str = t.encode('utf-8')
         eMsgOut = extMessageOutgoing(self.test_str, self.split_size)
         frag = eMsgOut.getFragments()
         
         eMsgIn = extMessageIncoming(frag[0])
+        
+        self.assertTrue(eMsgIn.isComplete())
+        self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
+        
+        #now a fragmented message
+        t = self.string_generator(self.split_size*2, string.printable)
+        self.test_str = t.encode('utf-8')
+        eMsgOut = extMessageOutgoing(self.test_str, self.split_size)
+        frag = eMsgOut.getFragments()
+        
+        eMsgIn = extMessageIncoming(frag[0])
+        for f in frag[1:]:
+            other = extMessageIncoming(f)
+            eMsgIn.merge(other)
         
         self.assertTrue(eMsgIn.isComplete())
         self.assertEqual(self.test_str, eMsgIn.getPlainMessage())
@@ -174,6 +190,16 @@ class extMsgTest(unittest.TestCase):
         self.assertFalse(eMsgIn.isCommand())
         self.assertEqual(eMsgIn.getCommand(), u"")
         self.assertEqual(eMsgIn.getCommandPayload(), u"")
+        
+    def testBinary(self):
+        self.assertRaises(Exception, extMessageOutgoing, u"HELO_SOMETHING payload", self.split_size ,binary=True)
+        eMsg = extMessageOutgoing("binary gibberish", self.split_size ,binary=True)
+        eMsgIn = extMessageIncoming(eMsg.getFragments()[0])
+        self.assertTrue(eMsgIn.isBinary())
+        self.assertTrue(eMsg.isBinary())
+        self.assertEqual(eMsgIn.getPlainMessage(), u"")
+        self.assertEqual(eMsgIn.getBinaryMessage(), "binary gibberish")
+        self.assertEqual(eMsgIn.getBinaryMessage(), eMsg.getBinaryMessage())
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
