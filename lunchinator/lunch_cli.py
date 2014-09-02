@@ -1,6 +1,6 @@
 import cmd, threading, time, inspect
 from functools import partial
-from lunchinator import get_server, utilities, lunchinator_lunchinator_has_gui,\
+from lunchinator import get_server, utilities, lunchinator_has_gui,\
     get_notification_center, get_settings, get_plugin_manager
 from lunchinator.log import loggingFunc
 from lunchinator.lunch_server_controller import LunchServerController
@@ -117,7 +117,7 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
             print "Lunch server did not initialize."
             self.serverThread.stop()
         else:
-            print "Lunch server started.",lunchinator_lunchinator_has_gui()()
+            print "Lunch server started."
         
         try:
             self.cmdloop()

@@ -5,7 +5,8 @@
 import platform, sys, os, logging, signal
 from functools import partial
 from optparse import OptionParser
-from lunchinator import get_settings, get_server, set_lunchinator_has_gui, MAIN_CONFIG_DIR
+from lunchinator import get_settings, get_server, set_has_gui, \
+                    lunchinator_has_gui, MAIN_CONFIG_DIR
 from lunchinator.log import getCoreLogger, initializeLogger
 from lunchinator.log.lunch_logger import setGlobalLoggingLevel
 from lunchinator.lunch_server import EXIT_CODE_STOP, EXIT_CODE_NO_QT
@@ -135,12 +136,12 @@ def startLunchinator():
     elif options.lunchCall or options.message != None:
         initializeLogger()
         get_settings().set_plugins_enabled(False)
-        set_lunchinator_has_gui()(False)
+        set_has_gui()(False)
         sendMessage(options.message, options.client)
     elif options.stop:
         initializeLogger()
         get_settings().set_plugins_enabled(False)
-        set_lunchinator_has_gui()(False)
+        set_has_gui()(False)
         get_server().stop_server(stop_any=True)
         print "Sent stop command to local lunchinator"
     elif options.installDep:
@@ -155,7 +156,7 @@ def startLunchinator():
         try:
             from lunchinator import lunch_cli
             get_settings().set_plugins_enabled(usePlugins)
-            set_lunchinator_has_gui()(False)
+            set_has_gui(False)
             get_server().set_disable_broadcast(options.noBroadcast)
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
@@ -169,7 +170,7 @@ def startLunchinator():
         
     #    sys.settrace(trace)
         get_settings().set_plugins_enabled(usePlugins)
-        set_lunchinator_has_gui()(False)
+        set_has_gui()(False)
         get_server().set_disable_broadcast(options.noBroadcast)
         get_server().initialize()
         get_server().start_server()
