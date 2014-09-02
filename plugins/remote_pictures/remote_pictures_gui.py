@@ -173,6 +173,8 @@ class RemotePicturesGui(QStackedWidget):
         picURL = convert_string(picRow[RemotePicturesStorage.PIC_URL_COL])
         picFile = convert_string(picRow[RemotePicturesStorage.PIC_FILE_COL])
         picDesc = convert_string(picRow[RemotePicturesStorage.PIC_DESC_COL])
+        if picDesc is None:
+            picDesc = u""
         picSender = convert_string(picRow[RemotePicturesStorage.PIC_SENDER_COL])
         picTime = picRow[RemotePicturesStorage.PIC_ADDED_COL]
         

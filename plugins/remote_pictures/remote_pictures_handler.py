@@ -16,6 +16,7 @@ from time import time
 from cStringIO import StringIO
 from functools import partial
 from urlparse import urlparse
+from lunchinator.logging_mutex import loggingMutex
 
 class RemotePicturesHandler(QObject):
     addCategory = pyqtSignal(object, object, int) # category, thumbnail path, thumbnail size
@@ -38,6 +39,8 @@ class RemotePicturesHandler(QObject):
         self._storeLocally = storeLocally 
         self._gui = gui
         self._storage = RemotePicturesStorage(self, self.logger)
+        self._currentlyDownloading = set() # set of currently downloading pictures
+        self._lock = loggingMutex(u"Remote Pictures Handler", qMutex=True, logging=get_settings().get_verbose())
         
         self._createThumbnailAndAddCategory = AsyncCall(self,
                                                         self.logger,
@@ -247,6 +250,10 @@ class RemotePicturesHandler(QObject):
         
     @loggingFunc
     def _downloadedPicture(self, category, description, sender, thread, url):
+        if self._hasPicture(category, url):
+            self.logger.warning("Picture already in storage: %s", url)
+            return
+        
         name = "New Remote Picture"
         if category != None:
             name = name + " in category %s" % category
@@ -297,6 +304,15 @@ class RemotePicturesHandler(QObject):
             if len(valueList) > 2:
                 cat = valueList[2]
         
+        self._lock.lock()
+        try:
+            if url in self._currentlyDownloading:
+                self.logger.debug("Already downloading picture %s", url)
+                return
+            self._currentlyDownloading.add(url)
+        finally:
+            self._lock.unlock()
+        
         self._extractPicture(url, cat, desc, get_peers().getPeerID(pIP=ip))    
     
     def getCategories(self, alsoEmpty):
@@ -306,6 +322,12 @@ class RemotePicturesHandler(QObject):
         return self._storage.getCategoryNames(alsoEmpty)
     
     def willIgnorePeerAction(self, category, url):
+        self._lock.lock()
+        try:
+            if url in self._currentlyDownloading:
+                return True
+        finally:
+            self._lock.unlock()
         return self._hasPicture(category, url)
 
     ################# PUBLIC SLOTS ##################
