@@ -1,5 +1,5 @@
 from online_update.appupdate.app_update_handler import AppUpdateHandler
-from lunchinator import get_settings, HAS_GUI
+from lunchinator import get_settings, lunchinator_has_gui
 from lunchinator.git import GitHandler
 from lunchinator.utilities import getValidQtParent
 from lunchinator.log.logging_func import loggingFunc
@@ -28,7 +28,7 @@ class GitUpdateHandler(AppUpdateHandler):
         return get_settings().get_commit_count()
         
     def canCheckForUpdate(self):
-        return HAS_GUI
+        return lunchinator_has_gui()
     
     @loggingFunc
     def checkForUpdate(self):

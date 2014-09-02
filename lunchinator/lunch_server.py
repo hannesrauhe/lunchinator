@@ -7,7 +7,7 @@ from cStringIO import StringIO
 
 from lunchinator.log import getCoreLogger
 from lunchinator.lunch_socket import lunchSocket, splitCall
-from lunchinator import get_settings, convert_string, get_notification_center, HAS_GUI
+from lunchinator import get_settings, convert_string, get_notification_center, lunchinator_has_gui
 from lunchinator.logging_mutex import loggingMutex
 from collections import deque
 from threading import Timer
@@ -260,7 +260,7 @@ class lunch_server(object):
         if 0 == len(target):            
             getCoreLogger().warning("Cannot send message (%s), there is no peer given or none found", msg)
             
-        if HAS_GUI and \
+        if lunchinator_has_gui() and \
            get_settings().get_warn_if_members_not_ready() and \
            not msg.startswith(u"HELO") and \
            get_settings().get_lunch_trigger().upper() in msg.upper():
@@ -620,8 +620,8 @@ class lunch_server(object):
             self._messages.finish()
         self.controller.serverStopped(self.exitCode)
         
-    def has_gui(self):
+    def lunchinator_has_gui()(self):
         """ returns if a GUI and qt is present
-        @deprecated: use lunchinator.HAS_GUI instead
+        @deprecated: use lunchinator.lunchinator_has_gui() instead
         """
-        return HAS_GUI
+        return lunchinator_has_gui()

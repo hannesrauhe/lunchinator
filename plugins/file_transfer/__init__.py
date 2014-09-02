@@ -2,7 +2,7 @@ from lunchinator.plugin import iface_gui_plugin
 from lunchinator.utilities import canUseBackgroundQThreads, getValidQtParent,\
     formatSize
 from lunchinator.peer_actions import PeerAction
-from lunchinator import convert_string, HAS_GUI
+from lunchinator import convert_string, lunchinator_has_gui
 import os, json
 
 class _TransferFileAction(PeerAction):
@@ -119,7 +119,7 @@ class file_transfer(iface_gui_plugin):
     
     def extendsInfoDict(self):
         # TODO also accept file transfers on CLI?
-        return HAS_GUI
+        return lunchinator_has_gui()
         
     def extendInfoDict(self, infoDict):
         infoDict[u"FT_v"] = self.VERSION_CURRENT

@@ -5,6 +5,13 @@ import os
 MAIN_CONFIG_DIR = unicode(os.path.join(os.getenv("HOME"), ".lunchinator") if os.getenv("HOME") else os.path.join(os.getenv("USERPROFILE"), ".lunchinator"))
 HAS_GUI = True
 
+def set_has_gui(b):
+    global HAS_GUI
+    HAS_GUI = b
+    
+def lunchinator_has_gui():
+    return HAS_GUI
+
 """ The following methods are deprecated and will be removed soon """
 def _generate_string(*s):
     return u" ".join(x if type(x) in (str, unicode) else str(x) for x in s)

@@ -1,5 +1,5 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import convert_string, get_peers, get_settings, HAS_GUI
+from lunchinator import convert_string, get_peers, get_settings, lunchinator_has_gui
 from lunchinator.peer_actions import PeerAction
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
     displayNotification, canUseBackgroundQThreads
@@ -105,7 +105,7 @@ class private_messages(iface_gui_plugin):
     
     def activate(self):
         iface_gui_plugin.activate(self)
-        if HAS_GUI:
+        if lunchinator_has_gui():
             sendMessageAction = _SendMessageAction()
             self._openChatAction = _OpenChatAction(sendMessageAction)
             self._peerActions = [self._openChatAction, _BlockAction(sendMessageAction), sendMessageAction]
@@ -160,7 +160,7 @@ class private_messages(iface_gui_plugin):
             chatWindow.getChatWidget().setMarkdownEnabled(newVal)
     
     def extendsInfoDict(self):
-        return HAS_GUI
+        return lunchinator_has_gui()
         
     def extendInfoDict(self, infoDict):
         infoDict[u"PM_v"] = self.VERSION_CURRENT

@@ -39,6 +39,7 @@ class extMessage(object):
         self._splitID = "0000"
         self._statusByte = 0b00000000
         self._signature_data = None
+        self._isBinary = False
     
     def isSigned(self):
         return bool(self._statusByte & 0b00000011)
@@ -54,6 +55,9 @@ class extMessage(object):
     
     def isCommand(self):
         return len(self._cmd)>0
+    
+    def isBinary(self):
+        return self._isBinary
     
     def getCommand(self):
         return self._cmd

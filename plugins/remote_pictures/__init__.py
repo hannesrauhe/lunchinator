@@ -1,5 +1,5 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import get_server, get_notification_center, HAS_GUI
+from lunchinator import get_server, get_notification_center, lunchinator_has_gui
 from lunchinator.log import loggingFunc
 from lunchinator.utilities import canUseBackgroundQThreads
 from StringIO import StringIO
@@ -175,13 +175,13 @@ class remote_pictures(iface_gui_plugin):
         iface_gui_plugin.destroy_widget(self)
 
     def extendsInfoDict(self):
-        HAS_GUI
+        lunchinator_has_gui()
         
     def extendInfoDict(self, infoDict):
         infoDict[u"RP_v"] = self.VERSION_CURRENT
         
     def get_peer_actions(self):
-        if HAS_GUI:
+        if lunchinator_has_gui():
             self._rpAction = _RemotePictureAction()
             return [self._rpAction]
         else:

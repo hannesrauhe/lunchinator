@@ -1,7 +1,7 @@
 import subprocess, sys, os, contextlib, json, shutil, time
 from datetime import datetime, timedelta 
 from time import mktime, strftime
-from lunchinator import get_settings, HAS_GUI
+from lunchinator import get_settings, lunchinator_has_gui
 from lunchinator.log import getCoreLogger
 import locale
 import platform
@@ -49,7 +49,7 @@ def displayNotification(name, msg, logger, icon=None):
     myPlatform = getPlatform()
     try: 
         from lunchinator import get_server
-        if not HAS_GUI:
+        if not lunchinator_has_gui():
             print time.strftime("%Y-%m-%d %H:%M"),name, msg
     except:
         print time.strftime("%Y-%m-%d %H:%M"),name, msg
@@ -575,7 +575,7 @@ def handleMissingDependencies(missing, optionalCallback=lambda _req : True):
             canInstall = True
             text = None
         
-        if HAS_GUI:
+        if lunchinator_has_gui():
             from lunchinator.req_error_dialog import RequirementsErrorDialog
             requirements = []
             for _component, missingList in missing.iteritems():

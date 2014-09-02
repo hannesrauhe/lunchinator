@@ -625,12 +625,12 @@ class LunchPeers(object):
             return False
         
         #that seems to be coming from an unknown machine and has to be reported
-        from lunchinator import HAS_GUI
+        from lunchinator import lunchinator_has_gui
         msg ="Another lunchinator on the network (%s: %s)"%( ip, othername) + \
               "is identifying itself with your ID. "+\
               "It will get all messages you get, also private ones!\n"
               
-        if HAS_GUI:
+        if lunchinator_has_gui():
             msg += "If this is not what you want, you should create a new ID immediately."
             from PyQt4.QtGui import QMessageBox, QPushButton
             msgBox = QMessageBox(None)

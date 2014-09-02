@@ -1,5 +1,5 @@
 from online_update.appupdate.gpg_update import GPGUpdateHandler
-from lunchinator import get_settings, HAS_GUI
+from lunchinator import get_settings, lunchinator_has_gui
 from lunchinator.shell_thread import ShellThread
 from lunchinator.download_thread import DownloadThread
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
@@ -12,7 +12,7 @@ from xml.etree import ElementTree
 class MacUpdateHandler(GPGUpdateHandler):
     @classmethod
     def appliesToConfiguration(cls, _logger):
-        return HAS_GUI and getPlatform() == PLATFORM_MAC and getApplicationBundle() != None
+        return lunchinator_has_gui() and getPlatform() == PLATFORM_MAC and getApplicationBundle() != None
     
     def activate(self):
         GPGUpdateHandler.activate(self)
