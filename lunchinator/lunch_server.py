@@ -620,7 +620,7 @@ class lunch_server(object):
             self._messages.finish()
         self.controller.serverStopped(self.exitCode)
         
-    def lunchinator_has_gui()(self):
+    def has_gui(self):
         """ returns if a GUI and qt is present
         @deprecated: use lunchinator.lunchinator_has_gui() instead
         """
