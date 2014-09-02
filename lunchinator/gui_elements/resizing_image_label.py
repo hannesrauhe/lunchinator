@@ -102,8 +102,8 @@ class ResizingWebImageLabel(ResizingImageLabel):
         thread.close()
             
     @loggingSlot(QThread, object)
-    def errorDownloading(self, _thread, url):
-        self.logger.error("Error downloading webcam image from %s", url)
+    def errorDownloading(self, thread, err):
+        self.setText(u"Error downloading URL %s: %s" % (thread.url, err))
         
     def showEvent(self, event):
         self.update()

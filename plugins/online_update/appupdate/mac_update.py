@@ -102,12 +102,12 @@ class MacUpdateHandler(GPGUpdateHandler):
         self.install_gpg(phase + 1, dt)
         
     @loggingFunc
-    def _install_gpg_failed(self, phase, dt, _url):
+    def _install_gpg_failed(self, phase, dt, err):
         dt.close()
         if phase == 0:
-            self._setStatus("Error downloading MacGPG version information.", True)
+            self._setStatus("Error downloading MacGPG version information: " + err, True)
         elif phase == 1:
-            self._setStatus("Error downloading MacGPG installer.", True)
+            self._setStatus("Error downloading MacGPG installer: " + err, True)
             dmgFile = dt.target.name
             if os.path.exists(dmgFile):
                 os.remove(dmgFile)

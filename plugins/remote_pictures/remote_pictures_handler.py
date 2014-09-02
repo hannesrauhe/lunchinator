@@ -241,8 +241,8 @@ class RemotePicturesHandler(QObject):
         self._storage.seenPicture(picID)
         
     @loggingSlot(QThread, object)
-    def _errorDownloadingPicture(self, thread, url):
-        self.logger.error("Error downloading picture from url %s", convert_string(url))
+    def _errorDownloadingPicture(self, thread, err):
+        self.logger.error("Error downloading picture from url %s: %s", convert_string(thread.url), err)
         thread.deleteLater()
         
     @loggingFunc

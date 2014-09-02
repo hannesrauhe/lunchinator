@@ -190,7 +190,7 @@ class GPGUpdateHandler(AppUpdateHandler):
         self._checkHash()
     
     @loggingFunc
-    def _errorDownloading(self, _th, err):
+    def _errorDownloading(self, _th, _url, err):
         self._setStatus("Download failed: " + err, True)
         
     def _hasNewVersion(self):
