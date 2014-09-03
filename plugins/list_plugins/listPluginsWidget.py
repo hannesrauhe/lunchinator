@@ -1,5 +1,5 @@
 from ui_plugins import Ui_Plugins
-from PyQt4.Qt import QWidget, QListWidgetItem
+from PyQt4.QtGui import QWidget, QListWidgetItem
 from PyQt4.QtCore import Qt
 from lunchinator import get_plugin_manager, get_notification_center,\
     get_server

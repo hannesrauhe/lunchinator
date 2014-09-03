@@ -4,11 +4,10 @@ from lunchinator.utilities import formatTime
 
 from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QTextDocument,\
     QStyle, QAbstractTextDocumentLayout, QPalette,\
-    QBrush, QColor, QLinearGradient, QPainter,\
+    QBrush, QColor, QLinearGradient, QPainter, QWidget,\
     QTextEdit, QFrame, QSizePolicy, QIcon, QFont, QAbstractItemDelegate
 from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
     QRectF, QSizeF, pyqtSignal, QModelIndex, QMetaType
-from PyQt4.Qt import QWidget
 
 import webbrowser
 from time import localtime

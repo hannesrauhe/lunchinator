@@ -1,7 +1,7 @@
 from PyQt4.QtGui import QDialog, QLabel, QHBoxLayout,\
     QWidget, QPushButton, QStyle, QLineEdit, QCheckBox,\
     QFileDialog, QVBoxLayout, QTabWidget
-from PyQt4.Qt import Qt
+from PyQt4.QtCore import Qt
 from lunchinator import convert_string, get_settings
 from lunchinator.git import GitHandler
 from lunchinator.gui_elements import ErrorMessageDialog
