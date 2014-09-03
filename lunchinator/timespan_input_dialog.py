@@ -1,6 +1,5 @@
 from PyQt4.QtGui import QTimeEdit, QLabel, QHBoxLayout, QWidget
-from PyQt4.Qt import Qt
-from PyQt4.QtCore import QTime
+from PyQt4.QtCore import Qt, QTime
 from lunchinator.lunch_settings import lunch_settings
 from lunchinator.utilities import getTimeDifference
 from lunchinator.error_message_dialog import ErrorMessageDialog

@@ -1,11 +1,10 @@
 from PyQt4.QtGui import QStyledItemDelegate, QStyleOptionViewItemV4, QTextDocument,\
     QStyle, QAbstractTextDocumentLayout, QPalette,\
     QBrush, QColor, QLinearGradient, QPainter,\
-    QTextEdit, QFrame, QSizePolicy, QIcon, QFont
+    QTextEdit, QFrame, QSizePolicy, QIcon, QFont, QWidget
 from PyQt4.QtCore import Qt, QSize, QString, QEvent, QPointF, QPoint, QRect,\
     QRectF, QSizeF, pyqtSignal, QModelIndex, QMetaType, pyqtSlot
 import webbrowser
-from PyQt4.Qt import QWidget
 from private_messages.chat_messages_model import ChatMessagesModel
 from lunchinator import log_warning
 from lunchinator.utilities import formatTime

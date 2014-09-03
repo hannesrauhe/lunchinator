@@ -1,6 +1,6 @@
 from PyQt4.QtGui import QDialog, QLabel, QVBoxLayout, QHBoxLayout,\
     QDialogButtonBox, QIcon
-from PyQt4.Qt import Qt
+from PyQt4.QtCore import Qt
 from lunchinator import get_settings
 
 class ErrorMessageDialog(QDialog):

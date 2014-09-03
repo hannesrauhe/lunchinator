@@ -1,6 +1,6 @@
 from PyQt4.QtGui import QDialog, QLabel, QVBoxLayout, QHBoxLayout,\
     QWidget, QPushButton, QButtonGroup, QRadioButton, QDialogButtonBox
-from PyQt4.Qt import Qt
+from PyQt4.QtCore import Qt
 from functools import partial
 from lunchinator.privacy.privacy_settings import PrivacySettings
 
