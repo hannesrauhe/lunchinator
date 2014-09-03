@@ -66,7 +66,7 @@ def setting(gui=False, desc=None, sendInfoDict=False, restart=False, choice=None
                 if gui and not isInit:
                     get_notification_center().emitGeneralSettingChanged(option)
                 
-                if sendInfo:
+                if sendInfo and not isInit:
                     from lunchinator import get_server
                     get_server().call_info()
                 if not isInit and restart:
@@ -267,7 +267,7 @@ class lunch_settings(object):
         self._plugin_repos = PluginRepositories(self.get_resource("plugins"), externalRepos, logging=self.get_verbose())
         
         if len(self._ID)==0:
-            self.generate_ID()       
+            self.generate_ID(init=True)
             
     def read_value_from_config_file(self, value, section, name):
         try:
@@ -378,8 +378,8 @@ class lunch_settings(object):
         """
         self._ID = v
     
-    def generate_ID(self):        
-        self.set_ID(unicode(uuid.uuid4()))
+    def generate_ID(self, init=False):        
+        self.set_ID(unicode(uuid.uuid4()), init=init)
     
     # the rest is read from/written to the config file
     def get_user_name(self):
