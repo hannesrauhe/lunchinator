@@ -296,16 +296,6 @@ class ChatMessagesHandler(QObject):
     def _receivedSuccessfullySlot(self, otherID, msgHTML, msgTime, msgDict, recvTime):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
-        
-        containsMessage = self._getStorage().containsMessage(otherID,
-                                                             msgDict[u"id"],
-                                                             msgHTML,
-                                                             msgTime,
-                                                             ownMessage=False)
-        if containsMessage:
-            self.logger.debug("Received same message again from %s within a very short time interval", otherID)
-            return
-            
         try:
             self._getStorage().addOtherMessage(msgDict[u"id"], otherID, msgTime, msgHTML, recvTime)
         except:
