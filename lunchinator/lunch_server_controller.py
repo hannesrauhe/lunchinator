@@ -77,7 +77,7 @@ class LunchServerController(object):
     
     def receiveFile(self, ip, fileSize, fileName, tcp_port, successFunc=None, errorFunc=None):
         if tcp_port == 0:
-            tcp_port = self.getOpenTCPPort()
+            tcp_port = self.getOpenTCPPort(ip)
         getCoreLogger().info("Receiving file of size %d on port %d", fileSize, tcp_port)
         dr = DataReceiverThread.receiveSingleFile(ip, fileName, fileSize, tcp_port, getCoreLogger(), None, successFunc, errorFunc)
         dr.start()

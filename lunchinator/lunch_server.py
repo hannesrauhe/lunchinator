@@ -583,7 +583,7 @@ class lunch_server(object):
             if os.path.exists(fileToSend):
                 fileSize = os.path.getsize(fileToSend)
                 getCoreLogger().info("Sending file of size %d to %s : %d", fileSize, str(ip), other_tcp_port)
-                self.call("AVATAR %s" % fileSize, peerIPs = [ip])
+                self.call("HELO_AVATAR %s" % fileSize, peerIPs = [ip])
                 # TODO in a future release, send TCP port
                 # self.call("AVATAR %s %s" % (fileSize, other_tcp_port), ip)
                 self.controller.sendFile(ip, fileToSend, other_tcp_port)
