@@ -4,6 +4,7 @@ from private_messages.chat_messages_storage import InconsistentIDError,\
 from lunchinator import convert_string, get_server, get_peers,\
     get_notification_center, get_settings
 from lunchinator.log.logging_slot import loggingSlot
+from lunchinator.logging_mutex import loggingMutex
 from PyQt4.QtCore import pyqtSignal, QTimer, QObject
 import json
 from time import time
@@ -32,6 +33,8 @@ class ChatMessagesHandler(QObject):
         self._ackTimeout = ackTimeout
         self._waitingForAck = {} # message ID : (otherID, time, message, isResend)
         self._hasUndelivered = True # just assume until proven otherwise
+        self._displaying = False
+        self._displayMessageLock = loggingMutex(u"Chat messages delivery lock", qMutex=True, logging=get_settings().get_verbose())
         
         nextIDFromDB = self._getStorage().getLastSentMessageID() + 1
         self._nextMessageID = max(nextMsgID, nextIDFromDB)
@@ -273,6 +276,13 @@ class ChatMessagesHandler(QObject):
         else:
             msgTime = time()
             messageTimeUnknown = True
+
+        # wait for the delivery of the previous message      
+        if self._displayMessageLock.tryLock(1000):
+            self._displaying = True
+        else:
+            self.logger.error("Displaying previous message took too long. Displaying new message anyways.")
+            
         
         # check if we already know the message (our ACK might not have been delivered)
         try:
@@ -297,6 +307,9 @@ class ChatMessagesHandler(QObject):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
         try:
+            if self._displaying:
+                self._displaying = False
+                self._displayMessageLock.unlock()
             self._getStorage().addOtherMessage(msgDict[u"id"], otherID, msgTime, msgHTML, recvTime)
         except:
             self.logger.exception("Error storing partner message")
