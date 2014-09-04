@@ -106,7 +106,8 @@ def installCoreDependencies():
                                      "There was an error, the dependencies could not be installed. Continuing without plugins.")
             except:
                 getCoreLogger().error("There was an error, the dependencies could not be installed. Continuing without plugins.")
-        getCoreLogger().error("Dependencies could not be installed.")
+        getCoreLogger().error("Lunchinator is running without plugins because of missing dependencies. \
+                Try executing 'lunchinator --install-dependencies' to install them automatically.")
         return False
         
 
