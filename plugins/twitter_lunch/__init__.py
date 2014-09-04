@@ -210,9 +210,10 @@ class twitter_lunch(iface_called_plugin):
         self.dthread.start()
     
     def deactivate(self):
-        self.logger.info("Stopping Twitter Thread")
+        self.logger.info("Waiting for Twitter Thread to stop")
         self.stopEvent.set()
-        #TODO: join thread
+        self.dthread.join()
+        self.logger.info("Twitter thread stopped")
         iface_called_plugin.deactivate(self)
         
     def authenticate(self,oldv=None,newv=None):
