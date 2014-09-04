@@ -136,12 +136,10 @@ def startLunchinator():
     elif options.lunchCall or options.message != None:
         initializeLogger()
         get_settings().set_plugins_enabled(False)
-        set_has_gui()(False)
         sendMessage(options.message, options.client)
     elif options.stop:
         initializeLogger()
         get_settings().set_plugins_enabled(False)
-        set_has_gui()(False)
         get_server().stop_server(stop_any=True)
         print "Sent stop command to local lunchinator"
     elif options.installDep:
@@ -156,7 +154,6 @@ def startLunchinator():
         try:
             from lunchinator import lunch_cli
             get_settings().set_plugins_enabled(usePlugins)
-            set_has_gui(False)
             get_server().set_disable_broadcast(options.noBroadcast)
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
@@ -170,7 +167,6 @@ def startLunchinator():
         
     #    sys.settrace(trace)
         get_settings().set_plugins_enabled(usePlugins)
-        set_has_gui()(False)
         get_server().set_disable_broadcast(options.noBroadcast)
         get_server().initialize()
         get_server().start_server()
@@ -181,7 +177,8 @@ def startLunchinator():
         initializeLogger(defaultLogPath)    
         getCoreLogger().info("We are on %s, %s, version %s", platform.system(), platform.release(), platform.version())
         try:
-            from PyQt4.QtCore import QThread
+            from PyQt4.QtCore import QThread            
+            set_has_gui(True)
         except:
             getCoreLogger().error("pyQT4 not found - start lunchinator with --no-gui")
             sys.exit(EXIT_CODE_NO_QT)
