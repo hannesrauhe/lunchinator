@@ -169,7 +169,7 @@ class TwitterDownloadThread(Thread):
         
                 
     def run(self):        
-        while not self._stop_event.wait(self._polling_time):
+        while not self._stop_event.isSet():
             if None==self._twitter_api:
                 continue
             self.logger.debug("Polling Twitter now")
@@ -179,7 +179,9 @@ class TwitterDownloadThread(Thread):
                 except:
                     self.logger.exception("Twitter: Error while accessing twitter timeline of user %s",account_name)
             
-            self._find_remote_calls()        
+            self._find_remote_calls()  
+            #returns None on Python 2.6
+            self._stop_event.wait(self._polling_time)      
         
 
 class twitter_lunch(iface_called_plugin):
