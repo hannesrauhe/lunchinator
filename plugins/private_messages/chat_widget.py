@@ -509,7 +509,7 @@ class ChatWidget(QWidget):
                 from markdown import Markdown
                 self._md = Markdown(extensions=['extra'])
             except ImportError:
-                self.logger.error("Cannot enable Markdown (%s)", formatException)
+                self.logger.error("Cannot enable Markdown (%s)", formatException())
                 raise
         return self._md
     
