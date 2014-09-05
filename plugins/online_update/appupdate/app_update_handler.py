@@ -56,7 +56,7 @@ class AppUpdateHandler(object):
             The progress bar will be made visible based on this parameter.
         """
         if err:
-            self.logger.error("Updater: %s", status)
+            self.logger.warning("Updater: %s", status)
             status = "Error: " + status
         else:
             self.logger.info("Updater: %s", status)

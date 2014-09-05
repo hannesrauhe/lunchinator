@@ -84,7 +84,7 @@ class GPGUpdateHandler(AppUpdateHandler):
         
         return v
     
-    def _checkHash(self):
+    def _checkHash(self, errorOnBadHash=True):
         if not os.path.isfile(self._local_installer_file):
             return False
         
@@ -100,7 +100,8 @@ class GPGUpdateHandler(AppUpdateHandler):
             return False
             
         if fileHash != self._version_info["Installer Hash"]:
-            self._setStatus("Installer Hash wrong %s!=%s" % (fileHash, self._version_info["Installer Hash"]), True)
+            if errorOnBadHash:
+                self._setStatus("Installer Hash wrong %s!=%s" % (fileHash, self._version_info["Installer Hash"]), True)
             return False
             
         self._setStatus("New version %s downloaded, ready to install" % self._getDownloadedVersion())
@@ -167,8 +168,8 @@ class GPGUpdateHandler(AppUpdateHandler):
         
         if self._hasNewVersion():
             # check if we already downloaded this version before
-            if not self._checkHash():
-                self._setStatus("New Version %s available, Downloading ..." % (self._getDownloadedVersion()), progress=True)
+            if not self._checkHash(errorOnBadHash=False):
+                self._setStatus("New version %s available, downloading ..." % (self._getDownloadedVersion()), progress=True)
                 
                 installer_download = DownloadThread(getValidQtParent(), self.logger, self._installer_url, target=open(self._local_installer_file, "wb"), progress=True)
                 installer_download.progressChanged.connect(self._downloadProgressChanged)
@@ -187,7 +188,7 @@ class GPGUpdateHandler(AppUpdateHandler):
         except:
             self._setStatus("unexpected error after downloading installer", True)
             
-        self._checkHash()
+        self._checkHash(errorOnBadHash=True)
     
     @loggingFunc
     def _errorDownloading(self, _th, _url, err):
