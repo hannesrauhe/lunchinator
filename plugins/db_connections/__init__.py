@@ -58,12 +58,12 @@ class db_connections(iface_general_plugin):
                         self.logger.error("DB Connection %s requires plugin of type \
                         %s which is not available", conn_name, plugin_type)
                         continue
-                    p_options = p.plugin_object.options
+                    p_options = p.plugin_object.options.copy()
                     for k,v in p_options.items():
                         '''this takes care of the option-type'''
                         p_options[k] = get_settings().read_value_from_config_file(v,
                                                                                   section_name,
-                                                              k)
+                                                                                  k)
                     p_options["plugin_type"]=plugin_type
                     self.conn_properties[conn_name] = p_options.copy()
             except:
@@ -81,7 +81,7 @@ class db_connections(iface_general_plugin):
         assert("plugin_type" in prop)
         
         if len(prop)==1:
-            prop = ob.options
+            prop = ob.options.copy()
         return ob,prop
     
     def deactivate(self):
@@ -121,42 +121,40 @@ class db_connections(iface_general_plugin):
 
         return self.conn_options_widget
     
-    def save_options_widget_data(self, **kwargs):
+    def save_options_widget_data(self, **_kwargs):
         new_props = self.conn_options_widget.get_connection_properties()
         self.config_file = get_settings().get_config_file()
         '''@todo Delete connections here'''
 
-        self.conn_properties_lock.acquire()
-        
-        for conn_name, props in new_props.iteritems():
-            section_name = "DB Connection: "+str(conn_name)
-            if conn_name not in self.conn_properties:
-                self.logger.debug("DB Connection: new connection %s", conn_name)
-                if self.config_file.has_section(section_name):
-                    self.logger.warning("DB Connection: a section with the name %s already \
-                    exists although it is supposed to be a new connection, maybe a bug...", conn_name)
-                else:
-                    self.config_file.add_section(section_name)
-                self.conn_properties[conn_name] = {"plugin_type": props["plugin_type"]}
-            
-            if props != self.conn_properties[conn_name]:
-                self.logger.debug("DB Connection: updated properties for %s", conn_name)
+        with self.conn_properties_lock:
+            for conn_name, props in new_props.iteritems():
+                section_name = "DB Connection: "+str(conn_name)
+                if conn_name not in self.conn_properties:
+                    self.logger.debug("DB Connection: new connection %s", conn_name)
+                    if self.config_file.has_section(section_name):
+                        self.logger.warning("DB Connection: a section with the name %s already \
+                        exists although it is supposed to be a new connection, maybe a bug...", conn_name)
+                    else:
+                        self.config_file.add_section(section_name)
+                    self.conn_properties[conn_name] = {"plugin_type": props["plugin_type"]}
                 
-                if not self.config_file.has_section(section_name):
-                    self.config_file.add_section(section_name)
+                if props != self.conn_properties[conn_name]:
+                    self.logger.debug("DB Connection: updated properties for %s", conn_name)
                     
-                for o, v in props.iteritems():
-                    self.config_file.set(section_name, o, unicode(v))
-                self.conn_properties[conn_name] = props
-                
-                if conn_name in self.open_connections:
-                    conn = self.open_connections.pop(conn_name)
-                    conn.close()
-                    get_notification_center().emitDBSettingChanged(conn_name)
-                    get_notification_center().emitRestartRequired("DB Settings were changed - you should restart")
-                
-        get_settings().set_available_db_connections(self.conn_properties.keys())
-        self.conn_properties_lock.release()
+                    if not self.config_file.has_section(section_name):
+                        self.config_file.add_section(section_name)
+                        
+                    for o, v in props.iteritems():
+                        self.config_file.set(section_name, o, unicode(v))
+                    self.conn_properties[conn_name] = props
+                    
+                    if conn_name in self.open_connections:
+                        conn = self.open_connections.pop(conn_name)
+                        conn.close(self.logger)
+                        get_notification_center().emitDBSettingChanged(conn_name)
+                        get_notification_center().emitRestartRequired("DB Settings were changed - you should restart")
+                    
+            get_settings().set_available_db_connections(self.conn_properties.keys())
             
         self.conn_plugins = {}
         self._init_plugin_objects()

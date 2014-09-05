@@ -25,7 +25,7 @@ class iface_db_plugin(iface_plugin):
     ''' do not overwrite these methods '''    
     def activate(self):        
         iface_plugin.activate(self)
-        self.conn_options = self.options
+        self.conn_options = self.options.copy()
 
     def deactivate(self):        
         iface_plugin.deactivate(self)            
