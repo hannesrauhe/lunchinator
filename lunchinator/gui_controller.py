@@ -692,7 +692,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def receiveFileSlot(self, addr, file_size, file_name, tcp_port, successFunc, errorFunc):
         addr = convert_string(addr)
         file_name = convert_string(file_name)
-        dr = DataReceiverThread.receiveSingleFile(addr, file_name, file_size, tcp_port, "avatar%s" % addr, getCoreLogger(), parent=self)
+        dr = DataReceiverThread.receiveSingleFile(addr, file_name, file_size, tcp_port, getCoreLogger(), "avatar%s" % addr, True, parent=self)
         if successFunc:
             dr.successfullyTransferred.connect(lambda _thread, _path : successFunc())
         if errorFunc:
