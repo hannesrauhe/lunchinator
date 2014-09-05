@@ -6,12 +6,16 @@ from lunchinator.log import loggingFunc
 class statistics(iface_called_plugin):
     def __init__(self):
         super(statistics, self).__init__()
-        self.options = [((u"db_connection", u"DB Connection",
-                          get_settings().get_available_db_connections(),
+        self.options = [((u"db_connection", u"DB Connection", [],
                           self.reconnect_db),
                          get_settings().get_default_db_connection())]
         self.add_supported_dbms("SQLite Connection", statistics_sqlite)
         self.add_supported_dbms("SAP HANA Connection", statistics_hana)
+    
+    def _getChoiceOptions(self, o):
+        if o in (u"db_connection", u"query_db_connection"):
+            return get_settings().get_available_db_connections()
+        return super(statistics, self)._getChoiceOptions()
     
     def activate(self):
         iface_called_plugin.activate(self)

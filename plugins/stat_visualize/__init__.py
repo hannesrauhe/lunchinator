@@ -6,9 +6,13 @@ class stat_visualize(iface_gui_plugin):
     def __init__(self):
         super(stat_visualize, self).__init__()
 
-        self.options = [((u"db_connection", u"DB Connection",
-                          get_settings().get_available_db_connections()),
+        self.options = [((u"db_connection", u"DB Connection", []),
                          get_settings().get_default_db_connection())]
+    
+    def _getChoiceOptions(self, o):
+        if o == u"db_connection":
+            return get_settings().get_available_db_connections()
+        return super(stat_visualize, self)._getChoiceOptions()
     
     def activate(self):
         iface_gui_plugin.activate(self)      

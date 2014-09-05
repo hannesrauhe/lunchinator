@@ -9,17 +9,20 @@ class sql_interface(iface_gui_plugin):
         self.sqlResultTable = None
         self.times_called=0
         self.last_key=-1
-        self.options = [((u"query_db_connection", u"DB Connection to send statements to", 
-                          get_settings().get_available_db_connections()),
+        self.options = [((u"query_db_connection", u"DB Connection to send statements to", []),
                          get_settings().get_default_db_connection()),
-                        ((u"db_connection", u"DB Connection to store history", 
-                          get_settings().get_available_db_connections(),
+                        ((u"db_connection", u"DB Connection to store history", [],
                           self.reconnect_db),
                          get_settings().get_default_db_connection()),
                         ((u"use_textedit", u"Use multi-line sql editor"),False)]
         self.db_connection = None
         
         self.add_supported_dbms("SQLite Connection", sql_commands_sqlite)
+    
+    def _getChoiceOptions(self, o):
+        if o in (u"db_connection", u"query_db_connection"):
+            return get_settings().get_available_db_connections()
+        return super(sql_interface, self)._getChoiceOptions()
     
     def activate(self):
         iface_gui_plugin.activate(self)
