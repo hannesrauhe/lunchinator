@@ -175,7 +175,7 @@ class remote_pictures(iface_gui_plugin):
         iface_gui_plugin.destroy_widget(self)
 
     def extendsInfoDict(self):
-        lunchinator_has_gui()
+        return lunchinator_has_gui()
         
     def extendInfoDict(self, infoDict):
         infoDict[u"RP_v"] = self.VERSION_CURRENT
