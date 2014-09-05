@@ -20,6 +20,8 @@ class _SettingsWidgetContainer(QWidget):
         
     def showContents(self):
         if self._showing:
+            # already showing -> update
+            self._pluginObject.update_options_widget()
             return
         self._showing = True
         

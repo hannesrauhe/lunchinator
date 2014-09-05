@@ -143,13 +143,18 @@ class iface_plugin(IPlugin):
                 return mod_v
         return new_v
     
+    def _getChoiceOptions(self, o):
+        """Called when initializing or updating a choice option"""
+        return self.option_choice.get(o, None)
+    
     """ Private members """
     
     def _convertOption(self, o, v, new_v):
         try:
-            if o in self.option_choice:
+            choiceOptions = self.option_choice.get(o, None)
+            if choiceOptions is not None:
                 finalValue = None
-                for aValue in self.option_choice[o]:
+                for aValue in choiceOptions:
                     if new_v.upper() == aValue.upper():
                         finalValue = aValue
                         break
@@ -187,19 +192,25 @@ class iface_plugin(IPlugin):
                     conv = self._convertOption(o, v, new_v)
                     self._initOptionValue(o, conv, True)
         
+    def _initChoiceOption(self, optionKey, comboBox, choiceOptions, currentValue):
+        comboBox.clear()
+        for aString in choiceOptions:
+            comboBox.addItem(aString)
+        currentIndex = 0
+        if currentValue in choiceOptions:
+            currentIndex = choiceOptions.index(currentValue)
+        comboBox.setCurrentIndex(currentIndex)
+        self.option_choice[optionKey] = choiceOptions
+        
     def _addOptionToLayout(self, parent, grid, i, o, v):
         from PyQt4.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
         from PyQt4.QtCore import Qt
         e = ""
         fillHorizontal = False
-        if o[0] in self.option_choice:
+        choiceOptions = self._getChoiceOptions(o[0])
+        if choiceOptions is not None:
             e = QComboBox(parent)
-            for aString in self.option_choice[o[0]]:
-                e.addItem(aString)
-            currentIndex = 0
-            if v in self.option_choice[o[0]]:
-                currentIndex = self.option_choice[o[0]].index(v)
-            e.setCurrentIndex(currentIndex)
+            self._initChoiceOption(o[0], e, choiceOptions, v)
         elif type(v) == types.IntType:
             e = QSpinBox(parent)
             e.setMinimum(0)
@@ -262,10 +273,11 @@ class iface_plugin(IPlugin):
             # probably not initialized yet.
             return
         e = self.option_widgets[o]
-        if o in self.option_choice:
+        choiceOptions = self.option_choice.get(o, None)
+        if choiceOptions is not None:
             currentIndex = 0
-            if v in self.option_choice[o]:
-                currentIndex = self.option_choice[o].index(v)
+            if v in choiceOptions:
+                currentIndex = choiceOptions.index(v)
             e.setCurrentIndex(currentIndex)
         elif type(v) == types.IntType:
             e.setValue(v)
@@ -286,8 +298,9 @@ class iface_plugin(IPlugin):
         from PyQt4.QtCore import Qt
         v = self._getOptionValue(o)
         new_v = v
-        if o in self.option_choice:
-            new_v = self.option_choice[o][e.currentIndex()]
+        choiceOptions = self.option_choice.get(o, None)
+        if choiceOptions is not None:
+            new_v = choiceOptions[e.currentIndex()]
         elif type(v) == types.IntType:
             new_v = e.value()
         elif type(v) == types.BooleanType:
@@ -295,7 +308,7 @@ class iface_plugin(IPlugin):
         else:
             new_v = convert_string(e.text())
         return new_v      
-        
+    
     """ Public interface """
     def has_options_widget(self):
         """Called from settings dialog. Override if you have a custom options widget."""
@@ -325,6 +338,14 @@ class iface_plugin(IPlugin):
         t.setRowStretch(row, 1)
         return optionsWidget
     
+    def update_options_widget(self):
+        """Called every time an options widget is displayed"""
+        for o in self.options:
+            choiceOptions = self._getChoiceOptions(o)
+            if choiceOptions is not None and choiceOptions != self.option_choice[o]:
+                combo = self.option_widgets[o]
+                self._initChoiceOption(o, combo, choiceOptions, self.get_option(o))
+                
     def destroy_options_widget(self):
         """Called before the options widget is removed from its parent."""
         pass
