@@ -124,31 +124,34 @@ def checkDependencies(noPlugins):
     
     return installCoreDependencies()
 
-def startLunchinator():
-    (options, _args) = parse_args()
-    
+def initLogger(options, path=None):
+    initializeLogger(path)
     if options.verbose:
         get_settings().set_verbose(True)
         setGlobalLoggingLevel(logging.DEBUG)
+
+def startLunchinator():
+    (options, _args) = parse_args()
+    
     usePlugins = options.noPlugins
     defaultLogPath = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
     if options.exitWithStopCode:
         sys.exit(EXIT_CODE_STOP)
     elif options.lunchCall or options.message != None:
-        initializeLogger()
+        initLogger(options)
         get_settings().set_plugins_enabled(False)
         sendMessage(options.message, options.client)
     elif options.stop:
-        initializeLogger()
+        initLogger(options)
         get_settings().set_plugins_enabled(False)
         get_server().stop_server(stop_any=True)
         print "Sent stop command to local lunchinator"
     elif options.installDep:
-        initializeLogger()
+        initLogger(options)
         req = getCoreDependencies()
         installDependencies(req)
     elif options.cli:
-        initializeLogger(defaultLogPath)
+        initLogger(options, defaultLogPath)
         usePlugins = checkDependencies(usePlugins)
             
         retCode = 1
@@ -163,7 +166,7 @@ def startLunchinator():
         finally:
             sys.exit(retCode)
     elif options.noGui:
-        initializeLogger(defaultLogPath)
+        initLogger(options, defaultLogPath)
         usePlugins = checkDependencies(usePlugins)
         
     #    sys.settrace(trace)
@@ -175,7 +178,7 @@ def startLunchinator():
     else:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         
-        initializeLogger(defaultLogPath)    
+        initLogger(options, defaultLogPath)    
         getCoreLogger().info("We are on %s, %s, version %s", platform.system(), platform.release(), platform.version())
         try:
             from PyQt4.QtCore import QThread            
