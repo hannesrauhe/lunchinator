@@ -11,7 +11,7 @@ from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView,\
     QSplitter, QStandardItemModel, QSortFilterProxyModel,\
     QLineEdit, QVBoxLayout, QPushButton, QFrame, QToolButton, QMenu,\
     QStandardItem, QItemSelection
-from PyQt4.QtCore import Qt, QVariant
+from PyQt4.QtCore import Qt, QVariant, QModelIndex
 
 from time import localtime
 from functools import partial
@@ -127,6 +127,8 @@ class ChatHistoryWidget(QWidget):
         layout.setSpacing(0)
         layout.addWidget(topWidget, 0)
         layout.addWidget(mainWidget, 1)
+        
+        self._peerList.doubleClicked.connect(self._peerDoubleClicked)
       
     def _initPeerList(self):  
         self._peerList = QTreeView(self)
@@ -211,6 +213,11 @@ class ChatHistoryWidget(QWidget):
                 if self._delegate.getOpenChatAction().appliesToPeer(peerID, peerInfo):
                     menu.addAction(get_peers().getDisplayedPeerName(pID=peerID, lock=False), partial(self._openChat, peerID))
         
+    @loggingSlot(QModelIndex)
+    def _peerDoubleClicked(self, index):
+        pID = convert_string(index.data(HistoryPeersModel.KEY_ROLE).toString())
+        self._delegate.openChat(pID)
+        
     def _openChat(self, peerID):
         peerInfo = get_peers().getPeerInfo(pID=peerID)
         if peerInfo is None:
@@ -257,6 +264,7 @@ class ChatHistoryWidget(QWidget):
         if selected is not None:
             self._createHistoryModel(selected)
             self._clearButton.setEnabled(True)
+            self._historyTable.resizeColumnToContents(2)
         else:
             self._sortFilterModel.setSourceModel(None)
             self._clearButton.setEnabled(False)
