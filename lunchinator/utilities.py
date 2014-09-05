@@ -505,6 +505,10 @@ def checkRequirements(reqs, component, dispName, missing={}):
     missing -- dictionary to update
     """
     
+    if isPyinstallerBuild():
+        # pkg_resources is not working reliably here.
+        return missing
+    
     for req in reqs:
         req = req.strip()
         try:
