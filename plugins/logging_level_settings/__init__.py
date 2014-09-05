@@ -7,7 +7,7 @@ class plugin_repositories(iface_general_plugin):
         super(plugin_repositories, self).__init__()
         
     def get_displayed_name(self):
-        return u"Logging Level Settings"
+        return u"Logging Level"
     
     def activate(self):
         iface_general_plugin.activate(self)
