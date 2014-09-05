@@ -1,6 +1,6 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QLabel, QPushButton, \
                         QTreeView, QHBoxLayout, QStandardItemModel, QColor,\
-                        QStandardItem, QItemSelection
+                        QStandardItem, QItemSelection, QHeaderView
 from PyQt4.QtCore import pyqtSignal, Qt
 from lunchinator import get_settings, convert_string
 from lunchinator.git import GitHandler
@@ -25,6 +25,7 @@ class PluginRepositoriesGUI(QWidget):
         
         self._reposTable = QTreeView(self) 
         self._reposTable.setIndentation(0)
+        self._reposTable.header().setStretchLastSection(False)
                 
         self._reposModel = QStandardItemModel(self._reposTable)
         self._initModel()
@@ -118,7 +119,8 @@ class PluginRepositoriesGUI(QWidget):
     def resizeColumns(self):
         self._reposTable.resizeColumnToContents(self.ACTIVE_COLUMN)
         self._reposTable.resizeColumnToContents(self.AUTO_UPDATE_COLUMN)
-        self._reposTable.setColumnWidth(self.PATH_COLUMN, 150)
+        self._reposTable.header().setResizeMode(self.PATH_COLUMN, QHeaderView.Stretch)
+        self._reposTable.header().setResizeMode(self.STATUS_COLUMN, QHeaderView.ResizeToContents)
     
     def getTable(self):
         return self._reposTable
