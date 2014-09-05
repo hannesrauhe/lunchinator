@@ -33,7 +33,7 @@ class avatar(iface_general_plugin):
         return w if w.parentWidget() == None else self.parentWindow(w.parentWidget())
     
     @loggingFunc
-    def _chooseFile(self):  
+    def _chooseFile(self, _checked=None):
         from PyQt4.QtGui import QSortFilterProxyModel, QFileDialog
         class FileFilterProxyModel(QSortFilterProxyModel):
             MIME_TYPES = ["image/png", "image/jpeg", "image/gif"]
@@ -63,8 +63,8 @@ class avatar(iface_general_plugin):
 #            selectedFile = convert_string(selectedFiles.first())
         
         selectedFile = QFileDialog.getOpenFileName(self.parentWindow(self.label), caption="Choose Avatar Picture:")
-        if selectedFile != None:
-            selectedFile = convert_string(selectedFile)
+        selectedFile = convert_string(selectedFile)
+        if selectedFile:
             if not os.path.isdir(selectedFile) and fileFilter.filterAcceptsFile(selectedFile):
                 self.selectedFile = selectedFile
                 self._setImage(selectedFile, self.label)
