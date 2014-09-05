@@ -13,8 +13,10 @@ class OnlineUpdateGUI(QWidget):
     def __init__(self, installedVersion, parent):
         super(OnlineUpdateGUI, self).__init__(parent)
         
-        self._appCheckWasEnabled = False
-        self._installWasEnabled = False
+        self._canCheckForAppUpdate = False
+        self._canCheckForRepoUpdate = False
+        self._appUpdatesAvailable = False
+        self._repoUpdatesAvailable = False
         
         layout = QVBoxLayout(self)
         layout.addWidget(self._createAppUpdateWidget(installedVersion))
@@ -86,26 +88,29 @@ class OnlineUpdateGUI(QWidget):
         
     def setInteractive(self, interactive):
         if interactive:
-            self._appCheckButton.setEnabled(self._appCheckWasEnabled)
-            self._installUpdatesButton.setEnabled(self._installWasEnabled)
+            self._appCheckButton.setEnabled(self._canCheckForAppUpdate)
+            self._repoCheckButton.setEnabled(self._canCheckForRepoUpdate)
+            self._installUpdatesButton.setEnabled(self._appUpdatesAvailable or self._repoUpdatesAvailable)
         else:
-            self._appCheckWasEnabled = self._appCheckButton.isEnabled()
-            self._installWasEnabled = self._installUpdatesButton.isEnabled()
-            
             self._appCheckButton.setEnabled(False)
+            self._repoCheckButton.setEnabled(False)
             self._installUpdatesButton.setEnabled(False)
 
     def setCanCheckForAppUpdate(self, can):
+        self._canCheckForAppUpdate = can
         self._appCheckButton.setEnabled(can)
         
     def setCanCheckForRepoUpdate(self, can):
+        self._canCheckForRepoUpdate = can
         self._repoCheckButton.setEnabled(can)
 
     def appInstallReady(self):
+        self._appUpdatesAvailable = True
         self._installUpdatesButton.setEnabled(True)
         
     def setRepoUpdatesAvailable(self, avail):
-        self._installUpdatesButton.setEnabled(avail)
+        self._repoUpdatesAvailable = True
+        self._installUpdatesButton.setEnabled(avail or self._appUpdatesAvailable)
         
     def setRepoStatus(self, status):
         self._repoStatusLabel.setText(status)
