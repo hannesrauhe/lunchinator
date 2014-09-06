@@ -1,7 +1,8 @@
 from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QComboBox, QWidget, QGridLayout, QLabel, QStackedWidget, QPushButton
+from PyQt4.QtGui import QComboBox, QWidget, QGridLayout, QLabel, QStackedWidget, QPushButton,\
+    QInputDialog, QLineEdit
 from copy import deepcopy
-from lunchinator import get_plugin_manager
+from lunchinator import get_plugin_manager, convert_string
 from lunchinator.log.logging_slot import loggingSlot
 
 class DbConnOptions(QWidget):
@@ -109,7 +110,26 @@ class DbConnOptions(QWidget):
             
     @loggingSlot()
     def new_conn(self):
-        new_conn_name = "Conn %d" % len(self.conn_properties)
+        i = len(self.conn_properties)
+        while u"Conn %d" % i in self.conn_properties:
+            i += 1
+        proposedName = u"Conn %d" % i
+        
+        new_conn_name = None
+        while not new_conn_name or new_conn_name in self.conn_properties:
+            if new_conn_name in self.conn_properties:
+                msg = u"Connection \"%s\" already exists. Enter a different name:" % new_conn_name
+            else:
+                msg = u"Enter the name of the new connection:"
+            new_conn_name, ok = QInputDialog.getText(self,
+                                                     u"Connection Name",
+                                                     msg,
+                                                     QLineEdit.Normal,
+                                                     proposedName)
+            if not ok:
+                return 
+            new_conn_name = convert_string(new_conn_name)
+        
         self.conn_properties[new_conn_name] = {"plugin_type" : str(self.typeCombo.currentText()) }
         self.nameCombo.addItem(new_conn_name)
         self.nameCombo.setCurrentIndex(self.nameCombo.count() - 1)
