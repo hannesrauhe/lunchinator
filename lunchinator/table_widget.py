@@ -79,8 +79,11 @@ class TableWidget(QWidget):
     def getTable(self):
         return self.table
     
-    def addToHistory(self, list):
-        for e in list:
+    def clearHistory(self):
+        self.entry.clearHistory()
+    
+    def addToHistory(self, l):
+        for e in l:
             self.entry.appendHistory(e)
         
 if __name__ == '__main__':

@@ -12,7 +12,7 @@ class stat_visualize(iface_gui_plugin):
     def _getChoiceOptions(self, o):
         if o == u"db_connection":
             return get_settings().get_available_db_connections()
-        return super(stat_visualize, self)._getChoiceOptions()
+        return super(stat_visualize, self)._getChoiceOptions(o)
     
     def activate(self):
         iface_gui_plugin.activate(self)      

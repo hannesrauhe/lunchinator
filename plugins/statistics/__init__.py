@@ -15,7 +15,7 @@ class statistics(iface_called_plugin):
     def _getChoiceOptions(self, o):
         if o in (u"db_connection", u"query_db_connection"):
             return get_settings().get_available_db_connections()
-        return super(statistics, self)._getChoiceOptions()
+        return super(statistics, self)._getChoiceOptions(o)
     
     def activate(self):
         iface_called_plugin.activate(self)

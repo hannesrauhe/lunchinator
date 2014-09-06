@@ -153,6 +153,8 @@ class iface_plugin(IPlugin):
         try:
             choiceOptions = self.option_choice.get(o, None)
             if choiceOptions is not None:
+                if not choiceOptions:
+                    choiceOptions = self._getChoiceOptions(o)
                 finalValue = None
                 for aValue in choiceOptions:
                     if new_v.upper() == aValue.upper():
@@ -479,14 +481,16 @@ class iface_plugin(IPlugin):
         self._supported_dbms[db_type] = db_iface
         
     @loggingFunc
-    def connect_to_db(self, changedDBConn = None):
+    def connect_to_db(self, changedDBConn=None):
         """
         connects to a database or changes the database connection type.
         """
         with self._specialized_db_connect_lock:
-            if self._specialized_db_conn and changedDBConn and changedDBConn != self.options["db_connection"]:
+            if self._specialized_db_conn and changedDBConn and changedDBConn == self.options["db_connection"]:
                 return
-            dbPlugin, plugin_type = get_db_connection(self.logger, self.options["db_connection"])
+            if changedDBConn is None:
+                changedDBConn = self.options[u"db_connection"]
+            dbPlugin, plugin_type = get_db_connection(self.logger, changedDBConn)
             
             if dbPlugin == None:
                 self.logger.error("Plugin %s: DB  connection %s not available: Maybe DB Connections are not active yet?", type(self), self.options["db_connection"])
@@ -505,9 +509,9 @@ class iface_plugin(IPlugin):
                         
             return True
             
-    def reconnect_db(self, _, __):
+    def reconnect_db(self, _, newConnection):
         """method for changed options callback"""
-        self.connect_to_db()
+        self.connect_to_db(newConnection)
         
     def is_db_ready(self):
         return self._specialized_db_conn and self._specialized_db_conn.is_open()
