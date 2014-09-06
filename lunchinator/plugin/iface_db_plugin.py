@@ -104,16 +104,4 @@ class lunch_db(object):
     
     def insert_values(self, logger, table, *values):
         raise  NotImplementedError("%s does not implement this method"%self.db_type) 
-            
-            
-    '''The following maybe should be moved to the other class'''
-    
-    '''lunch statistics plugin methods'''    
-    def lastUpdateForLunchDay(self, logger, date, tableName):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-        
-    def insertLunchPart(self, logger, date, textAndAdditivesList, update, table):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-            
-       
         
