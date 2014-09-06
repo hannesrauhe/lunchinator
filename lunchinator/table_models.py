@@ -37,7 +37,6 @@ class TableModelBase(QStandardItemModel):
         if item.data(self.SORT_ROLE) == None:
             item.setData(item.data(Qt.DisplayRole), self.SORT_ROLE)
         item.setData(key, self.KEY_ROLE)
-        item.setData(QSize(0, 20), Qt.SizeHintRole)
         return item
     
     def updateItem(self, key, data, row, column):
