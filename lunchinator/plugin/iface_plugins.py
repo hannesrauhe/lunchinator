@@ -548,12 +548,11 @@ class iface_plugin(IPlugin):
         return window, app
     
     def _init_run_options_widget(self, parent):
-        self.hasConfigOption = lambda _ : False
-        self.activate()
         return self.create_options_widget(parent)
     
     def run_options_widget(self):
         self.setPluginName(u"Settings Test")
+        self.hasConfigOption = lambda _ : False
         _window, app = iface_general_plugin.prepare_application(self.activate, self._init_run_options_widget)
         return app.exec_()
                     

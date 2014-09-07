@@ -127,7 +127,7 @@ class MultipleCategoriesView(QWidget):
         
     def _createSingleView(self, mode):
         self._clearCurrentView()
-        w = SingleCategoryView(self._action, self, mode=mode)
+        w = SingleCategoryView(self._action, self, self.logger, mode=mode)
         self._currentSingleViews[None] = w
         self._settingsWidget.layout().addWidget(w)
         

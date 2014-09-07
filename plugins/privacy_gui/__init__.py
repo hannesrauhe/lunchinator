@@ -51,6 +51,7 @@ class privacy(iface_general_plugin):
 if __name__ == '__main__':
     from lunchinator.peer_actions import PeerAction, PeerActions
     from lunchinator.plugin import iface_gui_plugin
+    from lunchinator.log import initializeLogger
     
     class TestAction(PeerAction):
         def getName(self):
@@ -73,6 +74,7 @@ if __name__ == '__main__':
         def getCategoryFromMessage(self, _msgData):
             return u"Category 1"
     
+    initializeLogger()
     w = privacy()
     testAction = TestAction()
     testAction._pluginObject = w
