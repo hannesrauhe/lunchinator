@@ -72,7 +72,7 @@ class MultipleCategoriesView(QWidget):
     _PEER_EXCEPTIONS_VIEW = -1
     
     def _createAndInsertSingleView(self, category, index):
-        singleView = SingleCategoryView(self._action, self._currentToolBox, category)
+        singleView = SingleCategoryView(self._action, self._currentToolBox, self.logger, category)
         self._currentSingleViews[category] = singleView
         icon = self._action.getCategoryIcon(category)
         title = u"Not Categorized" if category == PrivacySettings.NO_CATEGORY else category
@@ -89,7 +89,7 @@ class MultipleCategoriesView(QWidget):
         for category in self._action.getPrivacyCategories():
             self._createAndInsertSingleView(category, -1)
         
-        peerExceptions = SingleCategoryView(self._action, self._currentToolBox, category=None, mode=PrivacySettings.POLICY_PEER_EXCEPTION)
+        peerExceptions = SingleCategoryView(self._action, self._currentToolBox, self.logger, category=None, mode=PrivacySettings.POLICY_PEER_EXCEPTION)
         self._currentSingleViews[self._PEER_EXCEPTIONS_VIEW] = peerExceptions
         self._currentToolBox.addItem(peerExceptions, "Special Peers")
         
