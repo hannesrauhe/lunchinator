@@ -48,10 +48,19 @@ class PeerAction(object):
         
         For example, if the action sends HELO_XX {...} to the other peer,
         this method has to return XX.
-        If this method does not return None, it will be added to the
-        privacy settings.
+        By default, if this method does not return None, this action will
+        added to the privacy settings. Change this behavior by overriding
+        hasPrivacySetttings().
         """
         return None
+    
+    def hasPrivacySettings(self):
+        """Returns whether or not this action has privacy settings.
+        
+        By default, a PeerAction has privacy settings if it is registered
+        to a message prefix. See getMessagePrefix().
+        """
+        return self.getMessagePrefix() is not None
     
     def getPrivacyCategories(self):
         """Provide more fine-grained privacy settings.

@@ -82,7 +82,7 @@ class CLIPrivacyHandling(LunchCLIModule):
             self.appendSeparator()
             for dPluginName, actions in PeerActions.get().getAllPeerActions(filterFunc=self.__peerActionHasPrivacy).iteritems():
                 for action in actions:
-                    if action.getMessagePrefix() is None:
+                    if not action.hasPrivacySettings():
                         continue
                     if action.getPluginObject() is not None:
                         pluginName = action.getPluginObject().get_displayed_name()
@@ -282,7 +282,7 @@ class CLIPrivacyHandling(LunchCLIModule):
             return self.printHelp("privacy")
        
     def __peerActionHasPrivacy(self, _pluginName, peerAction):
-        return peerAction.getMessagePrefix() is not None
+        return peerAction.hasPrivacySettings()
        
     def _completePluginName(self, text):
         actionsDict = PeerActions.get().getAllPeerActions(filterFunc=self.__peerActionHasPrivacy)
