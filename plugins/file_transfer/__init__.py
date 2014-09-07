@@ -118,7 +118,7 @@ class file_transfer(iface_gui_plugin):
         iface_gui_plugin.destroy_widget(self)
     
     def extendsInfoDict(self):
-        # TODO also accept file transfers on CLI?
+        # do not except file transfers without GUI
         return lunchinator_has_gui()
         
     def extendInfoDict(self, infoDict):

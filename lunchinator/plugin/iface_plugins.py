@@ -493,8 +493,7 @@ class iface_plugin(IPlugin):
             dbPlugin, plugin_type = get_db_connection(self.logger, changedDBConn)
             
             if dbPlugin == None:
-                # TODO probably plugins should expect that no database is available. Then this is a warning.
-                self.logger.error("Plugin %s: DB  connection %s not available: Maybe DB Connections are not active yet?", type(self), self.options["db_connection"])
+                self.logger.warning("Plugin %s: DB  connection %s not available: Maybe DB Connections are not active yet?", type(self), self.options["db_connection"])
                 return False
             
             if plugin_type in self._supported_dbms:

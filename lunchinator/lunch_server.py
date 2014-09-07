@@ -299,8 +299,7 @@ class lunch_server(object):
                     s.sendto(msg, ip.strip())
                     i += 1
                 except Exception as e:
-                    # TODO only a warning on socket.error?
-                    getCoreLogger().exception("The following message could not be delivered to %s: %s\n%s", ip, str(sys.exc_info()[0]), msg)
+                    getCoreLogger().warning("The following message could not be delivered to %s: %s", ip, msg, exc_info=1)
         finally:
             s.close() 
         return i
@@ -538,7 +537,8 @@ class lunch_server(object):
         return False   
       
     def _handle_core_event(self, ip, xmsg, newPeer, _fromQueue):
-        # todo: maybe from here on this should be in plugins?
+        ''' handles cmds that are not necessary for peer discovery but should work without plugins 
+        '''
         
         # I don't see any reason to process these events for unknown peers.
         if newPeer:
