@@ -33,7 +33,7 @@ class ChatMessagesHandler(QObject):
         self._ackTimeout = ackTimeout
         self._waitingForAck = {} # message ID : (otherID, time, message, isResend)
         self._hasUndelivered = True # just assume until proven otherwise
-        self._displaying = False
+        self._currentlyDisplaying = {} # otherID : [msgID]
         self._displayMessageLock = loggingMutex(u"Chat messages delivery lock", qMutex=True, logging=get_settings().get_verbose())
         
         nextIDFromDB = self._getStorage().getLastSentMessageID() + 1
@@ -276,14 +276,18 @@ class ChatMessagesHandler(QObject):
         else:
             msgTime = time()
             messageTimeUnknown = True
-
-        # wait for the delivery of the previous message      
-        if self._displayMessageLock.tryLock(1000):
-            self._displaying = True
-        else:
-            self.logger.error("Displaying previous message took too long. Displaying new message anyways.")
-            
         
+        # check if this message is currently being displayed (not yet in storage)
+        self._displayMessageLock.lock()
+        try:
+            if otherID in self._currentlyDisplaying:
+                for aMsgID in self._currentlyDisplaying[otherID]:
+                    if msgDict[u"id"] == aMsgID:
+                        self.logger.debug("Ignoring duplicate message from %s (id %d) that is currently being displayed.", otherID, aMsgID)
+                        return
+        finally:
+            self._displayMessageLock.unlock()
+            
         # check if we already know the message (our ACK might not have been delivered)
         try:
             containsMessage = self._getStorage().containsMessage(otherID,
@@ -292,6 +296,17 @@ class ChatMessagesHandler(QObject):
                                                                  None if messageTimeUnknown else msgTime,
                                                                  ownMessage=False)
             if not containsMessage:
+                self._displayMessageLock.lock()
+                try:
+                    if otherID in self._currentlyDisplaying:
+                        msgIDs = self._currentlyDisplaying[otherID]
+                    else:
+                        msgIDs = []
+                    msgIDs.append(msgDict[u"id"])
+                    self._currentlyDisplaying[otherID] = msgIDs
+                finally:
+                    self._displayMessageLock.unlock()
+                
                 self.newMessage.emit(otherID, msgHTML, msgTime, msgDict)
             else:
                 self.logger.debug("Received message from %s that I already know (id %d)", otherID, msgDict[u"id"])
@@ -307,10 +322,12 @@ class ChatMessagesHandler(QObject):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
         try:
-            if self._displaying:
-                self._displaying = False
-                self._displayMessageLock.unlock()
             self._getStorage().addOtherMessage(msgDict[u"id"], otherID, msgTime, msgHTML, recvTime)
+            self._displayMessageLock.lock()
+            try:
+                self._currentlyDisplaying[otherID].remove(msgDict[u"id"])
+            finally:
+                self._displayMessageLock.unlock()
         except:
             self.logger.exception("Error storing partner message")
         self._sendAnswer(otherID, msgDict, recvTime=recvTime)
