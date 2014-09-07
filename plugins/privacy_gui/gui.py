@@ -3,53 +3,70 @@ from lunchinator.peer_actions.peer_actions_singleton import PeerActions
 from privacy_gui.multiple_categories_view import MultipleCategoriesView
 from privacy_gui.single_category_view import SingleCategoryView
 from PyQt4.QtGui import QWidget, QVBoxLayout, QTreeView, QFrame, QSplitter,\
-    QItemSelection
+    QItemSelection, QStandardItemModel, QStandardItem
 from PyQt4.QtCore import Qt, QVariant
 from lunchinator import get_notification_center
 from lunchinator.log.logging_slot import loggingSlot
 
-class PeerActionsModel(TableModelBase):
+class PeerActionsModel(QStandardItemModel):
     ACTION_ROLE = TableModelBase.SORT_ROLE + 1
     
-    def __init__(self, logger):
-        columns = [(u"Peer Action", self._updateNameItem)]
-        super(PeerActionsModel, self).__init__(None, columns, logger)
-        
+    def __init__(self, parent, logger):
+        super(PeerActionsModel, self).__init__(parent)
+        self.logger = logger
+        self._pluginToRow = {}
+        self.setHorizontalHeaderLabels([u"Peer Actions"])
         self.addPeerActions(PeerActions.get().getAllPeerActions())
     
-    def addPeerActions(self, added):
-        for pluginName, actions in added.iteritems():
-            for action in actions:
-                if action.getMessagePrefix():
-                    self.appendContentRow(pluginName + action.getName(), action)
-                    
-    def removePeerActions(self, removed):
-        for pluginName, actionNames in removed.iteritems():
-            for actionName in actionNames:
-                self.externalRowRemoved(pluginName + actionName)
-    
-    def createItem(self, key, action, column):
-        item = TableModelBase.createItem(self, key, action, column)
-        item.setData(action, self.ACTION_ROLE)
-        return item
-            
-    def _updateNameItem(self, _actionID, action, item):
+    def _createPluginItem(self, action):
+        item = QStandardItem()
+        item.setEditable(False)
         pluginName = None
         if action.getPluginObject() is not None:
             pluginName = action.getPluginObject().get_displayed_name()
         if pluginName is None:
             pluginName = action.getPluginName()
-        item.setText("%s: %s" % (pluginName, action.getName()))
+        item.setText(pluginName)
+        #icon = action.getPluginObject().getIcon()
+        #if icon is not None:
+        #    item.setData(QVariant(icon), Qt.DecorationRole)
+        return item
+    
+    def _createActionItem(self, action):
+        item = QStandardItem()
+        item.setEditable(False)
+        item.setData(action, self.ACTION_ROLE)
+        item.setText(action.getName())
         icon = action.getIcon()
         if icon is not None:
             item.setData(QVariant(icon), Qt.DecorationRole)
+        return item
+            
+    def addPeerActions(self, added):
+        for _pluginName, actions in added.iteritems():
+            hasPrivacySettings = any(action.hasPrivacySettings() for action in actions)
+            if not hasPrivacySettings:
+                continue
+            pluginItem = self._createPluginItem(actions[0])
+            for action in actions:
+                if action.hasPrivacySettings():
+                    actionItem = self._createActionItem(action)
+                    
+                    pluginItem.appendRow([actionItem])
+            self.appendRow([pluginItem])
+                    
+    def removePeerActions(self, removed):
+        for pluginName in removed:
+            row = self._pluginToRow.get(pluginName, None)
+            if row is not None:
+                self.removeRow(row)
 
 class PrivacyGUI(QWidget):
     def __init__(self, parent, logger):
         super(PrivacyGUI, self).__init__(parent)
        
         self.logger = logger
-        self._actionModel = PeerActionsModel(self.logger)
+        self._actionModel = PeerActionsModel(self, self.logger)
         
         self._initActionList()
         self._initSettingsWidget()
@@ -79,16 +96,15 @@ class PrivacyGUI(QWidget):
         self._actionList = QTreeView(self)
         self._actionList.setAlternatingRowColors(True)
         self._actionList.setHeaderHidden(False)
-        self._actionList.setItemsExpandable(False)
-        self._actionList.setIndentation(0)
+        self._actionList.setItemsExpandable(True)
+        self._actionList.setIndentation(15)
         self._actionList.setModel(self._actionModel)
+        self._actionList.expandAll()
         self._actionList.setSelectionMode(QTreeView.SingleSelection)
         self._actionList.selectionModel().selectionChanged.connect(self._displaySettings)
         
         self._actionList.setObjectName(u"__action_list")
         self._actionList.setFrameShape(QFrame.StyledPanel)
-        #if getPlatform() == PLATFORM_MAC:
-        #    self._actionList.setStyleSheet("QFrame#__action_list{border-width: 1px; border-top-style: solid; border-right-style: solid; border-bottom-style: none; border-left-style: none; border-color:palette(mid)}");
 
     def _initSettingsWidget(self):        
         self._settingsWidget = QWidget(self)
@@ -126,6 +142,8 @@ class PrivacyGUI(QWidget):
         if len(newSelection.indexes()) > 0:
             index = iter(newSelection.indexes()).next()
             action = index.data(PeerActionsModel.ACTION_ROLE).toPyObject()
+            if action is None:
+                return # root item
             if action.hasCategories():
                 self._settingsWidget.layout().addWidget(MultipleCategoriesView(action, self._settingsWidget, self.logger))
             else:
