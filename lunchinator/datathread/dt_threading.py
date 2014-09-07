@@ -12,7 +12,7 @@ class DataSenderThread(Thread, DataSenderThreadBase):
         try:
             self.performSend()
         except:
-            self.logger.error("Error sending file: %s", formatException())
+            self.logger.warning("Error sending file: %s", formatException())
     
 class DataReceiverThread(Thread, DataReceiverThreadBase):    
     def __init__(self, senderIP, portOrSocket, targetPath, overwrite, sendDict, category, logger, success_func=None, err_func=None):

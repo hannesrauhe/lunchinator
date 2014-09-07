@@ -136,14 +136,14 @@ class ChatMessagesHandler(QObject):
                 # need to resend message
                 msgTuple = self._getStorage().getMessage(otherID, oldMsgID, True)
                 if msgTuple is None:
-                    self.logger.error("Error trying to resend message %d with a new ID (message not found)", oldMsgID)
+                    self.logger.warning("Error trying to resend message %d with a new ID (message not found)", oldMsgID)
                     return False
                 msgHTML = msgTuple[ChatMessagesStorage.MSG_TEXT_COL]
                 recvTime = msgTuple[ChatMessagesStorage.MSG_TIME_COL]
                 
                 newID = self._getNextMessageID()
                 if not self._getStorage().updateMessageID(otherID, oldMsgID, newID, True):
-                    self.logger.error("Error trying to resend message %d with a new ID (could not update message ID)", oldMsgID)
+                    self.logger.warning("Error trying to resend message %d with a new ID (could not update message ID)", oldMsgID)
                     return False
                 self.messageIDChanged.emit(otherID, oldMsgID, newID)
                 
@@ -191,11 +191,11 @@ class ChatMessagesHandler(QObject):
         try:
             answerDict = json.loads(valueJSON)
         except:
-            self.logger.error("Error reading ACK message: %s", valueJSON)
+            self.logger.warning("Error reading ACK message: %s", valueJSON)
             return
         
         if not u"id" in answerDict:
-            self.logger.error("No message ID in ACK message: %s", valueJSON)
+            self.logger.warning("No message ID in ACK message: %s", valueJSON)
             return
         
         if u"recvTime" in answerDict:

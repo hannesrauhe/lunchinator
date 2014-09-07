@@ -35,6 +35,7 @@ class l_avatar(object):
     def use_as_avatar(self, file_path):    
         if not os.path.exists(file_path):
             self.logger.error("no image found at %s, exiting", file_path)
+            return
 
         tmpPath = os.path.join(get_settings().get_avatar_dir(), "tmp.png")
         self.scale_image(file_path, tmpPath)

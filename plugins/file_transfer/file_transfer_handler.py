@@ -133,22 +133,22 @@ class FileTransferHandler(QObject):
                 transferDict = json.loads(value)
                 
                 if not type(transferDict) is dict:
-                    self.logger.error("transferDict is no dict.")
+                    self.logger.warning("transferDict is no dict.")
                     return
             except:
                 self.logger.exception("Could not parse transfer dict.")
                 return
         
         if not u"id" in transferDict:
-            self.logger.error("No transfer ID in transfer dict. Cannot accept request")
+            self.logger.warning("No transfer ID in transfer dict. Cannot accept request")
             return
         
         if not u"name" in transferDict:
-            self.logger.error("No file name in transfer dict. Cannot accept request")
+            self.logger.warning("No file name in transfer dict. Cannot accept request")
             return
         
         if not u"size" in transferDict:
-            self.logger.error("No file size in transfer dict. Cannot accept request")
+            self.logger.warning("No file size in transfer dict. Cannot accept request")
             return
         
         transferID = transferDict[u"id"]
@@ -199,17 +199,17 @@ class FileTransferHandler(QObject):
             answerDict = json.loads(value)
             
             if not type(answerDict) is dict:
-                self.logger.error(u"answerDict is no dict.")
+                self.logger.warning(u"answerDict is no dict.")
                 return
         except:
             self.logger.exception(u"Could not parse answer dict.")
             return
         
         if not u"id" in answerDict:
-            self.logger.error(u"answerDict does not contain transfer ID.")
+            self.logger.warning(u"answerDict does not contain transfer ID.")
             return
         if not u"port" in answerDict:
-            self.logger.error(u"answerDict does not contain port.")
+            self.logger.warning(u"answerDict does not contain port.")
             return
         
         transferID = answerDict[u"id"]
@@ -246,18 +246,18 @@ class FileTransferHandler(QObject):
             cancelDict = json.loads(value)
             
             if not type(cancelDict) is dict:
-                self.logger.error(u"answerDict is no dict.")
+                self.logger.warning(u"answerDict is no dict.")
                 return
         except:
             self.logger.exception("Could not parse cancel dict.")
             return
         
         if not u"id" in cancelDict:
-            self.logger.error("Cancel dict does not contain transfer ID.")
+            self.logger.warning("Cancel dict does not contain transfer ID.")
             return
         
         if not u"up" in cancelDict:
-            self.logger.error("Cancel dict does not specify whether it was an upload or not.")
+            self.logger.warning("Cancel dict does not specify whether it was an upload or not.")
             return
         
         transferID = cancelDict[u"id"]

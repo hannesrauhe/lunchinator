@@ -422,7 +422,7 @@ def formatTime(mTime):
 
 def revealFile(path, logger):
     if not os.path.exists(path):
-        logger.error("Trying to reveal file %s which does not exist.", path)
+        logger.warning("Trying to reveal file %s which does not exist.", path)
         return
     try:
         if getPlatform() == PLATFORM_MAC:
@@ -438,7 +438,7 @@ def revealFile(path, logger):
         
 def openFile(path, logger):
     if not os.path.exists(path):
-        logger.error("Trying to open file %s which does not exist.", path)
+        logger.warning("Trying to open file %s which does not exist.", path)
         return
     try:
         if getPlatform() == PLATFORM_MAC:

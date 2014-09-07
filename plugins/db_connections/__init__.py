@@ -55,6 +55,7 @@ class db_connections(iface_general_plugin):
                     if p != None and p.plugin_object.is_activated:
                         self.conn_plugins[conn_name] = p.plugin_object
                     else:
+                        # TODO should this be a warning?
                         self.logger.error("DB Connection %s requires plugin of type \
                         %s which is not available", conn_name, plugin_type)
                         continue

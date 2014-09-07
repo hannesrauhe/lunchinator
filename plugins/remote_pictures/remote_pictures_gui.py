@@ -133,7 +133,7 @@ class RemotePicturesGui(QStackedWidget):
             return
         pixmap = self.imageLabel.getRawPixmap()
         if pixmap is None or pixmap.isNull():
-            self.logger.error("NULL pixmap")
+            self.logger.warning("NULL pixmap")
             return
         image = pixmap.toImage()
         if image.isNull():

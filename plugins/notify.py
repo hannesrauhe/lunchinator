@@ -39,7 +39,7 @@ class AttentionThread(threading.Thread):
             if playExe:
                 self._call([playExe, "-q", audioFile], "play sound")
             else:
-                self.logger.error("No audio player found, cannot play sound.")
+                self.logger.warning("No audio player found, cannot play sound.")
     
         if openTray:
             self._call(["eject", "-T", "/dev/cdrom"], "close")
@@ -93,7 +93,7 @@ class Notify(iface_called_plugin):
                 # get_resource will raise if the resource does not exist.
                 audio_file = get_settings().get_resource("sounds", new_value)
             except:
-                self.logger.error("configured audio file %s does not exist in sounds folder, using old one", new_value)
+                self.logger.warning("configured audio file %s does not exist in sounds folder, using old one", new_value)
             # don't set the new value, keep old value
         return audio_file
     

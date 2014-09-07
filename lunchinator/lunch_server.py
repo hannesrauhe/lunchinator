@@ -299,6 +299,7 @@ class lunch_server(object):
                     s.sendto(msg, ip.strip())
                     i += 1
                 except Exception as e:
+                    # TODO only a warning on socket.error?
                     getCoreLogger().exception("The following message could not be delivered to %s: %s\n%s", ip, str(sys.exc_info()[0]), msg)
         finally:
             s.close() 
@@ -557,7 +558,7 @@ class lunch_server(object):
             if u"avatar" in info:
                 file_name = os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])
             else:
-                getCoreLogger().error("%s tried to send his avatar, but I don't know where to safe it", ip)
+                getCoreLogger().error("%s tried to send his avatar, but I don't know where to save it", ip)
             
             if len(file_name):
                 pID = self._peers.getPeerID(pIP=ip)
@@ -586,6 +587,7 @@ class lunch_server(object):
                 self.call("HELO_AVATAR %s %s" % (fileSize, other_tcp_port), peerIPs = [ip])
                 self.controller.sendFile(ip, fileToSend, other_tcp_port)
             else:
+                # TODO should this be an error? If somebody deletes the avatar file, it should be reset silently -> warning
                 getCoreLogger().error("Want to send file %s, but cannot find it", fileToSend)   
             
         elif cmd == "REQUEST_LOGFILE":

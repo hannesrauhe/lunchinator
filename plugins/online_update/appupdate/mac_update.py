@@ -92,7 +92,7 @@ class MacUpdateHandler(GPGUpdateHandler):
                 else:
                     self._setStatus("Error installing MacGPG.", err=True)
                     if dt.pErr:
-                        self.logger.error("Console output: %s", dt.pErr.strip())
+                        self.logger.error("Error installing MacGPG.\nConsole output: %s", dt.pErr.strip())
                 
                 self._updateCheckButtonText()
                 self._ui.setInteractive(True)

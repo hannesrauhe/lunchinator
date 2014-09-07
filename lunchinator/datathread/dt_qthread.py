@@ -35,7 +35,7 @@ class DataSenderThread(QThread, DataSenderThreadBase):
             self.transferCanceled.emit(self)
         except socket.error:
             msg = formatException()
-            self.logger.error("Error sending: %s", msg)
+            self.logger.warning("Error sending: %s", msg)
             self.errorOnTransfer.emit(self, msg)
         except:
             self.logger.exception("Error sending")

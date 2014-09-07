@@ -239,7 +239,7 @@ class DataSenderThreadBase(DataThreadBase):
                 except:
                     numAttempts = numAttempts + 1
                     if numAttempts == 10:
-                        self.logger.error("Could not initiate connection to %s on Port %s", self._otherIP, self._portOrSocket)
+                        self.logger.warning("Could not initiate connection to %s on Port %s", self._otherIP, self._portOrSocket)
                         raise
         
             numFiles, totalSize, name, useTarstream, compression = self._readSendDict(self._sendDict, checkName=False)
@@ -606,7 +606,7 @@ class DataReceiverThreadBase(DataThreadBase):
             if addr[0] == self._otherIP:
                 self._receiveFiles(con, numFiles, totalSize, useTarstream, compression)
             else:
-                self.logger.error("Sender is not allowed to send file: %s, expected: %s", addr[0], self._otherIP)
+                self.logger.warning("Sender is not allowed to send file: %s, expected: %s", addr[0], self._otherIP)
         except IncompleteTransfer:
             raise
         except:

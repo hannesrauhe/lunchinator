@@ -101,6 +101,7 @@ def get_db_connection(logger, name=""):
     
     from lunchinator.log import getCoreLogger
     if not get_settings().get_plugins_enabled():
+        # TODO plugins should handle the case that there is no database connection -> warning
         getCoreLogger().error("Plugins are disabled, cannot get DB connections.")
         return None, None
     

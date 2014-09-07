@@ -429,8 +429,8 @@ class lunch_settings(object):
             if time:
                 return new_value
         except:
-            getCoreLogger().error("Problem while checking the lunch time")
-        getCoreLogger().error("Illegal time format: %s", new_value)
+            getCoreLogger().warning("Problem while checking the lunch time")
+        getCoreLogger().warning("Illegal time format: %s", new_value)
         return old_value
     
     def get_default_lunch_begin(self):

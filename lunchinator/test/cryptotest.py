@@ -1,5 +1,5 @@
-from lunchinator.log import initializeLogger
-from lunchinator import log_error, log_exception, get_settings
+from lunchinator.log import initializeLogger, getCoreLogger
+from lunchinator import get_settings
 from lunchinator.utilities import getBinary, getPlatform, PLATFORM_WINDOWS
 import zlib, sqlite3, os, locale, sys    
 from gnupg import GPG
@@ -8,7 +8,7 @@ initializeLogger()
 
 gbinary = getBinary("gpg", "bin")
 if not gbinary:
-    log_error("GPG not found")
+    getCoreLogger().error("GPG not found")
     sys.exit(1)
 
 ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
@@ -28,7 +28,7 @@ try:
     if not gpg.encoding:
         gpg.encoding = 'utf-8'
 except Exception, e:
-    log_exception("GPG not working: "+str(e))
+    getCoreLogger().exception("GPG not working: "+str(e))
     sys.exit(1)
     
 db_file = os.path.join(get_settings().get_main_config_dir(),"lunchinator.sq3")
