@@ -1,6 +1,6 @@
 from yapsy.IPlugin import IPlugin
 from lunchinator import convert_string, \
-    get_notification_center, get_db_connection
+    get_notification_center, get_db_connection, get_connection_type
 from lunchinator.log import loggingFunc, newLogger, removeLogger
 import types, sys, logging, threading
 from copy import deepcopy
@@ -16,6 +16,7 @@ class iface_plugin(IPlugin):
         self.hidden_options = None
         self.force_activation = False
         self.plugin_name = None
+        self._autoDBConnectionOption = False
         
         self._supported_dbms = {} #mapping from db plugin type to db_for_plugin_iface subclasses
         self._specialized_db_conn = None
@@ -79,6 +80,14 @@ class iface_plugin(IPlugin):
                     dict_options[o] = v
                     self.option_names.append((o, o))
             self.options = dict_options
+           
+        if self._supported_dbms and not u"db_connection" in self.options:
+            from lunchinator import get_settings
+            # add db connection option
+            self._autoDBConnectionOption = True
+            self.options[u"db_connection"] = get_settings().get_default_db_connection()
+            self.option_names.insert(0, (u"db_connection", u"Database Connection"))
+            self._registerOptionCallback(u"db_connection", self.reconnect_db)
            
         self.option_defaults = []
         if self._hasOptions():
@@ -145,6 +154,8 @@ class iface_plugin(IPlugin):
     
     def _getChoiceOptions(self, o):
         """Called when initializing or updating a choice option"""
+        if self._autoDBConnectionOption and o == u"db_connection":
+            return self.get_supported_connections()
         return self.option_choice.get(o, None)
     
     """ Private members """
@@ -479,6 +490,18 @@ class iface_plugin(IPlugin):
         if not issubclass(db_iface, db_for_plugin_iface):
             raise Exception("Adding supported DBMS only allowed via class inherited for db_for_plugin_iface")
         self._supported_dbms[db_type] = db_iface
+        
+    def get_supported_connections(self):
+        from lunchinator import get_settings
+        if not self._supported_dbms or u"default" in self._supported_dbms:
+            return get_settings().get_available_db_connections()
+         
+        conns = []
+        for connName in get_settings().get_available_db_connections():
+            connType = get_connection_type(self.logger, connName)
+            if connType in self._supported_dbms:
+                conns.append(connName)
+        return conns
         
     @loggingFunc
     def connect_to_db(self, changedDBConn=None):

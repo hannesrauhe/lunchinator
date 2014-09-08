@@ -77,9 +77,8 @@ class db_connections(iface_general_plugin):
         self._init_plugin_objects()
         
         ob = self.conn_plugins[conn_id]            
-        self.conn_properties_lock.acquire()
-        prop = self.conn_properties[conn_id]
-        self.conn_properties_lock.release()
+        with self.conn_properties_lock:
+            prop = self.conn_properties[conn_id]
         assert("plugin_type" in prop)
         
         if len(prop)==1:
@@ -108,6 +107,18 @@ class db_connections(iface_general_plugin):
             self.open_connections[name] = ob.create_connection(props)
         
         return _LoggerWrapper(self.open_connections[name], logger), props["plugin_type"]
+    
+    def getConnectionType(self, _logger, name=""):
+        """Returns the connection type for a given connection name."""
+        if not name:
+            name = get_settings().get_default_db_connection()
+        
+        with self.conn_properties_lock:  
+            if name not in self.conn_properties:
+                return None
+        
+        _ob, props = self.getProperties(name)
+        return props["plugin_type"]        
     
     def has_options_widget(self):
         return True

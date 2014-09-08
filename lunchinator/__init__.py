@@ -109,3 +109,15 @@ def get_db_connection(logger, name=""):
         return pluginInfo.plugin_object.getDBConnection(logger, name)
     getCoreLogger().error("getDBConnection: DB Connections plugin not yet loaded")
     return None, None
+
+def get_connection_type(logger, name=None):
+    from lunchinator.log import getCoreLogger
+    if not get_settings().get_plugins_enabled():
+        getCoreLogger().warning("Plugins are disabled, cannot get DB connections.")
+        return None
+    
+    pluginInfo = get_plugin_manager().getPluginByName("Database Settings", "general")
+    if pluginInfo and pluginInfo.plugin_object.is_activated:
+        return pluginInfo.plugin_object.getConnectionType(logger, name)
+    getCoreLogger().error("getDBConnection: DB Connections plugin not yet loaded")
+    return None
