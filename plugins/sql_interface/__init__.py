@@ -25,8 +25,10 @@ class sql_interface(iface_gui_plugin, LunchCLIModule):
         self.add_supported_dbms("SQLite Connection", sql_commands_sqlite)
     
     def _getChoiceOptions(self, o):
-        if o in (u"db_connection", u"query_db_connection"):
+        if o == u"query_db_connection":
             return get_settings().get_available_db_connections()
+        elif o == u"db_connection":
+            return self.get_supported_connections()
         return super(sql_interface, self)._getChoiceOptions(o)
     
     def _changeQueryDB(self, _set, _newVal):

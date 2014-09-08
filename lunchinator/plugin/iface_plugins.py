@@ -81,10 +81,13 @@ class iface_plugin(IPlugin):
                     self.option_names.append((o, o))
             self.options = dict_options
            
-        if self._supported_dbms and not u"db_connection" in self.options:
+        if self._supported_dbms and (self.options is None or not u"db_connection" in self.options):
             from lunchinator import get_settings
             # add db connection option
             self._autoDBConnectionOption = True
+            if self.options is None:
+                self.options = {}
+                self.option_names = []
             self.options[u"db_connection"] = get_settings().get_default_db_connection()
             self.option_names.insert(0, (u"db_connection", u"Database Connection"))
             self._registerOptionCallback(u"db_connection", self.reconnect_db)

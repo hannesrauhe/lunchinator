@@ -6,16 +6,8 @@ from lunchinator.log import loggingFunc
 class statistics(iface_called_plugin):
     def __init__(self):
         super(statistics, self).__init__()
-        self.options = [((u"db_connection", u"DB Connection", [],
-                          self.reconnect_db),
-                         get_settings().get_default_db_connection())]
         self.add_supported_dbms("SQLite Connection", statistics_sqlite)
         self.add_supported_dbms("SAP HANA Connection", statistics_hana)
-    
-    def _getChoiceOptions(self, o):
-        if o in (u"db_connection", u"query_db_connection"):
-            return get_settings().get_available_db_connections()
-        return super(statistics, self)._getChoiceOptions(o)
     
     def activate(self):
         iface_called_plugin.activate(self)
@@ -76,7 +68,8 @@ class statistics_sqlite(db_for_plugin_iface):
                 self.dbConn.execute("INSERT INTO statistics_version VALUES (1300, strftime('%s', 'now'))")
         q = self.dbConn.query("SELECT max(commit_count) as version FROM statistics_version")
         if len(q) == 0 or q[0][0] < 1778:
-            self.dbConn.execute("ALTER TABLE statistics_messages ADD COLUMN fragments INTEGER DEFAULT 0 ") 
+            if self.dbConn.existsTable("statistics_messages"):
+                self.dbConn.execute("ALTER TABLE statistics_messages ADD COLUMN fragments INTEGER DEFAULT 0 ") 
             self.dbConn.execute("INSERT INTO statistics_version(commit_count, migrate_time) VALUES(?, strftime('%s', 'now'))", 1778)
             # @todo remove "HELO_" from the mtype column
         
