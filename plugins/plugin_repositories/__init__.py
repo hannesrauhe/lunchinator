@@ -137,6 +137,8 @@ class plugin_repositories(iface_general_plugin):
         
     def discard_changes(self):
         self._initRepositories()
+        if self._ui is not None:
+            self._ui.resizeColumns()
         
     def save_options_widget_data(self, **_kwargs):
         if self._modified:
