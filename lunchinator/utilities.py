@@ -510,7 +510,6 @@ def checkRequirements(reqs, component, dispName, missing={}):
         return missing
     
     for req in reqs:
-        print req
         req = req.strip()
         try:
             get_distribution(req)
