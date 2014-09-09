@@ -66,6 +66,7 @@ class _lunchinatorLogger(object):
             yapsi_logger.setLevel(getLoggingLevel('yapsy'))
             yapsi_logger.addHandler(cls.logfileHandler)
             yapsi_logger.addHandler(cls.streamHandler)
+            yapsi_logger.addHandler(cls.notificationHandler)
             cls._loggers['yapsy'] = yapsi_logger
             
             cls.lunch_logger = cls.newLogger(u"Core")
