@@ -510,6 +510,7 @@ def checkRequirements(reqs, component, dispName, missing={}):
         return missing
     
     for req in reqs:
+        print req
         req = req.strip()
         try:
             get_distribution(req)
@@ -581,6 +582,7 @@ def handleMissingDependencies(missing, optionalCallback=lambda _req : True):
         
         if lunchinator_has_gui():
             from lunchinator.req_error_dialog import RequirementsErrorDialog
+            from PyQt4.QtGui import QMessageBox
             requirements = []
             for _component, missingList in missing.iteritems():
                 for dispName, req, reason, info in missingList:
@@ -599,7 +601,14 @@ def handleMissingDependencies(missing, optionalCallback=lambda _req : True):
             if res == RequirementsErrorDialog.Accepted:
                 if not canInstall:
                     return INSTALL_NOT_POSSIBLE
-                return installDependencies(f.getSelectedRequirements())
+                installRes = installDependencies(f.getSelectedRequirements())
+                if installRes == INSTALL_FAIL:
+                    QMessageBox.critical(None, "Install Failed", "Some dependencies could not be installed.")
+                elif installRes == INSTALL_SUCCESS:
+                    QMessageBox.information(None, "Install Succeeded", "Dependencies were successfully installed.")
+                elif installRes == INSTALL_RESTART:
+                    QMessageBox.information(None, "Install Finished", "Lunchinator needs to be restarted to complete the installation.")
+                return installRes
             elif res == RequirementsErrorDialog.IGNORED:
                 return INSTALL_IGNORE
             else:
