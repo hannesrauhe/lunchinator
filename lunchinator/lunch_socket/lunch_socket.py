@@ -106,7 +106,7 @@ class lunchSocket(object):
             else:
                 self._s.sendto(msg.encode('utf-8'), ('255.255.255.255', self._port))
         except:
-            getCoreLogger().exception("Problem while broadcasting")
+            getCoreLogger().warning("Problem while broadcasting", exc_info=1)
     
 
     def recv(self):

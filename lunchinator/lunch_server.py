@@ -190,12 +190,12 @@ class lunch_server(object):
                     if len(self._peers) > 1:                     
                         if is_in_broadcast_mode:
                             is_in_broadcast_mode = False
-                            getCoreLogger().warning("ending broadcast")       
+                            getCoreLogger().info("ending broadcast")       
                     else:
                         if not self._disable_broadcast:
                             if not is_in_broadcast_mode:
                                 is_in_broadcast_mode = True
-                                getCoreLogger().warning("seems like you are alone - broadcasting for others")
+                                getCoreLogger().info("seems like you are alone - broadcasting for others")
                             s_broad = lunchSocket(self._peers)
                             s_broad.broadcast('HELO_REQUEST_INFO ' + self._build_info_string())
                             s_broad.close()

@@ -56,9 +56,9 @@ class db_connections(iface_general_plugin):
                         self.conn_plugins[conn_name] = p.plugin_object
                     else:
                         # TODO should this be a warning?
-                        self.logger.error("DB Connection %s requires plugin of type \
-                        %s which is not available. \n Delete the connection from the Settings \
-                        or install the DB plugin again.", conn_name, plugin_type)
+                        self.logger.error("DB Connection %s requires plugin of type "\
+                        "%s which is not available. \n Delete the connection from the Settings "\
+                        "or install the DB plugin again.", conn_name, plugin_type)
                         continue
                     p_options = p.plugin_object.options.copy()
                     for k,v in p_options.items():
