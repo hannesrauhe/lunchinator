@@ -1,5 +1,4 @@
 from lunchinator.plugin import iface_plugin
-import types
 
 ''' every DB plugin consists of at least two objects:
 (necessary, because multiple connections of the same type are allowed)
@@ -47,20 +46,10 @@ class iface_db_plugin(iface_plugin):
             return
         self.conn_options.update(options)
 
-        from PyQt4.QtCore import Qt
         for o,e in self.option_widgets.iteritems():
             v = self.conn_options[o]
-            if o[0] in self.option_choice:
-                currentIndex = 0
-                if v in self.option_choice[o[0]]:
-                    currentIndex = self.option_choice[o[0]].index(v)
-                e.setCurrentIndex(currentIndex)
-            elif type(v)==types.IntType:
-                e.setValue(v)
-            elif type(v)==types.BooleanType:
-                e.setCheckState(Qt.Checked if v else Qt.Unchecked)
-            else:
-                e.setText(v)
+            choiceOptions = self.option_choice.get(o[0], None)
+            self._setValueToWidget(v, e, choiceOptions)
         
     def get_options_from_widget(self):
         if not self.option_widgets:
