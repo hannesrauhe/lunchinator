@@ -515,6 +515,9 @@ class ChatWidget(QWidget):
     
     @loggingSlot()        
     def eventTriggered(self):
+        if self.entry.toPlainText().length() is 0:
+            return
+        
         text = None
         if self._markdownEnabled:
             try:
