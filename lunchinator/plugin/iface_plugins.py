@@ -246,7 +246,7 @@ class iface_plugin(IPlugin):
     def _addOptionToLayout(self, parent, grid, i, o, v):
         from PyQt4.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
         from PyQt4.QtCore import Qt
-        from lunchinator.password_edit import PasswordEdit
+        from lunchinator.gui_elements.password_edit import PasswordEdit
         e = ""
         fillHorizontal = False
         choiceOptions = self._getChoiceOptions(o[0])
