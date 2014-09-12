@@ -262,8 +262,8 @@ class _TransferWidget(QFrame):
         self.disconnectDataThread(thread)
         self._checkButtonFunction()
     
-    @loggingSlot(object)    
-    def transferError(self, thread, message):
+    @loggingSlot(QThread, object)
+    def transferError(self, thread, message=None):
         if not self._transferring:
             return
         self._transferring = False
@@ -273,7 +273,7 @@ class _TransferWidget(QFrame):
         if self._progress.maximum() == 0:
             self._progress.setMaximum(100)
     
-    @loggingSlot(object)
+    @loggingSlot(QThread)
     def transferCanceled(self, thread):
         self._transferring = False
         self._statusLabel.setText(u"Transfer canceled")
