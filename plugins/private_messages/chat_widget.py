@@ -166,7 +166,7 @@ class ChatWidget(QWidget):
         
         if event.mimeData().hasUrls() and int(event.possibleActions()) & Qt.CopyAction:
             for url in event.mimeData().urls():
-                if url.isLocalFile():
+                if url.scheme() == u"file":
                     event.setDropAction(Qt.CopyAction)
                     event.accept()
                     return
@@ -180,7 +180,7 @@ class ChatWidget(QWidget):
         if event.mimeData().hasUrls() and int(event.possibleActions()) & Qt.CopyAction:
             files = []
             for url in event.mimeData().urls():
-                if url.isLocalFile():
+                if url.scheme() == u"file":
                     files.append(convert_string(url.toLocalFile()))
             
             if len(files) > 0:        

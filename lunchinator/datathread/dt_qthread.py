@@ -75,6 +75,8 @@ class DataReceiverThread(QThread, DataReceiverThreadBase):
             self.transferCanceled.emit(self)
         except IncompleteTransfer:
             self.errorOnTransfer.emit(self, u"Transfer incomplete.")
+        except socket.timeout:
+            self.errorOnTransfer.emit(self, u"Socket timed out.")
         except:
             self.logger.exception("Error receiving")
             self.errorOnTransfer.emit(self, formatException())

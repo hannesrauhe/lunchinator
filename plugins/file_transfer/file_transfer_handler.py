@@ -1,4 +1,4 @@
-from PyQt4.QtCore import QObject, pyqtSignal, QTimer, pyqtSlot
+from PyQt4.QtCore import QObject, pyqtSignal, QTimer, pyqtSlot, QThread
 from lunchinator import get_server, get_peers
 from lunchinator.log.logging_slot import loggingSlot
 from lunchinator.datathread.dt_qthread import DataReceiverThread, DataSenderThread
@@ -86,11 +86,11 @@ class FileTransferHandler(QObject):
         self._nextID += 1
         return nextID
     
-    @loggingSlot(object, object)
+    @loggingSlot(QThread, object)
     def _errorDownloading(self, thread, _message):
         self._removeDownload(thread)
             
-    @loggingSlot(object)
+    @loggingSlot(QThread)
     def _transferCanceled(self, thread):
         peerID, transferID = thread.getUserData()
         sendCancel = False
@@ -109,14 +109,14 @@ class FileTransferHandler(QObject):
                           u"up" : isUpload}
             get_server().call("HELO_FT_CANCEL %s" % json.dumps(cancelDict), peerIDs=[peerID])
     
-    @pyqtSlot(object)
-    @loggingSlot(object, object)
+    @pyqtSlot(QThread)
+    @loggingSlot(QThread, object)
     def _removeUpload(self, thread, _msg=None):
         _, transferID = thread.getUserData()
         self._outgoing.pop(transferID, None)
         
-    @pyqtSlot(object)
-    @loggingSlot(object, object)
+    @pyqtSlot(QThread)
+    @loggingSlot(QThread, object)
     def _removeDownload(self, thread, _path=None):
         peerID, transferID = thread.getUserData()
         self._incoming.pop((peerID, transferID), None)
@@ -155,6 +155,10 @@ class FileTransferHandler(QObject):
         size = transferDict[u"size"]
         name = transferDict.get(u"name", None)
         numFiles = transferDict.get(u"count", 1)
+        
+        if ((peerID, transferID) in self._incoming):
+            self.logger.debug(u"Ignoring duplicate file transfer from peer %s (%d)", peerID, transferID)
+            return
         
         if not os.path.exists(self._downloadDir):
             os.makedirs(self._downloadDir)
