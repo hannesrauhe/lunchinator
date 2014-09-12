@@ -536,7 +536,8 @@ class LunchPeers(object):
             self._idToIp.pop(pID)
             get_notification_center().emitPeerRemoved(pID)
         else:
-            get_notification_center().emitPeerUpdated(pID, deepcopy(self._peer_info[ip]))
+            existing_ip = self._idToIp[pID][0]
+            get_notification_center().emitPeerUpdated(pID, deepcopy(self._peer_info[existing_ip]))
      
     def _addPeerIPtoID(self, pID, ip):       
         if pID not in self._idToIp:
