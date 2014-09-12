@@ -139,12 +139,14 @@ class _TransferWidget(QFrame):
             text = text % (self._numFiles, u"file" if self._numFiles is 1 else "files", formatSize(self._totalSize), peerName)
         else:
             if self._down:
-                text = u"%s (total %s) \u2190 %s"
+                text = u"%s (%stotal %s) \u2190 %s"
             else:
-                text = u"%s (total %s) \u2192 %s"
+                text = u"%s (%stotal %s) \u2192 %s"
             if dispName is None:
                 dispName = os.path.basename(path)
-            text = text % (dispName, formatSize(self._totalSize), peerName)
+            
+            numFilesS = u"" if self._numFiles is 1 else u"%d files, " % self._numFiles
+            text = text % (dispName, numFilesS, formatSize(self._totalSize), peerName)
             self._setFileIcon(path)
             
         self._currentFile = path

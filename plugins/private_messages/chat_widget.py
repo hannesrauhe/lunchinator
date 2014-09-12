@@ -20,7 +20,7 @@ from xml.etree import ElementTree
 from StringIO import StringIO
 from functools import partial
 from time import time
-from lunchinator.utilities import formatException
+from lunchinator.utilities import formatException, isPyinstallerBuild, getPlatform, PLATFORM_WINDOWS
 from private_messages.index_set import IndexSet
 
 class ChatWidget(QWidget):
@@ -507,7 +507,10 @@ class ChatWidget(QWidget):
         if self._md is None:
             try:
                 from markdown import Markdown
-                self._md = Markdown()
+                if getPlatform()==PLATFORM_WINDOWS and isPyinstallerBuild():
+                    self._md = Markdown()
+                else:
+                    self._md = Markdown(extensions=['extra'])
             except ImportError:
                 self.logger.error("Cannot enable Markdown (%s)", formatException())
                 raise
@@ -515,6 +518,9 @@ class ChatWidget(QWidget):
     
     @loggingSlot()        
     def eventTriggered(self):
+        if self.entry.toPlainText().length() is 0:
+            return
+        
         text = None
         if self._markdownEnabled:
             try:
