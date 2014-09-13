@@ -84,35 +84,36 @@ class lunch_server(object):
     def call_info(self, peerIPs=[]):
         '''An info call informs a peer about my name etc...    by default to every peer'''
         if 0 == len(peerIPs):
-            peerIPs = self._peers.getPeerIPs()
+            peerIPs = self._peers.getFirstPeerIP()
         return self.call("HELO_INFO " + self._build_info_string(), peerIPs=peerIPs)  
   
     def call_request_info(self, peerIPs=[]):
         '''Similar to a info call but also request information from the peer
         by default to every/from every peer'''
         if 0 == len(peerIPs):
-            peerIPs = self._peers.getPeerIPs()
+            peerIPs = self._peers.getFirstPeerIP()
         return self.call("HELO_REQUEST_INFO " + self._build_info_string(), peerIPs=peerIPs)
     
     def call_dict(self, ip):  
         '''Sends the information about my peers to one peer identified by its IP at a time'''      
         peers_dict = {}
-        for pIP in self._peers.getPeerIPs():
+        for pIP in self._peers.getFirstPeerIP():
             peers_dict[pIP] = self._peers.getRealPeerName(pIP=pIP)
         self.call("HELO_DICT " + json.dumps(peers_dict), peerIPs=[ip]) 
         
     def call_request_dict(self):
         '''round robin I ask every peer for his peers, but one by one.
         (Sometimes the member asked is referred to as master)'''
-        peers = self._peers.getPeerIPs()
+        peers = self._peers.getPeers()
+        peers.remove(get_settings().get_ID())
         if len(peers) > self._peer_nr:
-            self.call("HELO_REQUEST_DICT " + self._build_info_string(), peerIPs=[peers[self._peer_nr]])
+            self.call("HELO_REQUEST_DICT " + self._build_info_string(), peerIDs=[peers[self._peer_nr]])
         if len(peers):
             self._peer_nr = (self._peer_nr + 1) % len(peers)            
     
     def changeGroup(self, _newgroup):
         """Call get_setting().set_group(...) to change the group programatically."""
-        peerIPs = self._peers.getPeerIPs() 
+        peerIPs = self._peers.getFirstPeerIP() 
         self.call("HELO_LEAVE Changing Group")
         self._peers.removeMembersByIP()
         self.call_request_info(peerIPs) #call stored peerIPs, otherwise I forget myself after the Leave Call
@@ -244,15 +245,15 @@ class lunch_server(object):
         both peerIDs and peerIPs should be sets
         Used also by start_lunchinator to send messages without initializing
         the whole lunch server."""     
-        msg = convert_string(msg) # TODO no unicode here?
+        msg = convert_string(msg) # make sure, msg is unicode
         target = []
         
         if len(peerIDs) == 0 and len(peerIPs) == 0:
-            target = self._peers.getPeerIPs()
+            target = self._peers.getFirstPeerIP()
         else:
             target = peerIPs
             for pID in peerIDs:
-                pIPs = self._peers.getPeerIPs(pID=pID)
+                pIPs = self._peers.getFirstPeerIP(pID=pID)
                 if len(pIPs):
                     target = target.union(pIPs)
                 else:
@@ -326,7 +327,7 @@ class lunch_server(object):
             getCoreLogger().debug("clean up thread runs")
             try:
                 # it's time to announce my name again and switch the master
-                self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getPeerIPs())
+                self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getFirstPeerIP())
                 self.call_request_dict()
         
                 # clean up peers

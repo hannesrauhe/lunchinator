@@ -316,6 +316,18 @@ class LunchPeers(object):
             return set(self._idToIp[pID])
         return []
     
+    @peerGetter(needsID=True)
+    def getFirstPeerIP(self, pID):
+        """returns the first IP of a peer or of all peers if pID==None
+        @return: set
+        """
+        if pID == None:
+            return [ips[0] for ips in self._idToIp.values()]
+        
+        if pID in self._idToIp:
+            return [self._idToIp[pID][0]]
+        return []
+    
     @peerGetter()
     def isPeerReady(self, ip):
         """returns true if the peer identified by the given IP is ready for lunch"""
