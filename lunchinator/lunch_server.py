@@ -161,7 +161,8 @@ class lunch_server(object):
                 try:
                     xmsg, ip = self._recv_socket.recv()
                     try:
-                        plainMsg = xmsg.getPlainMessage()
+                        plainMsg = xmsg.getPlainMessage()                        
+                        getCoreLogger().debug("Received from %s: %s",ip,plainMsg)
                     except:
                         getCoreLogger().exception("There was an error when trying to parse a message from %s", ip)
                         continue
@@ -297,7 +298,13 @@ class lunch_server(object):
                     short = msg if len(msg)<15 else msg[:14]+"..."
                     getCoreLogger().debug("Sending %s to %s", short, ip.strip())
                     s.sendto(msg, ip.strip())
-                    i += 1
+                    i += 1                    
+                except socket.error as e:
+                    if e.errno in [64,65]:
+                        getCoreLogger().debug("lunch_socket: Removing IP because host is down or there is no route")
+                        self._peers.removePeerIPs([ip])
+                    else:
+                        getCoreLogger().warning("The following message could not be delivered to %s: %s", ip, msg, exc_info=1)
                 except Exception as e:
                     getCoreLogger().warning("The following message could not be delivered to %s: %s", ip, msg, exc_info=1)
         finally:

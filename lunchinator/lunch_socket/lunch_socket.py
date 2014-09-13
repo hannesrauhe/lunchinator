@@ -55,7 +55,6 @@ class lunchSocket(object):
             raise Exception("Cannot send. There is no open lunch socket")
         
         ip = ip.strip()
-        # TODO remove leading HELO_, never use HELOX for old-school messages (they won't become too long anyways)?
         
         if len(msg) > self._max_msg_length:                     
             if disable_extended:
@@ -70,24 +69,17 @@ class lunchSocket(object):
                     disable_extended = True
         else:
             disable_extended = True
-                
-        try:        
-            if disable_extended:
-                if len(msg) > self.LEGACY_MAX_LEN:
-                    raise Exception("Message too large to be send over socket in one piece")
-                else:
-                    self._s.sendto(msg.encode('utf-8'), (ip, self._port))
+                    
+        if disable_extended:
+            if len(msg) > self.LEGACY_MAX_LEN:
+                raise Exception("Message too large to be send over socket in one piece")
             else:
-                getCoreLogger().debug("Sending as extended Message")
-                xmsg = extMessageOutgoing(msg, self._max_msg_length)
-                for f in xmsg.getFragments():
-                    self._s.sendto(f, (ip, self._port))
-        except socket.error as e:
-            if e.errno in [64,65]:
-                getCoreLogger().debug("lunch_socket: Removing IP because host is down or there is no route")
-                self._peers.removePeerIPs([ip])
-            else:
-                raise
+                self._s.sendto(msg.encode('utf-8'), (ip, self._port))
+        else:
+            getCoreLogger().debug("Sending as extended Message")
+            xmsg = extMessageOutgoing(msg, self._max_msg_length)
+            for f in xmsg.getFragments():
+                self._s.sendto(f, (ip, self._port))
         
     def broadcast(self, msg):
         """
@@ -104,6 +96,7 @@ class lunchSocket(object):
                 for f in xmsg.getFragments():
                     self._s.sendto(f, ('255.255.255.255', self._port))
             else:
+                getCoreLogger().debug("Broadcasting")
                 self._s.sendto(msg.encode('utf-8'), ('255.255.255.255', self._port))
         except:
             getCoreLogger().warning("Problem while broadcasting", exc_info=1)
@@ -124,7 +117,7 @@ class lunchSocket(object):
         
         for _ in itertools.repeat(None, 5):
             try:
-                rawdata, addr = self._s.recvfrom(self.LEGACY_MAX_LEN)                
+                rawdata, addr = self._s.recvfrom(self.LEGACY_MAX_LEN) 
                 ip = unicode(addr[0])
                 
                 xmsg = extMessageIncoming(rawdata)
@@ -140,7 +133,7 @@ class lunchSocket(object):
                             self._incomplete_messages[(ip,s)] = (xmsg, time.time())
                             raise splitCall(ip, xmsg)
                         else:
-                            del self._incomplete_messages[(ip,s)]  
+                            del self._incomplete_messages[(ip,s)]
                 
                 return xmsg, ip
             except socket.error as e:
