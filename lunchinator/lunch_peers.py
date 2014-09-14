@@ -322,10 +322,10 @@ class LunchPeers(object):
         @return: set
         """
         if pID == None:
-            return [ips[0] for ips in self._idToIp.values()]
+            return [ips[-1] for ips in self._idToIp.values()]
         
         if pID in self._idToIp:
-            return [self._idToIp[pID][0]]
+            return [self._idToIp[pID][-1]]
         return []
     
     @peerGetter()
