@@ -76,10 +76,15 @@ class ConsoleWidget(QWidget):
             index = newSel.indexes()[0]
             record = self._records[index.row()]
             
+            try:
+                logMsg = convert_string(record.msg) % (unicode(v) for v in record.args)
+            except:
+                logMsg = convert_string(record.msg) + ', '.join(record.args)
+            
             msg = u"%s - In %s:%d: %s" % (strftime("%H:%M:%S", localtime(record.created)),
                                           record.pathname,
                                           record.lineno,
-                                          convert_string(record.msg) % record.args)
+                                          logMsg)
             if record.exc_info:
                 out = StringIO()
                 traceback.print_tb(record.exc_info[2], file=out)
@@ -114,7 +119,13 @@ class ConsoleWidget(QWidget):
         msg = record.msg
         if not isinstance(msg, basestring):
             msg = unicode(msg)
-        msg = convert_string(msg) % record.args
+        try:
+            msg = convert_string(msg) % record.args
+        except:
+            msg = u"(Error formatting log message) " +\
+             convert_string(msg) +\
+             ', '.join(unicode(v) for v in record.args)
+            
         dirname = os.path.dirname(record.pathname)
         source = u"%s:%d" % (os.path.join(os.path.basename(dirname), os.path.basename(record.pathname)), record.lineno)
         fullsource = u"%s:%d" % (record.pathname, record.lineno)

@@ -128,7 +128,7 @@ class LunchServerController(object):
             
             shouldProcess = PeerActions.get().shouldProcessMessage(action, category, peerID, self.getMainGUI(), msgData)
             
-            getCoreLogger().debug(u"%s peer action %s.%s from peer %s%s"
+            getCoreLogger().debug(u"%s peer action %s.%s from peer %s%s",
                               "Accept" if shouldProcess else "Reject",
                               action.getPluginName(), action.getName(),
                               peerID, ("" if category is None else " category " + category))
