@@ -105,7 +105,10 @@ class lunch_server(object):
         '''round robin I ask every peer for his peers, but one by one.
         (Sometimes the member asked is referred to as master)'''
         peers = self._peers.getPeers()
-        peers.remove(get_settings().get_ID())
+        try:
+            peers.remove(get_settings().get_ID())
+        except ValueError:
+            pass
         if len(peers) > self._peer_nr:
             self.call("HELO_REQUEST_DICT " + self._build_info_string(), peerIDs=[peers[self._peer_nr]])
         if len(peers):
