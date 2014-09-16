@@ -40,6 +40,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _processEvent = pyqtSignal(object, object, float, bool, bool)
     _processMessage = pyqtSignal(object, object, float, bool, bool)
     _updateRequested = pyqtSignal()
+    _openWindow = pyqtSignal()
     # -----------------------------
     
     def __init__(self): 
@@ -88,6 +89,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processEvent.connect(self.processEventSlot)
         self._processMessage.connect(self.processMessageSlot)
         self._updateRequested.connect(self.updateRequested)
+        self._openWindow.connect(self.openWindowClicked)
         
         get_notification_center().connectApplicationUpdate(self._appUpdateAvailable)
         get_notification_center().connectOutdatedRepositoriesChanged(self._outdatedReposChanged)

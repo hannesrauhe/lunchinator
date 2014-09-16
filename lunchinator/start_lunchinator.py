@@ -46,6 +46,8 @@ def parse_args():
                       help="Exits immediately with the stop exit code.")
     optionParser.add_option("-v", "--verbose", default=False, dest="verbose", action="store_true",
                       help="Enable DEBUG output (override setting).")
+    optionParser.add_option("-i", "--input", default=False, dest="input", action="store_true",
+                      help="send input to clients")
     return optionParser.parse_args()
 
 def trace(frame, event, _):
@@ -141,6 +143,13 @@ def startLunchinator():
         initLogger(options)
         get_settings().set_plugins_enabled(False)
         sendMessage(options.message, options.client)
+    elif options.input:
+        initLogger(options)
+        get_settings().set_plugins_enabled(False)
+        msg = sys.stdin.read()
+        #@todo options.client
+        if msg:
+            sendMessage("HELO_PIPE "+msg, "127.0.0.1")
     elif options.stop:
         initLogger(options)
         get_settings().set_plugins_enabled(False)
@@ -150,6 +159,11 @@ def startLunchinator():
         initLogger(options)
         req = getCoreDependencies()
         installDependencies(req)
+        
+        
+    #lunchinator starts in listening mode:
+    
+    
     elif options.cli:
         initLogger(options, defaultLogPath)
         usePlugins = checkDependencies(usePlugins)
@@ -178,7 +192,17 @@ def startLunchinator():
     else:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         
-        initLogger(options, defaultLogPath)    
+        try:
+            initLogger(options, defaultLogPath)
+        except os.error:
+            if platform.system()=="Windows":
+                #this usually means that the lunchinator is already started
+                initLogger(options)
+                sendMessage("HELO_OPEN_WINDOW please", "127.0.0.1")
+                sys.exit(0)
+            else:
+                raise
+                
         getCoreLogger().info("We are on %s, %s, version %s", platform.system(), platform.release(), platform.version())
         try:
             from PyQt4.QtCore import QThread            

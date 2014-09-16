@@ -60,7 +60,7 @@ class lunchSocket(object):
             if disable_extended:
                 getCoreLogger().warning("Message to peer %s is too long and should be compressed/split, " + \
                  "but extended message is disabled for this call", ip)   
-            else:
+            elif self._peers:
                 peerversion = self._peers.getPeerCommitCount(pIP = ip)
                 peerversion = peerversion if peerversion else 0
                 if peerversion < self.EXT_MSG_VERSION:                

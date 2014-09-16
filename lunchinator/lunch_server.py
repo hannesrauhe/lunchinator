@@ -174,6 +174,11 @@ class lunch_server(object):
                             getCoreLogger().info("Got Stop Command from localhost: %s", plainMsg)
                             self.running = False
                             self.exitCode = EXIT_CODE_STOP
+                        elif xmsg.getCommand() == "OPEN_WINDOW" and lunchinator_has_gui():
+                            self.controller._openWindow.emit()
+                        elif xmsg.getCommand() == "LOCAL_PIPE":
+                            getCoreLogger().debug("Relaying LOCAL_PIPE call")
+                            self.call_all_members("HELO_PIPE "+xmsg.getCommandPayload())
                         continue
                     
                     # first we save the timestamp of this contact, no matter what
