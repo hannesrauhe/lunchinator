@@ -629,6 +629,11 @@ class lunch_server(object):
             self.call("HELO_LOGFILE_TGZ %d %d" % (fileSize, other_tcp_port), peerIPs=[ip])
             self.controller.sendFile(ip, fileToSend.getvalue(), other_tcp_port, True)      
             
+        elif cmd == "PIPE":
+            #to hell, I am going to print this in the hope that this is ASCII art
+            if not lunchinator_has_gui():
+                print value
+            
     def _finish(self):
         getCoreLogger().info("%s - Stopping the lunch notifier service", strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"))
         self._peers.finish()

@@ -149,7 +149,7 @@ def startLunchinator():
         msg = sys.stdin.read()
         #@todo options.client
         if msg:
-            sendMessage("HELO_PIPE "+msg, "127.0.0.1")
+            sendMessage("HELO_LOCAL_PIPE "+msg, "127.0.0.1")
     elif options.stop:
         initLogger(options)
         get_settings().set_plugins_enabled(False)
