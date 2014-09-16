@@ -518,7 +518,7 @@ class ChatWidget(QWidget):
     
     @loggingSlot()        
     def eventTriggered(self):
-        if self.entry.toPlainText().length() is 0:
+        if self.entry.toPlainText().trimmed().length() is 0:
             return
         
         text = None
