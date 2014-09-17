@@ -94,7 +94,7 @@ class DownloadThread(QThread):
                     # no need to retry
                     break
             except:
-                self.logger.exception("Error while downloading %s", self.url)
+                self.logger.warning("Error while downloading %s", self.url)
                 self.error.emit(self, formatException())
                 break
 
