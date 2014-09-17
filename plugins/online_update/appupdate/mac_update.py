@@ -99,7 +99,7 @@ class MacUpdateHandler(GPGUpdateHandler):
         
     @loggingFunc
     def _install_gpg_finished(self, phase, dt, _):
-        self.install_gpg(phase + 1, dt)
+        self._installGPG(phase + 1, dt)
         
     @loggingFunc
     def _install_gpg_failed(self, phase, dt, err):
