@@ -95,6 +95,11 @@ class lunch_db(object):
         return self._execute(logger, query, wildcards, returnResults=True, commit=False, returnHeader=True)
     
     '''abstract methods - basic functionality'''   
+    def open(self, logger):
+        ''' this method is only called by iface_db_plugin::create_connection which is implemented by yourself
+        therefore this acts only as a reminder that you typically need the open function, but yours might have more parameters
+        '''
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
             
     def _execute(self, logger, query, wildcards, returnResults=True, commit=False, returnHeader=False):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
