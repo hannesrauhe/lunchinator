@@ -6,6 +6,7 @@ from lunchinator.log import loggingFunc
 class statistics(iface_called_plugin):
     def __init__(self):
         super(statistics, self).__init__()
+        self._db_ready_warning = False
         self.add_supported_dbms("SQLite Connection", statistics_sqlite)
         self.add_supported_dbms("SAP HANA Connection", statistics_hana)
     
@@ -15,9 +16,24 @@ class statistics(iface_called_plugin):
         get_notification_center().connectPeerUpdated(self.peer_update)
         
     def deactivate(self):
-        get_notification_center().disconnectPeerAppended(self.peer_update)
-        get_notification_center().disconnectPeerUpdated(self.peer_update)
+        try:
+            get_notification_center().disconnectPeerAppended(self.peer_update)
+            get_notification_center().disconnectPeerUpdated(self.peer_update)
+        except:
+            self.logger.warning("Problem while disconnecting signals", exc_info=1)
         iface_called_plugin.deactivate(self)    
+        
+    def is_db_ready(self):
+        if super(statistics, self).is_db_ready():
+            if self._db_ready_warning:
+                self.logger.warning("Database connection is ready now")
+                self._db_ready_warning = False
+            return True
+        else:
+            if not self._db_ready_warning:
+                self.logger.warning("Database connection is not ready")
+                self._db_ready_warning = True
+            return False
         
     def processes_events_immediately(self):
         return True
@@ -30,23 +46,17 @@ class statistics(iface_called_plugin):
         if self.is_db_ready():
             mtype = "lunch" if lunch_call else "msg"
             self.specialized_db_conn().insert_message(mtype, xmsg, ip, memberID)
-        else:
-            self.logger.warning("Statistics: DB not ready -- cannot process message")
     
     def process_command(self, xmsg, ip, member_info, _prep):
         memberID = member_info[u'ID'] if member_info else ip
         if self.is_db_ready():
             self.specialized_db_conn().insert_command(xmsg, ip, memberID)
-        else:
-            self.logger.warning("Statistics: DB not ready -- cannot process event")
             
     @loggingFunc
     def peer_update(self, _peerID, peerInfo):        
         if self.is_db_ready():
             self.specialized_db_conn().insert_members("ip", peerInfo["name"], \
                                  peerInfo["avatar"], peerInfo["next_lunch_begin"], peerInfo["next_lunch_end"])
-        else:
-            self.logger.warning("Statistics: DB not ready -- cannot store member data")
 
 class statistics_sqlite(db_for_plugin_iface):
     version_schema = "CREATE TABLE statistics_version (commit_count INTEGER, migrate_time INTEGER)"
