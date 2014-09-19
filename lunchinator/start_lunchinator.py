@@ -11,7 +11,8 @@ from lunchinator.log import getCoreLogger, initializeLogger
 from lunchinator.log.lunch_logger import setGlobalLoggingLevel
 from lunchinator.lunch_server import EXIT_CODE_STOP, EXIT_CODE_NO_QT
 from lunchinator.utilities import INSTALL_CANCEL, INSTALL_SUCCESS, INSTALL_FAIL, \
-    installDependencies, checkRequirements, handleMissingDependencies
+    installDependencies, checkRequirements, handleMissingDependencies,\
+    getPlatform, PLATFORM_MAC, isPyinstallerBuild
     
 
 def parse_args():
@@ -234,6 +235,16 @@ def startLunchinator():
             sys.exit(0)
         if options.showWindow:
             lanschi.openWindowClicked()
+            
+        if getPlatform() == PLATFORM_MAC and isPyinstallerBuild():
+            import AppKit
+            class MyDelegate(AppKit.AppKit.NSObject):
+                def applicationShouldHandleReopen_hasVisibleWindows_(self, _app, hasOpenWindow):
+                    if not hasOpenWindow:
+                        lanschi.openWindowClicked()
+            
+            delegate = MyDelegate.alloc().init()
+            AppKit.AppKit.NSApplication.sharedApplication().setDelegate_(delegate)
         
         # enable CRTL-C
         signal.signal(signal.SIGINT, partial(handleInterrupt, lanschi))
