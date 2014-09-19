@@ -698,7 +698,7 @@ class iface_gui_plugin(iface_plugin):
         """Override if plugin processes all (non-blocked) peer actions.""" 
         return False
         
-    def process_command(self, xmsg, ip, member_info, preprocessedData=None):
+    def process_command(self, xmsg, ip, peer_info, preprocessedData=None):
         """process extended Messages - can be signed
         @type xmsg: extMessageIncoming
         @type ip: unicode

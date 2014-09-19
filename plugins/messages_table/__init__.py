@@ -1,8 +1,29 @@
+from lunchinator import get_settings, get_server, get_notification_center, \
+        lunchinator_has_gui 
+from lunchinator.log import loggingFunc
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import get_settings, get_server, get_notification_center
+from lunchinator.peer_actions import PeerAction
+from lunchinator.utilities import getValidQtParent
 import sys
 from datetime import datetime, timedelta
-from lunchinator.log import loggingFunc
+
+class _PipeFileAction(PeerAction):
+    def getName(self):
+        return "Pipe Text File"
+    
+    def appliesToPeer(self, _peerID, _peerInfo):
+        return True
+    
+    def performAction(self, peerID, peerInfo, parent):
+        from PyQt4.QtGui import QFileDialog
+        fname = QFileDialog.getOpenFileName(parent, 'Pipe file')
+        
+        with open(fname, 'r') as f:        
+            data = f.read()
+        get_server().call("HELO_PIPE "+data, peerIDs=[peerID])
+    
+    def getMessagePrefix(self):
+        return "PIPE"
     
 class messages_table(iface_gui_plugin):
     def __init__(self):
@@ -78,3 +99,18 @@ class messages_table(iface_gui_plugin):
     
     def add_menu(self,menu):
         pass
+    
+    def get_peer_actions(self):
+        self._pfAction = _PipeFileAction()
+        return [self._pfAction]
+    
+    def process_command(self, xmsg, ip, peer_info, preprocessedData=None):
+        if xmsg.getCommand()=="PIPE":
+            data = xmsg.getCommandPayload()
+            if lunchinator_has_gui():
+                from PyQt4.QtGui import QMessageBox
+                QMessageBox.information(None, "Piped File from "+peer_info[u"name"], "<pre>%s</pre>"%data)
+            else:
+                print data
+                print "by "+peer_info[u"name"]
+            
