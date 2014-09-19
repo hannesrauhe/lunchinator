@@ -104,13 +104,13 @@ class lunch_server(object):
     def call_request_dict(self):
         '''round robin I ask every peer for his peers, but one by one.
         (Sometimes the member asked is referred to as master)'''
-        peers = self._peers.getPeers()
+        peers = self._peers.getFirstPeerIP()
         try:
-            peers.remove(get_settings().get_ID())
+            peers.remove(self._peers.getFirstPeerIP(get_settings().get_ID()))
         except ValueError:
             pass
         if len(peers) > self._peer_nr:
-            self.call("HELO_REQUEST_DICT " + self._build_info_string(), peerIDs=[peers[self._peer_nr]])
+            self.call("HELO_REQUEST_DICT " + self._build_info_string(), peerIPs=[peers[self._peer_nr]])
         if len(peers):
             self._peer_nr = (self._peer_nr + 1) % len(peers)            
     
