@@ -5,7 +5,7 @@ import socket, sys, os, json, contextlib, tarfile, platform, random
 from time import strftime, localtime, time
 from cStringIO import StringIO
 
-from lunchinator.log import getCoreLogger
+from lunchinator.log import getCoreLogger, newLogger
 from lunchinator.lunch_socket import lunchSocket, splitCall
 from lunchinator import get_settings, convert_string, get_notification_center, lunchinator_has_gui
 from lunchinator.logging_mutex import loggingMutex
@@ -38,11 +38,15 @@ class lunch_server(object):
         self.plugin_manager = None
         self._message_queues = {} # queues for messages from new peers
         self._last_messages = {} # last messages by peer ID, to avoid duplicates
+        self._send_logger = newLogger("Core Send")
+        self._recv_logger = newLogger("Core Recv")
         
         self.message_queues_lock = loggingMutex("message_queues", logging=get_settings().get_verbose())
         self.cached_messages_lock = loggingMutex("cached_messages", logging=get_settings().get_verbose())
         
         self.exitCode = 0  
+    
+        
         
     """ -------------------------- CALLED FROM MAIN THREAD -------------------------------- """
         
@@ -166,7 +170,7 @@ class lunch_server(object):
                     xmsg, ip = self._recv_socket.recv()
                     try:
                         plainMsg = xmsg.getPlainMessage()                        
-                        getCoreLogger().debug("Received from %s: %s",ip,plainMsg)
+                        self._recv_logger.info("From %s: %s",ip,plainMsg)
                     except:
                         getCoreLogger().exception("There was an error when trying to parse a message from %s", ip)
                         continue
@@ -207,7 +211,9 @@ class lunch_server(object):
                                 is_in_broadcast_mode = True
                                 getCoreLogger().info("seems like you are alone - broadcasting for others")
                             s_broad = lunchSocket(self._peers)
-                            s_broad.broadcast('HELO_REQUEST_INFO ' + self._build_info_string())
+                            msg = 'HELO_REQUEST_INFO ' + self._build_info_string()
+                            self._send_logger.info(msg)
+                            s_broad.broadcast(msg)
                             s_broad.close()
                             #forgotten peers may be on file
                             requests = self._peers.initPeersFromFile()
@@ -301,11 +307,12 @@ class lunch_server(object):
 
         i = 0
         s = lunchSocket(self._peers)
-        try:      
+        try:                  
+            self._send_logger.info(msg)
             for ip in target:
                 try:
                     short = msg if len(msg)<15 else msg[:14]+"..."
-                    getCoreLogger().debug("Sending %s to %s", short, ip.strip())
+                    self._send_logger.debug("To %s: %s", ip.strip(), short)
                     s.sendto(msg, ip.strip())
                     i += 1                    
                 except socket.error as e:
