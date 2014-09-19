@@ -1,6 +1,6 @@
 from PyQt4.QtGui import QItemDelegate, QStyleOptionComboBox, QStyle,\
     QApplication, QComboBox
-from PyQt4.QtCore import Qt, QSize
+from PyQt4.QtCore import Qt, QSize, pyqtSignal
 from lunchinator.log.logging_slot import loggingSlot
 from lunchinator import convert_string
 
@@ -34,13 +34,20 @@ class ComboboxDelegate(QItemDelegate):
     def getEditor(self):
         return self._editor
     
-    def editorClosing(self, _editor, _hint):
+    @loggingSlot()
+    def editorClosing(self):
         self._editor = None
     
     class OpeningComboBox(QComboBox):
+        hiding = pyqtSignal()
+        
         def showEvent(self, event):
             QComboBox.showEvent(self, event)
             self.showPopup()
+     
+        def hideEvent(self, event):
+            self.hiding.emit()
+            return QComboBox.hideEvent(self, event)
      
     def createEditor(self, parent, _option, index):
         editor = self.OpeningComboBox(parent)
@@ -54,7 +61,8 @@ class ComboboxDelegate(QItemDelegate):
             editor.setCurrentIndex(editor.findText(index.data(Qt.DisplayRole).toString(), Qt.MatchExactly))
             editor.currentIndexChanged.connect(self._commitEditor)
 
-        self._editor = editor            
+        self._editor = editor
+        self._editor.hiding.connect(self.editorClosing)            
         return editor
      
     @loggingSlot(int)

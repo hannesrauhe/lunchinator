@@ -356,6 +356,8 @@ class iface_plugin(IPlugin):
     
     def update_options_widget(self):
         """Called every time an options widget is displayed"""
+        if self.options is None:
+            return
         for o in self.options:
             choiceOptions = self._getChoiceOptions(o)
             if choiceOptions is not None and choiceOptions != self.option_choice[o]:

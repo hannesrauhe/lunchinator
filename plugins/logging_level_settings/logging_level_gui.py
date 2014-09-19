@@ -60,7 +60,6 @@ class LogLevelTable(QTreeView):
     def stopEditing(self):
         if self.itemDelegate().getEditor() != None:
             self.closeEditor(self.itemDelegate().getEditor(), ComboboxDelegate.NoHint)
-            self.itemDelegate().editorClosing(self.itemDelegate().getEditor(), ComboboxDelegate.NoHint)
     
     def mouseMoveEvent(self, event):
         event.ignore()
