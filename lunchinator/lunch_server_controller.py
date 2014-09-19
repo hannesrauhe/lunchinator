@@ -229,16 +229,23 @@ class LunchServerController(object):
         #deprecated:
         self.processPluginCall(addr, lambda p, ip, member_info: p.process_message(msg, ip, member_info), newPeer, fromQueue)
         
+        #the next block could be one huge statement, but for readability I leave it as is
         if get_settings().get_lunch_trigger() in msg.lower():
-            # check if we should process the lunch call
-            diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time(), getCoreLogger())
-            if diff == None or 0 < diff:
-                # either the time format is invalid or we are within the alarm time
-                if eventTime - self.last_lunch_call > get_settings().get_mute_timeout() or \
-                   fromQueue and self.last_lunch_call == eventTime:
-                    # either the lunch call is within a mute timeout or
-                    # this is a queued lunch call that previously wasn't muted
+            # the message contains the lunch keyword
+            if eventTime - self.last_lunch_call > get_settings().get_mute_timeout() or \
+               fromQueue and self.last_lunch_call == eventTime:
+                # it has not been reported before 
+                # the call has not been during the mute_timeout or
+                # this is a queued lunch call that previously wasn't muted
+                diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time(), getCoreLogger())
+                if diff == None or 0 < diff:
+                    # either the time format is invalid or we are within the alarm time
                     processLunchCall = True
+                else:
+                    diff = getTimeDifference(get_settings().get_next_lunch_begin(), get_settings().get_next_lunch_end(), getCoreLogger())
+                    if diff == None or 0 < diff:
+                        # either the time format is invalid or we are within the free for lunch time
+                        processLunchCall = True
             
             if processLunchCall:
                 self.last_lunch_call = eventTime
