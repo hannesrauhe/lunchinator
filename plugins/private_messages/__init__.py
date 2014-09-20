@@ -106,9 +106,9 @@ class private_messages(iface_gui_plugin):
     def activate(self):
         iface_gui_plugin.activate(self)
         if lunchinator_has_gui():
-            sendMessageAction = _SendMessageAction()
-            self._openChatAction = _OpenChatAction(sendMessageAction)
-            self._peerActions = [self._openChatAction, _BlockAction(sendMessageAction), sendMessageAction]
+            self._sendMessageAction = _SendMessageAction()
+            self._openChatAction = _OpenChatAction(self._sendMessageAction)
+            self._peerActions = [self._openChatAction, _BlockAction(self._sendMessageAction), self._sendMessageAction]
         else:
             self._peerActions = None
         
@@ -219,7 +219,7 @@ class private_messages(iface_gui_plugin):
     
     def _openChat(self, myName, otherName, myAvatar, otherAvatar, otherID):
         from private_messages.chat_window import ChatWindow
-        newWindow = ChatWindow(None, self.logger, myName, otherName, myAvatar, otherAvatar, otherID)
+        newWindow = ChatWindow(None, self.logger, myName, otherName, myAvatar, otherAvatar, otherID, self._sendMessageAction)
         newWindow.getChatWidget().setMarkdownEnabled(self.get_option(u"enable_markdown"))
         
         newWindow.windowClosing.connect(self._chatClosed)
