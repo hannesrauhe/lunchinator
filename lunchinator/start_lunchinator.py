@@ -49,6 +49,8 @@ def parse_args():
                       help="Enable DEBUG output (override setting).")
     optionParser.add_option("-i", "--input", default=False, dest="input", action="store_true",
                       help="send input to clients")
+    optionParser.add_option("--version", default=False, dest="version", action="store_true",
+                      help="Show Version and exit")
     return optionParser.parse_args()
 
 def trace(frame, event, _):
@@ -139,7 +141,11 @@ def startLunchinator():
     usePlugins = options.noPlugins
     defaultLogPath = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
     if options.exitWithStopCode:
-        sys.exit(EXIT_CODE_STOP)
+        sys.exit(EXIT_CODE_STOP)        
+    elif options.version:
+        initLogger(options)
+        print "Lunchinator",get_settings().get_version()
+        sys.exit(0)
     elif options.lunchCall or options.message != None:
         initLogger(options)
         get_settings().set_plugins_enabled(False)
