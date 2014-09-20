@@ -1,6 +1,6 @@
 # coding: utf-8
 from lunchinator import get_server, get_settings, convert_string,\
-    get_notification_center, get_plugin_manager
+    get_notification_center, get_plugin_manager, get_peers
 from lunchinator.log import getCoreLogger
 from lunchinator.datathread.dt_qthread import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
@@ -512,13 +512,17 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
             status = u"%s ready, %s not ready for lunch." % (ready, notReady)
         if everybodyReady and not self._highlightPeersReady:
-            self._highlightPeersReady = True
-            if get_settings().get_notification_if_everybody_ready():
-                displayNotification("Lunch Time",
-                                    "Everybody is ready for lunch now",
-                                    getCoreLogger(),
-                                    get_settings().get_resource("images", "lunchinator.png"))
-            self._highlightIcon()
+            # don't highlight if I am the only member
+            if len(readyMembers) > 1 or not get_peers().isMe(pID=iter(readyMembers).next()):
+                self._highlightPeersReady = True
+                if get_settings().get_notification_if_everybody_ready():
+                    displayNotification("Lunch Time",
+                                        "Everybody is ready for lunch now",
+                                        getCoreLogger(),
+                                        get_settings().get_resource("images", "lunchinator.png"))
+                self._highlightIcon()
+            else:
+                status = u"You are the only member."
         elif not everybodyReady and self._highlightPeersReady:
             self._highlightPeersReady = False
             self._highlightIcon()
