@@ -12,6 +12,7 @@ from lunchinator.logging_mutex import loggingMutex
 from collections import deque
 from threading import Timer
 from functools import partial
+from lunchinator.datathread.base import DataReceiverThreadBase
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -555,7 +556,8 @@ class lunch_server(object):
     def request_avatar(self, ip): 
         info = self._peers.getPeerInfo(pIP=ip)
         if info and u"avatar" in info and not os.path.exists(os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])):
-            self.call("HELO_REQUEST_AVATAR " + str(self.controller.getOpenTCPPort(ip)), peerIPs=[ip])  
+            openPort = DataReceiverThreadBase.getOpenPort(category="avatar%s" % ip)
+            self.call("HELO_REQUEST_AVATAR " + str(openPort), peerIPs=[ip])  
             return True
         return False   
       

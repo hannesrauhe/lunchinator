@@ -72,14 +72,9 @@ class LunchServerController(object):
                 except:
                     getCoreLogger().exception(u"plugin error in %s while extending member info" % pluginInfo.name)
     
-    def getOpenTCPPort(self, senderIP):
-        return DataReceiverThread.getOpenPort(category="avatar%s" % senderIP)
-    
     def receiveFile(self, ip, fileSize, fileName, tcp_port, successFunc=None, errorFunc=None):
-        if tcp_port == 0:
-            tcp_port = self.getOpenTCPPort(ip)
         getCoreLogger().info("Receiving file of size %d on port %d", fileSize, tcp_port)
-        dr = DataReceiverThread.receiveSingleFile(ip, fileName, fileSize, tcp_port, getCoreLogger(), None, True, successFunc, errorFunc)
+        dr = DataReceiverThread.receiveSingleFile(ip, fileName, fileSize, tcp_port, getCoreLogger(), "avatar%s" % ip, True, successFunc, errorFunc)
         dr.start()
     
     def sendFile(self, ip, fileOrData, otherTCPPort, isData=False):
