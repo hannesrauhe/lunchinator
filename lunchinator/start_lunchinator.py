@@ -49,6 +49,8 @@ def parse_args():
                       help="Enable DEBUG output (override setting).")
     optionParser.add_option("-i", "--input", default=False, dest="input", action="store_true",
                       help="send input to clients")
+    optionParser.add_option("-o", "--output", default=False, dest="output", action="store_true",
+                      help="same as --no-gui --no-plugins - ideal for displaying piped content")
     optionParser.add_option("--version", default=False, dest="version", action="store_true",
                       help="Show Version and exit")
     return optionParser.parse_args()
@@ -137,8 +139,12 @@ def initLogger(options, path=None):
 
 def startLunchinator():
     (options, _args) = parse_args()
-    
     usePlugins = options.noPlugins
+    if options.output:      
+        options.cli = False  
+        options.nogui = True
+        usePlugins = False
+        
     defaultLogPath = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
     if options.exitWithStopCode:
         sys.exit(EXIT_CODE_STOP)        
