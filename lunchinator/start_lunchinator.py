@@ -139,11 +139,12 @@ def initLogger(options, path=None):
 
 def startLunchinator():
     (options, _args) = parse_args()
+    #@todo: using the variable "usePlugins" this way is confusing - refactor later
     usePlugins = options.noPlugins
     if options.output:      
         options.cli = False  
-        options.nogui = True
-        usePlugins = False
+        options.noGui = True
+        usePlugins = True #<- means do NOT use plugins
         
     defaultLogPath = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
     if options.exitWithStopCode:
