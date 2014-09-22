@@ -134,7 +134,10 @@ class TwitterDownloadThread(Thread):
                     self.announce_pic(account_name, urls[0])
                     self._old_pic_urls[account_name]=urls[0]
             except twitter.TwitterError as t:
-                self.logger.error("Twitter: Error while trying to retrieve pics from %s: %s", account_name,str(t))
+                if t[0][u'code']==88:
+                    raise
+                else:  
+                    self.logger.error("Twitter: Error while trying to retrieve pics from %s: %s", account_name,str(t))
                 
     def _find_remote_calls(self):
         import twitter
@@ -165,23 +168,35 @@ class TwitterDownloadThread(Thread):
                     get_server().call("Remote call by @%s: %s"%(s_name,m.GetText()))
                     self._twitter_api.PostUpdate(u"@"+s_name+u" OK, I forwarded your message", m.GetId())
             except twitter.TwitterError as t:
-                self.logger.error("Twitter: Error while trying to retrieve mentions %s", str(t))   
+                if t[0][u'code']==88:
+                    raise
+                else:
+                    self.logger.error("Twitter: Error while trying to retrieve mentions %s", str(t))   
         
                 
-    def run(self):        
-        while not self._stop_event.isSet():
+    def run(self):
+        import twitter  
+        while not self._stop_event.isSet():            
             if None==self._twitter_api:
+                self._stop_event.wait(self._polling_time) 
                 continue
-            self.logger.debug("Polling Twitter now")
-            for account_name in self._screen_names:
-                try:
-                    self._get_pics_from_account(account_name)
-                except:
-                    self.logger.exception("Twitter: Error while accessing twitter timeline of user %s",account_name)
             
-            self._find_remote_calls()  
+            poll_time = self._polling_time
+            self.logger.debug("Polling Twitter now")
+            try:
+                for account_name in self._screen_names:
+                    try:
+                        self._get_pics_from_account(account_name)
+                    except:
+                        self.logger.exception("Twitter: Error while accessing twitter timeline of user %s",account_name)
+                
+                self._find_remote_calls()  
+            except twitter.TwitterError as t:
+                self.logger.warning("Twitter: Rate limit exceeded. Waiting 15 min: %s", str(t))
+                poll_time = 60*15
+                
             #returns None on Python 2.6
-            self._stop_event.wait(self._polling_time)      
+            self._stop_event.wait(poll_time)      
         
 
 class twitter_lunch(iface_called_plugin):
