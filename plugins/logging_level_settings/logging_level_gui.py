@@ -130,7 +130,7 @@ class LoggingLevelGUI(QWidget):
         
     def _setGlobalLevel(self, globalLevel):
         globalLevelText = LogLevelModel._LEVEL_TEXT[globalLevel]
-        self._globalLevelCombo.setCurrentIndex(self._globalLevelCombo.findText(globalLevelText, flags=Qt.MatchExactly))
+        self._globalLevelCombo.setCurrentIndex(self._globalLevelCombo.findText(globalLevelText, Qt.MatchExactly))
         
     def getGlobalLevelText(self):
         return convert_string(self._globalLevelCombo.currentText())
