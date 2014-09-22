@@ -1,8 +1,11 @@
+from lunchinator import get_settings, get_server, get_notification_center, \
+        lunchinator_has_gui 
+from lunchinator.log import loggingFunc
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import get_settings, get_server, get_notification_center
+from lunchinator.peer_actions import PeerAction
+from lunchinator.utilities import getValidQtParent
 import sys
 from datetime import datetime, timedelta
-from lunchinator.log import loggingFunc
     
 class messages_table(iface_gui_plugin):
     def __init__(self):
@@ -76,5 +79,4 @@ class messages_table(iface_gui_plugin):
         
         return self.messagesTable
     
-    def add_menu(self,menu):
-        pass
+            

@@ -11,7 +11,8 @@ from lunchinator.log import getCoreLogger, initializeLogger
 from lunchinator.log.lunch_logger import setGlobalLoggingLevel
 from lunchinator.lunch_server import EXIT_CODE_STOP, EXIT_CODE_NO_QT
 from lunchinator.utilities import INSTALL_CANCEL, INSTALL_SUCCESS, INSTALL_FAIL, \
-    installDependencies, checkRequirements, handleMissingDependencies
+    installDependencies, checkRequirements, handleMissingDependencies,\
+    getPlatform, PLATFORM_MAC, isPyinstallerBuild
     
 
 def parse_args():
@@ -46,6 +47,12 @@ def parse_args():
                       help="Exits immediately with the stop exit code.")
     optionParser.add_option("-v", "--verbose", default=False, dest="verbose", action="store_true",
                       help="Enable DEBUG output (override setting).")
+    optionParser.add_option("-i", "--input", default=False, dest="input", action="store_true",
+                      help="send input to clients")
+    optionParser.add_option("-o", "--output", default=False, dest="output", action="store_true",
+                      help="same as --no-gui --no-plugins - ideal for displaying piped content")
+    optionParser.add_option("--version", default=False, dest="version", action="store_true",
+                      help="Show Version and exit")
     return optionParser.parse_args()
 
 def trace(frame, event, _):
@@ -132,15 +139,30 @@ def initLogger(options, path=None):
 
 def startLunchinator():
     (options, _args) = parse_args()
-    
     usePlugins = options.noPlugins
+    if options.output:      
+        options.cli = False  
+        options.nogui = True
+        usePlugins = False
+        
     defaultLogPath = os.path.join(MAIN_CONFIG_DIR, "lunchinator.log")
     if options.exitWithStopCode:
-        sys.exit(EXIT_CODE_STOP)
+        sys.exit(EXIT_CODE_STOP)        
+    elif options.version:
+        initLogger(options)
+        print "Lunchinator",get_settings().get_version()
+        sys.exit(0)
     elif options.lunchCall or options.message != None:
         initLogger(options)
         get_settings().set_plugins_enabled(False)
         sendMessage(options.message, options.client)
+    elif options.input:
+        initLogger(options)
+        get_settings().set_plugins_enabled(False)
+        msg = sys.stdin.read()
+        #@todo options.client
+        if msg:
+            sendMessage("HELO_LOCAL_PIPE "+msg, "127.0.0.1")
     elif options.stop:
         initLogger(options)
         get_settings().set_plugins_enabled(False)
@@ -150,6 +172,11 @@ def startLunchinator():
         initLogger(options)
         req = getCoreDependencies()
         installDependencies(req)
+        
+        
+    #lunchinator starts in listening mode:
+    
+    
     elif options.cli:
         initLogger(options, defaultLogPath)
         usePlugins = checkDependencies(usePlugins)
@@ -178,7 +205,17 @@ def startLunchinator():
     else:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         
-        initLogger(options, defaultLogPath)    
+        try:
+            initLogger(options, defaultLogPath)
+        except os.error:
+            if platform.system()=="Windows":
+                #this usually means that the lunchinator is already started
+                initLogger(options)
+                sendMessage("HELO_OPEN_WINDOW please", "127.0.0.1")
+                sys.exit(0)
+            else:
+                raise
+                
         getCoreLogger().info("We are on %s, %s, version %s", platform.system(), platform.release(), platform.version())
         try:
             from PyQt4.QtCore import QThread            
@@ -210,6 +247,16 @@ def startLunchinator():
             sys.exit(0)
         if options.showWindow:
             lanschi.openWindowClicked()
+            
+        if getPlatform() == PLATFORM_MAC and isPyinstallerBuild():
+            import AppKit
+            class MyDelegate(AppKit.AppKit.NSObject):
+                def applicationShouldHandleReopen_hasVisibleWindows_(self, _app, hasOpenWindow):
+                    if not hasOpenWindow:
+                        lanschi.openWindowClicked()
+            
+            delegate = MyDelegate.alloc().init()
+            AppKit.AppKit.NSApplication.sharedApplication().setDelegate_(delegate)
         
         # enable CRTL-C
         signal.signal(signal.SIGINT, partial(handleInterrupt, lanschi))

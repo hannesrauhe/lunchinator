@@ -22,6 +22,7 @@ from functools import partial
 from time import time
 from lunchinator.utilities import formatException, isPyinstallerBuild, getPlatform, PLATFORM_WINDOWS
 from private_messages.index_set import IndexSet
+from lunchinator.privacy.privacy_settings import PrivacySettings
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -65,13 +66,17 @@ class ChatWidget(QWidget):
     typing = pyqtSignal()
     cleared = pyqtSignal()
         
-    def __init__(self, parent, logger, ownName, otherName, ownPicFile, otherPicFile, otherID):
+    def __init__(self, parent, logger, ownName, otherName, ownPicFile, otherPicFile, otherID, sendAction):
         super(ChatWidget, self).__init__(parent)
         
         self.logger = logger
         self._firstShowEvent = True
         
         self._offline = False
+        if sendAction is not None:
+            self._blocked = sendAction.getPeerState(otherID) == PrivacySettings.STATE_BLOCKED
+        else:
+            self._blocked = False
         self._delivering = False
         self._lastTimeRow = 0
         self._textChanged = False
@@ -92,6 +97,8 @@ class ChatWidget(QWidget):
         
         self._otherName = otherName
         self._ownName = ownName
+        
+        self._sendAction = sendAction
         
         self._errIcon = None
         self._warnIcon = None
@@ -139,6 +146,7 @@ class ChatWidget(QWidget):
         get_notification_center().connectPeerRemoved(self._peerRemoved)
         get_notification_center().connectAvatarChanged(self._avatarChanged)
         get_notification_center().connectDisplayedPeerNameChanged(self._displayedPeerNameChanged)
+        get_notification_center().connectPrivacySettingsChanged(self._privacySettingsChanged)
         
         if get_peers() != None:
             self._setOffline(not get_peers().isPeerID(pID=self._otherID))
@@ -200,10 +208,12 @@ class ChatWidget(QWidget):
     def _updateOtherName(self):
         if self._offline:
             title = self._otherName + " (Offline)"
+        elif self._blocked:
+            title = self._otherName + " (Blocked)"
         else:
             title = self._otherName
             
-        self._otherPicLabel.setEnabled(not self._offline)
+        self._otherPicLabel.setEnabled(not self._offline and not self._blocked)
         self._otherNameLabel.setText(title)
         self.parent().setWindowTitle(title)
         self._checkEntryState()
@@ -245,16 +255,30 @@ class ChatWidget(QWidget):
             self._ownName = newName
             self._updateOwnName()
         
+    @loggingSlot(object, object)
+    def _privacySettingsChanged(self, pluginName, actionName):
+        if self._sendAction is None:
+            return
+        if pluginName == self._sendAction.getPluginName() and \
+           actionName == self._sendAction.getName():
+            blocked = self._sendAction.getPeerState(self._otherID) == PrivacySettings.STATE_BLOCKED
+            if blocked != self._blocked:
+                self._blocked = blocked
+                self._updateOtherName()
+        
     def _clearEntry(self):
         self.entry.clear()
         self.entry.setCurrentCharFormat(QTextCharFormat())
         
     def _checkEntryState(self):
-        self.entry.setEnabled(not self._offline and not self._delivering)
-        if self._offline:
+        self.entry.setEnabled(not self._offline and not self._delivering and not self._blocked)
+        if self._offline or self._blocked:
             if self.entry.document().isEmpty():
                 self._clearEntry()
-                self.entry.setText(u"Partner is offline")
+                if self._offline:
+                    self.entry.setText(u"Partner is offline")
+                else:
+                    self.entry.setText(u"Partner is blocked")
             else:
                 self._keepEntryText = True
         elif self._delivering:
@@ -263,7 +287,7 @@ class ChatWidget(QWidget):
         elif not self._keepEntryText:
             self._clearEntry()
             
-        if self._keepEntryText and not self._offline:
+        if self._keepEntryText and (not self._offline and not self._blocked):
             # reset if not offline any more
             self._keepEntryText = False
         
@@ -392,7 +416,7 @@ class ChatWidget(QWidget):
             self._otherWasTyping = False
             
     def _informTyping(self):
-        if not self._offline:
+        if not self._offline and not self._blocked:
             self.typing.emit()
         
     def _informCleared(self):
@@ -518,7 +542,7 @@ class ChatWidget(QWidget):
     
     @loggingSlot()        
     def eventTriggered(self):
-        if self.entry.toPlainText().length() is 0:
+        if self.entry.toPlainText().trimmed().length() is 0:
             return
         
         text = None
@@ -630,7 +654,7 @@ if __name__ == '__main__':
     def createTable(window):
         ownIcon = get_settings().get_resource("images", "me.png")
         otherIcon = get_settings().get_resource("images", "lunchinator.png")
-        tw = ChatWidget(window, getCoreLogger(), "Me", "Other Guy", ownIcon, otherIcon, "ID")
+        tw = ChatWidget(window, getCoreLogger(), "Me", "Other Guy", ownIcon, otherIcon, "ID", None)
         tw.setMarkdownEnabled(True)
         
         tw.addOwnMessage(0, time(),

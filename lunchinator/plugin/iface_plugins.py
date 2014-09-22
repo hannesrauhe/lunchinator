@@ -398,6 +398,8 @@ class iface_plugin(IPlugin):
     
     def update_options_widget(self):
         """Called every time an options widget is displayed"""
+        if self.options is None:
+            return
         for o in self.options:
             choiceOptions = self._getChoiceOptions(o)
             if choiceOptions is not None and choiceOptions != self.option_choice[o]:
@@ -738,7 +740,7 @@ class iface_gui_plugin(iface_plugin):
         """Override if plugin processes all (non-blocked) peer actions.""" 
         return False
         
-    def process_command(self, xmsg, ip, member_info, preprocessedData=None):
+    def process_command(self, xmsg, ip, peer_info, preprocessedData=None):
         """process extended Messages - can be signed
         @type xmsg: extMessageIncoming
         @type ip: unicode

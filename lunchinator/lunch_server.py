@@ -5,13 +5,14 @@ import socket, sys, os, json, contextlib, tarfile, platform, random
 from time import strftime, localtime, time
 from cStringIO import StringIO
 
-from lunchinator.log import getCoreLogger
+from lunchinator.log import getCoreLogger, newLogger
 from lunchinator.lunch_socket import lunchSocket, splitCall
 from lunchinator import get_settings, convert_string, get_notification_center, lunchinator_has_gui
 from lunchinator.logging_mutex import loggingMutex
 from collections import deque
 from threading import Timer
 from functools import partial
+from lunchinator.datathread.base import DataReceiverThreadBase
 
 EXIT_CODE_ERROR = 1
 EXIT_CODE_UPDATE = 2
@@ -38,11 +39,15 @@ class lunch_server(object):
         self.plugin_manager = None
         self._message_queues = {} # queues for messages from new peers
         self._last_messages = {} # last messages by peer ID, to avoid duplicates
+        self._send_logger = newLogger("Core Send")
+        self._recv_logger = newLogger("Core Recv")
         
         self.message_queues_lock = loggingMutex("message_queues", logging=get_settings().get_verbose())
         self.cached_messages_lock = loggingMutex("cached_messages", logging=get_settings().get_verbose())
         
         self.exitCode = 0  
+    
+        
         
     """ -------------------------- CALLED FROM MAIN THREAD -------------------------------- """
         
@@ -84,27 +89,31 @@ class lunch_server(object):
     def call_info(self, peerIPs=[]):
         '''An info call informs a peer about my name etc...    by default to every peer'''
         if 0 == len(peerIPs):
-            peerIPs = self._peers.getPeerIPs()
+            peerIPs = self._peers.getFirstPeerIP()
         return self.call("HELO_INFO " + self._build_info_string(), peerIPs=peerIPs)  
   
     def call_request_info(self, peerIPs=[]):
         '''Similar to a info call but also request information from the peer
         by default to every/from every peer'''
         if 0 == len(peerIPs):
-            peerIPs = self._peers.getPeerIPs()
+            peerIPs = self._peers.getFirstPeerIP()
         return self.call("HELO_REQUEST_INFO " + self._build_info_string(), peerIPs=peerIPs)
     
     def call_dict(self, ip):  
         '''Sends the information about my peers to one peer identified by its IP at a time'''      
         peers_dict = {}
-        for pIP in self._peers.getPeerIPs():
+        for pIP in self._peers.getFirstPeerIP():
             peers_dict[pIP] = self._peers.getRealPeerName(pIP=pIP)
         self.call("HELO_DICT " + json.dumps(peers_dict), peerIPs=[ip]) 
         
     def call_request_dict(self):
         '''round robin I ask every peer for his peers, but one by one.
         (Sometimes the member asked is referred to as master)'''
-        peers = self._peers.getPeerIPs()
+        peers = self._peers.getFirstPeerIP()
+        try:
+            peers.remove(self._peers.getFirstPeerIP(get_settings().get_ID()))
+        except ValueError:
+            pass
         if len(peers) > self._peer_nr:
             self.call("HELO_REQUEST_DICT " + self._build_info_string(), peerIPs=[peers[self._peer_nr]])
         if len(peers):
@@ -112,7 +121,7 @@ class lunch_server(object):
     
     def changeGroup(self, _newgroup):
         """Call get_setting().set_group(...) to change the group programatically."""
-        peerIPs = self._peers.getPeerIPs() 
+        peerIPs = self._peers.getFirstPeerIP() 
         self.call("HELO_LEAVE Changing Group")
         self._peers.removeMembersByIP()
         self.call_request_info(peerIPs) #call stored peerIPs, otherwise I forget myself after the Leave Call
@@ -161,7 +170,8 @@ class lunch_server(object):
                 try:
                     xmsg, ip = self._recv_socket.recv()
                     try:
-                        plainMsg = xmsg.getPlainMessage()
+                        plainMsg = xmsg.getPlainMessage()                        
+                        self._recv_logger.info("From %s: %s",ip,plainMsg)
                     except:
                         getCoreLogger().exception("There was an error when trying to parse a message from %s", ip)
                         continue
@@ -172,6 +182,11 @@ class lunch_server(object):
                             getCoreLogger().info("Got Stop Command from localhost: %s", plainMsg)
                             self.running = False
                             self.exitCode = EXIT_CODE_STOP
+                        elif xmsg.getCommand() == "OPEN_WINDOW" and lunchinator_has_gui():
+                            self.controller._openWindow.emit()
+                        elif xmsg.getCommand() == "LOCAL_PIPE":
+                            getCoreLogger().debug("Relaying LOCAL_PIPE call")
+                            self.call_all_members("HELO_PIPE "+xmsg.getCommandPayload())
                         continue
                     
                     # first we save the timestamp of this contact, no matter what
@@ -197,7 +212,9 @@ class lunch_server(object):
                                 is_in_broadcast_mode = True
                                 getCoreLogger().info("seems like you are alone - broadcasting for others")
                             s_broad = lunchSocket(self._peers)
-                            s_broad.broadcast('HELO_REQUEST_INFO ' + self._build_info_string())
+                            msg = 'HELO_REQUEST_INFO ' + self._build_info_string()
+                            self._send_logger.info(msg)
+                            s_broad.broadcast(msg)
                             s_broad.close()
                             #forgotten peers may be on file
                             requests = self._peers.initPeersFromFile()
@@ -243,15 +260,15 @@ class lunch_server(object):
         both peerIDs and peerIPs should be sets
         Used also by start_lunchinator to send messages without initializing
         the whole lunch server."""     
-        msg = convert_string(msg) # TODO no unicode here?
+        msg = convert_string(msg) # make sure, msg is unicode
         target = []
         
         if len(peerIDs) == 0 and len(peerIPs) == 0:
-            target = self._peers.getPeerIPs()
+            target = self._peers.getFirstPeerIP()
         else:
             target = peerIPs
             for pID in peerIDs:
-                pIPs = self._peers.getPeerIPs(pID=pID)
+                pIPs = self._peers.getFirstPeerIP(pID=pID)
                 if len(pIPs):
                     target = target.union(pIPs)
                 else:
@@ -291,13 +308,20 @@ class lunch_server(object):
 
         i = 0
         s = lunchSocket(self._peers)
-        try:      
+        try:                  
+            self._send_logger.info(msg)
             for ip in target:
                 try:
                     short = msg if len(msg)<15 else msg[:14]+"..."
-                    getCoreLogger().debug("Sending %s to %s", short, ip.strip())
+                    self._send_logger.debug("To %s: %s", ip.strip(), short)
                     s.sendto(msg, ip.strip())
-                    i += 1
+                    i += 1                    
+                except socket.error as e:
+                    if e.errno in [64,65]:
+                        getCoreLogger().debug("lunch_socket: Removing IP because host is down or there is no route")
+                        self._peers.removePeerIPs([ip])
+                    else:
+                        getCoreLogger().warning("The following message could not be delivered to %s: %s", ip, msg, exc_info=1)
                 except Exception as e:
                     getCoreLogger().warning("The following message could not be delivered to %s: %s", ip, msg, exc_info=1)
         finally:
@@ -319,7 +343,7 @@ class lunch_server(object):
             getCoreLogger().debug("clean up thread runs")
             try:
                 # it's time to announce my name again and switch the master
-                self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getPeerIPs())
+                self.call("HELO " + get_settings().get_user_name(), peerIPs=self._peers.getFirstPeerIP())
                 self.call_request_dict()
         
                 # clean up peers
@@ -532,7 +556,8 @@ class lunch_server(object):
     def request_avatar(self, ip): 
         info = self._peers.getPeerInfo(pIP=ip)
         if info and u"avatar" in info and not os.path.exists(os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])):
-            self.call("HELO_REQUEST_AVATAR " + str(self.controller.getOpenTCPPort(ip)), peerIPs=[ip])  
+            openPort = DataReceiverThreadBase.getOpenPort(category="avatar%s" % ip)
+            self.call("HELO_REQUEST_AVATAR " + str(openPort), peerIPs=[ip])  
             return True
         return False   
       
@@ -612,6 +637,11 @@ class lunch_server(object):
             getCoreLogger().info("Sending file of size %d to %s : %d", fileSize, str(ip), other_tcp_port)
             self.call("HELO_LOGFILE_TGZ %d %d" % (fileSize, other_tcp_port), peerIPs=[ip])
             self.controller.sendFile(ip, fileToSend.getvalue(), other_tcp_port, True)      
+            
+        elif cmd == "PIPE":
+            #to hell, I am going to print this in the hope that this is ASCII art
+            if not lunchinator_has_gui():
+                print value
             
     def _finish(self):
         getCoreLogger().info("%s - Stopping the lunch notifier service", strftime("%a, %d %b %Y %H:%M:%S", localtime()).decode("utf-8"))

@@ -72,14 +72,9 @@ class LunchServerController(object):
                 except:
                     getCoreLogger().exception(u"plugin error in %s while extending member info" % pluginInfo.name)
     
-    def getOpenTCPPort(self, senderIP):
-        return DataReceiverThread.getOpenPort(category="avatar%s" % senderIP)
-    
     def receiveFile(self, ip, fileSize, fileName, tcp_port, successFunc=None, errorFunc=None):
-        if tcp_port == 0:
-            tcp_port = self.getOpenTCPPort(ip)
         getCoreLogger().info("Receiving file of size %d on port %d", fileSize, tcp_port)
-        dr = DataReceiverThread.receiveSingleFile(ip, fileName, fileSize, tcp_port, getCoreLogger(), None, True, successFunc, errorFunc)
+        dr = DataReceiverThread.receiveSingleFile(ip, fileName, fileSize, tcp_port, getCoreLogger(), "avatar%s" % ip, True, successFunc, errorFunc)
         dr.start()
     
     def sendFile(self, ip, fileOrData, otherTCPPort, isData=False):
@@ -128,7 +123,7 @@ class LunchServerController(object):
             
             shouldProcess = PeerActions.get().shouldProcessMessage(action, category, peerID, self.getMainGUI(), msgData)
             
-            getCoreLogger().debug(u"%s peer action %s.%s from peer %s%s"
+            getCoreLogger().debug(u"%s peer action %s.%s from peer %s%s",
                               "Accept" if shouldProcess else "Reject",
                               action.getPluginName(), action.getName(),
                               peerID, ("" if category is None else " category " + category))
@@ -229,16 +224,23 @@ class LunchServerController(object):
         #deprecated:
         self.processPluginCall(addr, lambda p, ip, member_info: p.process_message(msg, ip, member_info), newPeer, fromQueue)
         
+        #the next block could be one huge statement, but for readability I leave it as is
         if get_settings().get_lunch_trigger() in msg.lower():
-            # check if we should process the lunch call
-            diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time(), getCoreLogger())
-            if diff == None or 0 < diff:
-                # either the time format is invalid or we are within the alarm time
-                if eventTime - self.last_lunch_call > get_settings().get_mute_timeout() or \
-                   fromQueue and self.last_lunch_call == eventTime:
-                    # either the lunch call is within a mute timeout or
-                    # this is a queued lunch call that previously wasn't muted
+            # the message contains the lunch keyword
+            if eventTime - self.last_lunch_call > get_settings().get_mute_timeout() or \
+               fromQueue and self.last_lunch_call == eventTime:
+                # it has not been reported before 
+                # the call has not been during the mute_timeout or
+                # this is a queued lunch call that previously wasn't muted
+                diff = getTimeDifference(get_settings().get_alarm_begin_time(), get_settings().get_alarm_end_time(), getCoreLogger())
+                if diff == None or 0 < diff:
+                    # either the time format is invalid or we are within the alarm time
                     processLunchCall = True
+                else:
+                    diff = getTimeDifference(get_settings().get_next_lunch_begin(), get_settings().get_next_lunch_end(), getCoreLogger())
+                    if diff == None or 0 < diff:
+                        # either the time format is invalid or we are within the free for lunch time
+                        processLunchCall = True
             
             if processLunchCall:
                 self.last_lunch_call = eventTime

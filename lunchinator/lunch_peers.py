@@ -316,6 +316,18 @@ class LunchPeers(object):
             return set(self._idToIp[pID])
         return []
     
+    @peerGetter(needsID=True)
+    def getFirstPeerIP(self, pID):
+        """returns the first IP of a peer or of all peers if pID==None
+        @return: set
+        """
+        if pID == None:
+            return [ips[-1] for ips in self._idToIp.values()]
+        
+        if pID in self._idToIp:
+            return [self._idToIp[pID][-1]]
+        return []
+    
     @peerGetter()
     def isPeerReady(self, ip):
         """returns true if the peer identified by the given IP is ready for lunch"""
@@ -536,7 +548,8 @@ class LunchPeers(object):
             self._idToIp.pop(pID)
             get_notification_center().emitPeerRemoved(pID)
         else:
-            get_notification_center().emitPeerUpdated(pID, deepcopy(self._peer_info[ip]))
+            existing_ip = self._idToIp[pID][0]
+            get_notification_center().emitPeerUpdated(pID, deepcopy(self._peer_info[existing_ip]))
      
     def _addPeerIPtoID(self, pID, ip):       
         if pID not in self._idToIp:

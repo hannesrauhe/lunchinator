@@ -46,7 +46,7 @@ class MacUpdateHandler(GPGUpdateHandler):
                 self._ui.setInteractive(False)
                 
                 self._setStatus("Searching for latest version...")
-                dt = DownloadThread(getValidQtParent(), self.logger, "https://releases.gpgtools.org/nightlies/macgpg2/appcast.xml")
+                dt = DownloadThread(getValidQtParent(), self.logger, "https://gpgtools.org/releases/macgpg2/appcast.xml")
                 dt.success.connect(partial(self._install_gpg_finished, 0))
                 dt.error.connect(partial(self._install_gpg_failed, 0))
                 dt.start()
@@ -99,7 +99,7 @@ class MacUpdateHandler(GPGUpdateHandler):
         
     @loggingFunc
     def _install_gpg_finished(self, phase, dt, _):
-        self.install_gpg(phase + 1, dt)
+        self._installGPG(phase + 1, dt)
         
     @loggingFunc
     def _install_gpg_failed(self, phase, dt, err):

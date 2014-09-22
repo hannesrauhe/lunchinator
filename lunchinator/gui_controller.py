@@ -1,6 +1,6 @@
 # coding: utf-8
 from lunchinator import get_server, get_settings, convert_string,\
-    get_notification_center, get_plugin_manager
+    get_notification_center, get_plugin_manager, get_peers
 from lunchinator.log import getCoreLogger
 from lunchinator.datathread.dt_qthread import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
@@ -40,6 +40,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _processEvent = pyqtSignal(object, object, float, bool, bool)
     _processMessage = pyqtSignal(object, object, float, bool, bool)
     _updateRequested = pyqtSignal()
+    _openWindow = pyqtSignal()
     # -----------------------------
     
     def __init__(self): 
@@ -88,6 +89,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processEvent.connect(self.processEventSlot)
         self._processMessage.connect(self.processMessageSlot)
         self._updateRequested.connect(self.updateRequested)
+        self._openWindow.connect(self.openWindowClicked)
         
         get_notification_center().connectApplicationUpdate(self._appUpdateAvailable)
         get_notification_center().connectOutdatedRepositoriesChanged(self._outdatedReposChanged)
@@ -253,10 +255,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         infoDict['pyqt_version'] = QtCore.PYQT_VERSION_STR
         infoDict['qt_version'] = QtCore.QT_VERSION_STR
             
-    def getOpenTCPPort(self, senderIP):
-        assert senderIP != None
-        return DataReceiverThread.getOpenPort(category="avatar%s" % senderIP)
-    
     def receiveFile(self, ip, fileSize, fileName, tcp_port, successFunc=None, errorFunc=None):
         self._receiveFile.emit(ip, fileSize, fileName, tcp_port, successFunc, errorFunc)
     
@@ -510,13 +508,17 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
             status = u"%s ready, %s not ready for lunch." % (ready, notReady)
         if everybodyReady and not self._highlightPeersReady:
-            self._highlightPeersReady = True
-            if get_settings().get_notification_if_everybody_ready():
-                displayNotification("Lunch Time",
-                                    "Everybody is ready for lunch now",
-                                    getCoreLogger(),
-                                    get_settings().get_resource("images", "lunchinator.png"))
-            self._highlightIcon()
+            # don't highlight if I am the only member
+            if len(readyMembers) > 1 or not get_peers().isMe(pID=iter(readyMembers).next()):
+                self._highlightPeersReady = True
+                if get_settings().get_notification_if_everybody_ready():
+                    displayNotification("Lunch Time",
+                                        "Everybody is ready for lunch now",
+                                        getCoreLogger(),
+                                        get_settings().get_resource("images", "lunchinator.png"))
+                self._highlightIcon()
+            else:
+                status = u"You are the only member."
         elif not everybodyReady and self._highlightPeersReady:
             self._highlightPeersReady = False
             self._highlightIcon()

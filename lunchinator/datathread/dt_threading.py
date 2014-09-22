@@ -30,6 +30,6 @@ class DataReceiverThread(Thread, DataReceiverThreadBase):
                 self._successFunc()
         except:
 #             self.error()
-            self.logger.info("Error receiving file at %s", self._targetPath)
+            self.logger.warning("Error receiving file at %s", self._targetPath, exc_info=1)
             if self._errorFunc is not None:
                 self._errorFunc()

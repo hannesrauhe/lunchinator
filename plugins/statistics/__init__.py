@@ -6,6 +6,7 @@ from lunchinator.log import loggingFunc
 class statistics(iface_called_plugin):
     def __init__(self):
         super(statistics, self).__init__()
+        self._db_ready_warning = False
         self.add_supported_dbms("SQLite Connection", statistics_sqlite)
         self.add_supported_dbms("SAP HANA Connection", statistics_hana)
     
@@ -15,9 +16,24 @@ class statistics(iface_called_plugin):
         get_notification_center().connectPeerUpdated(self.peer_update)
         
     def deactivate(self):
-        get_notification_center().disconnectPeerAppended(self.peer_update)
-        get_notification_center().disconnectPeerUpdated(self.peer_update)
+        try:
+            get_notification_center().disconnectPeerAppended(self.peer_update)
+            get_notification_center().disconnectPeerUpdated(self.peer_update)
+        except:
+            self.logger.warning("Problem while disconnecting signals", exc_info=1)
         iface_called_plugin.deactivate(self)    
+        
+    def is_db_ready(self):
+        if super(statistics, self).is_db_ready():
+            if self._db_ready_warning:
+                self.logger.warning("Database connection is ready now")
+                self._db_ready_warning = False
+            return True
+        else:
+            if not self._db_ready_warning:
+                self.logger.warning("Database connection is not ready")
+                self._db_ready_warning = True
+            return False
         
     def processes_events_immediately(self):
         return True
@@ -29,24 +45,24 @@ class statistics(iface_called_plugin):
         memberID = member_info[u'ID'] if member_info else ip
         if self.is_db_ready():
             mtype = "lunch" if lunch_call else "msg"
-            self.specialized_db_conn().insert_message(mtype, xmsg, ip, memberID)
-        else:
-            self.logger.warning("Statistics: DB not ready -- cannot process message")
+            try:
+                self.specialized_db_conn().insert_message(mtype, xmsg, ip, memberID)
+            except:
+                self.logger.warning("Problem while inserting message", exc_info=1)
     
     def process_command(self, xmsg, ip, member_info, _prep):
         memberID = member_info[u'ID'] if member_info else ip
         if self.is_db_ready():
-            self.specialized_db_conn().insert_command(xmsg, ip, memberID)
-        else:
-            self.logger.warning("Statistics: DB not ready -- cannot process event")
-            
+            try:
+                self.specialized_db_conn().insert_command(xmsg, ip, memberID)
+            except:
+                self.logger.warning("Problem while inserting command", exc_info=1)
+                
     @loggingFunc
     def peer_update(self, _peerID, peerInfo):        
         if self.is_db_ready():
             self.specialized_db_conn().insert_members("ip", peerInfo["name"], \
                                  peerInfo["avatar"], peerInfo["next_lunch_begin"], peerInfo["next_lunch_end"])
-        else:
-            self.logger.warning("Statistics: DB not ready -- cannot store member data")
 
 class statistics_sqlite(db_for_plugin_iface):
     version_schema = "CREATE TABLE statistics_version (commit_count INTEGER, migrate_time INTEGER)"
@@ -106,32 +122,49 @@ class statistics_hana(db_for_plugin_iface):
             avatar VARCHAR(255), lunch_begin VARCHAR(5), lunch_end VARCHAR(5), rtime SECONDDATE)"; 
     
     def init_db(self):
-        if not self.dbConn.existsTable("members"):
-            self.dbconn.execute(self.members_schema)
-        if not self.dbConn.existsTable("messages"):
-            self.dbConn.execute(self.messages_schema)
-        if not self.dbConn.existsTable("statistics_version"):
-            # we need to migrate now
-            self.dbConn.execute("ALTER TABLE testable ADD (senderIP VARCHAR(100), fragments INTEGER DEFAULT 0)")
-            self.dbConn.execute(self.version_schema)
-            self.dbConn.execute("INSERT INTO statistics_version(commit_count, migrate_time) VALUES(?, now())", 1778)
+        try:
+            if not self.dbConn.existsTable("members"):
+                self.dbconn.execute(self.members_schema)
+            if not self.dbConn.existsTable("messages"):
+                self.dbConn.execute(self.messages_schema)
+                self.dbConn.execute(self.version_schema)
+                self.dbConn.execute("INSERT INTO statistics_version(commit_count, migrate_time) VALUES(?, now())", 1778)
+            else:
+                if not self.dbConn.existsTable("statistics_version"):
+                    # we need to migrate now
+                    self.dbConn.execute("ALTER TABLE messages ADD (senderIP VARCHAR(100), fragments INTEGER DEFAULT 0)")
+                    self.dbConn.execute(self.version_schema)
+                    self.dbConn.execute("INSERT INTO statistics_version(commit_count, migrate_time) VALUES(?, now())", 1778)
+                    self.logger.info("Successfull migration of database to new version")
+            self._setup_failed = False        
+        except:
+            self.logger.exception("Setup or migration of database failed")
+            self._setup_failed = True
         
     def insert_message(self, mtype, xmsg, senderIP, senderID):
+        if self._setup_failed:
+            return
         msg = xmsg.getPlainMessage()
         fragments = len(xmsg.getFragments())
-        self.dbConn.execute("INSERT INTO statistics_messages(mtype, message, sender, senderIP, receiver, fragments, rtime) VALUES (?,?,?,?,?,?,now())",
+        self.dbConn.execute("INSERT INTO messages(mtype, message, sender, senderIP, receiver, fragments, rtime) VALUES (?,?,?,?,?,?,now())",
                             mtype, msg, senderID, senderIP, get_settings().get_ID(), fragments)   
              
-    def insert_call(self, xmsg, senderIP, senderID):
+    def insert_command(self, xmsg, senderIP, senderID):
+        if self._setup_failed:
+            return
         mtype = xmsg.getCommand()
         msg = xmsg.getCommandPayload()
         fragments = len(xmsg.getFragments())
-        self.dbConn.execute("INSERT INTO statistics_messages(mtype, message, sender, senderIP, receiver, fragments, rtime) VALUES (?,?,?,?,?,?,now())",
+        self.dbConn.execute("INSERT INTO messages(mtype, message, sender, senderIP, receiver, fragments, rtime) VALUES (?,?,?,?,?,?,now())",
                             mtype, msg, senderID, senderIP, get_settings().get_ID(), fragments)        
     
     def insert_members(self, ip, name, avatar, lunch_begin, lunch_end):
+        if self._setup_failed:
+            return
         self.dbConn.execute("INSERT INTO members(IP, name, avatar, lunch_begin, lunch_end, rtime) VALUES (?,?,?,?,?,now())", ip, name, avatar, lunch_begin, lunch_end)
                 
     def get_newest_members_data(self):  
+        if self._setup_failed:
+            return
         return self.dbConn.query("select * from members, (SELECT ip as maxtimeip,MAX(rtime) as maxtime FROM members GROUP BY IP) as maxtable where maxtimeip=ip and maxtime = rtime")      
 
