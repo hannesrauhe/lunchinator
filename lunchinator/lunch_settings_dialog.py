@@ -1,6 +1,6 @@
 from PyQt4.QtGui import QTabWidget, QDialog, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton,\
     QDialogButtonBox
-from PyQt4.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt4.QtCore import Qt, pyqtSignal
 from lunchinator import get_settings, get_plugin_manager,\
     get_notification_center, convert_string
 from lunchinator.log import getCoreLogger
@@ -181,10 +181,9 @@ class LunchinatorSettingsDialog(QDialog):
         self.setResult(QDialog.Accepted)
         self.save.emit()
         self.setVisible(False)
-
-    @pyqtSlot()        
-    @loggingSlot(bool)
-    def cancelPressed(self, _=None):
+        
+    @loggingSlot()
+    def cancelPressed(self):
         self.setResult(QDialog.Rejected)
         self.discard.emit()
         self.setVisible(False)
