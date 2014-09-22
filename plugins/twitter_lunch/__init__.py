@@ -185,10 +185,7 @@ class TwitterDownloadThread(Thread):
             self.logger.debug("Polling Twitter now")
             try:
                 for account_name in self._screen_names:
-                    try:
-                        self._get_pics_from_account(account_name)
-                    except:
-                        self.logger.exception("Twitter: Error while accessing twitter timeline of user %s",account_name)
+                    self._get_pics_from_account(account_name)
                 
                 self._find_remote_calls()  
             except twitter.TwitterError as t:
