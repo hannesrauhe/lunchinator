@@ -176,6 +176,8 @@ class TwitterDownloadThread(Thread):
                 
     def run(self):
         import twitter  
+        #first give the lunchinator a few seconds to initialize to prevent a warning
+        self._stop_event.wait(10)  
         while not self._stop_event.isSet():            
             if None==self._twitter_api:
                 self._stop_event.wait(self._polling_time) 
