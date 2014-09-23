@@ -190,7 +190,7 @@ def startLunchinator():
             cli = lunch_cli.LunchCommandLineInterface()
             sys.retCode = cli.start()
         except:
-            getCoreLogger().exception("cli version cannot be started, is readline installed?")
+            getCoreLogger().exception("cli version cannot be started")
         finally:
             sys.exit(retCode)
     elif options.noGui:
@@ -206,16 +206,20 @@ def startLunchinator():
     else:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         
-        try:
-            initLogger(options, defaultLogPath)
-        except os.error:
-            if platform.system()=="Windows":
-                #this usually means that the lunchinator is already started
+        if getPlatform() != PLATFORM_MAC:
+            import socket
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+                s.bind(("", 50000))
+                s.close()
+            except:
+                #something is listening, hopefully a lunchinator
+                print "The lunchinator port is already in use, trying to open window"
                 initLogger(options)
                 sendMessage("HELO_OPEN_WINDOW please", "127.0.0.1")
                 sys.exit(0)
-            else:
-                raise
+                
+        initLogger(options, defaultLogPath)
                 
         getCoreLogger().info("We are on %s, %s, version %s", platform.system(), platform.release(), platform.version())
         try:
