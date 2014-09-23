@@ -175,7 +175,7 @@ class TwitterDownloadThread(Thread):
         
                 
     def run(self):
-        import twitter  
+        import twitter,requests 
         #first give the lunchinator a few seconds to initialize to prevent a warning
         self._stop_event.wait(10)  
         while not self._stop_event.isSet():            
@@ -193,6 +193,11 @@ class TwitterDownloadThread(Thread):
             except twitter.TwitterError as t:
                 self.logger.warning("Twitter: Rate limit exceeded. Waiting 15 min: %s", str(t))
                 poll_time = 60*15
+            except requests.ConnectionError as e:
+                self.logger.warning("Twitter: Connection error. Waiting 15 min: %s", str(e))
+                poll_time = 60*15
+            except:
+                self.logger.exception("Twitter: Unknown error")
                 
             #returns None on Python 2.6
             self._stop_event.wait(poll_time)      
