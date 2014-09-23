@@ -134,7 +134,7 @@ class TwitterDownloadThread(Thread):
                     self.announce_pic(account_name, urls[0])
                     self._old_pic_urls[account_name]=urls[0]
             except twitter.TwitterError as t:
-                if t[0][u'code']==88:
+                if t[0][0][u'code']==88:
                     raise
                 else:  
                     self.logger.error("Twitter: Error while trying to retrieve pics from %s: %s", account_name,str(t))
@@ -168,7 +168,7 @@ class TwitterDownloadThread(Thread):
                     get_server().call("Remote call by @%s: %s"%(s_name,m.GetText()))
                     self._twitter_api.PostUpdate(u"@"+s_name+u" OK, I forwarded your message", m.GetId())
             except twitter.TwitterError as t:
-                if t[0][u'code']==88:
+                if t[0][0][u'code']==88:
                     raise
                 else:
                     self.logger.error("Twitter: Error while trying to retrieve mentions %s", str(t))   
