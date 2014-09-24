@@ -1,9 +1,10 @@
 from PyQt4.QtGui import QLineEdit
 class PasswordEdit(QLineEdit):
-    def __init__(self, parent):
+    def __init__(self, hasValue, parent):
         super(PasswordEdit, self).__init__(parent)
         self.setEchoMode(QLineEdit.Password)
-        self.setText("*****")
+        if hasValue:
+            self.setText("*****")
         self.setModified(False)
         
         self._selectOnMousePress = True
@@ -18,6 +19,8 @@ class PasswordEdit(QLineEdit):
             self.selectAll()
             self._selectOnMousePress = False
 
-    def reset(self):
-        self.setText("*****")
+    def reset(self, hasValue):
+        self.clear()
+        if hasValue:
+            self.setText("*****")
         self.setModified(False)
