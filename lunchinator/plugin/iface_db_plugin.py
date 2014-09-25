@@ -58,7 +58,7 @@ class iface_db_plugin(iface_plugin):
         pass
     
     def _getPasswordForOption(self, o):
-        return self._getPassword("dbconn_%s.%s" % (self.connName, o))
+        return self.getPasswordForConnection(self.connName, o)
     
     def _hasPasswordForOption(self, o):
         return o in self.password_options or super(iface_db_plugin, self)._hasPasswordForOption(o)
@@ -77,6 +77,9 @@ class iface_db_plugin(iface_plugin):
         
     def storePasswordForConnection(self, connName, o, p):
         self._storePassword("dbconn_%s.%s" % (connName, o), p)
+        
+    def getPasswordForConnection(self, connName, o):
+        return self._getPassword("dbconn_%s.%s" % (connName, o))
         
     def getPasswords(self):
         return self.passwords
@@ -99,16 +102,24 @@ class iface_db_plugin(iface_plugin):
         self.passwords = {}
     
     '''should return an object of Type lunch_db which is already open'''
-    def create_connection(self, properties):
+    def create_connection(self, connName, properties):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
 
 class lunch_db(object):              
-    def __init__(self):
+    def __init__(self, dbPlugin, connName):
         self.is_open = False
+        self._db_plugin = dbPlugin
+        self._conn_name = connName
         
     def isOpen(self, _logger):
         return self.is_open
+    
+    def getConnectionName(self):
+        return self._conn_name
+    
+    def _getPasswordForOption(self, o):
+        return self._db_plugin.getPasswordForConnection(self._conn_name, o)
         
     '''convenience calls'''    
     def execute(self, logger, query, *wildcards):

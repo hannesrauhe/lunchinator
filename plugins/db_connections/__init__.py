@@ -105,7 +105,7 @@ class db_connections(iface_general_plugin):
         ob, props = self.getProperties(name)
         if name not in self.open_connections:
             self.logger.debug("DB Connections: opening connection %s of type %s", name, props["plugin_type"])
-            self.open_connections[name] = ob.create_connection(props)
+            self.open_connections[name] = ob.create_connection(name, props)
         
         return _LoggerWrapper(self.open_connections[name], logger), props["plugin_type"]
     
