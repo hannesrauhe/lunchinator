@@ -72,7 +72,7 @@ def displayNotification(name, msg, logger, icon=None):
                 fileToClose.close()
         elif myPlatform == PLATFORM_MAC:
             fh = open(os.path.devnull,"w")
-            exe = getBinary("terminal-notifier", "bin")
+            exe = getBinary("terminal-notifier", os.path.join("bin", "terminal-notifier.app", "Contents", "MacOS"))
             if not exe:
                 logger.warning("terminal-notifier not found.")
                 return
