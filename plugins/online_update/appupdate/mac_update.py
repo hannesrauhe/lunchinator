@@ -1,18 +1,18 @@
 from online_update.appupdate.gpg_update import GPGUpdateHandler
-import os
-from functools import partial
-from xml.etree import ElementTree
+from lunchinator import get_settings, lunchinator_has_gui
+from lunchinator.shell_thread import ShellThread
+from lunchinator.download_thread import DownloadThread
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
     getApplicationBundle
-from lunchinator.download_thread import DownloadThread
-import tempfile
-from lunchinator import log_debug, get_settings, log_error, get_server
-from lunchinator.shell_thread import ShellThread
+from lunchinator.log.logging_func import loggingFunc
+import os, tempfile
+from functools import partial
+from xml.etree import ElementTree
 
 class MacUpdateHandler(GPGUpdateHandler):
     @classmethod
-    def appliesToConfiguration(cls):
-        return get_server().has_gui() and getPlatform() == PLATFORM_MAC and getApplicationBundle() != None
+    def appliesToConfiguration(cls, _logger):
+        return lunchinator_has_gui() and getPlatform() == PLATFORM_MAC and getApplicationBundle() != None
     
     def activate(self):
         GPGUpdateHandler.activate(self)
@@ -46,7 +46,7 @@ class MacUpdateHandler(GPGUpdateHandler):
                 self._ui.setInteractive(False)
                 
                 self._setStatus("Searching for latest version...")
-                dt = DownloadThread(getValidQtParent(), "https://releases.gpgtools.org/nightlies/macgpg2/appcast.xml")
+                dt = DownloadThread(getValidQtParent(), self.logger, "https://gpgtools.org/releases/macgpg2/appcast.xml")
                 dt.success.connect(partial(self._install_gpg_finished, 0))
                 dt.error.connect(partial(self._install_gpg_failed, 0))
                 dt.start()
@@ -59,11 +59,11 @@ class MacUpdateHandler(GPGUpdateHandler):
                 dmgURL = e.iter("channel").next().iter("item").next().iter("enclosure").next().attrib["url"]
                 
                 tmpFile = tempfile.NamedTemporaryFile(suffix=".dmg", prefix="macgpg", delete=False)
-                log_debug("Donloading", dmgURL, "to", tmpFile.name)
+                self.logger.debug("Downloading %s to %s", dmgURL, tmpFile.name)
                 self._setStatus("Downloading MacGPG...", progress=True)
                 self._ui.setProgress(0)
                 
-                dt = DownloadThread(getValidQtParent(), dmgURL, target=tmpFile, progress=True)
+                dt = DownloadThread(getValidQtParent(), self.logger, dmgURL, target=tmpFile, progress=True)
                 dt.success.connect(partial(self._install_gpg_finished, 1))
                 dt.error.connect(partial(self._install_gpg_failed, 1))
                 dt.progressChanged.connect(self._downloadProgressChanged)
@@ -77,7 +77,7 @@ class MacUpdateHandler(GPGUpdateHandler):
                 dmgFile = dt.target.name
                 dt.close()
                 
-                st = ShellThread(getValidQtParent(), [get_settings().get_resource('bin', 'mac_gpg_installer.sh'), dmgFile], context=dmgFile, quiet=False)
+                st = ShellThread(getValidQtParent(), self.logger, [get_settings().get_resource('bin', 'mac_gpg_installer.sh'), dmgFile], context=dmgFile, quiet=False)
                 st.finished.connect(partial(self._install_gpg_finished, 2))
                 st.start()
                 
@@ -92,20 +92,22 @@ class MacUpdateHandler(GPGUpdateHandler):
                 else:
                     self._setStatus("Error installing MacGPG.", err=True)
                     if dt.pErr:
-                        log_error("Console output:", dt.pErr.strip())
+                        self.logger.error("Error installing MacGPG.\nConsole output: %s", dt.pErr.strip())
                 
                 self._updateCheckButtonText()
                 self._ui.setInteractive(True)
         
+    @loggingFunc
     def _install_gpg_finished(self, phase, dt, _):
-        self.install_gpg(phase + 1, dt)
+        self._installGPG(phase + 1, dt)
         
-    def _install_gpg_failed(self, phase, dt, _url):
+    @loggingFunc
+    def _install_gpg_failed(self, phase, dt, err):
         dt.close()
         if phase == 0:
-            self._setStatus("Error downloading MacGPG version information.", True)
+            self._setStatus("Error downloading MacGPG version information: " + err, True)
         elif phase == 1:
-            self._setStatus("Error downloading MacGPG installer.", True)
+            self._setStatus("Error downloading MacGPG installer: " + err, True)
             dmgFile = dt.target.name
             if os.path.exists(dmgFile):
                 os.remove(dmgFile)

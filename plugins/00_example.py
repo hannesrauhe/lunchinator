@@ -1,5 +1,5 @@
 from lunchinator.plugin import *
-from lunchinator import get_server, log_info, log_error
+from lunchinator import get_server
 
 '''use iface_called_plugin if you want to do something when a message arrives
 (see notify.py for example)'''
@@ -33,13 +33,13 @@ class example_called(iface_called_plugin):
         '''if a text-message that is recognized as lunch call comes in, this method will be called'''
         
         '''you can use the logger to write information to the log-files'''
-        log_info("my plugin processes the lunch call")
+        self.logger.info("my plugin processes the lunch call")
         if 0==1:
-            log_error("something went wrong")
+            self.logger.error("something went wrong")
             
         '''if exceptions are thrown they will be caught and logged outside'''
     
-    def process_event(self,cmd,value,ip,member_info):
+    def process_event(self,cmd,value,ip,member_info,prep):
         '''messages that are exchanged between peers to inform 
         about preferred lunch time, avatars, etc can be processed in this method'''
         pass

@@ -3,6 +3,7 @@ from PyQt4.QtGui import QWidget, QListWidgetItem
 from PyQt4.QtCore import Qt
 from lunchinator import get_plugin_manager, get_notification_center,\
     get_server
+from lunchinator.log.logging_slot import loggingSlot
 
 class listPluginsWidget(QWidget):
     def __init__(self, parent):
@@ -38,7 +39,7 @@ class listPluginsWidget(QWidget):
             p["description"] = pluginInfo.description
             p["requirements"] = []
             if pluginInfo.details.has_option("Requirements", "pip"):
-                p["requirements"] = pluginInfo.details.get("Requirements", "pip").split(",")
+                p["requirements"] = [req.strip() for req in pluginInfo.details.get("Requirements", "pip").split(";;")]
             p["forced"] = pluginInfo.plugin_object.force_activation
             p["activated"] = pluginInfo.plugin_object.is_activated
             info[pluginInfo.name] = p
@@ -58,14 +59,16 @@ class listPluginsWidget(QWidget):
             item.setHidden(not showAll and p_info["forced"])
             self.ui.pluginView.addItem(item)
             
-    def update_plugin_view(self):
+    @loggingSlot(object, object)
+    def update_plugin_view(self, _pn, _pc):
         self.p_info = self.get_plugin_info()
         r = self.ui.pluginView.currentRow()
         self.ui.pluginView.clear()
         self.create_plugin_view(self.ui.showAllCheckBox.checkState()==Qt.Checked)
         self.ui.pluginView.setCurrentRow(r)        
             
-    def plugin_selected(self, current, old):
+    @loggingSlot(QListWidgetItem, QListWidgetItem)
+    def plugin_selected(self, current, _old):
         if current == None:
             return
         p = self.p_info[str(current.toolTip())]
@@ -84,18 +87,21 @@ class listPluginsWidget(QWidget):
             self.ui.requirementsView.setDisabled(False)
             self.ui.installReqButton.setDisabled(False)
             
+    @loggingSlot()
     def install_req_clicked(self):
         plug = self.ui.pluginView.currentItem()
         reqs = self.p_info[str(plug.toolTip())]["requirements"]
-        from utilities import installPipDependencyWindows
-        installPipDependencyWindows(reqs)
+        from utilities import installDependencies
+        installDependencies(reqs)
         
+    @loggingSlot(bool)
     def show_all_toggled(self, value):
         r = self.ui.pluginView.currentRow()
         self.ui.pluginView.clear()
         self.create_plugin_view(value)
         self.ui.pluginView.setCurrentRow(r)
         
+    @loggingSlot(QListWidgetItem)
     def activate_plugin_toggled(self, item):
         p_name = str(item.toolTip())
         if item.checkState()==Qt.Checked and not self.p_info[p_name]["activated"]:

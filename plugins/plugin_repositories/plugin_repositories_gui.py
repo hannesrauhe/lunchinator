@@ -1,9 +1,10 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QLabel, QPushButton, \
                         QTreeView, QHBoxLayout, QStandardItemModel, QColor,\
-    QStandardItem
+                        QStandardItem, QItemSelection, QHeaderView
 from PyQt4.QtCore import pyqtSignal, Qt
 from lunchinator import get_settings, convert_string
 from lunchinator.git import GitHandler
+from lunchinator.log.logging_slot import loggingSlot
     
 class PluginRepositoriesGUI(QWidget):
     PATH_COLUMN = 1
@@ -14,31 +15,35 @@ class PluginRepositoriesGUI(QWidget):
     addRepository = pyqtSignal()
     checkForUpdates = pyqtSignal()
     
-    def __init__(self, parent):
+    def __init__(self, logger, parent):
         super(PluginRepositoriesGUI, self).__init__(parent)
        
+        self.logger = logger
+        self._gitHandler = GitHandler(logger)
+        
         layout = QVBoxLayout(self)
         
         self._reposTable = QTreeView(self) 
         self._reposTable.setIndentation(0)
+        self._reposTable.header().setStretchLastSection(False)
                 
         self._reposModel = QStandardItemModel(self._reposTable)
         self._initModel()
         self._reposTable.setModel(self._reposModel)
         
-        self._reposTable.setSelectionMode(QTreeView.MultiSelection)
+        self._reposTable.setSelectionMode(QTreeView.ExtendedSelection)
         self._reposTable.selectionModel().selectionChanged.connect(self._selectionChanged)
         
         layout.addWidget(self._reposTable)
 
         buttonLayout = QHBoxLayout()    
         addButton = QPushButton("Add...")
-        addButton.clicked.connect(self.addRepository.emit)
+        addButton.clicked.connect(self.addRepository)
         self._removeButton = QPushButton("Remove")
         self._removeButton.setEnabled(False)
         self._removeButton.clicked.connect(self._removeSelected)
         refreshButton = QPushButton("Check Status")
-        refreshButton.clicked.connect(self.checkForUpdates.emit)
+        refreshButton.clicked.connect(self.checkForUpdates)
         buttonLayout.addWidget(addButton)
         buttonLayout.addWidget(self._removeButton)
         buttonLayout.addWidget(refreshButton)
@@ -101,7 +106,7 @@ class PluginRepositoriesGUI(QWidget):
         autoUpdateItem = QStandardItem()
         autoUpdateItem.setEditable(False)
         if canAutoUpdate == None:
-            canAutoUpdate = GitHandler.hasGit(path)
+            canAutoUpdate = self._gitHandler.hasGit(path)
         if canAutoUpdate:
             autoUpdateItem.setCheckState(Qt.Checked if autoUpdate else Qt.Unchecked)
             autoUpdateItem.setCheckable(True)
@@ -114,15 +119,18 @@ class PluginRepositoriesGUI(QWidget):
     def resizeColumns(self):
         self._reposTable.resizeColumnToContents(self.ACTIVE_COLUMN)
         self._reposTable.resizeColumnToContents(self.AUTO_UPDATE_COLUMN)
-        self._reposTable.setColumnWidth(self.PATH_COLUMN, 150)
+        self._reposTable.header().setResizeMode(self.PATH_COLUMN, QHeaderView.Stretch)
+        self._reposTable.header().setResizeMode(self.STATUS_COLUMN, QHeaderView.ResizeToContents)
     
     def getTable(self):
         return self._reposTable
     
+    @loggingSlot(QItemSelection, QItemSelection)
     def _selectionChanged(self, _sel, _desel):
         selection = self._reposTable.selectionModel().selectedRows()
         self._removeButton.setEnabled(len(selection) > 0)
         
+    @loggingSlot()
     def _removeSelected(self):
         selection = self._reposTable.selectionModel().selectedRows()
         for index in selection:

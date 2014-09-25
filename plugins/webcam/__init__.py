@@ -1,6 +1,6 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import log_exception, get_settings
-import urllib2,sys
+from lunchinator import get_settings
+import sys
     
 class webcam(iface_gui_plugin):
     def __init__(self):
@@ -22,8 +22,9 @@ class webcam(iface_gui_plugin):
         iface_gui_plugin.deactivate(self)
     
     def create_widget(self, parent):
-        from lunchinator.resizing_image_label import ResizingWebImageLabel
+        from lunchinator.gui_elements import ResizingWebImageLabel
         self.webcam = ResizingWebImageLabel(parent=parent,
+                                            logger=self.logger,
                                             fallback_pic=self.options["fallback_pic"],
                                             pic_url=self.options["pic_url"],
                                             timeout=self.options["timeout"],

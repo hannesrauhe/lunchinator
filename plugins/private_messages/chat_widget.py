@@ -1,21 +1,28 @@
 from PyQt4.QtGui import QWidget, QVBoxLayout, QSizePolicy,\
     QFrame, QIcon, QHBoxLayout,\
-    QLabel, QPixmap, QTextCharFormat, QTextCursor, QToolButton, QMenu
-from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp, QTimer
+    QLabel, QPixmap, QTextCharFormat, QTextCursor, QToolButton, QMenu, QCursor,\
+    QTextDocument, QApplication
+from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRegExp, QTimer, QPoint,\
+    QMimeData
 
+from private_messages.chat_messages_view import ChatMessagesView
+from private_messages.chat_messages_model import ChatMessagesModel
 from lunchinator import convert_string, get_settings, get_notification_center,\
     get_peers
+from lunchinator.log import loggingFunc
+from lunchinator.log.logging_slot import loggingSlot
 from lunchinator.history_line_edit import HistoryTextEdit
 from lunchinator.peer_actions.peer_action_utils import showPeerActionsPopup,\
     initializePeerActionsMenu
-from private_messages.chat_messages_view import ChatMessagesView
-from private_messages.chat_messages_model import ChatMessagesModel
+from lunchinator.peer_actions import PeerActions
 
 from xml.etree import ElementTree
 from StringIO import StringIO
 from functools import partial
 from time import time
-from lunchinator.utilities import getPlatform, PLATFORM_WINDOWS
+from lunchinator.utilities import formatException, isPyinstallerBuild, getPlatform, PLATFORM_WINDOWS
+from private_messages.index_set import IndexSet
+from lunchinator.privacy.privacy_settings import PrivacySettings
 
 class ChatWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -29,10 +36,11 @@ class ChatWidget(QWidget):
         [A-Za-z0-9\.\-]+
         \.[A-Za-z]+
       )
+      (?::\d+)?
       (
-        (?:\/[\+~%\/\.\w\-]*)
-        ?\??(?:[\-\+=&;%@\.\w]*) 
-        #?(?:[\.\!\/\\\w]*)
+        (?:\/[\+~%\/\.\w\-=]*)
+        ?\??(?:[\-\+=&;%@\.\w]*)
+        #?(?:[\.\!\/\\w]*)
       )?
     )
     """.replace("\n", "").replace(" ", "")
@@ -47,24 +55,34 @@ class ChatWidget(QWidget):
     )
     """.replace("\n", "").replace(" ", "")
     
-    _URI_MATCHER=QRegExp(_URI_REGEX)
-    _MAIL_MATCHER=QRegExp(_MAIL_REGEX)
+    _MD_LINK_REGEX="\[[^]]+\]\([^)]+\)"
+    
+    _URI_MATCHER = QRegExp(_URI_REGEX)
+    _MAIL_MATCHER = QRegExp(_MAIL_REGEX)
+    _MD_LINK_MATCHER = QRegExp(_MD_LINK_REGEX)
     _TIME_ROW_INTERVAL = 10*60 # once every 10 minutes
 
     sendMessage = pyqtSignal(object, object) # peer ID, message HTML
     typing = pyqtSignal()
     cleared = pyqtSignal()
         
-    def __init__(self, parent, ownName, otherName, ownPicFile, otherPicFile, otherID):
+    def __init__(self, parent, logger, ownName, otherName, ownPicFile, otherPicFile, otherID, sendAction):
         super(ChatWidget, self).__init__(parent)
         
+        self.logger = logger
         self._firstShowEvent = True
         
         self._offline = False
+        if sendAction is not None:
+            self._blocked = sendAction.getPeerState(otherID) == PrivacySettings.STATE_BLOCKED
+        else:
+            self._blocked = False
         self._delivering = False
         self._lastTimeRow = 0
         self._textChanged = False
         self._keepEntryText = False
+        self._markdownEnabled = False
+        self._md = None
         
         self._typingTimer = QTimer(self)
         self._typingTimer.timeout.connect(self._checkTyping)
@@ -79,6 +97,8 @@ class ChatWidget(QWidget):
         
         self._otherName = otherName
         self._ownName = ownName
+        
+        self._sendAction = sendAction
         
         self._errIcon = None
         self._warnIcon = None
@@ -102,14 +122,12 @@ class ChatWidget(QWidget):
         self._initMessageModel()
         self._initMessageTable()
         self._initTextEntry()
-        self._initStatusLabel()
         
         mainLayout = QVBoxLayout(self)
         mainLayout.setSpacing(0)
         
         self._addTopLayout(mainLayout)
         mainLayout.addWidget(self.table)
-        mainLayout.addWidget(self._statusLabel)
         mainLayout.addWidget(self.entry)
         
         # initialize GUI
@@ -128,11 +146,57 @@ class ChatWidget(QWidget):
         get_notification_center().connectPeerRemoved(self._peerRemoved)
         get_notification_center().connectAvatarChanged(self._avatarChanged)
         get_notification_center().connectDisplayedPeerNameChanged(self._displayedPeerNameChanged)
+        get_notification_center().connectPrivacySettingsChanged(self._privacySettingsChanged)
         
         if get_peers() != None:
             self._setOffline(not get_peers().isPeerID(pID=self._otherID))
         else:
             self._setOffline(True)
+            
+        self.setAcceptDrops(True)
+        
+    def setMarkdownEnabled(self, en):
+        self._markdownEnabled = en
+        
+    def _canSendFilesToOther(self):
+        peerInfo = get_peers().getPeerInfo(pID=self._otherID)
+        if peerInfo is None:
+            return False
+        action = PeerActions.get().getPeerActionByName(u"hannesrauhe.lunchinator.file_transfer", u"Send File")
+        if action is None or not action.appliesToPeer(self._otherID, peerInfo):
+            return False
+        return True    
+    
+    def dragEnterEvent(self, event):
+        if not self._canSendFilesToOther():
+            event.ignore()
+            return
+        
+        if event.mimeData().hasUrls() and int(event.possibleActions()) & Qt.CopyAction:
+            for url in event.mimeData().urls():
+                if url.scheme() == u"file":
+                    event.setDropAction(Qt.CopyAction)
+                    event.accept()
+                    return
+        event.ignore()
+        
+    def dropEvent(self, event):
+        if not self._canSendFilesToOther():
+            event.ignore()
+            return
+        
+        if event.mimeData().hasUrls() and int(event.possibleActions()) & Qt.CopyAction:
+            files = []
+            for url in event.mimeData().urls():
+                if url.scheme() == u"file":
+                    files.append(convert_string(url.toLocalFile()))
+            
+            if len(files) > 0:        
+                action = PeerActions.get().getPeerActionByName(u"hannesrauhe.lunchinator.file_transfer", u"Send File")
+                action.sendFilesToPeer(files, self._otherID)
+                event.accept()
+                return
+        event.ignore()
         
     def _setOffline(self, offline):
         if self._offline == offline:
@@ -144,10 +208,12 @@ class ChatWidget(QWidget):
     def _updateOtherName(self):
         if self._offline:
             title = self._otherName + " (Offline)"
+        elif self._blocked:
+            title = self._otherName + " (Blocked)"
         else:
             title = self._otherName
             
-        self._otherPicLabel.setEnabled(not self._offline)
+        self._otherPicLabel.setEnabled(not self._offline and not self._blocked)
         self._otherNameLabel.setText(title)
         self.parent().setWindowTitle(title)
         self._checkEntryState()
@@ -155,16 +221,19 @@ class ChatWidget(QWidget):
     def _updateOwnName(self):
         self._ownNameLabel.setText(self._ownName)
         
+    @loggingSlot(object, object)
     def _peerUpdated(self, peerID, peerInfo):
         peerID = convert_string(peerID)
         if peerID == self._otherID:
             self._setOffline(u"PM_v" not in peerInfo)
-    
+
+    @loggingSlot(object)    
     def _peerRemoved(self, peerID):
         peerID = convert_string(peerID)
         if peerID == self._otherID:
             self._setOffline(True)
             
+    @loggingSlot(object, object)
     def _avatarChanged(self, peerID, newFile):
         peerID = convert_string(peerID)
         newFile = convert_string(newFile)
@@ -174,6 +243,7 @@ class ChatWidget(QWidget):
         elif peerID == get_settings().get_ID():
             self.setOwnIconPath(get_peers().getPeerAvatarFile(pID=peerID))
             
+    @loggingSlot(object, object, object)
     def _displayedPeerNameChanged(self, pID, newName, _infoDict):
         pID = convert_string(pID)
         newName = convert_string(newName)
@@ -185,16 +255,30 @@ class ChatWidget(QWidget):
             self._ownName = newName
             self._updateOwnName()
         
+    @loggingSlot(object, object)
+    def _privacySettingsChanged(self, pluginName, actionName):
+        if self._sendAction is None:
+            return
+        if pluginName == self._sendAction.getPluginName() and \
+           actionName == self._sendAction.getName():
+            blocked = self._sendAction.getPeerState(self._otherID) == PrivacySettings.STATE_BLOCKED
+            if blocked != self._blocked:
+                self._blocked = blocked
+                self._updateOtherName()
+        
     def _clearEntry(self):
         self.entry.clear()
         self.entry.setCurrentCharFormat(QTextCharFormat())
         
     def _checkEntryState(self):
-        self.entry.setEnabled(not self._offline and not self._delivering)
-        if self._offline:
+        self.entry.setEnabled(not self._offline and not self._delivering and not self._blocked)
+        if self._offline or self._blocked:
             if self.entry.document().isEmpty():
                 self._clearEntry()
-                self.entry.setText(u"Partner is offline")
+                if self._offline:
+                    self.entry.setText(u"Partner is offline")
+                else:
+                    self.entry.setText(u"Partner is blocked")
             else:
                 self._keepEntryText = True
         elif self._delivering:
@@ -203,7 +287,7 @@ class ChatWidget(QWidget):
         elif not self._keepEntryText:
             self._clearEntry()
             
-        if self._keepEntryText and not self._offline:
+        if self._keepEntryText and (not self._offline and not self._blocked):
             # reset if not offline any more
             self._keepEntryText = False
         
@@ -222,6 +306,7 @@ class ChatWidget(QWidget):
     def _addTopLayout(self, mainLayout):
         topWidget = QWidget(self)
         topLayout = QHBoxLayout(topWidget)
+        topLayout.setSpacing(0)
         topLayout.setContentsMargins(0, 0, 0, 0)
         
         self._otherNameLabel = QToolButton(topWidget)
@@ -231,18 +316,24 @@ class ChatWidget(QWidget):
         self._otherNameLabel.customContextMenuRequested.connect(partial(showPeerActionsPopup, self._otherID, self._filterPeerAction, self._otherNameLabel))
         self._otherNameLabel.setPopupMode(QToolButton.InstantPopup)
         menu = QMenu(self._otherNameLabel)
-        menu.aboutToShow.connect(partial(initializePeerActionsMenu, menu, self._otherID, self._filterPeerAction))
+        menu.aboutToShow.connect(partial(initializePeerActionsMenu, menu, self._otherID, self._filterPeerAction, self))
         self._otherNameLabel.setMenu(menu)
         
         self._otherPicLabel = QLabel(topWidget)
         topLayout.addWidget(self._otherPicLabel, 0, Qt.AlignLeft)
-        topLayout.addWidget(self._otherNameLabel, 1, Qt.AlignLeft)
+        topLayout.addSpacing(5)
+        topLayout.addWidget(self._otherNameLabel, 0, Qt.AlignLeft)
+        
+        self._otherStatusLabel = QLabel(topWidget)
+        topLayout.addSpacing(2)
+        topLayout.addWidget(self._otherStatusLabel, 1, Qt.AlignLeft)
         
         self._ownNameLabel = QToolButton(topWidget)
         self._ownNameLabel.setStyleSheet("QToolButton { text-align: left; font-size: 13pt; border: none; margin-right: -5px;}")
         self._ownNameLabel.setToolButtonStyle(Qt.ToolButtonTextOnly)
         self._ownPicLabel = QLabel(topWidget)
         topLayout.addWidget(self._ownNameLabel, 1, Qt.AlignRight)
+        topLayout.addSpacing(5)
         topLayout.addWidget(self._ownPicLabel, 0, Qt.AlignRight)
         
         mainLayout.addWidget(topWidget)
@@ -257,17 +348,43 @@ class ChatWidget(QWidget):
         self.entry = HistoryTextEdit(self, True)
         self.entry.textChanged.connect(self._textChangedSlot)
         
-    def _initStatusLabel(self):
-        self._statusLabel = QLabel(self)
-        self._statusLabel.setContentsMargins(0, 5, 0, 5)
-        self._statusLabel.setVisible(False)
-        
     def _initMessageModel(self):
         self._model = ChatMessagesModel(self, self)
         
     def _initMessageTable(self):
-        self.table = ChatMessagesView(self._model, self)
+        self.table = ChatMessagesView(self._model, self, self.logger)
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self._showContextMenu)
         
+    @loggingSlot(QPoint)
+    def _showContextMenu(self, point):
+        index = self.table.indexAt(point)
+        if index != None:
+            if index.column() != ChatMessagesModel.MESSAGE_COLUMN:
+                return
+            isOwn = index.data(ChatMessagesModel.OWN_MESSAGE_ROLE).toBool()
+            menu = QMenu(self)
+            if isOwn:
+                menu.addAction(u"Send again", partial(self._sendAgain, index))
+            menu.addAction(u"Copy", partial(self._copy, index))
+            menu.exec_(QCursor.pos())
+            menu.deleteLater()
+        
+    @loggingSlot()
+    def _sendAgain(self, index):
+        self.sendMessage.emit(self._otherID, convert_string(index.data(Qt.DisplayRole).toString()))
+        
+    @loggingSlot()
+    def _copy(self, index):
+        doc = QTextDocument()
+        doc.setHtml(index.data(Qt.DisplayRole).toString())
+        clipboard = QApplication.clipboard()
+        richTextData = QMimeData()
+        richTextData.setHtml(index.data(Qt.DisplayRole).toString())
+        richTextData.setText(doc.toPlainText())
+        clipboard.setMimeData(richTextData)
+        
+    @loggingSlot()
     def _textChangedSlot(self):
         if not self.entry.isEnabled() or self.entry.document().isEmpty():
             self._textChanged = False
@@ -283,6 +400,7 @@ class ChatWidget(QWidget):
         else:
             self._textChanged = True
             
+    @loggingSlot()
     def _checkTyping(self):
         curTime = time()
         if self._textChanged:
@@ -294,23 +412,25 @@ class ChatWidget(QWidget):
             self._selfWasTyping = False    
             
         if self._otherWasTyping and curTime - self._lastTimePartnerTyped > 3:
-            self.setStatus(self.getOtherName() + " paused typing.")
+            self.setStatus("paused typing")
             self._otherWasTyping = False
             
     def _informTyping(self):
-        if not self._offline:
+        if not self._offline and not self._blocked:
             self.typing.emit()
         
     def _informCleared(self):
         if not self._offline:
             self.cleared.emit()
             
+    @loggingSlot()
     def otherIsTyping(self):
         if not self._otherWasTyping:
             self._otherWasTyping = True
-            self.setStatus(self.getOtherName() + " is typing a message...")
+            self.setStatus("typing...")
         self._lastTimePartnerTyped = time()
-        
+    
+    @loggingSlot()
     def otherCleared(self):
         self._otherWasTyping = False
         self.setStatus(None)
@@ -330,6 +450,7 @@ class ChatWidget(QWidget):
             self.addTimeRow(msgTime)
             self._lastTimeRow = msgTime
         
+    @loggingFunc
     def addOwnMessage(self, msgID, recvTime, msg, msgTime, messageState=None, toolTip=None):
         self._checkTime(msgTime)
         self._model.addOwnMessage(msgID, recvTime, msg, msgTime, messageState, toolTip)
@@ -401,14 +522,41 @@ class ChatWidget(QWidget):
     
     def setStatus(self, statusText):
         if statusText:
-            self._statusLabel.setText(statusText)
-            self._statusLabel.setVisible(True)
+            title = u"(%s)" % (statusText)
         else:
-            self._statusLabel.setVisible(False)
+            title = u""
+        self._otherStatusLabel.setText(title)
         
+    def _getMD(self):
+        if self._md is None:
+            try:
+                from markdown import Markdown
+                if getPlatform()==PLATFORM_WINDOWS and isPyinstallerBuild():
+                    self._md = Markdown()
+                else:
+                    self._md = Markdown(extensions=['extra'])
+            except ImportError:
+                self.logger.error("Cannot enable Markdown (%s)", formatException())
+                raise
+        return self._md
+    
+    @loggingSlot()        
     def eventTriggered(self):
-        self._detectHyperlinks()
-        text = self._cleanHTML(convert_string(self.entry.toHtml()))
+        if self.entry.toPlainText().trimmed().length() is 0:
+            return
+        
+        text = None
+        if self._markdownEnabled:
+            try:
+                md = self._getMD()
+                text = self._detectHyperlinks(True)
+                text = md.convert(text)
+            except ImportError:
+                pass
+        if text is None:
+            # fallback to default method
+            self._detectHyperlinks()
+            text = self._cleanHTML(convert_string(self.entry.toHtml()))
         self.sendMessage.emit(self._otherID, text)
         self._delivering = True
         self._checkEntryState()
@@ -424,30 +572,76 @@ class ChatWidget(QWidget):
             sio = StringIO()
             ElementTree.ElementTree(p).write(sio, "utf-8")
             cleaned += sio.getvalue().replace('<br />', '').decode("utf-8")
+            
         return cleaned
 
-    def _insertAnchors(self, cursor, plainText, matcher, hrefFunc):
+    def _iterMatchedRanges(self, matcher, text):
         pos = 0
         while pos != -1:
-            pos = matcher.indexIn(plainText, pos)
+            pos = matcher.indexIn(text, pos)
             if pos == -1:
                 break
             
-            cursor.setPosition(pos);
-            cursor.setPosition(pos + matcher.matchedLength(), QTextCursor.KeepAnchor)
+            yield pos, pos + matcher.matchedLength(), matcher
+            
+            pos += matcher.matchedLength()
 
+    def _insertAnchors(self, cursor, plainText, matcher, hrefFunc):
+        for start, end, matcher in self._iterMatchedRanges(matcher, plainText):
+            cursor.setPosition(start);
+            cursor.setPosition(end, QTextCursor.KeepAnchor)
+    
             fmt = QTextCharFormat()
             fmt.setAnchor(True)
             fmt.setAnchorHref(hrefFunc(matcher.cap()))
             cursor.mergeCharFormat(fmt)
             
-            pos += matcher.matchedLength()
-        
-    def _detectHyperlinks(self):
+    def _findPlainLinks(self, plainText, matcher, hrefFunc, mdLinks):
+        newLinks = []
+        for start, end, matcher in self._iterMatchedRanges(matcher, plainText):
+            if start in mdLinks:
+                # is already a markdown link
+                continue
+            newLinks.append((start, end, hrefFunc(matcher.cap())))
+        return newLinks
+            
+    def _detectHyperlinks(self, toMarkdown=False):
         cursor = QTextCursor(self.entry.document())
         plainText = self.entry.toPlainText()
-        self._insertAnchors(cursor, plainText, self._URI_MATCHER, lambda uri : u"http://" + convert_string(uri) if uri.startsWith(u"www.") else uri)
-        self._insertAnchors(cursor, plainText, self._MAIL_MATCHER, lambda mail : u"mailto:" + convert_string(mail))
+        
+        makeURL = lambda uri : u"http://" + convert_string(uri) if uri.startsWith(u"www.") else uri
+        makeMail = lambda mail : u"mailto:" + convert_string(mail)
+        if toMarkdown:
+            # find markdown links
+            mdLinks = IndexSet()
+            for start, end, _matcher in self._iterMatchedRanges(self._MD_LINK_MATCHER, plainText):
+                mdLinks.addRange(start, end)
+            
+            # replace plain links with markdown links
+            plainLinks = self._findPlainLinks(plainText,
+                                              self._URI_MATCHER,
+                                              makeURL,
+                                              mdLinks)
+            plainLinks += self._findPlainLinks(plainText,
+                                               self._MAIL_MATCHER,
+                                               makeMail,
+                                               mdLinks)
+            plainLinks = sorted(plainLinks, key=lambda aTup : aTup[0])
+            
+            plainText = convert_string(plainText)
+            for start, end, linkTarget in reversed(plainLinks):
+                mdLink = "[%s](%s)" % (plainText[start:end], linkTarget)
+                plainText = plainText[:start] + mdLink + plainText[end:]
+            return plainText    
+        else:
+            self._insertAnchors(cursor,
+                                plainText,
+                                self._URI_MATCHER,
+                                makeURL)
+            self._insertAnchors(cursor,
+                                plainText,
+                                self._MAIL_MATCHER,
+                                makeMail)
         
     def sizeHint(self):
         sizeHint = QWidget.sizeHint(self)
@@ -455,11 +649,14 @@ class ChatWidget(QWidget):
         
 if __name__ == '__main__':
     from lunchinator.plugin import iface_gui_plugin
+    from lunchinator.log import getCoreLogger
     
     def createTable(window):
         ownIcon = get_settings().get_resource("images", "me.png")
         otherIcon = get_settings().get_resource("images", "lunchinator.png")
-        tw = ChatWidget(window, "Me", "Other Guy", ownIcon, otherIcon, "ID")
+        tw = ChatWidget(window, getCoreLogger(), "Me", "Other Guy", ownIcon, otherIcon, "ID", None)
+        tw.setMarkdownEnabled(True)
+        
         tw.addOwnMessage(0, time(),
                          "foo<br> <a href=\"http://www.tagesschau.de/\">ARD Tagesschau</a> Nachrichten",
                          time(),
@@ -498,7 +695,7 @@ if __name__ == '__main__':
         
         tw.typing.connect(tw.otherIsTyping)
         tw.cleared.connect(tw.otherCleared)
-        tw.sendMessage.connect(lambda pID, html : tw.addOwnMessage(0, time(), html, time()), type=Qt.QueuedConnection)
+        tw.sendMessage.connect(lambda _pID, html : tw.addOwnMessage(0, time(), html, time()), type=Qt.QueuedConnection)
         
         return tw
         

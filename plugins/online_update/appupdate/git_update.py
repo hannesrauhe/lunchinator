@@ -1,16 +1,20 @@
 from online_update.appupdate.app_update_handler import AppUpdateHandler
+from lunchinator import get_settings, lunchinator_has_gui
 from lunchinator.git import GitHandler
-from lunchinator.callables import AsyncCall
 from lunchinator.utilities import getValidQtParent
-from __builtin__ import True
-from lunchinator import get_settings, get_server
+from lunchinator.log.logging_func import loggingFunc
 
 class GitUpdateHandler(AppUpdateHandler):
     """Used if Lunchinator is run directly from git."""
     
+    def __init__(self, logger):
+        super(GitUpdateHandler, self).__init__(logger)
+        self._gitHandler = GitHandler(logger)
+        
     @classmethod
-    def appliesToConfiguration(cls):
-        return GitHandler.hasGit()
+    def appliesToConfiguration(cls, logger):
+        gh = GitHandler(logger)
+        return gh.hasGit()
     
     def activate(self):
         AppUpdateHandler.activate(self)
@@ -24,23 +28,28 @@ class GitUpdateHandler(AppUpdateHandler):
         return get_settings().get_commit_count()
         
     def canCheckForUpdate(self):
-        return get_server().has_gui()
-        
+        return lunchinator_has_gui()
+    
+    @loggingFunc
     def checkForUpdate(self):
         self._setStatus("Checking for update...")
+        from lunchinator.callables import AsyncCall
         AsyncCall(getValidQtParent(),
-                  GitHandler.needsPull,
+                  self.logger,
+                  self._gitHandler.needsPull,
                   self._checkUpdateSuccess,
                   self._checkUpdateError)(returnReason=True)
         
+    @loggingFunc
     def _checkUpdateSuccess(self, tup):
         needsPull, reason = tup
         if needsPull:
-            self._setStatus("Repository can be updated to version %s." % GitHandler.getRemoteCommitCount())
+            self._setStatus("Repository can be updated to version %s." % self._gitHandler.getRemoteCommitCount())
             self._installReady()
         else:
             self._setStatus(u"No update: " + reason)
             
+    @loggingFunc
     def _checkUpdateError(self, msg=None):
         st = u"Checking for update failed"
         if msg:

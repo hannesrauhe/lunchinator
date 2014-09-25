@@ -1,13 +1,13 @@
 from PyQt4.QtGui import QImage, QPixmap, QLabel, QSizePolicy
-from PyQt4.QtCore import Qt, QSize, QThread, pyqtSlot, QTimer
-import sys
-from lunchinator import log_exception, log_error
+from PyQt4.QtCore import Qt, QSize, QThread, QTimer, pyqtSignal
 from lunchinator.download_thread import DownloadThread
+from lunchinator.log.logging_slot import loggingSlot
 
 class ResizingImageLabel(QLabel):
-    def __init__(self,parent,smooth_scaling,sizeHint = None):
+    def __init__(self, parent, logger, smooth_scaling, sizeHint=None):
         super(ResizingImageLabel, self).__init__(parent)
         
+        self.logger = logger
         self._sizeHint = sizeHint
         self.rawPixmap = None
         self.smooth_scaling = smooth_scaling
@@ -36,24 +36,29 @@ class ResizingImageLabel(QLabel):
     def setImage(self, path):
         self.setRawPixmap(QPixmap.fromImage(QImage(path)))
         
+    def getRawPixmap(self):
+        return self.rawPixmap
+        
     def setSmoothScaling(self, newValue):
         if self.smooth_scaling != newValue:
             self.smooth_scaling = newValue
             self.setScaledPixmap()
 
 class ResizingWebImageLabel(ResizingImageLabel):
-    """Constructor
+    imageDownloaded = pyqtSignal(object, object) # url, image data as str
     
-    parent -- parent QObject
-    pic_url -- URL to download and display
-    fallback_pic -- Picture to display if pic_url is not yet downloaded or is not available
-    smooth_scaling -- Use a smooth image resizing algorithm (slower)
-    update -- automatically update periodically
-    timeout -- number of seconds between updates
-    no_proxy -- True to disable proxy for pic_url
-    """
-    def __init__(self, parent, pic_url=None, fallback_pic=None, smooth_scaling=False, update=False, timeout=0, no_proxy=False):
-        super(ResizingWebImageLabel, self).__init__(parent, smooth_scaling, QSize(640, 480))
+    def __init__(self, parent, logger, pic_url=None, fallback_pic=None, smooth_scaling=False, update=False, timeout=0, no_proxy=False):
+        """Constructor
+        
+        @param parent: parent QObject
+        @param pic_url -- URL to download and display
+        @param fallback_pic -- Picture to display if pic_url is not yet downloaded or is not available
+        @param smooth_scaling -- Use a smooth image resizing algorithm (slower)
+        @param update -- automatically update periodically
+        @param timeout -- number of seconds between updates
+        @param no_proxy -- True to disable proxy for pic_url
+        """
+        super(ResizingWebImageLabel, self).__init__(parent, logger, smooth_scaling, QSize(640, 480))
         
         self.fallback_pic = fallback_pic
         self.pic_url = pic_url
@@ -72,9 +77,9 @@ class ResizingWebImageLabel(ResizingImageLabel):
     def displayFallbackPic(self):
         if self.fallback_pic != None:
             try:
-                self.setImage(self.fallback_pic)
+                super(ResizingWebImageLabel, self).setImage(self.fallback_pic)
             except:
-                log_exception("Something went wrong when trying to display the fallback image",self.fallback_pic)
+                self.logger.exception("Something went wrong when trying to display the fallback image %s", self.fallback_pic)
         else:
             self.setPixmap(QPixmap())
             
@@ -88,26 +93,29 @@ class ResizingWebImageLabel(ResizingImageLabel):
         self.pic_url = None
         self.update()
             
-    @pyqtSlot(QThread, object)
-    def downloadFinished(self, thread, _url):
+    @loggingSlot(QThread, object)
+    def downloadFinished(self, thread, url):
+        self.imageDownloaded.emit(url, thread.getResult())
         qtimage = QImage()
         qtimage.loadFromData(thread.getResult())
         self.setRawPixmap(QPixmap.fromImage(qtimage))
+        thread.close()
             
-    @pyqtSlot(QThread, object)
-    def errorDownloading(self, _thread, url):
-        log_error("Error downloading webcam image from %s" % url)
+    @loggingSlot(QThread, object)
+    def errorDownloading(self, thread, err):
+        self.setText(u"Error downloading URL %s: %s" % (thread.url, err))
         
     def showEvent(self, event):
         self.update()
         return super(ResizingWebImageLabel, self).showEvent(event)
             
+    @loggingSlot()
     def update(self):
         if not self.isVisible():
             return
          
         if self.pic_url is not None:
-            thread = DownloadThread(self, self.pic_url, no_proxy = self.no_proxy)
+            thread = DownloadThread(self, self.logger, self.pic_url, no_proxy = self.no_proxy)
             thread.finished.connect(thread.deleteLater)
             thread.error.connect(self.errorDownloading)
             thread.success.connect(self.downloadFinished)

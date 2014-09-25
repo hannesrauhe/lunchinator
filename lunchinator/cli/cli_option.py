@@ -1,6 +1,7 @@
 import sys
 from lunchinator.cli import LunchCLIModule
-from lunchinator import get_settings, get_plugin_manager, convert_string, log_exception
+from lunchinator import get_settings, get_plugin_manager, convert_string
+from lunchinator.log import getCoreLogger
 
 class CLIOptionHandling(LunchCLIModule):
     def getOptionCategories(self):
@@ -11,7 +12,7 @@ class CLIOptionHandling(LunchCLIModule):
                         if pluginInfo.plugin_object.has_options():
                             yield (pluginInfo.name, pluginInfo.description)
         except:
-            log_exception("while collecting option categories")
+            getCoreLogger().exception("while collecting option categories")
             
     def getPluginObject(self, cat):
         cat = cat.upper()

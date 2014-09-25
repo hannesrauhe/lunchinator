@@ -1,5 +1,6 @@
 from PyQt4.QtGui import QTextEdit, QSizePolicy, QWidget
-from PyQt4.QtCore import QSize, pyqtSignal
+from PyQt4.QtCore import QSize
+from lunchinator.log.logging_slot import loggingSlot
 
 class GrowingTextEdit(QTextEdit):
     def __init__(self, parent, heightMax = 1000):
@@ -19,6 +20,7 @@ class GrowingTextEdit(QTextEdit):
         self.setMinimumHeight(height)
         self.setMaximumHeight(height)
 
+    @loggingSlot()
     def sizeChange(self):
         docHeight = self.document().size().height()
         if self.heightMin <= docHeight <= self.heightMax:

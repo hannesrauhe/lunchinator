@@ -1,9 +1,12 @@
-from PyQt4.QtGui import QTabWidget, QDialog, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton
+from PyQt4.QtGui import QTabWidget, QDialog, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton,\
+    QDialogButtonBox
 from PyQt4.QtCore import Qt, pyqtSignal
-from lunchinator import get_settings, get_plugin_manager, log_exception,\
+from lunchinator import get_settings, get_plugin_manager,\
     get_notification_center, convert_string
+from lunchinator.log import getCoreLogger
 from lunchinator.ComboTabWidget import ComboTabWidget
 from bisect import bisect_left
+from lunchinator.log.logging_slot import loggingSlot
 
 class _SettingsWidgetContainer(QWidget):
     def __init__(self, pluginName, pluginObject, parent):
@@ -17,6 +20,8 @@ class _SettingsWidgetContainer(QWidget):
         
     def showContents(self):
         if self._showing:
+            # already showing -> update
+            self._pluginObject.update_options_widget()
             return
         self._showing = True
         
@@ -24,7 +29,7 @@ class _SettingsWidgetContainer(QWidget):
             w = self._pluginObject.create_options_widget(self)
         except:
             w = QLabel("Error while including plugin", self)
-            log_exception("while including plugin %s in settings window" % self._pluginName)
+            getCoreLogger().exception("while including plugin %s in settings window", self._pluginName)
             
         self.layout().addWidget(w, 1)
         
@@ -36,7 +41,8 @@ class _SettingsWidgetContainer(QWidget):
         return self._showing
 
 class LunchinatorSettingsDialog(QDialog):
-    closed = pyqtSignal()
+    save = pyqtSignal()
+    discard = pyqtSignal()
     
     def __init__(self, parent):
         super(LunchinatorSettingsDialog, self).__init__(parent, Qt.Dialog)
@@ -60,7 +66,7 @@ class LunchinatorSettingsDialog(QDialog):
                                        pluginInfo.name,
                                        pluginInfo.category)
         except:
-            log_exception("while including plugins in settings window")
+            getCoreLogger().exception("while including plugins in settings window")
         
         contentLayout.addWidget(self.nb)
         # d.get_content_area().pack_start(nb, True, True, 0)
@@ -69,18 +75,26 @@ class LunchinatorSettingsDialog(QDialog):
             # show first widget
             self.nb.widget(0).showContents()
             
-        bottomLayout = QHBoxLayout()
-        bottomLayout.addWidget(QWidget(self), 1)
+        buttonBox = QDialogButtonBox(Qt.Horizontal, self)
+        
         saveButton = QPushButton("Save", self)
-        saveButton.setAutoDefault(True)
+        #saveButton.setAutoDefault(True)
         saveButton.clicked.connect(self.savePressed)
-        bottomLayout.addWidget(saveButton)
+        buttonBox.addButton(saveButton, QDialogButtonBox.AcceptRole)
         
         cancelButton = QPushButton("Cancel", self)
         cancelButton.clicked.connect(self.cancelPressed)
-        bottomLayout.addWidget(cancelButton)
+        buttonBox.addButton(cancelButton, QDialogButtonBox.RejectRole)
         
-        contentLayout.addLayout(bottomLayout)
+        applyButton = QPushButton("Apply", self)
+        applyButton.clicked.connect(self.applyPressed)
+        buttonBox.addButton(applyButton, QDialogButtonBox.ApplyRole)
+        
+        discardButton = QPushButton("Discard", self)
+        discardButton.clicked.connect(self.discardPressed)
+        buttonBox.addButton(discardButton, QDialogButtonBox.ApplyRole)
+        
+        contentLayout.addWidget(buttonBox)
         
         get_notification_center().connectPluginActivated(self._pluginActivated)
         get_notification_center().connectPluginWillBeDeactivated(self._pluginWillBeDeactivated)
@@ -89,13 +103,15 @@ class LunchinatorSettingsDialog(QDialog):
         get_notification_center().disconnectPluginActivated(self._pluginActivated)
         get_notification_center().disconnectPluginWillBeDeactivated(self._pluginWillBeDeactivated)
         
+    @loggingSlot(object, object)
     def _pluginActivated(self, pName, pCat):
         pName = convert_string(pName)
         pCat = convert_string(pCat)
         pluginInfo = get_plugin_manager().getPluginByName(pName, pCat)
         if pluginInfo is not None:
             self.addPlugin(pluginInfo.plugin_object, pName, pCat)
-            
+           
+    @loggingSlot(object, object) 
     def _pluginWillBeDeactivated(self, pName, pCat):
         pName = convert_string(pName)
         pCat = convert_string(pCat)
@@ -132,7 +148,7 @@ class LunchinatorSettingsDialog(QDialog):
             try:
                 po.destroy_options_widget()
             except:
-                log_exception("Error destroying options widget for plugin", pName, "from category", pCat)
+                getCoreLogger().exception("Error destroying options widget for plugin %s from category %s", pName, pCat)
                     
         if po.get_displayed_name():
             displayedName = po.get_displayed_name()
@@ -152,14 +168,24 @@ class LunchinatorSettingsDialog(QDialog):
             size = self.size()
             self.setMinimumSize(size.width(), size.height())
         
+    @loggingSlot()
+    def applyPressed(self):
+        self.save.emit()
+        
+    @loggingSlot()
+    def discardPressed(self):
+        self.discard.emit()
+        
+    @loggingSlot()
     def savePressed(self):
         self.setResult(QDialog.Accepted)
-        self.closed.emit()
+        self.save.emit()
         self.setVisible(False)
         
+    @loggingSlot()
     def cancelPressed(self):
         self.setResult(QDialog.Rejected)
-        self.closed.emit()
+        self.discard.emit()
         self.setVisible(False)
 
     def isOptionsWidgetLoaded(self, pluginName):

@@ -2,6 +2,7 @@ from PyQt4.QtCore import QAbstractItemModel, Qt, QModelIndex, QVariant, QSize
 from lunchinator import get_server, get_peers
 import time
 from lunchinator.utilities import formatTime
+from lunchinator.log.logging_slot import loggingSlot
 
 class MessagesTableModel(QAbstractItemModel):
     SORT_ROLE = Qt.UserRole + 1
@@ -78,9 +79,11 @@ class MessagesTableModel(QAbstractItemModel):
                 return QVariant("Message")
         return super(MessagesTableModel, self).headerData(section, orientation, role)
             
+    @loggingSlot(time.struct_time, object, object)
     def messagePrepended(self, _time, _sender, _message):
         self.rowsInserted.emit(QModelIndex(), 0, 0)
 
+    @loggingSlot()
     def updateSenders(self):
         self.dataChanged.emit(self.createIndex(0, self.SENDER_COL),
                               self.createIndex(len(self._messages), self.SENDER_COL))

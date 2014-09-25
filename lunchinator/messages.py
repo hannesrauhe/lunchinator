@@ -1,6 +1,6 @@
 from lunchinator.logging_mutex import loggingMutex
-from lunchinator import log_exception, log_warning, get_settings,\
-    get_db_connection
+from lunchinator import get_settings, get_db_connection
+from lunchinator.log import newLogger
 from time import localtime, mktime
 import codecs, json, os, sys
 from collections import deque
@@ -10,11 +10,17 @@ class Messages(object):
     _DB_VERSION_CURRENT = _DB_VERSION_INITIAL
     
     def __init__(self, logging):
+        self.logger = newLogger("Core Messages")
         self._lock = loggingMutex("messages", logging=logging)
-        self._db, plugin_type = get_db_connection()
+        self._db, plugin_type = get_db_connection(self.logger)
+        
+        if self._db is None:
+            self._length = 0
+            self._latest = None
+            return
         
         if plugin_type != "SQLite Connection":
-            log_warning("Your standard connection is not of type SQLite." + \
+            self.logger.warning("Your standard connection is not of type SQLite." + \
                 "Loading messages from another type is experimental.")
         
         if not self._db.existsTable("CORE_MESSAGE_VERSION"):
@@ -62,7 +68,7 @@ class Messages(object):
                     for mtime, addr, msg in reversed(messages):
                         self.insert(mtime, addr, msg)
             except:
-                log_exception("Could not read messages file %s, but it seems to exist" % (path))
+                self.logger.exception("Could not read messages file %s, but it seems to exist", path)
     
     def finish(self):
         pass

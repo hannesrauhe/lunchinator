@@ -1,6 +1,7 @@
 from lunchinator.plugin import iface_general_plugin
 from lunchinator import get_settings, get_notification_center, convert_string
 from lunchinator.lunch_settings import lunch_settings
+from lunchinator.log import loggingFunc
     
 class gui_settings(iface_general_plugin):
     def __init__(self):
@@ -56,6 +57,7 @@ class gui_settings(iface_general_plugin):
     
     """ End overrides """
     
+    @loggingFunc
     def _settingChanged(self, settingName):
         settingName = convert_string(settingName)
         self._displayOptionValue(settingName)

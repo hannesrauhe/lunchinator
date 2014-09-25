@@ -4,6 +4,7 @@ from PyQt4.QtCore import Qt, QSize
 from lunchinator import convert_string
 from lunchinator.history_line_edit import HistoryLineEdit, HistoryTextEdit
 from lunchinator.utilities import getPlatform, PLATFORM_MAC
+from lunchinator.log.logging_slot import loggingSlot
 
 class TableWidget(QWidget):
     PREFERRED_WIDTH = 400
@@ -58,6 +59,7 @@ class TableWidget(QWidget):
         
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
         
+    @loggingSlot()
     def eventTriggered(self):
         text = convert_string(self.entry.text())
         ret_val = self.externalEvent(text)
@@ -77,8 +79,11 @@ class TableWidget(QWidget):
     def getTable(self):
         return self.table
     
-    def addToHistory(self, list):
-        for e in list:
+    def clearHistory(self):
+        self.entry.clearHistory()
+    
+    def addToHistory(self, l):
+        for e in l:
             self.entry.appendHistory(e)
         
 if __name__ == '__main__':

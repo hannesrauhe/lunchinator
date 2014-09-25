@@ -1,5 +1,5 @@
 [Core]
-Name = WebRelay
+Name = hannesrauhe.lunchinator.webrelay
 Module = webrelay
 
 [Documentation]

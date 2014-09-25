@@ -68,7 +68,7 @@ class ChatMessagesModel(QStandardItemModel):
             toolTip = u""
             
         toolTip += u"Sent: " + formatTime(localtime(messageTime))
-        if recvTime != None:
+        if recvTime:
             if isOwn:
                 toolTip += ",\nDelivered: " + formatTime(localtime(recvTime))
             else:
@@ -108,7 +108,7 @@ class ChatMessagesModel(QStandardItemModel):
         return item
     
     def data(self, index, role=Qt.DisplayRole):
-        if role == Qt.ToolTipRole:
+        if index.column() is 1 and role == Qt.ToolTipRole:
             isOwn = index.data(self.OWN_MESSAGE_ROLE).toBool()
             toolTip = convert_string(index.data(self.TOOL_TIP_MSG_ROLE).toString())
             messageTime, _ = index.data(self.MESSAGE_TIME_ROLE).toDouble()

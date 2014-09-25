@@ -2,18 +2,21 @@
 # @summary: This plugin is supposed to be the only one necessary for the core functionality of the lunchinator
 
 from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel, \
-                        QLineEdit, QMenu, QInputDialog
-from PyQt4.QtCore import QTimer, Qt
-from lunchinator import get_server, get_peers, log_info, get_notification_center
-from time import localtime, time, strftime, mktime
+                        QLineEdit, QMenu, QInputDialog, QPushButton
+from PyQt4.QtCore import QTimer, Qt, pyqtSlot
+from lunchinator import get_server, get_peers, get_notification_center,\
+    convert_string, convert_raw
 from lunchinator.lunch_button import LunchButton
+from lunchinator.log.logging_slot import loggingSlot
+from time import time, strftime, struct_time
             
 class SimpleViewWidget(QWidget):   
     # http://www.colourlovers.com/palette/1930/cheer_up_emo_kid
     colors = ["C44D58", "C7F464", "4ECDC4", "556270", "FF6B6B"]
     
-    def __init__(self, parent):
+    def __init__(self, parent, logger):
         super(SimpleViewWidget, self).__init__(parent)
+        self.logger = logger
         self.colorMap = {}
         self.colorCounter = 0
         
@@ -21,6 +24,19 @@ class SimpleViewWidget(QWidget):
         
         self.memberView = QLabel(self)
         self.memberView.setAlignment(Qt.AlignHCenter)
+        
+        self.addMemberWidget = QWidget(self)
+        addMemberLayout = QHBoxLayout(self.addMemberWidget)
+        addMemberLayout.setContentsMargins(0, 0, 0, 0)
+        addMemberLayout.addWidget(QLabel(u"Add Member", self), 0)
+        self.addMemberEdit = QLineEdit(self)
+        if hasattr(self.addMemberEdit, "setPlaceholderText"):
+            self.addMemberEdit.setPlaceholderText(u"IP or Hostname")
+        self.addMemberEdit.returnPressed.connect(self._addMember)
+        addMemberLayout.addWidget(self.addMemberEdit, 1)
+        addMemberButton = QPushButton("Add", self)
+        addMemberButton.clicked.connect(self._addMember)
+        addMemberLayout.addWidget(addMemberButton, 0)
         
         sendLayout = QHBoxLayout()
         sendMessageField = QLineEdit(self)
@@ -35,11 +51,12 @@ class SimpleViewWidget(QWidget):
         self.msgview.setLineWrapMode(QTextEdit.WidgetWidth)
         self.msgview.setReadOnly(True)
         
+        layout.addWidget(self.addMemberWidget)
         layout.addWidget(self.memberView)
         layout.addLayout(sendLayout)
         layout.addWidget(self.msgview)
         
-        
+        get_notification_center().connectMemberAppended(self._memberAppended)
         get_notification_center().connectMemberAppended(self.updateWidgets)
         get_notification_center().connectMemberUpdated(self.updateWidgets)
         get_notification_center().connectMemberRemoved(self.updateWidgets)
@@ -51,6 +68,12 @@ class SimpleViewWidget(QWidget):
     def showEvent(self, showEvent):
         self.updateWidgets()
         
+    @loggingSlot()
+    def _addMember(self):
+        hostn = convert_raw(self.addMemberEdit.text())
+        if hostn:
+            get_server().call_request_info([hostn])
+        
     def getMemberColor(self, peerID):
         if not self.colorMap.has_key(peerID):
             self.colorMap[peerID] = self.colors[self.colorCounter]
@@ -58,17 +81,31 @@ class SimpleViewWidget(QWidget):
         
         return self.colorMap[peerID]
             
-    def updateWidgets(self):
+    @loggingSlot(object, object)
+    def _memberAppended(self, pID, _infoDict):
+        if not get_peers().isMe(pID=pID):
+            self.addMemberWidget.setVisible(False)
+                
+    @pyqtSlot(struct_time, object, object)
+    @pyqtSlot(object, object)
+    @pyqtSlot(object)
+    @loggingSlot()
+    def updateWidgets(self, _=None, __=None, ___=None):
         if not self.isVisible():
             return True        
         
-        members = get_peers().getMembers()
+        peers = get_peers()
+        if peers is not None:
+            members = peers.getMembers()
+            readyMembers = peers.getReadyMembers()
+            notReadyMembers = peers.getMembers() - readyMembers
+        else:
+            members = []
+            readyMembers = []
+            notReadyMembers = []
+            
         memText = "%d group members online<br />" % len(members)
         memToolTip = ""
-
-        peers = get_server().getLunchPeers()
-        readyMembers = peers.getReadyMembers()
-        notReadyMembers = peers.getMembers() - readyMembers
         
         # don't display members with unknown status as ready
         readyMembers = [pID for pID in readyMembers if peers.isPeerReadinessKnown(pID=pID)]
@@ -86,7 +123,7 @@ class SimpleViewWidget(QWidget):
         with get_server().get_messages():
             messages = get_server().get_messages().getAll(time() - (180 * 60))
         for timest, peerID, msg in messages:
-            member = get_peers().getDisplayedPeerName(pID=peerID)
+            member = peers.getDisplayedPeerName(pID=peerID)
             color = self.getMemberColor(peerID)
             msgTexts += "<span style='color:#%s'><b>%s</b> \
                         <i>[%s]</i>: %s</span><br />\n" % (color, member,strftime("%H:%M",timest), msg)
@@ -113,8 +150,4 @@ class SimpleViewWidget(QWidget):
             get_notification_center().disconnectMemberRemoved(self.updateWidgets)
             get_notification_center().disconnectMessagePrepended(self.updateWidgets) 
         except:
-            log_info("Simple View: was not able to disconnect timer")
-        
-if __name__ == '__main__':        
-    from lunchinator.plugin import iface_gui_plugin
-    iface_gui_plugin.run_standalone(lambda window : SimpleViewWidget(window))
+            self.logger.info("Simple View: was not able to disconnect timer")

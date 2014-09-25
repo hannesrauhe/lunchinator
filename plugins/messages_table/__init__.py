@@ -1,7 +1,10 @@
+from lunchinator import get_settings, get_server, get_notification_center, \
+        lunchinator_has_gui 
+from lunchinator.log import loggingFunc
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import log_exception, get_settings, get_server,\
-    get_notification_center, log_debug
-import urllib2,sys
+from lunchinator.peer_actions import PeerAction
+from lunchinator.utilities import getValidQtParent
+import sys
 from datetime import datetime, timedelta
     
 class messages_table(iface_gui_plugin):
@@ -46,8 +49,9 @@ class messages_table(iface_gui_plugin):
         delta = midnight - now
         self._dailyTrigger.start((delta.seconds + 1) * 1000 + delta.microseconds / 1000)
         
+    @loggingFunc
     def _updateTimes(self):
-        log_debug("It's a new day, update the message times.")
+        self.logger.debug("It's a new day, update the message times.")
         self.messagesModel.updateTimes()
         self._updateDailyTrigger()
         
@@ -75,5 +79,4 @@ class messages_table(iface_gui_plugin):
         
         return self.messagesTable
     
-    def add_menu(self,menu):
-        pass
+            

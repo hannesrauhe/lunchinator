@@ -1,22 +1,27 @@
 # coding: utf-8
-import platform, sip, socket, os, subprocess
-from lunchinator import get_server, log_exception, log_info, get_settings, \
-    log_error, convert_string, log_warning, get_notification_center, \
-    get_plugin_manager
-from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QSystemTrayIcon, QIcon, QCursor,\
-    QDialog
-from PyQt4.QtCore import QThread, pyqtSignal, pyqtSlot, QObject, QCoreApplication, QTimer
-from PyQt4 import QtCore
-from functools import partial
-from lunchinator.lunch_datathread_qt import DataReceiverThread, DataSenderThread
+from lunchinator import get_server, get_settings, convert_string,\
+    get_notification_center, get_plugin_manager, get_peers
+from lunchinator.log import getCoreLogger
+from lunchinator.datathread.dt_qthread import DataReceiverThread, DataSenderThread
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.lunch_window import LunchinatorWindow
 from lunchinator.lunch_settings_dialog import LunchinatorSettingsDialog
-from lunchinator.utilities import getPlatform, PLATFORM_MAC,\
+from lunchinator.utilities import getPlatform, PLATFORM_MAC, PLATFORM_WINDOWS,\
     getValidQtParent, restart, displayNotification, msecUntilNextMinute
 from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
 from lunchinator.notification_center_qt import NotificationCenterQt
 from lunchinator.notification_center import NotificationCenter
+from lunchinator.log.logging_slot import loggingSlot
+from lunchinator.log.error_dialog import ErrorLogDialog
+
+from PyQt4.QtGui import QLineEdit, QMenu, QMessageBox, QSystemTrayIcon,\
+    QIcon, QCursor, QDialog
+from PyQt4.QtCore import QThread, pyqtSignal, QObject,\
+    QCoreApplication, QTimer, Qt, pyqtSlot
+from PyQt4 import QtCore
+
+from functools import partial
+import platform, sip, socket, os, subprocess, time
 
 class LunchServerThread(QThread):
     def __init__(self, parent):
@@ -32,16 +37,17 @@ class LunchinatorGuiController(QObject, LunchServerController):
     _performCall = pyqtSignal(object, set, set)
     _sendFile = pyqtSignal(object, bytearray, int, bool)
     _receiveFile = pyqtSignal(object, int, object, int, object, object)
-    _processEvent = pyqtSignal(object, object, object, float, bool, bool)
+    _processEvent = pyqtSignal(object, object, float, bool, bool)
     _processMessage = pyqtSignal(object, object, float, bool, bool)
     _updateRequested = pyqtSignal()
+    _openWindow = pyqtSignal()
     # -----------------------------
     
     def __init__(self): 
         QObject.__init__(self)
         LunchServerController.__init__(self)
         
-        log_info("Your PyQt version is %s, based on Qt %s" % (QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR))
+        getCoreLogger().info("Your PyQt version is %s, based on Qt %s", QtCore.PYQT_VERSION_STR, QtCore.QT_VERSION_STR)
         
         self._shuttingDown = False
         self.resetNextLunchTimeTimer = None
@@ -66,6 +72,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         # initialize main window
         self.mainWindow = LunchinatorWindow(self)
         self.settingsWindow = None
+        self.errorDialog = ErrorLogDialog(self.mainWindow)
         self.setParent(self.mainWindow)
         
         if not self.createTrayIcon():
@@ -82,6 +89,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._processEvent.connect(self.processEventSlot)
         self._processMessage.connect(self.processMessageSlot)
         self._updateRequested.connect(self.updateRequested)
+        self._openWindow.connect(self.openWindowClicked)
         
         get_notification_center().connectApplicationUpdate(self._appUpdateAvailable)
         get_notification_center().connectOutdatedRepositoriesChanged(self._outdatedReposChanged)
@@ -99,7 +107,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def _initNotificationCenter(self):
         NotificationCenter.setSingletonInstance(NotificationCenterQt(self))
         
-    def _newMessage(self):
+    @loggingSlot(time.struct_time, object, object)
+    def _newMessage(self, _messageTime, _senderID, _messageText):
         if self.mainWindow.isActiveWindow():
             # dont set highlighted if window is in foreground
             return
@@ -120,7 +129,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         else:
             name = "lunchinator"
         
-        icon_file = get_settings().get_resource("images", name + ".png")
+        icon_file = get_settings().get_resource("images", name + (".png" if getPlatform() == PLATFORM_WINDOWS else ".svg"))
         
         icon = None
         if hasattr(QIcon, "fromTheme"):
@@ -141,8 +150,8 @@ class LunchinatorGuiController(QObject, LunchServerController):
                                               defaultButton=QMessageBox.Yes)
                 if result == QMessageBox.Yes:
                     if subprocess.call(['gksu', get_settings().get_resource('bin', 'install-lunch-icons.sh') + ' lunchinator']) == 0:
-                        log_info("restarting after icons were installed")
-                        restart()
+                        getCoreLogger().info("restarting after icons were installed")
+                        restart(getCoreLogger())
                         return False
                     else:
                         QMessageBox.critical(self.mainWindow,
@@ -150,7 +159,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
                                              "The icons were not installed, there was an error.",
                                              buttons=QMessageBox.Ok,
                                              defaultButton=QMessageBox.Ok)
-                        log_info("icons were not installed because of an error")
+                        getCoreLogger().info("icons were not installed because of an error")
         
         # initialize tray icon
         self.statusicon = QSystemTrayIcon(self.mainWindow)
@@ -162,6 +171,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.statusicon.show()
         return True
         
+    @loggingSlot(QSystemTrayIcon.ActivationReason)
     def trayActivated(self, reason):
         if getPlatform() == PLATFORM_MAC:
             # Trigger is sent even though the context menu is shown.
@@ -187,19 +197,19 @@ class LunchinatorGuiController(QObject, LunchServerController):
         if self.serverThread != None and not sip.isdeleted(self.serverThread) and self.serverThread.isRunning():
             self.serverThread.finished.disconnect(self.serverFinishedUnexpectedly)
             get_server().stop_server()
-            log_info("Waiting maximal 30s for server to stop...")
+            getCoreLogger().info("Waiting maximal 30s for server to stop...")
             # wait maximal 30s 
             if self.serverThread.wait(30000):
-                log_info("server stopped")
+                getCoreLogger().info("server stopped")
             else:
-                log_warning("server not stopped properly")
+                getCoreLogger().warning("server not stopped properly")
         else:
-            log_info("server not running")
+            getCoreLogger().info("server not running")
         
         if self.running:
             if get_settings().get_plugins_enabled():
                 get_plugin_manager().deactivatePlugins(get_plugin_manager().getAllPlugins(), save_state=False)
-                log_info("all plug-ins deactivated")
+                getCoreLogger().info("all plug-ins deactivated")
             if self.mainWindow is not None:
                 self.mainWindow.finish()
             if self.settingsWindow is not None:
@@ -229,6 +239,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def call(self, msg, peerIDs, peerIPs):
         self._performCall.emit(msg, peerIDs, peerIPs)
         
+    @loggingSlot()
     def serverFinishedUnexpectedly(self):
         self.serverThread = None
         self.quit(EXIT_CODE_ERROR)
@@ -244,10 +255,6 @@ class LunchinatorGuiController(QObject, LunchServerController):
         infoDict['pyqt_version'] = QtCore.PYQT_VERSION_STR
         infoDict['qt_version'] = QtCore.QT_VERSION_STR
             
-    def getOpenTCPPort(self, senderIP):
-        assert senderIP != None
-        return DataReceiverThread.getOpenPort(category="avatar%s" % senderIP)
-    
     def receiveFile(self, ip, fileSize, fileName, tcp_port, successFunc=None, errorFunc=None):
         self._receiveFile.emit(ip, fileSize, fileName, tcp_port, successFunc, errorFunc)
     
@@ -257,13 +264,27 @@ class LunchinatorGuiController(QObject, LunchServerController):
             fileOrData = fileOrData.encode('utf-8')
         self._sendFile.emit(ip, bytearray(fileOrData), otherTCPPort, isData)
 
-    """ process any non-message event """    
-    def processEvent(self, cmd, hostName, senderIP, eventTime, newPeer, fromQueue):
-        self._processEvent.emit(cmd, hostName, senderIP, eventTime, newPeer, fromQueue)
+    def processEvent(self, xmsg, addr, eventTime, newPeer, fromQueue):
+        """ process any non-message event 
+        @type xmsg: extMessageIncoming
+        @type addr: unicode
+        @type eventTime: float
+        @type newPeer: bool
+        @type fromQueue: bool
+        """
+        self._processEvent.emit(xmsg, addr, eventTime, newPeer, fromQueue)
     
-    """ process any message event, including lunch calls """
-    def processMessage(self, msg, addr, eventTime, newPeer, fromQueue):
-        self._processMessage.emit(msg, addr, eventTime, newPeer, fromQueue)
+    
+    def processMessage(self, xmsg, addr, eventTime, newPeer, fromQueue):
+        """ process any message event, including lunch calls 
+        @type cmd: unicode
+        @type xmsg: extMessageIncoming
+        @type addr: unicode
+        @type eventTime: float
+        @type newPeer: bool
+        @type fromQueue: bool
+        """
+        self._processMessage.emit(xmsg, addr, eventTime, newPeer, fromQueue)
     
     def getMainGUI(self):
         return self.mainWindow
@@ -279,18 +300,21 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         self._repoUpdateStatusAction.setVisible(self._repoUpdates > 0)
     
+    @loggingSlot()
     def _appUpdateAvailable(self):
         self._updateAvailable = True
         if self._appUpdateStatusAction != None:
             self._appUpdateStatusAction.setVisible(True)
         self.notifyUpdates()
     
+    @loggingSlot()
     def _outdatedReposChanged(self):
         self._repoUpdates = get_settings().get_plugin_repositories().getNumOutdated()
         if self._repoUpdateStatusAction != None:
             self._updateRepoUpdateStatusAction()
         self.notifyUpdates()
         
+    @loggingSlot()
     def _updatesDisabled(self):
         if self._repoUpdateStatusAction != None:
             self._repoUpdateStatusAction.setVisible(False)
@@ -303,13 +327,14 @@ class LunchinatorGuiController(QObject, LunchServerController):
     def _hasUpdates(self):
         return self._updateAvailable or self._repoUpdates > 0
         
+    @loggingSlot(object)
     def _restartRequired(self, reason):
         reason = convert_string(reason)
         if self._restartReason == reason:
             # same reason again, do not notify
             return
         
-        displayNotification(u"Restart required", reason)
+        displayNotification(u"Restart required", reason, getCoreLogger())
         
         if self._restartReason:
             # now there are multiple reasons to restart
@@ -338,7 +363,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         anAction = parentMenu.addAction(displayedName)
         anAction.setCheckable(True)
         anAction.setChecked(pluginInfo.plugin_object.is_activated)
-        anAction.toggled.connect(partial(self.toggle_plugin, pluginInfo.name, aCat))
+        anAction.triggered.connect(partial(self.toggle_plugin, pluginInfo.name, aCat), type=Qt.DirectConnection)
         self.pluginNameToMenuAction[pluginInfo.name] = anAction
         return anAction
         
@@ -397,7 +422,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self.memberStatusUpdateTimer.start(msecUntilNextMinute())
         
         anAction = menu.addAction('Call for lunch')
-        anAction.triggered.connect(partial(self.sendMessageClicked, u'lunch', None))
+        anAction.triggered.connect(partial(self.sendMessageClicked, u'lunch'))
         
         anAction = menu.addAction('Show Lunchinator')
         anAction.triggered.connect(self.openWindowClicked)
@@ -419,7 +444,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         self._restartStatusAction = menu.addAction(self._restartReason)
         self._restartStatusAction.setEnabled(False)
         self._restartAction = menu.addAction("Restart")
-        self._restartAction.triggered.connect(restart)
+        self._restartAction.triggered.connect(partial(restart, getCoreLogger()))
         if self._restartReason:
             self._restartStatusAction.setVisible(True)
             self._restartAction.setVisible(True)
@@ -444,13 +469,17 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         return menu
     
+    @loggingSlot()
     def _startSyncedTimer(self):
         self._updateMemberStatus()
         self.memberStatusUpdateTimer.timeout.disconnect(self._startSyncedTimer)
         self.memberStatusUpdateTimer.timeout.connect(self._updateMemberStatus)
         self.memberStatusUpdateTimer.start(60000)
     
-    def _updateMemberStatus(self):
+    @pyqtSlot()
+    @pyqtSlot(object)
+    @loggingSlot(object, object)
+    def _updateMemberStatus(self, _pID=None, _pInfo=None):
         peers = get_server().getLunchPeers()
         readyMembers = peers.getReadyMembers()
         notReadyMembers = peers.getMembers() - readyMembers
@@ -479,10 +508,17 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
             status = u"%s ready, %s not ready for lunch." % (ready, notReady)
         if everybodyReady and not self._highlightPeersReady:
-            self._highlightPeersReady = True
-            if get_settings().get_notification_if_everybody_ready():
-                displayNotification("Lunch Time", "Everybody is ready for lunch now", get_settings().get_resource("images", "lunchinator.png"))
-            self._highlightIcon()
+            # don't highlight if I am the only member
+            if len(readyMembers) > 1 or not get_peers().isMe(pID=iter(readyMembers).next()):
+                self._highlightPeersReady = True
+                if get_settings().get_notification_if_everybody_ready():
+                    displayNotification("Lunch Time",
+                                        "Everybody is ready for lunch now",
+                                        getCoreLogger(),
+                                        get_settings().get_resource("images", "lunchinator.png"))
+                self._highlightIcon()
+            else:
+                status = u"You are the only member."
         elif not everybodyReady and self._highlightPeersReady:
             self._highlightPeersReady = False
             self._highlightIcon()
@@ -497,50 +533,53 @@ class LunchinatorGuiController(QObject, LunchServerController):
                   
     """---------------------- SLOTS ------------------------------"""
     
-    @pyqtSlot()
+    @loggingSlot()
     def initDoneSlot(self):
         pass
     
-    @pyqtSlot(object, set, set)
+    @loggingSlot(object, set, set)
     def performCallSlot(self, msg, peerIDs, peerIPs):
         get_server().perform_call(msg, peerIDs, peerIPs)
     
-    @pyqtSlot()
+    @loggingSlot()
     def updateRequested(self):
         self.quit(EXIT_CODE_UPDATE)
     
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _pluginActivated(self, pluginName, _category):
         pluginName = convert_string(pluginName)
         if pluginName in self.pluginNameToMenuAction:
             anAction = self.pluginNameToMenuAction[pluginName]
             anAction.setChecked(True)
             
-    @pyqtSlot(object, object)
+    @loggingSlot(object, object)
     def _pluginDeactivated(self, pluginName, _category):
         pluginName = convert_string(pluginName)
         if pluginName in self.pluginNameToMenuAction:
             anAction = self.pluginNameToMenuAction[pluginName]
             anAction.setChecked(False)
 
-    @pyqtSlot(object, object, bool)
+    @loggingSlot(object, object, bool)
     def toggle_plugin(self, p_name, p_cat, new_state):
-        p_cat = convert_string(p_cat)
-        p_name = convert_string(p_name)
-        
-        if new_state:
-            get_plugin_manager().activatePluginByName(p_name, p_cat)
-        else:
-            get_plugin_manager().deactivatePluginByName(p_name, p_cat)
+        try:
+            p_cat = convert_string(p_cat)
+            p_name = convert_string(p_name)
+            
+            if new_state:
+                get_plugin_manager().activatePluginByName(p_name, p_cat)
+            else:
+                get_plugin_manager().deactivatePluginByName(p_name, p_cat)
+        except:
+            getCoreLogger().exception("Error toggling plugin")
     
-    @pyqtSlot(object, QObject)
+    @loggingSlot(object, QObject)
     def sendMessageClicked(self, message, text):
         if message != None:
             get_server().call_all_members(convert_string(message))
         else:
             get_server().call_all_members(text)
         
-    @pyqtSlot(QLineEdit)
+    @loggingSlot(QLineEdit)
     def addHostClicked(self, hostn):
         try:
             ip = socket.gethostbyname(hostn.strip())
@@ -550,25 +589,25 @@ class LunchinatorGuiController(QObject, LunchServerController):
             d.exec_()
             
     @pyqtSlot(bool)
-    @pyqtSlot()
+    @loggingSlot()
     def quitClicked(self, _=None):
         self.quit()
 
     @pyqtSlot(bool)
-    @pyqtSlot()
+    @loggingSlot()
     def openWindowClicked(self, _=None):    
         if self.mainWindow == None:
-            log_error("mainWindow is not initialized")
+            getCoreLogger().error("mainWindow is not initialized")
             return
         self.mainWindow.showNormal()
         self.mainWindow.raise_()
         self.mainWindow.activateWindow()
             
-    @pyqtSlot()
+    @loggingSlot()
     def changeNextLunchTime(self, begin = None, end = None):
         if begin == None:
             if self.mainWindow == None:
-                log_error("mainWindow is not initialized")
+                getCoreLogger().error("mainWindow is not initialized")
                 return
             from lunchinator.timespan_input_dialog import TimespanInputDialog
             dialog = TimespanInputDialog(self.mainWindow, "Change Lunch Time", "When are you free for lunch today?", get_settings().get_next_lunch_begin(), get_settings().get_next_lunch_end())
@@ -593,83 +632,97 @@ class LunchinatorGuiController(QObject, LunchServerController):
             
         get_server().call_info()
             
+    @loggingSlot()
     def _resetNextLunchTime(self):
         get_settings().set_next_lunch_time(None, None)
         get_server().call_info()
             
     @pyqtSlot(bool)
-    @pyqtSlot()
+    @loggingSlot()
     def openSettingsClicked(self, _=None):
         if self.mainWindow == None:
-            log_error("mainWindow not specified")
+            getCoreLogger().error("mainWindow not specified")
             return
         
         if self.settingsWindow == None:
             self.settingsWindow = LunchinatorSettingsDialog(self.mainWindow)
-            self.settingsWindow.closed.connect(self.settingsDialogClosed)
+            self.settingsWindow.save.connect(partial(self.settingsDialogAction, True))
+            self.settingsWindow.discard.connect(partial(self.settingsDialogAction, False))
 
         self.settingsWindow.showNormal()
         self.settingsWindow.raise_()
         self.settingsWindow.activateWindow()
 
-    @pyqtSlot()        
-    def settingsDialogClosed(self):
+    @loggingSlot()        
+    def settingsDialogAction(self, saved):
         if not get_settings().get_plugins_enabled():
             return
-        resp = self.settingsWindow.result()
         for pluginInfo in get_plugin_manager().getAllPlugins():
             if pluginInfo.plugin_object.is_activated and self.settingsWindow.isOptionsWidgetLoaded(pluginInfo.name):
-                if resp == LunchinatorSettingsDialog.Accepted:
+                if saved:
                     try:
                         pluginInfo.plugin_object.save_options_widget_data(sendInfoDict=False)
                     except:
-                        log_exception("was not able to save data for plugin %s" % pluginInfo.name)
+                        getCoreLogger().exception("was not able to save data for plugin %s", pluginInfo.name)
                 else:
                     pluginInfo.plugin_object.discard_changes()
         get_settings().write_config_to_hd()
             
         get_server().call_info()      
 
-    @pyqtSlot(object, bytearray, int, bool)
+    @loggingSlot(object, bytearray, int, bool)
     def sendFileSlot(self, addr, fileToSend, other_tcp_port, isData):
         addr = convert_string(addr)
         if isData:
             fileToSend = str(fileToSend)
+            ds = DataSenderThread.sendData(addr, other_tcp_port, fileToSend, getCoreLogger(), parent=self)
         else:
             fileToSend = str(fileToSend).decode("utf-8")
-        ds = DataSenderThread(self, addr, fileToSend, other_tcp_port, isData)
+            ds = DataSenderThread.sendSingleFile(addr, other_tcp_port, fileToSend, getCoreLogger(), parent=self)
         ds.finished.connect(ds.deleteLater)
         ds.start()
         
+    @loggingSlot(QThread, object)
     def successfullyReceivedFile(self, _thread, filePath):
-        log_info("successfully received file %s" % filePath)
+        getCoreLogger().info("successfully received file %s", filePath)
         
-    def errorOnTransfer(self, _thread):
-        log_error("Error receiving file")
+    @loggingSlot(QThread, object)
+    def errorOnTransfer(self, _thread, message):
+        getCoreLogger().error("Error receiving file (%s)", message)
     
-    @pyqtSlot(object, int, object, int, object, object)
+    @loggingSlot(object, int, object, int, object, object)
     def receiveFileSlot(self, addr, file_size, file_name, tcp_port, successFunc, errorFunc):
         addr = convert_string(addr)
         file_name = convert_string(file_name)
-        dr = DataReceiverThread(self, addr, file_size, file_name, tcp_port, category="avatar%s" % addr)
+        dr = DataReceiverThread.receiveSingleFile(addr, file_name, file_size, tcp_port, getCoreLogger(), "avatar%s" % addr, True, parent=self)
         if successFunc:
             dr.successfullyTransferred.connect(lambda _thread, _path : successFunc())
         if errorFunc:
-            dr.errorOnTransfer.connect(lambda _thread : errorFunc())
+            dr.errorOnTransfer.connect(lambda _thread, _msg : errorFunc())
         dr.successfullyTransferred.connect(self.successfullyReceivedFile)
         dr.errorOnTransfer.connect(self.errorOnTransfer)
         dr.finished.connect(dr.deleteLater)
         dr.start()
         
-    @pyqtSlot(object, object, object, float, bool, bool)
-    def processEventSlot(self, cmd, value, addr, eventTime, newPeer, fromQueue):
-        cmd = convert_string(cmd)
-        value = convert_string(value)
-        addr = convert_string(addr)
-        super(LunchinatorGuiController, self).processEvent(cmd, value, addr, eventTime, newPeer, fromQueue)
+    @loggingSlot(object, object, float, bool, bool)
+    def processEventSlot(self, xmsg, addr, eventTime, newPeer, fromQueue):
+        """ process events that are not group messages
+        @type xmsg: extendedMessageIncoming
+        @type addr: unicode
+        @type eventTime: float
+        @type newPeer: bool
+        @type fromQueue: bool
+        """
+        super(LunchinatorGuiController, self).processEvent(xmsg, addr, eventTime, newPeer, fromQueue)
      
-    @pyqtSlot(object, object, float, bool, bool)
-    def processMessageSlot(self, msg, addr, eventTime, newPeer, fromQueue):
-        msg = convert_string(msg)
-        addr = convert_string(addr)
-        super(LunchinatorGuiController, self).processMessage(msg, addr, eventTime, newPeer, fromQueue)
+    @loggingSlot(object, object, float, bool, bool)
+    def processMessageSlot(self, xmsg, addr, eventTime, newPeer, fromQueue):
+        """ process any message event, including lunch calls
+        @type xmsg: extendedMessageIncoming
+        @type addr: unicode
+        @type eventTime: float
+        @type newPeer: bool
+        @type fromQueue: bool
+        """
+
+        super(LunchinatorGuiController, self).processMessage(xmsg, addr, eventTime, newPeer, fromQueue)

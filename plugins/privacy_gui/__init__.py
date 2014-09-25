@@ -1,7 +1,7 @@
-from lunchinator.plugin import iface_general_plugin
-from privacy_gui.gui import PrivacyGUI
-from lunchinator.privacy import PrivacySettings
 from lunchinator import get_notification_center
+from lunchinator.plugin import iface_general_plugin
+from lunchinator.privacy import PrivacySettings
+from lunchinator.log import loggingFunc
 
 class privacy(iface_general_plugin):
     def __init__(self):
@@ -24,7 +24,8 @@ class privacy(iface_general_plugin):
         return True
 
     def create_options_widget(self, parent):
-        self._ui = PrivacyGUI(parent)
+        from privacy_gui.gui import PrivacyGUI
+        self._ui = PrivacyGUI(parent, self.logger)
         return self._ui  
     
     def destroy_options_widget(self):
@@ -37,6 +38,7 @@ class privacy(iface_general_plugin):
     def discard_changes(self):
         PrivacySettings.get().discard()
         
+    @loggingFunc
     def _settingsChanged(self, _=None, __=None):
         self.set_hidden_option(u"json", PrivacySettings.get().getJSON(), convert=False)
         
@@ -49,6 +51,7 @@ class privacy(iface_general_plugin):
 if __name__ == '__main__':
     from lunchinator.peer_actions import PeerAction, PeerActions
     from lunchinator.plugin import iface_gui_plugin
+    from lunchinator.log import initializeLogger
     
     class TestAction(PeerAction):
         def getName(self):
@@ -71,6 +74,7 @@ if __name__ == '__main__':
         def getCategoryFromMessage(self, _msgData):
             return u"Category 1"
     
+    initializeLogger()
     w = privacy()
     testAction = TestAction()
     testAction._pluginObject = w

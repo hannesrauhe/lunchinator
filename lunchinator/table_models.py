@@ -1,15 +1,17 @@
 from PyQt4.QtCore import Qt, QVariant, QSize, QStringList, QString
 from PyQt4.QtGui import QStandardItemModel, QStandardItem
 from lunchinator import convert_string
+from lunchinator.log.logging_slot import loggingSlot
 
 class TableModelBase(QStandardItemModel):
     KEY_ROLE = Qt.UserRole + 1
     SORT_ROLE = Qt.UserRole + 2
     
-    def __init__(self, dataSource, columns):
+    def __init__(self, dataSource, columns, logger):
         super(TableModelBase, self).__init__()
         self.dataSource = dataSource
         self.columns = columns
+        self.logger = logger
         if self.columns != None:
             self.setColumnCount(len(self.columns))
             stringList = QStringList()
@@ -35,7 +37,6 @@ class TableModelBase(QStandardItemModel):
         if item.data(self.SORT_ROLE) == None:
             item.setData(item.data(Qt.DisplayRole), self.SORT_ROLE)
         item.setData(key, self.KEY_ROLE)
-        item.setData(QSize(0, 20), Qt.SizeHintRole)
         return item
     
     def updateItem(self, key, data, row, column):
@@ -139,24 +140,28 @@ class TableModelBase(QStandardItemModel):
     
     """ ----------------- SLOTS ------------------- """
             
+    @loggingSlot(object, object, int)
     def externalRowInserted(self, key, data, index):
         if type(key) == QString:
             key = convert_string(key)
         data = self._checkDict(data)
         self.insertContentRow(key, data, index)
         
+    @loggingSlot(object, object)
     def externalRowAppended(self, key, data):
         if type(key) == QString:
             key = convert_string(key)
         data = self._checkDict(data)
         self.appendContentRow(key, data)
         
+    @loggingSlot(object, object)
     def externalRowPrepended(self, key, data):
         if type(key) == QString:
             key = convert_string(key)
         data = self._checkDict(data)
         self.prependContentRow(key, data)
     
+    @loggingSlot(object, object)
     def externalRowUpdated(self, key, data):
         if type(key) == QString:
             key = convert_string(key)
@@ -165,6 +170,7 @@ class TableModelBase(QStandardItemModel):
             index = self.keys.index(key)
             self.updateRow(key, data, index)
     
+    @loggingSlot(object)
     def externalRowRemoved(self, key):
         if type(key) == QString:
             key = convert_string(key)

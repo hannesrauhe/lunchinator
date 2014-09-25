@@ -1,23 +1,29 @@
-from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTreeWidget, QStandardItem, QStandardItemModel, QComboBox, QSplitter, QTextEdit, QTreeWidgetItem
-from PyQt4.QtCore import Qt, QVariant, pyqtSlot, QTimer, QStringList, QThread
+from PyQt4.QtGui import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTreeWidget, QComboBox, QSplitter, QTextEdit, QTreeWidgetItem,\
+    QItemSelection
+from PyQt4.QtCore import Qt, QVariant, QTimer, QStringList, QThread
+
+from lunchinator import get_server, get_settings, convert_string, get_peers, get_notification_center
 from lunchinator.history_line_edit import HistoryLineEdit
-from functools import partial
-from lunchinator import get_server, get_settings, convert_string, log_warning,\
-    log_exception, log_debug, getLogLineTime, get_peers, get_notification_center
-import os, sip, codecs, copy, shutil, contextlib, tarfile
-from datetime import datetime
-from lunchinator.lunch_datathread_qt import DataReceiverThread
+from lunchinator.log import getLogLineTime
+from lunchinator.log.logging_slot import loggingSlot
+from lunchinator.datathread.dt_qthread import DataReceiverThread
 from lunchinator.table_models import TableModelBase
+
+import os, sip, codecs, shutil, contextlib, tarfile
+from functools import partial
+from datetime import datetime
 
 class DropdownModel(TableModelBase):
     _NAME_KEY = u'name'
     _ID_KEY = u'ID'
     
-    def __init__(self, dataSource):
+    def __init__(self, dataSource, logger):
         columns = [(u"Name", self._updateNameItem)]
-        super(DropdownModel, self).__init__(dataSource, columns)
+        super(DropdownModel, self).__init__(dataSource, columns, logger)
         
         # Called before server is running, no need to lock here
+        if self.dataSource is None:
+            return
         for peerID in self.dataSource:
             infoDict = dataSource.getPeerInfo(pID=peerID)
             self.appendContentRow(peerID, infoDict)
@@ -37,23 +43,21 @@ class DropdownModel(TableModelBase):
         item.setText(name)
 
 class MembersWidget(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, logger):
         super(MembersWidget, self).__init__(parent)
         
+        self.logger = logger
         layout = QVBoxLayout(self)
         layout.setSpacing(0)
         
         self.dropdown_members_dict = {}
-        self.dropdown_members_model = DropdownModel(get_peers())
+        self.dropdown_members_model = DropdownModel(get_peers(), self.logger)
         self.dropdown_members = QComboBox(self)
         self.dropdown_members.setModel(self.dropdown_members_model)
         
-        self.update_button = QPushButton("Send Update Command", self)
-
         topLayout = QHBoxLayout()
         topLayout.setSpacing(10)
         topLayout.addWidget(self.dropdown_members, 1)
-        topLayout.addWidget(self.update_button)
         self.requestLogsButton = QPushButton("Request Logfiles", self)
         topLayout.addWidget(self.requestLogsButton)
         layout.addLayout(topLayout)
@@ -117,7 +121,6 @@ class MembersWidget(QWidget):
         self.memberSelectionChanged()
         self.log_tree_view.selectionModel().selectionChanged.connect(self.displaySelectedLogfile)
         self.dropdown_members.currentIndexChanged.connect(self.memberSelectionChanged)
-        self.update_button.clicked.connect(self.request_update)
         self.requestLogsButton.clicked.connect(self.requestLogClicked)
         self.sendMessageButton.clicked.connect(partial(self.sendMessageToMember, messageInput))
         messageInput.returnPressed.connect(partial(self.sendMessageToMember, messageInput))
@@ -224,7 +227,7 @@ class MembersWidget(QWidget):
         self.requestLogsButton.setEnabled(True)
         self.dropdown_members.setEnabled(True)
     
-    @pyqtSlot(QThread, object)
+    @loggingSlot(QThread, object)
     def cb_log_transfer_success(self, thread, path):
         path = convert_string(path)
         
@@ -233,7 +236,7 @@ class MembersWidget(QWidget):
         if not os.path.exists(tmpPath):
             os.makedirs(tmpPath)
 
-        logsAdded = []   
+        logsAdded = []
         if path.endswith(".tgz"):
             #extract received log files
             with contextlib.closing(tarfile.open(path, 'r:gz')) as tarContent:
@@ -258,7 +261,7 @@ class MembersWidget(QWidget):
             if numNew > 0 and logNum < 9:
                 # there might be more new ones
                 self.logRequests[thread.sender] = (logNum + 1, datetime.now())
-                log_debug("log seems to be new, another!!!")
+                self.logger.debug("log seems to be new, another!!!")
                 logsAdded.append((logNum + 1, None))
                 self.request_log(thread.sender, logNum + 1)
             elif thread.sender in self.logRequests:
@@ -271,11 +274,11 @@ class MembersWidget(QWidget):
         if len(logsAdded) > 0 or len(logsRenamed) > 0:
             self.updateLogList(logsAdded, logsRenamed)
     
-    @pyqtSlot(QThread)
-    def cb_log_transfer_error(self, _thread):
+    @loggingSlot(QThread, object)
+    def cb_log_transfer_error(self, _thread, message):
         if not self.isVisible():
             return False
-        self.log_area.setText("Error while getting log")
+        self.log_area.setText("Error while getting log (%s)" % message)
         self.requestFinished()
         
     def get_selected_log_member(self):
@@ -293,25 +296,22 @@ class MembersWidget(QWidget):
         if member == None:
             member = self.get_selected_log_member()
         if member != None:
-            log_debug("Requesting log %d from %s" % (logNum, member))
+            self.logger.debug("Requesting log %d from %s", logNum, member)
             get_server().call("HELO_REQUEST_LOGFILE %s %d"%(DataReceiverThread.getOpenPort(category="log%s"%member), logNum), set([member]))
         else:
             self.log_area.setText("No Member selected!")
             
-    @pyqtSlot()
+    @loggingSlot()
     def requestLogClicked(self):
         self.requestLogsButton.setEnabled(False)
         self.dropdown_members.setEnabled(False)
         self.updateLogList([(0, None)])
         self.request_log()
             
-    def request_update(self):
-        member = self.get_selected_log_member()
-        if member != None:
-            get_server().call("HELO_UPDATE from GUI", set([member]))
-    
     def listLogFilesForMember(self, member):
-        logDir = "%s/logs/%s" % (get_settings().get_main_config_dir(), member)
+        if member is None:
+            return []
+        logDir = os.path.join(get_settings().get_main_config_dir(), "logs", member)
         if not os.path.exists(logDir):
             return []
         return self.listLogfiles(logDir)
@@ -347,7 +347,7 @@ class MembersWidget(QWidget):
         item.setData(0, Qt.UserRole, logFile)
         item.setData(0, Qt.DisplayRole, QVariant(text))
     
-    @pyqtSlot()
+    @loggingSlot()
     def clearLogs(self):
         for aLogFile in self.listLogFilesForMember(self.get_selected_log_member()):
             os.remove(aLogFile)
@@ -376,7 +376,7 @@ class MembersWidget(QWidget):
                 if item != None:
                     itemLogFile = convert_string(item.data(0, Qt.UserRole).toString())
                     if itemLogFile != oldName:
-                        log_warning("index does not correspond to item in list:\n\t%s\n\t%s" % (itemLogFile, oldName))
+                        self.logger.warning("index does not correspond to item in list:\n\t%s\n\t%s", itemLogFile, oldName)
                     self.initializeLogItem(item, newName)
             
         if len(logsAdded) == 0:
@@ -430,27 +430,30 @@ class MembersWidget(QWidget):
             with codecs.open(logPath,"r",'utf8') as fhandler:
                 fcontent = fhandler.read()
         except Exception as e:
-            log_exception("Error reading file")
+            self.logger.exception("Error reading file")
             fcontent = "Error reading file: %s"%str(e)
         return fcontent
     
-    def displaySelectedLogfile(self):
+    @loggingSlot(QItemSelection, QItemSelection)
+    def displaySelectedLogfile(self, _new, _old):
         self.log_area.setText(self.getSelectedLogContent())
-        
-    def memberSelectionChanged(self):
+    
+    @loggingSlot(int)
+    def memberSelectionChanged(self, _new=None):
         self.updateLogList()
         isMemberSelected = self.get_selected_log_member() != None
         self.sendMessageButton.setEnabled(isMemberSelected)
-        self.update_button.setEnabled(isMemberSelected)
         self.requestLogsButton.setEnabled(isMemberSelected)
         self.updateMemberInformation()
         
+    @loggingSlot(object)
     def sendMessageToMember(self, lineEdit):
         selectedMember = self.get_selected_log_member()
         if selectedMember != None:
             get_server().call(convert_string(lineEdit.text()),set([selectedMember]))
             lineEdit.clear()
         
+    @loggingSlot(object, object)
     def updateMemberInformation(self, peerID=None, peerInfo=None):
         if peerID != None and peerID != self.get_selected_log_member():
             # only update if selected member updated

@@ -1,2 +1,1 @@
 from privacy_settings import PrivacySettings
-from confirmation_dialog import PrivacyConfirmationDialog

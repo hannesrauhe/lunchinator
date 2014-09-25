@@ -1,7 +1,7 @@
 from lunchinator.plugin import iface_general_plugin
-from avatar.l_avatar import l_avatar
 import mimetypes
-from lunchinator import get_server, get_settings, log_error, convert_string, log_debug
+from lunchinator import get_server, get_settings, convert_string
+from lunchinator.log import loggingFunc
 from functools import partial
 import os
 
@@ -23,6 +23,7 @@ class avatar(iface_general_plugin):
     def _setImage(self, selectedFile, label):
         from PyQt4.QtGui import QImage, QPixmap
         from PyQt4.QtCore import Qt
+        from avatar.l_avatar import l_avatar
         qimg = QImage(selectedFile)
         pixmap = QPixmap.fromImage(qimg).scaled(l_avatar.width,l_avatar.height,Qt.KeepAspectRatio,Qt.SmoothTransformation)
         label.setPixmap(pixmap)
@@ -31,7 +32,8 @@ class avatar(iface_general_plugin):
     def parentWindow(self, w):
         return w if w.parentWidget() == None else self.parentWindow(w.parentWidget())
     
-    def _chooseFile(self):  
+    @loggingFunc
+    def _chooseFile(self, _checked=None):
         from PyQt4.QtGui import QSortFilterProxyModel, QFileDialog
         class FileFilterProxyModel(QSortFilterProxyModel):
             MIME_TYPES = ["image/png", "image/jpeg", "image/gif"]
@@ -61,15 +63,15 @@ class avatar(iface_general_plugin):
 #            selectedFile = convert_string(selectedFiles.first())
         
         selectedFile = QFileDialog.getOpenFileName(self.parentWindow(self.label), caption="Choose Avatar Picture:")
-        if selectedFile != None:
-            selectedFile = convert_string(selectedFile)
+        selectedFile = convert_string(selectedFile)
+        if selectedFile:
             if not os.path.isdir(selectedFile) and fileFilter.filterAcceptsFile(selectedFile):
                 self.selectedFile = selectedFile
                 self._setImage(selectedFile, self.label)
             else:
-                log_error("Selected invalid file: '%s' is of invalid type" % selectedFile)
+                self.logger.error("Selected invalid file: '%s' is of invalid type", selectedFile)
         else:
-            log_debug("Avatar: no file selected")
+            self.logger.debug("Avatar: no file selected")
     
     def _display_avatar(self):
         img_path = os.path.join(get_settings().get_avatar_dir(), get_settings().get_avatar_file())
@@ -101,8 +103,9 @@ class avatar(iface_general_plugin):
         return widget
 
     def save_options_widget_data(self, **_kwargs):
+        from avatar.l_avatar import l_avatar
         if self.selectedFile != None:
-            l = l_avatar()
+            l = l_avatar(self.logger)
             l.use_as_avatar(self.selectedFile)
 
     def discard_changes(self):

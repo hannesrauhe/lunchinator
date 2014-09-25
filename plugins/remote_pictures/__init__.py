@@ -1,24 +1,21 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import log_exception, get_settings, log_error, convert_string,\
-    log_warning, get_server, log_debug, get_peers, get_notification_center
-import urllib2,sys,tempfile,csv,contextlib,os,socket
-from lunchinator.utilities import getValidQtParent, displayNotification,\
-    canUseBackgroundQThreads
-from lunchinator.download_thread import DownloadThread
+from lunchinator import get_server, get_notification_center, lunchinator_has_gui
+from lunchinator.log import loggingFunc
+from lunchinator.utilities import canUseBackgroundQThreads
 from StringIO import StringIO
-from functools import partial
-from tempfile import NamedTemporaryFile
-from urlparse import urlparse
 from lunchinator.peer_actions import PeerAction
 from lunchinator.privacy import PrivacySettings
+import contextlib, csv
     
 class _RemotePictureAction(PeerAction):
     def getName(self):
         return "Send Remote Picture"
     
     def appliesToPeer(self, _peerID, _peerInfo):
-        # TODO have to implement performAction
-        return False
+        return True
+    
+    def performAction(self, peerID, peerInfo, parent):
+        self.getPluginObject().sendRemotePicture(peerID, peerInfo, parent)
     
     def getMessagePrefix(self):
         return "REMOTE_PIC"
@@ -59,13 +56,16 @@ class _RemotePictureAction(PeerAction):
         return PrivacySettings.NO_CATEGORY
     
 class remote_pictures(iface_gui_plugin):
+    VERSION_DB = 0
+    VERSION_CURRENT = VERSION_DB
+    
     def __init__(self):
         super(remote_pictures, self).__init__()
-        self.options = [((u"min_opacity", u"Minimum opacity of controls:", self.minOpacityChanged), 20),
-                        ((u"max_opacity", u"Maximum opacity of controls:", self.maxOpacityChanged), 80),
-                        ((u"thumbnail_size", u"Thumbnail Size:", self.thumbnailSizeChanged), 150),
-                        ((u"smooth_scaling", u"Smooth scaling", self.smoothScalingChanged), False),
-                        ((u"store_locally", u"Store pictures locally"), True)]
+        self.options = [((u"min_opacity", u"Minimum opacity of controls:", self._minOpacityChanged), 20),
+                        ((u"max_opacity", u"Maximum opacity of controls:", self._maxOpacityChanged), 80),
+                        ((u"thumbnail_size", u"Thumbnail Size:", self._thumbnailSizeChanged), 150),
+                        ((u"smooth_scaling", u"Smooth scaling", self._smoothScalingChanged), False),
+                        ((u"store_locally", u"Store pictures locally", self._storeLocallyChanged), True)]
         self._gui = None
         self._handler = None
         self._rpAction = None
@@ -80,13 +80,13 @@ class remote_pictures(iface_gui_plugin):
             signal.emit(float(newValue) / 100.)
         return newValue
         
-    def minOpacityChanged(self, _setting, newValue):
+    def _minOpacityChanged(self, _setting, newValue):
         return self._handleOpacity(newValue, None if self._gui is None else self._gui.minOpacityChanged)
     
-    def maxOpacityChanged(self, _setting, newValue):
+    def _maxOpacityChanged(self, _setting, newValue):
         return self._handleOpacity(newValue, None if self._gui is None else self._gui.maxOpacityChanged)
     
-    def thumbnailSizeChanged(self, _setting, newValue):
+    def _thumbnailSizeChanged(self, _setting, newValue):
         from remote_pictures.remote_pictures_category_model import CategoriesModel
         if newValue < CategoriesModel.MIN_THUMBNAIL_SIZE:
             newValue = CategoriesModel.MIN_THUMBNAIL_SIZE
@@ -98,8 +98,12 @@ class remote_pictures(iface_gui_plugin):
         if self._handler is not None:
             self._handler.thumbnailSizeChanged(newValue)
         return newValue
+    
+    def _storeLocallyChanged(self, _setting, newValue):
+        self._handler.storeLocallyChanged(newValue)
+        return newValue
         
-    def smoothScalingChanged(self, _setting, newValue):
+    def _smoothScalingChanged(self, _setting, newValue):
         if self._gui is not None:
             self._gui.setSmoothScaling(newValue)
         
@@ -109,6 +113,7 @@ class remote_pictures(iface_gui_plugin):
         from remote_pictures.remote_pictures_handler import RemotePicturesHandler
         super(remote_pictures, self).create_widget(parent)
         self._gui = RemotePicturesGui(parent,
+                                      self.logger,
                                       self.get_option(u"smooth_scaling"),
                                       self.get_option(u"min_opacity"),
                                       self.get_option(u"max_opacity"))
@@ -117,7 +122,10 @@ class remote_pictures(iface_gui_plugin):
             self._messagesThread = QThread()
         else:
             self._messagesThread = None
-        self._handler = RemotePicturesHandler(self.get_option(u"thumbnail_size"), self._gui)
+        self._handler = RemotePicturesHandler(self.logger,
+                                              self.get_option(u"thumbnail_size"),
+                                              self.get_option(u"store_locally"),
+                                              self._gui)
         if self._messagesThread is not None:
             self._handler.moveToThread(self._messagesThread)
             self._messagesThread.start()
@@ -125,8 +133,11 @@ class remote_pictures(iface_gui_plugin):
         self._gui.openCategory.connect(self._handler.openCategory)
         self._gui.displayPrev.connect(self._handler.displayPrev)
         self._gui.displayNext.connect(self._handler.displayNext)
+        self._gui.pictureDownloaded.connect(self._handler.pictureDownloaded)
+        self._gui.setCategoryThumbnail.connect(self._handler.setCategoryThumbnail)
         
         self._handler.addCategory.connect(self._gui.categoryModel.addCategory)
+        self._handler.categoryThumbnailChanged.connect(self._gui.categoryModel.categoryThumbnailChanged) 
         self._handler.displayImageInGui.connect(self._gui.displayImage)
         
         self._gui.categoryModel.categoriesChanged.connect(self._privacySettingsChanged)
@@ -141,8 +152,11 @@ class remote_pictures(iface_gui_plugin):
             self._gui.openCategory.disconnect(self._handler.openCategory)
             self._gui.displayPrev.disconnect(self._handler.displayPrev)
             self._gui.displayNext.disconnect(self._handler.displayNext)
+            self._gui.pictureDownloaded.disconnect(self._handler.pictureDownloaded)
+            self._gui.setCategoryThumbnail.disconnect(self._handler.setCategoryThumbnail)
             
             self._handler.addCategory.disconnect(self._gui.categoryModel.addCategory)
+            self._handler.categoryThumbnailChanged.disconnect(self._gui.categoryModel.categoryThumbnailChanged)
             self._handler.displayImageInGui.disconnect(self._gui.displayImage)
             
         if self._gui is not None:
@@ -160,34 +174,59 @@ class remote_pictures(iface_gui_plugin):
         
         iface_gui_plugin.destroy_widget(self)
 
+    def extendsInfoDict(self):
+        return lunchinator_has_gui()
+        
+    def extendInfoDict(self, infoDict):
+        infoDict[u"RP_v"] = self.VERSION_CURRENT
+        
     def get_peer_actions(self):
-        self._rpAction = _RemotePictureAction()
-        return [self._rpAction]
+        if lunchinator_has_gui():
+            self._rpAction = _RemotePictureAction()
+            return [self._rpAction]
+        else:
+            return None
             
     def checkCategory(self, cat):
         if self._handler is not None:
             self._handler.checkCategory(cat)
             
-    def process_event(self, cmd, value, ip, _info):
+    def process_event(self, cmd, value, ip, _info, _prep):
         if cmd=="HELO_REMOTE_PIC":
             if self._handler is not None:
-                self._handler.processRemotePicture(value, ip, self.get_option(u"store_locally"))
-    
+                self._handler.processRemotePicture(value, ip)
+                
     def getCategories(self):
         if self._handler is None:
-            log_error("Remote Pictures not initialized")
+            self.logger.error("Remote Pictures not initialized")
             return []
     
         return self._handler.getCategoryNames(alsoEmpty=True)
     
     def getCategoryIcon(self, category):
         if self._gui is None:
-            log_error("Remote Pictures not initialized")
+            self.logger.error("Remote Pictures not initialized")
             return None
         return self._gui.getCategoryIcon(category)
     
     def willIgnorePeerAction(self, category, url):
         return self._handler.willIgnorePeerAction(category, url)
     
+    def sendRemotePicture(self, peerID, peerInfo, parent):
+        from remote_pictures.remote_pictures_dialog import RemotePicturesDialog
+        dialog = RemotePicturesDialog(parent, peerID, peerInfo)
+        result = dialog.exec_()
+        if result == RemotePicturesDialog.Accepted:
+            data = [dialog.getURL().encode('utf-8')]
+            if dialog.getDescription():
+                data.append(dialog.getDescription().encode('utf-8'))
+                if dialog.getCategory():
+                    data.append(dialog.getCategory().encode('utf-8'))
+            with contextlib.closing(StringIO()) as strOut:
+                writer = csv.writer(strOut, delimiter = ' ', quotechar = '"')
+                writer.writerow(data)
+                get_server().call("HELO_REMOTE_PIC " + strOut.getvalue(), peerIDs=[peerID])
+    
+    @loggingFunc
     def _privacySettingsChanged(self):
         get_notification_center().emitPrivacySettingsChanged(self._rpAction.getPluginName(), self._rpAction.getName())

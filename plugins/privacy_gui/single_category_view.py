@@ -1,15 +1,16 @@
 from PyQt4.QtGui import QWidget, QHBoxLayout, QLabel, QComboBox, QTreeView,\
-    QVBoxLayout, QFrame, QCheckBox
+    QVBoxLayout, QFrame, QCheckBox, QSortFilterProxyModel, QStandardItem
 from PyQt4.QtCore import Qt, QVariant
 from lunchinator.table_models import TableModelBase
-from lunchinator import get_peers, log_warning, get_notification_center,\
+from lunchinator import get_peers, get_notification_center,\
     convert_string
 from lunchinator.privacy.privacy_settings import PrivacySettings
+from lunchinator.log.logging_slot import loggingSlot
 
 class PeerModel(TableModelBase):
-    def __init__(self, data, tristate):
+    def __init__(self, data, tristate, logger):
         columns = [(u"Peer Name", self._updateNameItem)]
-        super(PeerModel, self).__init__(get_peers(), columns)
+        super(PeerModel, self).__init__(get_peers(), columns, logger)
         
         if data is None:
             raise ValueError("data cannot be None")
@@ -42,9 +43,11 @@ class PeerModel(TableModelBase):
                     value = QVariant(Qt.PartiallyChecked)
         return TableModelBase.setData(self, index, value, role)
         
+    @loggingSlot(object, object)
     def peerNameAdded(self, pID, _name):
         self.appendContentRow(pID, None)
     
+    @loggingSlot(object, object)
     def peerNameChanged(self, pID, _newName):
         self.externalRowUpdated(pID, None)
         
@@ -55,7 +58,7 @@ class PeerModel(TableModelBase):
             m_name = pID
         
         if m_name is None:
-            log_warning("displayed peer name (%s) should not be None" % pID)
+            self.logger.warning("displayed peer name (%s) should not be None", pID)
             m_name = pID
         item.setText(m_name)
         item.setCheckable(True)
@@ -67,9 +70,10 @@ class PeerModel(TableModelBase):
         item.setCheckState(checkState)
         
 class SingleCategoryView(QWidget):
-    def __init__(self, action, parent, category=None, mode=None):
+    def __init__(self, action, parent, logger, category=None, mode=None):
         super(SingleCategoryView, self).__init__(parent)
         
+        self.logger = logger
         self._action = action
         self._category = category
         self._resetting = False
@@ -98,11 +102,13 @@ class SingleCategoryView(QWidget):
         get_notification_center().connectPeerNameAdded(self._peerModel.peerNameAdded)
         get_notification_center().connectDisplayedPeerNameChanged(self._peerModel.peerNameChanged)
         get_notification_center().connectPrivacySettingsChanged(self._privacySettingsChanged)
+        get_notification_center().connectPrivacySettingsDiscarded(self._privacySettingsChanged)
         
     def finish(self):
         get_notification_center().disconnectPeerNameAdded(self._peerModel.peerNameAdded)
         get_notification_center().disconnectDisplayedPeerNameChanged(self._peerModel.peerNameChanged)
         get_notification_center().disconnectPrivacySettingsChanged(self._privacySettingsChanged)
+        get_notification_center().disconnectPrivacySettingsDiscarded(self._privacySettingsChanged)
         
     def _getCategoryPolicy(self):
         return PrivacySettings.CATEGORY_NEVER if self._category is None else PrivacySettings.CATEGORY_ALWAYS
@@ -134,15 +140,22 @@ class SingleCategoryView(QWidget):
         else:
             exceptions = {}
         self._peerModel = PeerModel(exceptions,
-                                    mode == PrivacySettings.POLICY_PEER_EXCEPTION)
+                                    mode == PrivacySettings.POLICY_PEER_EXCEPTION,
+                                    self.logger)
         self._peerModel.itemChanged.connect(self._peerDataChanged)
+        
+        proxyModel = QSortFilterProxyModel(self)
+        proxyModel.setDynamicSortFilter(True)
+        proxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
+        proxyModel.setSourceModel(self._peerModel)
+        proxyModel.sort(0)
         
         self._peerList = QTreeView(self)
         self._peerList.setAlternatingRowColors(False)
         self._peerList.setHeaderHidden(True)
         self._peerList.setItemsExpandable(False)
         self._peerList.setIndentation(0)
-        self._peerList.setModel(self._peerModel)
+        self._peerList.setModel(proxyModel)
         self._peerList.setSelectionMode(QTreeView.NoSelection)
         self._peerList.setAutoFillBackground(False)
         self._peerList.viewport().setAutoFillBackground(False)
@@ -157,6 +170,7 @@ class SingleCategoryView(QWidget):
         self._askForConfirmationBox.stateChanged.connect(self._askForConfirmationChanged)
         return self._askForConfirmationBox
     
+    @loggingSlot(QStandardItem)
     def _peerDataChanged(self, item):
         if not self._resetting:
             PrivacySettings.get().addException(self._action,
@@ -167,10 +181,12 @@ class SingleCategoryView(QWidget):
                                                applyImmediately=False,
                                                categoryPolicy=self._getCategoryPolicy())
     
+    @loggingSlot(int)
     def _askForConfirmationChanged(self, newState):
         if not self._resetting:
             PrivacySettings.get().setAskForConfirmation(self._action, self._category, newState == Qt.Checked, applyImmediately=False, categoryPolicy=self._getCategoryPolicy())
         
+    @loggingSlot(int)
     def _modeChanged(self, newMode, notify=True, resetModel=True):
         self._resetting = True
         if newMode in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX, PrivacySettings.POLICY_PEER_EXCEPTION):
@@ -198,6 +214,10 @@ class SingleCategoryView(QWidget):
     def setMode(self, newMode):
         self._modeChanged(newMode, notify=False)
 
+    def getCategory(self):
+        return self._category
+
+    @loggingSlot(object, object)
     def _privacySettingsChanged(self, pluginName, actionName):
         if pluginName != self._action.getPluginName() or actionName != self._action.getName():
             return

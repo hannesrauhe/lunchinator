@@ -3,6 +3,8 @@ from PyQt4.QtGui import QDialog, QLabel, QVBoxLayout, QHBoxLayout,\
 from PyQt4.QtCore import Qt
 from functools import partial
 from lunchinator.privacy.privacy_settings import PrivacySettings
+from PyQt4.QtCore import QTimer
+from lunchinator.log.logging_slot import loggingSlot
 
 class PrivacyConfirmationDialog(QDialog):
     POLICY_ONCE = 0
@@ -13,35 +15,72 @@ class PrivacyConfirmationDialog(QDialog):
     SCOPE_EVERYONE_CATEGORY = 2
     SCOPE_EVERYONE = 3
     
-    def __init__(self, parent, title, message, peerName, peerID, action, category=PrivacySettings.NO_CATEGORY):
+    def __init__(self, parent, title, peerName, peerID, action, category, msgData):
         super(PrivacyConfirmationDialog, self).__init__(parent)
         
         self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
         
         self._peerID = peerID
+        self._peerName = peerName
         self._action = action
         self._category = category if category is not None else PrivacySettings.NO_CATEGORY
         self._useCategories = self._action.usesPrivacyCategories()
         
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(15, 15, 15, 10)
         
-        messageLabel = QLabel(message, self)
+        messageLabel = QLabel(self._createMessage(msgData), self)
         messageLabel.setWordWrap(True)
 
         policyWidget = self._initPolicyWidget()
         scopeWidget = self._initScopeWidget(peerName, category)
         buttonBox = self._initButtonBox()
         
+        bottomWidget = QWidget(self)
+        bottomLayout = QHBoxLayout(bottomWidget)
+        bottomLayout.setContentsMargins(0, 0, 0, 0)
+        bottomLayout.setSpacing(0)
+        self._timeoutLabel = QLabel(bottomWidget)
+        bottomLayout.addWidget(self._timeoutLabel, 1)
+        bottomLayout.addWidget(buttonBox)
+        
         layout.addWidget(messageLabel)
         layout.addWidget(policyWidget, 0)
         layout.addWidget(scopeWidget)
-        layout.addWidget(buttonBox, 1)
+        layout.addWidget(bottomWidget, 1)
         
         self.setWindowTitle(title)
         size = self.sizeHint()
         self.setMaximumHeight(size.height())
         
         self._setPolicy(0)
+        if action.getTimeout() is not None and action.getTimeout() > 0:
+            self._timeout = action.getTimeout()
+            self._timer = QTimer(self)
+            self._timer.timeout.connect(self._decrementTimer)
+            self._timer.start(1000)
+        else:
+            self._timer = None
+    
+    @loggingSlot()
+    def _decrementTimer(self):
+        self._timeout -= 1
+        if self._timeout <= 0:
+            self.reject()
+        self._timeoutLabel.setText(u"%d s" % self._timeout)
+            
+    def _createMessage(self, msgData):
+        message = self._action.getConfirmationMessage(self._peerID, self._peerName, msgData)
+        if message is None:
+            # create default message
+            if self._action.usesPrivacyCategories():
+                if self._category == PrivacySettings.NO_CATEGORY:
+                    message = "%s wants to perform the following action: %s (uncategorized)" % (self._peerName, self._action.getName())
+                else:
+                    message = "%s wants to perform the following action: %s, in category %s" % (self._peerName, self._action.getName(), self._category)
+            else:
+                message = "%s wants to perform the following action: %s" % (self._peerName, self._action.getName())
+        return message
         
     def _initPolicyWidget(self):
         policyWidget = QWidget(self)
@@ -190,12 +229,21 @@ class PrivacyConfirmationDialog(QDialog):
                                                 PrivacySettings.POLICY_EVERYBODY if accepted else PrivacySettings.POLICY_NOBODY,
                                                 categoryPolicy=PrivacySettings.CATEGORY_NEVER)
             
+    def _finish(self):
+        if self._timer is not None:
+            self._timer.stop()
+            self._timer = None        
+    
+    @loggingSlot()
     def accept(self):
+        self._finish()
         if self._action is not None and self._policy == self.POLICY_FOREVER:
             self._storeDecision(True)
         return QDialog.accept(self)
     
+    @loggingSlot()
     def reject(self):
+        self._finish()
         if self._action is not None and self._policy == self.POLICY_FOREVER:
             self._storeDecision(False)
         return QDialog.reject(self)
@@ -203,15 +251,25 @@ class PrivacyConfirmationDialog(QDialog):
 if __name__ == '__main__':
     from PyQt4.QtGui import QApplication
     import sys
+    from lunchinator.peer_actions import PeerAction
+    class TestAction(PeerAction):
+        def getName(self):
+            return u"Test"
+        
+        def usesPrivacyCategories(self):
+            return False
+        
+        def getTimeout(self):
+            return 5
 
     app = QApplication(sys.argv)
     window = PrivacyConfirmationDialog(None,
                                        "Confirmation",
-                                       "Some guy wants to do something in some category, do you approve?",
-                                       "Some guy",
+                                       u"Some guy",
                                        "guy'sID",
-                                       None,
-                                       "Weird")
+                                       TestAction(),
+                                       "Weird",
+                                       None)
     
     window.showNormal()
     window.raise_()

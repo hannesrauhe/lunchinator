@@ -1,14 +1,14 @@
 import json
 import subprocess
 from lunchinator.git import GitHandler
-from lunchinator import log_info, log_error, log_exception
 
 class Commands(object):
     """Convenience class that encapsules and handles execution of multiple commands."""
     _SHELL_COMMAND = "sh"
     _GIT_PULL = "gp"
     
-    def __init__(self, stringRep=None):
+    def __init__(self, logger, stringRep=None):
+        self._logger = logger
         if stringRep:
             self._cmds = self._fromString(stringRep)
         else:
@@ -39,17 +39,18 @@ class Commands(object):
                 _member(cmd[1])
                 
     def _do_sh(self, args):
-        log_info("Executing:", ' '.join(args))
+        self._logger.info("Executing: %s", ' '.join(args))
         try:
             subprocess.call(args)
         except:
-            log_exception("Error executing command.")
+            self._logger.exception("Error executing command.")
     
     def _do_gp(self, path):
-        log_info("Pulling git repository:", path)
-        retCode, _pOut, pErr = GitHandler.pull(path)
+        self._logger.info("Pulling git repository: %s", path)
+        gitHandler = GitHandler(self._logger)
+        retCode, _pOut, pErr = gitHandler.pull(path)
         if retCode != 0:
             if pErr:
-                log_error("Error pulling git repository. Stderr:", pErr)
+                self._logger.error(u"Error pulling git repository. Stderr: %s", pErr.decode("utf-8"))
             else:
-                log_error("Error pulling git repository.")
+                self._logger.error("Error pulling git repository.")

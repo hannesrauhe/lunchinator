@@ -1,6 +1,7 @@
 from yapsy.IPlugin import IPlugin
-from lunchinator import log_error, log_exception, convert_string, \
-    get_notification_center, get_db_connection, log_debug
+from lunchinator import convert_string, \
+    get_notification_center, get_db_connection, get_connection_type
+from lunchinator.log import loggingFunc, newLogger, removeLogger
 import types, sys, logging, threading
 from copy import deepcopy
 
@@ -14,12 +15,17 @@ class iface_plugin(IPlugin):
         self.option_choice = {}
         self.hidden_options = None
         self.force_activation = False
+        self.plugin_name = None
+        self._autoDBConnectionOption = False
         
         self._supported_dbms = {} #mapping from db plugin type to db_for_plugin_iface subclasses
         self._specialized_db_conn = None
         self._specialized_db_connect_lock = threading.Lock()
 
         super(iface_plugin, self).__init__()
+    
+    def setPluginName(self, pluginName):
+        self.plugin_name = pluginName
     
     """ Overrides from IPlugin """
     
@@ -29,6 +35,7 @@ class iface_plugin(IPlugin):
         """
         IPlugin.activate(self)
         
+        self.logger = newLogger(self.plugin_name)
         self._initOptions()
         self._readOptionsFromFile()
         if len(self._supported_dbms)>0:
@@ -43,6 +50,7 @@ class iface_plugin(IPlugin):
         if len(self._supported_dbms)>0:
             get_notification_center().disconnectDBSettingChanged(self.connect_to_db)
         self.option_widgets = {}
+        removeLogger(self.plugin_name)
         IPlugin.deactivate(self)
     
     def _initOptions(self):
@@ -53,7 +61,7 @@ class iface_plugin(IPlugin):
             for o, v in self.options:
                 if type(o) in (tuple, list):
                     if len(o) < 2:
-                        log_error("Setting '%s' specified as tuple must contain at least 2 elements." % o[0])
+                        self.logger.error("Setting '%s' specified as tuple must contain at least 2 elements.", o[0])
                         continue
                     dict_options[o[0]] = v
                     self.option_names.append(o)
@@ -72,6 +80,17 @@ class iface_plugin(IPlugin):
                     dict_options[o] = v
                     self.option_names.append((o, o))
             self.options = dict_options
+           
+        if self._supported_dbms and (self.options is None or not u"db_connection" in self.options):
+            from lunchinator import get_settings
+            # add db connection option
+            self._autoDBConnectionOption = True
+            if self.options is None:
+                self.options = {}
+                self.option_names = []
+            self.options[u"db_connection"] = get_settings().get_default_db_connection()
+            self.option_names.insert(0, (u"db_connection", u"Database Connection"))
+            self._registerOptionCallback(u"db_connection", self.reconnect_db)
            
         self.option_defaults = []
         if self._hasOptions():
@@ -136,13 +155,22 @@ class iface_plugin(IPlugin):
                 return mod_v
         return new_v
     
+    def _getChoiceOptions(self, o):
+        """Called when initializing or updating a choice option"""
+        if self._autoDBConnectionOption and o == u"db_connection":
+            return self.get_supported_connections()
+        return self.option_choice.get(o, None)
+    
     """ Private members """
     
     def _convertOption(self, o, v, new_v):
         try:
-            if o in self.option_choice:
+            choiceOptions = self.option_choice.get(o, None)
+            if choiceOptions is not None:
+                if not choiceOptions:
+                    choiceOptions = self._getChoiceOptions(o)
                 finalValue = None
-                for aValue in self.option_choice[o]:
+                for aValue in choiceOptions:
                     if new_v.upper() == aValue.upper():
                         finalValue = aValue
                         break
@@ -161,9 +189,9 @@ class iface_plugin(IPlugin):
             elif type(v) in (types.StringType, types.UnicodeType):
                 return convert_string(new_v)
             else:
-                log_error("type of value", o, v, "not supported, using default")
+                self.logger.error("type of value %s %s not supported, using default", o, v)
         except:
-            log_exception("could not convert value of", o, "from config to type", type(v), "(", new_v, ") using default")
+            self.logger.exception("could not convert value of %s from config to type %s (%s) using default", o, type(v), new_v)
 
     def _readOptionsFromFile(self):
         if self.has_options():
@@ -180,19 +208,25 @@ class iface_plugin(IPlugin):
                     conv = self._convertOption(o, v, new_v)
                     self._initOptionValue(o, conv, True)
         
+    def _initChoiceOption(self, optionKey, comboBox, choiceOptions, currentValue):
+        comboBox.clear()
+        for aString in choiceOptions:
+            comboBox.addItem(aString)
+        currentIndex = 0
+        if currentValue in choiceOptions:
+            currentIndex = choiceOptions.index(currentValue)
+        comboBox.setCurrentIndex(currentIndex)
+        self.option_choice[optionKey] = choiceOptions
+        
     def _addOptionToLayout(self, parent, grid, i, o, v):
         from PyQt4.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
         from PyQt4.QtCore import Qt
         e = ""
         fillHorizontal = False
-        if o[0] in self.option_choice:
+        choiceOptions = self._getChoiceOptions(o[0])
+        if choiceOptions is not None:
             e = QComboBox(parent)
-            for aString in self.option_choice[o[0]]:
-                e.addItem(aString)
-            currentIndex = 0
-            if v in self.option_choice[o[0]]:
-                currentIndex = self.option_choice[o[0]].index(v)
-            e.setCurrentIndex(currentIndex)
+            self._initChoiceOption(o[0], e, choiceOptions, v)
         elif type(v) == types.IntType:
             e = QSpinBox(parent)
             e.setMinimum(0)
@@ -213,6 +247,7 @@ class iface_plugin(IPlugin):
             
     def _set_option(self, o, new_v, convert, hidden, **kwargs):
         if not self.has_option(o, hidden):
+            print "don't have"
             return
         v = self._getOptionValue(o, hidden)
         if convert:
@@ -221,7 +256,8 @@ class iface_plugin(IPlugin):
             new_v = self._callOptionCallback(o, new_v, **kwargs)
             new_v = self._storeOptionValue(o, new_v)
             self._setOptionValue(o, new_v, hidden, **kwargs)
-        self._displayOptionValue(o, new_v)
+        if not hidden:
+            self._displayOptionValue(o, new_v)
         
     """ Protected members """
     
@@ -253,10 +289,11 @@ class iface_plugin(IPlugin):
             # probably not initialized yet.
             return
         e = self.option_widgets[o]
-        if o in self.option_choice:
+        choiceOptions = self.option_choice.get(o, None)
+        if choiceOptions is not None:
             currentIndex = 0
-            if v in self.option_choice[o]:
-                currentIndex = self.option_choice[o].index(v)
+            if v in choiceOptions:
+                currentIndex = choiceOptions.index(v)
             e.setCurrentIndex(currentIndex)
         elif type(v) == types.IntType:
             e.setValue(v)
@@ -277,8 +314,9 @@ class iface_plugin(IPlugin):
         from PyQt4.QtCore import Qt
         v = self._getOptionValue(o)
         new_v = v
-        if o in self.option_choice:
-            new_v = self.option_choice[o][e.currentIndex()]
+        choiceOptions = self.option_choice.get(o, None)
+        if choiceOptions is not None:
+            new_v = choiceOptions[e.currentIndex()]
         elif type(v) == types.IntType:
             new_v = e.value()
         elif type(v) == types.BooleanType:
@@ -286,7 +324,7 @@ class iface_plugin(IPlugin):
         else:
             new_v = convert_string(e.text())
         return new_v      
-        
+    
     """ Public interface """
     def has_options_widget(self):
         """Called from settings dialog. Override if you have a custom options widget."""
@@ -316,6 +354,16 @@ class iface_plugin(IPlugin):
         t.setRowStretch(row, 1)
         return optionsWidget
     
+    def update_options_widget(self):
+        """Called every time an options widget is displayed"""
+        if self.options is None:
+            return
+        for o in self.options:
+            choiceOptions = self._getChoiceOptions(o)
+            if choiceOptions is not None and choiceOptions != self.option_choice[o]:
+                combo = self.option_widgets[o]
+                self._initChoiceOption(o, combo, choiceOptions, self.get_option(o))
+                
     def destroy_options_widget(self):
         """Called before the options widget is removed from its parent."""
         pass
@@ -348,7 +396,7 @@ class iface_plugin(IPlugin):
         
         Return None if pluginInfo.name is good enough.
         """
-        return None
+        return self.plugin_name
     
     def has_options(self, hidden=False):
         """Returns True if there are any options
@@ -448,36 +496,50 @@ class iface_plugin(IPlugin):
             raise Exception("Adding supported DBMS only allowed via class inherited for db_for_plugin_iface")
         self._supported_dbms[db_type] = db_iface
         
-    def connect_to_db(self, changedDBConn = None):
+    def get_supported_connections(self):
+        from lunchinator import get_settings
+        if not self._supported_dbms or u"default" in self._supported_dbms:
+            return get_settings().get_available_db_connections()
+         
+        conns = []
+        for connName in get_settings().get_available_db_connections():
+            connType = get_connection_type(self.logger, connName)
+            if connType in self._supported_dbms:
+                conns.append(connName)
+        return conns
+        
+    @loggingFunc
+    def connect_to_db(self, changedDBConn=None):
         """
         connects to a database or changes the database connection type.
         """
         with self._specialized_db_connect_lock:
-            if self._specialized_db_conn and changedDBConn and changedDBConn != self.options["db_connection"]:
+            if self._specialized_db_conn and changedDBConn and changedDBConn == self.options["db_connection"]:
                 return
-            dbPlugin, plugin_type = get_db_connection(self.options["db_connection"])
+            if changedDBConn is None:
+                changedDBConn = self.options[u"db_connection"]
+            dbPlugin, plugin_type = get_db_connection(self.logger, changedDBConn)
             
             if dbPlugin == None:
-                log_error("Plugin %s: DB  connection %s not available: Maybe DB Connections are not active yet?"
-                          %(type(self),self.options["db_connection"]))
+                self.logger.warning("Plugin %s: DB  connection %s not available: Maybe DB Connections are not active yet?", type(self), self.options["db_connection"])
                 return False
             
             if plugin_type in self._supported_dbms:
-                self._specialized_db_conn = self._supported_dbms[plugin_type](dbPlugin)
+                self._specialized_db_conn = self._supported_dbms[plugin_type](dbPlugin, self.logger)
             elif "default" in self._supported_dbms:
-                self._specialized_db_conn = self._supported_dbms["default"](dbPlugin)
+                self._specialized_db_conn = self._supported_dbms["default"](dbPlugin, self.logger)
             else:
-                log_error("DB Conn of type %s is not supported by this plugin"%plugin_type)
+                self.logger.error("DB Conn of type %s is not supported by this plugin", plugin_type)
                 self._specialized_db_conn = None
                 return False
                 
-            log_debug("Plugin %s uses DB Connection of type %s "%(type(self),plugin_type))
+            self.logger.debug("Plugin %s uses DB Connection of type %s ", type(self), plugin_type)
                         
             return True
             
-    def reconnect_db(self, _, __):
+    def reconnect_db(self, _, newConnection):
         """method for changed options callback"""
-        self.connect_to_db()
+        self.connect_to_db(newConnection)
         
     def is_db_ready(self):
         return self._specialized_db_conn and self._specialized_db_conn.is_open()
@@ -488,14 +550,20 @@ class iface_plugin(IPlugin):
     """ Used for testing """
     
     @classmethod
-    def prepare_application(cls, factory):
+    def prepare_application(cls, beforeCreate, factory):
         from PyQt4.QtGui import QApplication, QMainWindow
-        from lunchinator import setLoggingLevel, get_settings
-        from utilities import setValidQtParent
+        from lunchinator import get_settings
+        from lunchinator.log import initializeLogger
+        from lunchinator.log.lunch_logger import setGlobalLoggingLevel
+        from lunchinator.utilities import setValidQtParent
     
+        initializeLogger()
         get_settings().set_verbose(True)
-        setLoggingLevel(logging.DEBUG)    
+        setGlobalLoggingLevel(logging.DEBUG)    
         app = QApplication(sys.argv)
+        
+        beforeCreate()
+        
         window = QMainWindow()
         
         setValidQtParent(window)
@@ -508,24 +576,25 @@ class iface_plugin(IPlugin):
         return window, app
     
     def _init_run_options_widget(self, parent):
-        self.hasConfigOption = lambda _ : False
-        self.activate()
         return self.create_options_widget(parent)
     
     def run_options_widget(self):
-        _window, app = iface_general_plugin.prepare_application(self._init_run_options_widget)
+        self.setPluginName(u"Settings Test")
+        self.hasConfigOption = lambda _ : False
+        _window, app = iface_general_plugin.prepare_application(self.activate, self._init_run_options_widget)
         return app.exec_()
                     
 class db_for_plugin_iface(object):
     """to support different DBMS within a plugin, a class inherited from this one is needed"""
     
-    def __init__(self, newconn):
+    def __init__(self, newconn, logger):
         self.dbConn = newconn
+        self.logger = logger
         
         try:
             self.init_db()
         except:
-            log_exception("Problem while migrating dataset to new version")
+            self.logger.exception("Problem while migrating dataset to new version")
     
     def is_open(self):
         if self.dbConn != None:
@@ -560,13 +629,31 @@ class iface_called_plugin(iface_plugin):
         """Override if plugin processes all (non-blocked) peer actions.""" 
         return False
         
+    def process_command(self, xmsg, ip, member_info, preprocessedData=None):
+        """process extended Messages - can be signed
+        @type xmsg: extMessageIncoming
+        @type ip: unicode
+        @type member_info: dict   
+        """
+        pass
+    
+    def process_group_message(self, xmsg, ip, member_info, lunch_call):
+        """process extended Messages - can be signed
+        @type xmsg: extMessageIncoming
+        @type ip: unicode
+        @type member_info: dict   
+        @type lunch_call: bool
+        """
+        pass
+    
+    """ deprecated interface that is still supported: """        
     def process_message(self, msg, ip, member_info):
         pass
         
     def process_lunch_call(self, msg, ip, member_info):
         pass
         
-    def process_event(self, cmd, value, ip, member_info):
+    def process_event(self, cmd, value, ip, member_info, preprocessedData=None):
         pass 
         
 class iface_gui_plugin(iface_plugin):
@@ -587,12 +674,14 @@ class iface_gui_plugin(iface_plugin):
     
     @classmethod
     def run_standalone(cls, factory):
-        _window, app = cls.prepare_application(factory)
+        _window, app = cls.prepare_application(lambda : None, factory)
         sys.exit(app.exec_())
         
-    def run_in_window(self):
-        _window, app = iface_gui_plugin.prepare_application(lambda window : self.create_widget(window))
-        self.activate()
+    def run_in_window(self, callAfterCreate=None):
+        self.setPluginName(u"GUI Test")
+        _window, app = iface_gui_plugin.prepare_application(self.activate, lambda window : self.create_widget(window))
+        if callAfterCreate:
+            callAfterCreate()
         sys.exit(app.exec_())
         
     def processes_events_immediately(self):
@@ -608,13 +697,30 @@ class iface_gui_plugin(iface_plugin):
     def processes_all_peer_actions(self):
         """Override if plugin processes all (non-blocked) peer actions.""" 
         return False
+        
+    def process_command(self, xmsg, ip, peer_info, preprocessedData=None):
+        """process extended Messages - can be signed
+        @type xmsg: extMessageIncoming
+        @type ip: unicode
+        @type member_info: dict   
+        """
+        pass    
     
+    def process_group_message(self, xmsg, ip, member_info, lunch_call):
+        """process extended Messages - can be signed
+        @type xmsg: extMessageIncoming
+        @type ip: unicode
+        @type member_info: dict   
+        @type lunch_call: bool
+        """
+        pass
+    
+    """ deprecated interface that is still supported: """    
     def process_message(self, msg, ip, member_info):
         pass
         
     def process_lunch_call(self, msg, ip, member_info):
         pass
         
-    def process_event(self, cmd, value, ip, member_info):
+    def process_event(self, cmd, value, ip, member_info, preprocessedData=None):
         pass
-    

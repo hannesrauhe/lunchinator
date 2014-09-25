@@ -1,8 +1,11 @@
 import sys, os, getpass, ConfigParser, types, logging, codecs, contextlib, uuid
 
 '''integrate the cli-parser into the default_config sooner or later'''
-from lunchinator import log_exception, log_error, setLoggingLevel, convert_string, MAIN_CONFIG_DIR,\
-    log_warning, get_notification_center, log_info
+from lunchinator import convert_string, MAIN_CONFIG_DIR,\
+    get_notification_center
+from lunchinator.log import getCoreLogger
+from lunchinator.log.lunch_logger import getLoggingLevel, serializeLoggingLevels,\
+    deserializeLoggingLevels, setGlobalLoggingLevel
 from datetime import datetime
 import json
 from lunchinator.repositories import PluginRepositories
@@ -46,10 +49,10 @@ def setting(gui=False, desc=None, sendInfoDict=False, restart=False, choice=None
                     old_v = getattr(self, attrname)
                     new_v = args[0]
                     if type(old_v) != type(new_v):
-                        log_error("Value of setting", option, "has wrong type.")
+                        getCoreLogger().error("Value of setting %s has wrong type.", option)
                         return
                 else:
-                    log_warning("settings has attribute '%s'" % attrname)
+                    getCoreLogger().warning("settings has attribute '%s'", attrname)
 
                 func(self, *args, **kwargs)
     
@@ -63,7 +66,7 @@ def setting(gui=False, desc=None, sendInfoDict=False, restart=False, choice=None
                 if gui and not isInit:
                     get_notification_center().emitGeneralSettingChanged(option)
                 
-                if sendInfo:
+                if sendInfo and not isInit:
                     from lunchinator import get_server
                     get_server().call_info()
                 if not isInit and restart:
@@ -117,7 +120,6 @@ class lunch_settings(object):
         self._avatar_dir = self.get_config("avatars")
         self._version = None
         self._commit_count = None
-        self._commit_count_plugins = "-1"
         self._main_package_path = self._findMainPackagePath()
         if self._main_package_path == None:
             raise Exception("Could not determine path to the main lunchinator package.")
@@ -140,17 +142,28 @@ class lunch_settings(object):
         self._mute_timeout = 30
         self._verbose = False
         self._logging_level = u"ERROR"
+        self._log_cache_size = 100
         self._group_plugins = False
         self._default_db_connection = u"Standard"
-        self._available_db_connections = u"Standard"  # list separated by ;; (like yapsy)
+        self._available_db_connections = [u"Standard"]  # list separated by ;; (like yapsy)
         self._proxy = u""
         self._warn_if_members_not_ready = True
         self._notification_if_everybody_ready = False
                 
-        #also in config, but hidden
+        """===also in config, but hidden==="""
+        # ID (UUID) is generated at first startup
         self._ID = u""
-        self._peer_timeout = 120
-        self._message_cache_timeout = 5 # cache lifetime to detect duplicate messages
+        # time until unreachable peers are dropped and until incomplete HELOX calls are dropped
+        # cleanUp thread runs twice in this interval
+        self._peer_timeout = 60
+        # cache lifetime to detect duplicate messages
+        self._message_cache_timeout = 5
+        # lunchinators standard UPD port 
+        self._udp_port = 50000
+        # size of a single UDP package (best value depends on the network)
+        self._max_fragment_length = 512
+        # allow multiple lunchinators with the same ID in the network (experimental)
+        self._multiple_machines_allowed = []
         
         self._next_lunch_begin = None
         self._next_lunch_end = None
@@ -205,7 +218,7 @@ class lunch_settings(object):
             _member = getattr(self, methodname)
             _member(v, **kwargs)
         else:
-            log_warning("settings has no setter for '%s'" % o)
+            getCoreLogger().warning("settings has no setter for '%s'", o)
         
         return self.get_option(o)
     
@@ -216,7 +229,7 @@ class lunch_settings(object):
             _member = getattr(self, methodname)
             return _member()
         else:
-            log_warning("settings has no attribute called '%s'" % o)
+            getCoreLogger().warning("settings has no attribute called '%s'", o)
         return None
             
     def read_config_from_hd(self): 
@@ -236,7 +249,13 @@ class lunch_settings(object):
         # load settings that don't fit the default schema        
         self._ID = self.read_value_from_config_file(self._ID, "general", "ID")      
         self._available_db_connections = self.read_value_from_config_file(self._available_db_connections, "general", "available_db_connections")
+        self._multiple_machines_allowed = self.read_value_from_config_file(self._multiple_machines_allowed , "general", "multiple_machines_allowed")
         externalRepos = self.read_value_from_config_file(None, "general", "external_plugin_repos")
+        
+        componentLoggingLevels = self.read_value_from_config_file(None, "general", "comp_logging_levels")
+        if componentLoggingLevels:
+            deserializeLoggingLevels(componentLoggingLevels)
+            
         if externalRepos == None:
             if os.path.isdir(self.get_config("plugins")):
                 externalRepos = [(self.get_config("plugins"), True, False)]  # active, but no auto update
@@ -248,9 +267,7 @@ class lunch_settings(object):
         self._plugin_repos = PluginRepositories(self.get_resource("plugins"), externalRepos, logging=self.get_verbose())
         
         if len(self._ID)==0:
-            self._ID = unicode(uuid.uuid4())
-            self._config_file.set('general', 'ID', self._ID )
-        
+            self.generate_ID(init=True)
             
     def read_value_from_config_file(self, value, section, name):
         try:
@@ -258,6 +275,8 @@ class lunch_settings(object):
                 value = self._config_file.getboolean(section, name)
             elif type(value) is types.IntType:
                 value = self._config_file.getint(section, name)
+            elif type(value) is types.ListType:                
+                value = [unicode(x) for x in self._config_file.get(section, name).split(";;")]
             else:
                 value = unicode(self._config_file.get(section, name))
         except ConfigParser.NoSectionError:
@@ -265,13 +284,18 @@ class lunch_settings(object):
         except ConfigParser.NoOptionError:
             pass
         except ValueError:
-            log_error("Value of setting", name, "has wrong type.")
+            getCoreLogger().error("Value of setting, %s has wrong type.", name)
         except:
-            log_exception("error while reading %s from config file", name)
+            getCoreLogger().exception("error while reading %s from config file", name)
         return value
         
     def write_config_to_hd(self):
         self.get_config_file().set('general', 'external_plugin_repos', json.dumps(self.get_plugin_repositories().getExternalRepositories()))
+        levels = serializeLoggingLevels()
+        if levels:
+            self.get_config_file().set('general', 'comp_logging_levels', levels)
+        else:
+            self.get_config_file().remove_option('general', 'comp_logging_levels')
         with codecs.open(self._main_config_dir + '/settings.cfg', 'w', 'utf-8') as f: 
             self._config_file.write(f)
     
@@ -284,7 +308,7 @@ class lunch_settings(object):
     def get_resource(self, *args):
         res = unicode(os.path.join(self.get_resources_path(), *args))
         if not os.path.exists(res):
-            raise Exception("Resource %s does not exist." % res)
+            raise IOError("Resource %s does not exist." % res)
         return res
     
     def get_main_config_dir(self):
@@ -325,13 +349,14 @@ class lunch_settings(object):
                 self._commit_count = self._version.split(".")[-1]
             except Exception:
                 from lunchinator.git import GitHandler
-                if GitHandler.hasGit():
-                    commit_count = GitHandler.getCommitCount()
+                gh = GitHandler(getCoreLogger())
+                if gh.hasGit():
+                    commit_count = gh.getCommitCount()
                     if commit_count:
                         self._commit_count = commit_count
                         self._version = commit_count
                 else:
-                    log_error("Error reading/parsing version file")
+                    getCoreLogger().error("Error reading/parsing version file")
                     self._version = u"unknown.unknown"
                     self._commit_count = "unknown"
                 
@@ -342,14 +367,19 @@ class lunch_settings(object):
         
         return self._commit_count
     
-    def get_commit_count_plugins(self):
-        return self._commit_count_plugins
-    
-    def get_log_file(self):
+    def log_file(self):
         return self._log_file
     
     def get_ID(self):
         return self._ID
+    @hidden_setting(sendInfoDict=True)
+    def set_ID(self, v):
+        """to generate a new ID use generate_ID instead
+        """
+        self._ID = v
+    
+    def generate_ID(self, init=False):        
+        self.set_ID(unicode(uuid.uuid4()), init=init)
     
     # the rest is read from/written to the config file
     def get_user_name(self):
@@ -372,7 +402,7 @@ class lunch_settings(object):
         oldGroup = self._group
         self._group = value
         if not init:
-            log_info("Changing Group: '%s' -> '%s'" % (oldGroup, self._group))
+            getCoreLogger().info("Changing Group: '%s' -> '%s'", oldGroup, self._group)
             get_server().changeGroup(unicode(value))
             get_notification_center().emitGroupChanged(oldGroup, self._group)
       
@@ -384,7 +414,7 @@ class lunch_settings(object):
     @hidden_setting()
     def set_avatar_file(self, file_name):  
         if file_name and not os.path.exists(os.path.join(self._avatar_dir, file_name)):
-            log_error("avatar does not exist: %s", file_name)
+            getCoreLogger().error("avatar does not exist: %s", file_name)
             return
         self._avatar_file = convert_string(file_name)
         
@@ -399,8 +429,8 @@ class lunch_settings(object):
             if time:
                 return new_value
         except:
-            log_error("Problem while checking the lunch time")
-        log_error("Illegal time format:", new_value)
+            getCoreLogger().warning("Problem while checking the lunch time")
+        getCoreLogger().warning("Illegal time format: %s", new_value)
         return old_value
     
     def get_default_lunch_begin(self):
@@ -450,8 +480,8 @@ class lunch_settings(object):
         from lunchinator.utilities import getTimeDelta
         # reset after next_lunch_end, but not before default_lunch_end
         
-        tdn = getTimeDelta(self._next_lunch_end)
-        tdd = getTimeDelta(self.get_default_lunch_end())
+        tdn = getTimeDelta(self._next_lunch_end, getCoreLogger())
+        tdd = getTimeDelta(self.get_default_lunch_end(), getCoreLogger())
         
         return max(tdn, tdd)
     
@@ -493,6 +523,18 @@ class lunch_settings(object):
     def set_peer_timeout(self, v):
         self._peer_timeout = v
         
+    def get_max_fragment_length(self):
+        return self._max_fragment_length
+    @hidden_setting()
+    def set_max_fragment_length(self, v):
+        self._max_fragment_length = v
+        
+    def get_udp_port(self):
+        return self._udp_port
+    @hidden_setting()
+    def set_udp_port(self, v):
+        self._udp_port = v
+        
     def get_message_cache_timeout(self):
         return self._message_cache_timeout
     @hidden_setting()
@@ -507,25 +549,33 @@ class lunch_settings(object):
     
     def get_logging_level(self):
         return self._logging_level
-    @gui_setting(u"Logging level", choice=(u"CRITICAL", u"ERROR", u"WARNING", u"INFO", u"DEBUG"))
+    @hidden_setting()
     def set_logging_level(self, newValue):
         self._logging_level = convert_string(newValue)
-        if self._logging_level == u"CRITICAL":
-            setLoggingLevel(logging.CRITICAL)
-        elif self._logging_level == u"ERROR":
-            setLoggingLevel(logging.ERROR)
-        elif self._logging_level == u"WARNING":
-            setLoggingLevel(logging.WARNING)
-        elif self._logging_level == u"INFO":
-            setLoggingLevel(logging.INFO)
-        elif self._logging_level == u"DEBUG":
-            setLoggingLevel(logging.DEBUG)
+        if self._logging_level.upper() == u"CRITICAL":
+            setGlobalLoggingLevel(logging.CRITICAL)
+        elif self._logging_level.upper() == u"ERROR":
+            setGlobalLoggingLevel(logging.ERROR)
+        elif self._logging_level.upper() == u"WARNING":
+            setGlobalLoggingLevel(logging.WARNING)
+        elif self._logging_level.upper() == u"INFO":
+            setGlobalLoggingLevel(logging.INFO)
+        elif self._logging_level.upper() == u"DEBUG":
+            setGlobalLoggingLevel(logging.DEBUG)
+        
+    def get_log_cache_size(self):
+        return self._log_cache_size
+    @hidden_setting()
+    def set_log_cache_size(self, newValue):
+        from lunchinator.log.lunch_logger import setLogCacheSize
+        self._log_cache_size = newValue
+        setLogCacheSize(newValue)
         
     def set_verbose(self, verbose):
         """Set True to override logging level"""
         self._verbose = verbose
     def get_verbose(self):
-        return self._verbose or self._logging_level == u"DEBUG"
+        return self._verbose or getLoggingLevel(None) == logging.DEBUG
         
     def get_group_plugins(self):
         return self._group_plugins
@@ -541,19 +591,16 @@ class lunch_settings(object):
         
     # always force at least one connection
     def get_available_db_connections(self):
-        conn = [unicode(x) for x in self._available_db_connections.split(";;")]
+        conn = self._available_db_connections
         if len(conn):
             return conn
         else:
             return [u'Standard']
     
     def set_available_db_connections(self, newValue):
-        self._available_db_connections = ";;".join(newValue)
-        self._config_file.set('general', 'available_db_connections', str(self._available_db_connections))
+        self._available_db_connections = newValue
+        self._config_file.set('general', 'available_db_connections', str(";;".join(newValue)))
             
-    def get_advanced_gui_enabled(self):
-        return self._logging_level == u"DEBUG"
-        
     def get_proxy(self):
         return self._proxy
     @gui_setting(u"Proxy server (usually detected automatically)", restart=True)
@@ -567,4 +614,12 @@ class lunch_settings(object):
             if "https_proxy" in os.environ:
                 del os.environ["https_proxy"]
         self._proxy = newValue
+        
+    
+    def get_multiple_machines_allowed(self):
+        return self._multiple_machines_allowed
+    def add_multiple_machines_allowed(self, newValue):
+        self._multiple_machines_allowed += [newValue]
+        v = ";;".join(self._multiple_machines_allowed)
+        self._config_file.set('general', 'multiple_machines_allowed', str(v))
         

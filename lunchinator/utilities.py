@@ -1,11 +1,17 @@
-import subprocess, sys, os, contextlib, json, shutil, socket
+import subprocess, sys, os, contextlib, json, shutil, time
 from datetime import datetime, timedelta 
 from time import mktime, strftime
-from lunchinator import log_exception, log_warning, log_debug, \
-    get_settings, log_error
+from lunchinator import get_settings, lunchinator_has_gui
+from lunchinator.log import getCoreLogger
 import locale
 import platform
 from tempfile import NamedTemporaryFile
+import itertools
+import string
+import errno
+import sys
+from pkg_resources import get_distribution, ResolutionError,\
+    DistributionNotFound, VersionConflict
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -24,6 +30,10 @@ def getPlatform():
     else:
         return PLATFORM_OTHER
 
+def isPyinstallerBuild():
+    frozen = getattr(sys, 'frozen', '')
+    return frozen
+
 def checkBundleIdentifier(ident):
     res = subprocess.call([get_settings().get_resource('bin', 'check_bundle_identifier.sh'), ident])
     return res == 1
@@ -33,10 +43,17 @@ def _mustScaleNotificationIcon():
         return platform.linux_distribution()[0].startswith("SUSE Linux Enterprise")
 
 # TODO: message groups for notification center
-def displayNotification(name, msg, icon=None):
+def displayNotification(name, msg, logger, icon=None):
     if msg == None:
         msg = u""
     myPlatform = getPlatform()
+    try: 
+        from lunchinator import get_server
+        if not lunchinator_has_gui():
+            print time.strftime("%Y-%m-%d %H:%M"),name, msg
+    except:
+        print time.strftime("%Y-%m-%d %H:%M"),name, msg
+    
     try:
         if myPlatform == PLATFORM_LINUX:
             fileToClose = None
@@ -55,26 +72,31 @@ def displayNotification(name, msg, icon=None):
                 fileToClose.close()
         elif myPlatform == PLATFORM_MAC:
             fh = open(os.path.devnull,"w")
-            exe = getBinary("terminal-notifier", "bin")
+            exe = getBinary("terminal-notifier", os.path.join("bin", "terminal-notifier.app", "Contents", "MacOS"))
             if not exe:
-                log_warning("terminal-notifier not found.")
+                logger.warning("terminal-notifier not found.")
                 return
             
             call = [exe, "-title", "Lunchinator: %s" % name, "-message", msg]
             if False and checkBundleIdentifier(_LUNCHINATOR_BUNDLE_IDENTIFIER): # no sender until code signing is fixed (probably never)
                 call.extend(["-sender", _LUNCHINATOR_BUNDLE_IDENTIFIER])
                 
-            log_debug(call)
+            logger.debug(call)
             try:
                 subprocess.call(call, stdout=fh, stderr=fh)
+            except OSError as e:
+                if e.errno == errno.EINVAL:
+                    logger.warning("Ignoring invalid value on Mac")
+                else:
+                    raise
             except:
-                log_exception("Error calling", call)
+                logger.exception("Error calling %s", call)
         elif myPlatform == PLATFORM_WINDOWS:
             from lunchinator import get_server
             if hasattr(get_server().controller, "statusicon"):
                 get_server().controller.statusicon.showMessage(name,msg)
     except:
-        log_exception("error displaying notification")
+        logger.exception("error displaying notification")
         
 qtParent = None 
 
@@ -99,40 +121,6 @@ def canUseBackgroundQThreads():
         return LooseVersion(PYQT_VERSION_STR) > LooseVersion("4.7.2")
     except:
         return False
-    
-def _processCallOnPlugin(pluginObject, pluginName, ip, call, newPeer, fromQueue, member_info):
-    from lunchinator.plugin import iface_called_plugin, iface_gui_plugin
-    
-    # called also contains gui plugins
-    if not (isinstance(pluginObject, iface_called_plugin) or \
-            isinstance(pluginObject, iface_gui_plugin)):
-        log_warning("Plugin '%s' is not a called/gui plugin" % pluginName)
-        return
-    if pluginObject.is_activated:
-        try:
-            if (pluginObject.processes_events_immediately() and not fromQueue) or \
-               (not pluginObject.processes_events_immediately() and not newPeer):
-                call(pluginObject, ip, member_info)
-        except:
-            log_exception(u"plugin error in %s while processing event" % pluginName)
-    
-def processPluginCall(ip, call, newPeer, fromQueue, action=None):
-    if not get_settings().get_plugins_enabled():
-        return
-    from lunchinator import get_peers, get_plugin_manager
-    
-    member_info = get_peers().getPeerInfo(pIP=ip)
-    
-    # called also contains gui plugins
-    for pluginInfo in get_plugin_manager().getPluginsOfCategory("called")+get_plugin_manager().getPluginsOfCategory("gui"):
-        # if this is a peer action, only call special plugins
-        if action is None or (pluginInfo.plugin_object.processes_all_peer_actions() and \
-                              pluginInfo.name != action.getPluginName()):
-            _processCallOnPlugin(pluginInfo.plugin_object, pluginInfo.name, ip, call, newPeer, fromQueue, member_info)
-    
-    # perform peer action
-    if action is not None:
-        _processCallOnPlugin(action.getPluginObject(), action.getPluginName(), ip, call, newPeer, fromQueue, member_info)
                 
 def which(program):
     def is_exe(fpath):
@@ -176,40 +164,46 @@ def _findLunchinatorKeyID(gpg, secret):
                 return key['keyid']
     return None
 
-def getGPG(secret=False):
+lunch_gpg = None
+
+def getGPG():
+    global lunch_gpg
+    if not lunch_gpg:
+        from gnupg import GPG
+        gbinary = getBinary("gpg", "bin")
+        if not gbinary:
+            raise Exception("GPG not found")
+        
+        ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
+        
+        if not locale.getpreferredencoding():
+            # Fix for GnuPG on Mac
+            # TODO will this work on systems without English locale?
+            os.putenv("LANG", "en_US.UTF-8")
+        
+        if not locale.getpreferredencoding():
+            # Fix for GnuPG on Mac
+            # TODO will this work on systems without English locale?
+            os.putenv("LANG", "en_US.UTF-8")
+        
+        try:
+            if getPlatform() == PLATFORM_WINDOWS:
+                lunch_gpg = GPG("\""+gbinary+"\"",ghome)
+            else:
+                lunch_gpg = GPG(gbinary,ghome)
+            if not lunch_gpg.encoding:
+                lunch_gpg.encoding = 'utf-8'
+        except Exception, e:
+            raise Exception("GPG not working: "+str(e))
+
+    return lunch_gpg
+
+def getGPGandKey(secret=False):
     """ Returns tuple (GPG instance, keyid) """
+    gpg = getGPG()
     
-    from gnupg import GPG
-    gbinary = getBinary("gpg", "bin")
-    if not gbinary:
-        log_error("GPG not found")
-        return None, None
-    
+    # use key from keyring as default    
     ghome = os.path.join(get_settings().get_main_config_dir(),"gnupg")
-    
-    if not locale.getpreferredencoding():
-        # Fix for GnuPG on Mac
-        # TODO will this work on systems without English locale?
-        os.putenv("LANG", "en_US.UTF-8")
-    
-    if not locale.getpreferredencoding():
-        # Fix for GnuPG on Mac
-        # TODO will this work on systems without English locale?
-        os.putenv("LANG", "en_US.UTF-8")
-    
-    try:
-        gpg = None
-        if getPlatform() == PLATFORM_WINDOWS:
-            gpg = GPG("\""+gbinary+"\"",ghome)
-        else:
-            gpg = GPG(gbinary,ghome)
-        if not gpg.encoding:
-            gpg.encoding = 'utf-8'
-    except Exception, e:
-        log_exception("GPG not working: "+str(e))
-        return None, None
-    
-    # use key from keyring as default
     keyid = _findLunchinatorKeyID(gpg, secret)
     
     if keyid == None:
@@ -221,39 +215,14 @@ def getGPG(secret=False):
             path = get_settings().get_resource("lunchinator_pub_0x17F57DC2.asc")
                 
         if not os.path.isfile(path):
-            log_error("Key file not found:", path)
-            return None, None
+            raise Exception("Key file not found: %s"%path)
         with contextlib.closing(open(path,"r")) as keyf:
             gpg.import_keys(keyf.read())
             keyid = _findLunchinatorKeyID(gpg, secret)
     
     return gpg, keyid
 
-# TODO not used anymore. May be removed.    
-'''for the external IP a connection to someone has to be opened briefly
-   therefore a list of possible peers is needed'''
-def determineOwnIP(peers):
-    if 0 == len(peers):
-        log_debug("Cannot determine IP if there is no peer given")
-        return None
-    
-    own_ip = None
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      
-    for m in peers:
-        try:
-            # connect to UDF discard port 9
-            s.connect((m, 9))
-            own_ip = unicode(s.getsockname()[0])
-            break
-        except:
-            log_debug("While getting own IP, problem to connect to", m)
-            continue
-    if own_ip:
-        log_debug("Found my IP:", own_ip)
-    s.close()
-    return own_ip
-
-def getTimeDelta(end):
+def getTimeDelta(end, logger):
     """
     calculates the correlation of now and the specified time
     positive value: now is before time, milliseconds until time
@@ -266,7 +235,7 @@ def getTimeDelta(end):
         try:
             end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
         except ValueError:
-            log_debug("Unsupported time format:", end)
+            logger.debug("Unsupported time format: %s", end)
             return None
         
         # ignore begin
@@ -277,11 +246,11 @@ def getTimeDelta(end):
         return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 3
     
     except:
-        log_exception("don't know how to handle time span")
+        logger.exception("don't know how to handle time span")
         return None
     
 
-def getTimeDifference(begin, end):
+def getTimeDifference(begin, end, logger):
     """
     calculates the correlation of now and the specified lunch dates
     negative value: now is before begin, seconds until begin
@@ -296,14 +265,14 @@ def getTimeDifference(begin, end):
         try:
             end = datetime.strptime(end, lunch_settings.LUNCH_TIME_FORMAT)
         except ValueError:
-            log_debug("Unsupported time format:", end)
+            logger.debug("Unsupported time format: %s", end)
             return None
         
         try:
             begin = datetime.strptime(begin, lunch_settings.LUNCH_TIME_FORMAT)
         except ValueError:
             # this is called repeatedly, so only debug
-            log_debug("Unsupported time format:", begin)
+            logger.debug("Unsupported time format: %s", begin)
             return None
         
         now = datetime.now()
@@ -323,7 +292,7 @@ def getTimeDifference(begin, end):
             # now is after end
             return 0
     except:
-        log_exception("don't know how to handle time span")
+        logger.exception("don't know how to handle time span")
         return None
 
 def msecUntilNextMinute():
@@ -346,8 +315,8 @@ def getApplicationBundle():
         return None
     return path
 
-def spawnProcess(args):
-    log_debug("spawning process: %s"%str(args))
+def spawnProcess(args, logger):
+    logger.debug("spawning process: %s", args)
     if getPlatform() in (PLATFORM_LINUX, PLATFORM_MAC):
         #somehow fork() is not safe on Mac OS. I guess this will do fine on Linux, too. 
         fh = open(os.path.devnull, "w")
@@ -357,7 +326,7 @@ def spawnProcess(args):
     else:
         raise NotImplementedError("Process spawning not implemented for your OS.")
 
-def _getStartCommand():
+def _getStartCommand(logger):
     if getPlatform() == PLATFORM_MAC:
         # Git or Application bundle?
         bundlePath = getApplicationBundle()
@@ -371,34 +340,33 @@ def _getStartCommand():
     elif getPlatform() == PLATFORM_WINDOWS:
         return [_getPythonInterpreter(), os.path.join(get_settings().get_main_package_path(), "start_lunchinator.py")]
     else:
-        log_error("Restart not yet implemented for your OS.")
+        logger.error("Restart not yet implemented for your OS.")
             
     return None
     
 def _getPythonInterpreter():
     # sys.executable does not always return the python interpreter
     if getPlatform() == PLATFORM_WINDOWS: 
-        frozen = getattr(sys, 'frozen', '')
-        if frozen:
+        if isPyinstallerBuild():
             raise Exception("There is no python interpreter in pyinstaller packages.")
         else:
             return sys.executable
     return which("python")
 
-def stopWithCommands(args):
+def stopWithCommands(args, logger):
     """
     Stops Lunchinator and execute commands
     """
     from lunchinator import get_server
     try:        
-        spawnProcess(args)
+        spawnProcess(args, logger)
     except:
-        log_exception("Error in stopWithCommands")
+        logger.exception("Error in stopWithCommands")
         return
     if get_server().getController() != None:
         get_server().getController().shutdown()
             
-def restartWithCommands(commands):
+def restartWithCommands(commands, logger):
     """
     Restart Lunchinator and execute commands in background while it is stopped.
     commands: lunchinator.commands.Commands instance
@@ -408,7 +376,7 @@ def restartWithCommands(commands):
         # copy restart script to safe place
         shutil.copy(get_settings().get_resource("bin", "restart.py"), get_settings().get_main_config_dir())
         
-        startCmd = _getStartCommand()
+        startCmd = _getStartCommand(logger)
         args = [_getPythonInterpreter(), get_settings().get_config("restart.py"),
                 "--lunchinator-path", get_settings().get_main_package_path(),
                 "--start-cmd", json.dumps(startCmd),
@@ -416,63 +384,30 @@ def restartWithCommands(commands):
         if commands != None:
             args.extend(["--commands", commands.toString()])
         
-        spawnProcess(args)
+        spawnProcess(args, logger)
     except:
-        log_exception("Error in restartWithCommands")
+        logger.exception("Error in restartWithCommands")
         return
     if get_server().getController() != None:
         get_server().getController().shutdown()
     else:
         sys.exit(0)
     
-def restart():
+def restart(logger):
     """Restarts the Lunchinator"""
-    
-    #on Windows with pyinstaller we use this special handling for now
-    if getPlatform()==PLATFORM_WINDOWS:  
-        frozen = getattr(sys, 'frozen', '')
-        if frozen:
-            log_debug("Trying to spawn %s"%sys.executable)
-            from lunchinator import get_server
-            get_server().stop_server()
-            subprocess.Popen(sys.executable, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
-            
-    restartWithCommands(None)
-    
-def installPipDependencyWindows(package, notifyRestart=True):
-    log_debug("Trying to install %s"%package)
-    
-    import win32api, win32con, win32event, win32process, types
-    from win32com.shell.shell import ShellExecuteEx
-    from win32com.shell import shellcon
-
-    python_exe = sys.executable
-    
-    if type(package)==types.ListType:
-        packageStr = " ".join(package)
-    else:
-        packageStr = package
-
-    params = '-m pip install %s' % (packageStr)
-
-    procInfo = ShellExecuteEx(nShow=win32con.SW_SHOWNORMAL,
-                              fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
-                              lpVerb='runas',
-                              lpFile='"%s"'%python_exe,
-                              lpParameters=params)
-
-    procHandle = procInfo['hProcess']    
-    _obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
-    rc = win32process.GetExitCodeProcess(procHandle)
-    log_debug("Process handle %s returned code %s" % (procHandle, rc))
-
-    if notifyRestart:
-        try:
-            from lunchinator import get_notification_center
-            get_notification_center().emitRestartRequired("Dependecies were installed, please restart")
-        except:
-            log_error("Restart Notification failed")
-    
+    try:
+        #on Windows with pyinstaller we use this special handling for now
+        if getPlatform()==PLATFORM_WINDOWS:  
+            frozen = getattr(sys, 'frozen', '')
+            if frozen:
+                logger.debug("Trying to spawn %s", sys.executable)
+                from lunchinator import get_server
+                get_server().stop_server()
+                subprocess.Popen(sys.executable, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
+                
+        restartWithCommands(None, logger)
+    except:
+        logger.exception("Error restarting")
 
 def formatTime(mTime):
     """Returns a human readable time representation given a struct_time"""
@@ -484,3 +419,244 @@ def formatTime(mTime):
     elif dt.date().year == datetime.today().date().year:
         return strftime("%b %d, %H:%M", mTime)
     return strftime("%b %d %Y, %H:%M", mTime)
+
+def revealFile(path, logger):
+    if not os.path.exists(path):
+        logger.warning("Trying to reveal file %s which does not exist.", path)
+        return
+    try:
+        if getPlatform() == PLATFORM_MAC:
+            from AppKit import NSWorkspace
+            ws = NSWorkspace.sharedWorkspace()
+            ws.selectFile_inFileViewerRootedAtPath_(path, os.path.dirname(path))
+        elif getPlatform() == PLATFORM_WINDOWS:
+            subprocess.call(['explorer', '/select', path])
+        elif getPlatform() == PLATFORM_LINUX:
+            subprocess.call(['xdg-open', os.path.dirname(path)])
+    except:
+        logger.exception("Could not reveal file")
+        
+def openFile(path, logger):
+    if not os.path.exists(path):
+        logger.warning("Trying to open file %s which does not exist.", path)
+        return
+    try:
+        if getPlatform() == PLATFORM_MAC:
+            from AppKit import NSWorkspace
+            ws = NSWorkspace.sharedWorkspace()
+            ws.openFile_(path)
+        elif getPlatform() == PLATFORM_WINDOWS:
+            os.startfile(path)
+        elif getPlatform() == PLATFORM_LINUX:
+            subprocess.call(['xdg-open', path])
+    except:
+        logger.exception("Could not open file")
+    
+def formatException(exc_info=None):
+    if exc_info is None:
+        exc_info = sys.exc_info()
+    typeName = u"Unknown Exception"
+    if exc_info[0] != None:
+        typeName = unicode(exc_info[0].__name__)
+    return u"%s: %s" % (typeName, unicode(exc_info[1]))
+
+def formatSize(num):
+    num = float(num)
+    if num < 1024 and num > -1024:
+        return u"%3.0f\u2009%s" % (num, u"bytes")
+    num /= 1024.0
+    for x in [u'KiB', u'MiB', u'GiB']:
+        if num < 1024.0 and num > -1024.0:
+            return u"%3.1f\u2009%s" % (num, x)
+        num /= 1024.0
+    return u"%3.1f\u2009%s" % (num, u'TB')
+
+def getUniquePath(defaultPath):
+    if not os.path.exists(defaultPath):
+        return defaultPath
+    
+    # have to make it unique
+    name, ext = os.path.splitext(defaultPath)
+    for i in itertools.count(2):
+        newPath = "%s %d%s" % (name, i, ext)
+        if not os.path.exists(newPath):
+            return newPath
+
+_validFilenameChars = None
+def sanitizeForFilename(s):
+    global _validFilenameChars
+    if _validFilenameChars is None:
+        _validFilenameChars = set("-_.() %s%s" % (string.ascii_letters, string.digits))
+    return ''.join(c for c in s if c in _validFilenameChars)
+
+REASON_PACKAGE_MISSING = 0
+REASON_VERSION_CONFLICT = 1
+REASON_UNKNOWN = 2
+
+def checkRequirements(reqs, component, dispName, missing={}):
+    """Checks Python environment for installed dependencies.
+    
+    Returns a dictionary {component name : (displayed name, requirement, reason, info)}
+    for each requirement that is not met by the current environment.
+    
+    reqs -- List of requirement strings
+    component -- Name of the component that requires the package
+    dispName -- Displayed name of the component
+    missing -- dictionary to update
+    """
+    
+    if isPyinstallerBuild():
+        # pkg_resources is not working reliably here.
+        return missing
+    
+    for req in reqs:
+        req = req.strip()
+        try:
+            get_distribution(req)
+        except ResolutionError as e:
+            if type(e) is DistributionNotFound:
+                reason = REASON_PACKAGE_MISSING
+                info = None
+            elif type(e) is VersionConflict:
+                reason = REASON_VERSION_CONFLICT
+                info = e.args[0]
+            else:
+                reason = REASON_UNKNOWN
+                info = None
+            if component not in missing:
+                missing[component] = []
+            missing[component].append((dispName, req, reason, info))
+    return missing
+    
+INSTALL_SUCCESS = 0
+INSTALL_FAIL = 1
+INSTALL_RESTART = 2
+INSTALL_CANCEL = 3
+INSTALL_NOT_POSSIBLE = 4
+INSTALL_IGNORE = 5
+       
+def installDependencies(requirements):
+    if not requirements:
+        getCoreLogger().info("No dependencies to install.")
+        return INSTALL_SUCCESS
+    
+    if getPlatform() == PLATFORM_WINDOWS:
+        result = installPipDependencyWindows(requirements)
+    else:
+        result = subprocess.call([get_settings().get_resource('bin', 'install-dependencies.sh')] + requirements)
+    
+    from lunchinator.lunch_server import EXIT_CODE_UPDATE
+    if result == EXIT_CODE_UPDATE:
+        # need to restart
+        restart(getCoreLogger())
+        return INSTALL_RESTART
+    
+    for req in requirements:
+        try:
+            get_distribution(req)
+        except:
+            return INSTALL_FAIL
+    return INSTALL_SUCCESS
+ 
+def handleMissingDependencies(missing, optionalCallback=lambda _req : True):
+    """If there are missing dependencies, asks and installs them.
+    
+    Returns a list of components whose requirements were not fully
+    installed.
+    
+    missing -- dictionary returned by checkRequirements(...)
+    optionalCallbacl -- function that takes a requirement string and returns
+                        True if the requirement is optional and False
+                        otherwise.
+    """
+    if missing:
+        if isPyinstallerBuild():
+            canInstall = False
+            text = u"There are missing dependencies in your PyInstaller build. " +\
+                u"Unfortunately, you cannot install additional packages for a PyInstaller build."
+            getCoreLogger().warning(text + u"\n The missing dependencies are: \n" + unicode(str(missing)))
+        else:
+            canInstall = True
+            text = None
+        
+        if lunchinator_has_gui():
+            from lunchinator.req_error_dialog import RequirementsErrorDialog
+            from PyQt4.QtGui import QMessageBox
+            requirements = []
+            for _component, missingList in missing.iteritems():
+                for dispName, req, reason, info in missingList:
+                    if reason == REASON_PACKAGE_MISSING:
+                        reasonStr = u"Not installed"
+                    elif reason == REASON_VERSION_CONFLICT:
+                        reasonStr = u"Wrong version (installed: %s)" % info.version
+                    else:
+                        reasonStr = u"Unknown"
+                    requirements.append((req,
+                                         dispName,
+                                         reasonStr,
+                                         optionalCallback(req)))
+            f = RequirementsErrorDialog(requirements, None, canInstall, text)
+            res = f.exec_()
+            if res == RequirementsErrorDialog.Accepted:
+                if not canInstall:
+                    return INSTALL_NOT_POSSIBLE
+                installRes = installDependencies(f.getSelectedRequirements())
+                if installRes == INSTALL_FAIL:
+                    QMessageBox.critical(None, "Install Failed", "Some dependencies could not be installed.")
+                elif installRes == INSTALL_SUCCESS:
+                    QMessageBox.information(None, "Install Succeeded", "Dependencies were successfully installed.")
+                elif installRes == INSTALL_RESTART:
+                    QMessageBox.information(None, "Install Finished", "Lunchinator needs to be restarted to complete the installation.")
+                return installRes
+            elif res == RequirementsErrorDialog.IGNORED:
+                return INSTALL_IGNORE
+            else:
+                return INSTALL_CANCEL
+        return INSTALL_FAIL
+    return INSTALL_NOT_POSSIBLE
+
+def installPipDependencyWindows(package):
+    """ installs dependecies for lunchinator working without pyinstaller on Win 
+    """
+    from lunchinator.lunch_server import EXIT_CODE_UPDATE, EXIT_CODE_ERROR
+    import types
+    
+    getCoreLogger().debug("Trying to install %s", package)
+    
+    python_exe = sys.executable
+    
+    if type(package)==types.ListType:
+        packageStr = " ".join(package)
+    else:
+        packageStr = package
+
+    params = '-m pip install %s' % (packageStr)
+        
+    try:
+        import win32api, win32con, win32event, win32process
+        from win32com.shell.shell import ShellExecuteEx
+        from win32com.shell import shellcon
+    except:
+        getCoreLogger().error("You need pywin32 to install dependencies automatically. " + \
+        "You can try to install dependencies by running this as Administrator:\n" + \
+        "%s %s", python_exe, params)        
+        return EXIT_CODE_ERROR
+    
+    try:    
+        procInfo = ShellExecuteEx(nShow=win32con.SW_SHOWNORMAL,
+                                  fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
+                                  lpDirectory="C:",
+                                  lpVerb='runas',
+                                  lpFile='"%s"'%python_exe,
+                                  lpParameters=params)
+    
+        procHandle = procInfo['hProcess']    
+        _obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
+        rc = win32process.GetExitCodeProcess(procHandle)
+        getCoreLogger().debug("DependencyInstall: Process handle %s returned code %s", procHandle, rc)
+        return EXIT_CODE_UPDATE
+    except:
+        getCoreLogger().exception("Installation with pip failed")
+        return EXIT_CODE_ERROR
+        
+    

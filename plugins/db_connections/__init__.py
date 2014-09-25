@@ -1,8 +1,22 @@
 from lunchinator.plugin import iface_general_plugin
-from lunchinator import get_plugin_manager, get_settings, log_error, log_debug, \
-    log_warning, log_exception, get_notification_center
+from lunchinator import get_plugin_manager, get_settings, get_notification_center
 from lunchinator.logging_mutex import loggingMutex
 import logging
+from functools import wraps
+from types import MethodType
+
+class _LoggerWrapper(object):
+    def __init__(self, obj, logger):
+        self._obj = obj
+        self._logger = logger
+    
+    def __getattr__(self, name):
+        inner = getattr(self._obj, name)
+        if not isinstance(inner, MethodType):
+            return inner
+        def loggingFunc(*args, **kwargs):
+            return inner(self._logger, *args, **kwargs)
+        return loggingFunc
 
 class db_connections(iface_general_plugin):
     STANDARD_PLUGIN = "SQLite Connection"
@@ -41,15 +55,17 @@ class db_connections(iface_general_plugin):
                     if p != None and p.plugin_object.is_activated:
                         self.conn_plugins[conn_name] = p.plugin_object
                     else:
-                        log_error("DB Connection %s requires plugin of type \
-                        %s which is not available"%(conn_name,plugin_type))
+                        # TODO should this be a warning?
+                        self.logger.error("DB Connection %s requires plugin of type "\
+                        "%s which is not available. \n Delete the connection from the Settings "\
+                        "or install the DB plugin again.", conn_name, plugin_type)
                         continue
-                    p_options = p.plugin_object.options
+                    p_options = p.plugin_object.options.copy()
                     for k,v in p_options.items():
                         '''this takes care of the option-type'''
                         p_options[k] = get_settings().read_value_from_config_file(v,
                                                                                   section_name,
-                                                              k)
+                                                                                  k)
                     p_options["plugin_type"]=plugin_type
                     self.conn_properties[conn_name] = p_options.copy()
             except:
@@ -61,24 +77,23 @@ class db_connections(iface_general_plugin):
         self._init_plugin_objects()
         
         ob = self.conn_plugins[conn_id]            
-        self.conn_properties_lock.acquire()
-        prop = self.conn_properties[conn_id]
-        self.conn_properties_lock.release()
+        with self.conn_properties_lock:
+            prop = self.conn_properties[conn_id]
         assert("plugin_type" in prop)
         
         if len(prop)==1:
-            prop = ob.options
+            prop = ob.options.copy()
         return ob,prop
     
     def deactivate(self):
         for name,conn in self.open_connections.iteritems():
             try:
-                conn.close()
+                conn.close(self.logger)
             except:
-                log_exception("While deactivating: Could not close connection %s", name)   
+                self.logger.exception("While deactivating: Could not close connection %s", name)   
         iface_general_plugin.deactivate(self)
     
-    def getDBConnection(self,name=""):        
+    def getDBConnection(self, logger, name=""):        
         """returns tuple (connection_handle, connection_type) of the given connection"""
         if len(name)==0:
             name = get_settings().get_default_db_connection()
@@ -88,10 +103,22 @@ class db_connections(iface_general_plugin):
         
         ob, props = self.getProperties(name)
         if name not in self.open_connections:
-            log_debug("DB Connections: opening connection %s of type %s"%(name,props["plugin_type"]))
+            self.logger.debug("DB Connections: opening connection %s of type %s", name, props["plugin_type"])
             self.open_connections[name] = ob.create_connection(props)
         
-        return self.open_connections[name], props["plugin_type"]
+        return _LoggerWrapper(self.open_connections[name], logger), props["plugin_type"]
+    
+    def getConnectionType(self, _logger, name=""):
+        """Returns the connection type for a given connection name."""
+        if not name:
+            name = get_settings().get_default_db_connection()
+        
+        with self.conn_properties_lock:  
+            if name not in self.conn_properties:
+                return None
+        
+        _ob, props = self.getProperties(name)
+        return props["plugin_type"]        
     
     def has_options_widget(self):
         return True
@@ -107,42 +134,40 @@ class db_connections(iface_general_plugin):
 
         return self.conn_options_widget
     
-    def save_options_widget_data(self, **kwargs):
+    def save_options_widget_data(self, **_kwargs):
         new_props = self.conn_options_widget.get_connection_properties()
         self.config_file = get_settings().get_config_file()
         '''@todo Delete connections here'''
 
-        self.conn_properties_lock.acquire()
-        
-        for conn_name, props in new_props.iteritems():
-            section_name = "DB Connection: "+str(conn_name)
-            if conn_name not in self.conn_properties:
-                log_debug("DB Connection: new connection "+conn_name)
-                if self.config_file.has_section(section_name):
-                    log_warning("DB Connection: a section with the name %s already \
-                    exists although it is supposed to be a new connection, maybe a bug..."%conn_name)
-                else:
-                    self.config_file.add_section(section_name)
-                self.conn_properties[conn_name] = {"plugin_type": props["plugin_type"]}
-            
-            if props != self.conn_properties[conn_name]:
-                log_debug("DB Connection: updated properties for "+conn_name)
+        with self.conn_properties_lock:
+            for conn_name, props in new_props.iteritems():
+                section_name = "DB Connection: "+str(conn_name)
+                if conn_name not in self.conn_properties:
+                    self.logger.debug("DB Connection: new connection %s", conn_name)
+                    if self.config_file.has_section(section_name):
+                        self.logger.warning("DB Connection: a section with the name %s already \
+                        exists although it is supposed to be a new connection, maybe a bug...", conn_name)
+                    else:
+                        self.config_file.add_section(section_name)
+                    self.conn_properties[conn_name] = {"plugin_type": props["plugin_type"]}
                 
-                if not self.config_file.has_section(section_name):
-                    self.config_file.add_section(section_name)
+                if props != self.conn_properties[conn_name]:
+                    self.logger.debug("DB Connection: updated properties for %s", conn_name)
                     
-                for o, v in props.iteritems():
-                    self.config_file.set(section_name, o, unicode(v))
-                self.conn_properties[conn_name] = props
-                
-                if conn_name in self.open_connections:
-                    conn = self.open_connections.pop(conn_name)
-                    conn.close()
-                    get_notification_center().emitDBSettingChanged(conn_name)
-                    get_notification_center().emitRestartRequired("DB Settings were changed - you should restart")
-                
-        get_settings().set_available_db_connections(self.conn_properties.keys())
-        self.conn_properties_lock.release()
+                    if not self.config_file.has_section(section_name):
+                        self.config_file.add_section(section_name)
+                        
+                    for o, v in props.iteritems():
+                        self.config_file.set(section_name, o, unicode(v))
+                    self.conn_properties[conn_name] = props
+                    
+                    if conn_name in self.open_connections:
+                        conn = self.open_connections.pop(conn_name)
+                        conn.close(self.logger)
+                        get_notification_center().emitDBSettingChanged(conn_name)
+                        get_notification_center().emitRestartRequired("DB Settings were changed - you should restart")
+                    
+            get_settings().set_available_db_connections(self.conn_properties.keys())
             
         self.conn_plugins = {}
         self._init_plugin_objects()

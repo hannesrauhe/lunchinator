@@ -3,13 +3,15 @@ from PyQt4.QtGui import QWidget, QComboBox, QHBoxLayout, QLabel, QToolBox,\
 from PyQt4.QtCore import Qt
 from privacy_gui.single_category_view import SingleCategoryView
 from lunchinator.privacy.privacy_settings import PrivacySettings
-from lunchinator import get_notification_center, log_error
+from lunchinator import get_notification_center, convert_string
+from lunchinator.log.logging_slot import loggingSlot
 from itertools import izip
 
 class MultipleCategoriesView(QWidget):
-    def __init__(self, action, parent):
+    def __init__(self, action, parent, logger):
         super(MultipleCategoriesView, self).__init__(parent)
-
+        
+        self.logger = logger
         self._action = action
         self._mode = PrivacySettings.get().getPolicy(self._action, None, useModified=True, categoryPolicy=PrivacySettings.CATEGORY_NEVER)
         self._currentSingleViews = {}
@@ -24,9 +26,11 @@ class MultipleCategoriesView(QWidget):
         self._modeChanged(self._mode, False)
         
         get_notification_center().connectPrivacySettingsChanged(self._privacySettingsChanged)
+        get_notification_center().connectPrivacySettingsDiscarded(self._privacySettingsChanged)
         
     def finish(self):
         get_notification_center().disconnectPrivacySettingsChanged(self._privacySettingsChanged)
+        get_notification_center().disconnectPrivacySettingsDiscarded(self._privacySettingsChanged)
         self._clearCurrentView()
 
     def _initTopView(self):
@@ -68,7 +72,7 @@ class MultipleCategoriesView(QWidget):
     _PEER_EXCEPTIONS_VIEW = -1
     
     def _createAndInsertSingleView(self, category, index):
-        singleView = SingleCategoryView(self._action, self._currentToolBox, category)
+        singleView = SingleCategoryView(self._action, self._currentToolBox, self.logger, category)
         self._currentSingleViews[category] = singleView
         icon = self._action.getCategoryIcon(category)
         title = u"Not Categorized" if category == PrivacySettings.NO_CATEGORY else category
@@ -85,7 +89,7 @@ class MultipleCategoriesView(QWidget):
         for category in self._action.getPrivacyCategories():
             self._createAndInsertSingleView(category, -1)
         
-        peerExceptions = SingleCategoryView(self._action, self._currentToolBox, category=None, mode=PrivacySettings.POLICY_PEER_EXCEPTION)
+        peerExceptions = SingleCategoryView(self._action, self._currentToolBox, self.logger, category=None, mode=PrivacySettings.POLICY_PEER_EXCEPTION)
         self._currentSingleViews[self._PEER_EXCEPTIONS_VIEW] = peerExceptions
         self._currentToolBox.addItem(peerExceptions, "Special Peers")
         
@@ -99,16 +103,13 @@ class MultipleCategoriesView(QWidget):
         
     def _updateCategoryView(self):
         if self._currentToolBox is None:
-            log_error("Current tool box is None. Have to reset.")
+            self.logger.debug("Current tool box is None. Have to reset.")
             self._createCategoryView()
             return
         
         newCategories = self._action.getPrivacyCategories()
-        if PrivacySettings.NO_CATEGORY in self._currentSingleViews:
-            last = self._currentToolBox.count() - 2
-        else:
-            last = self._currentToolBox.count() - 1
-        oldCategories = [self._currentToolBox.itemText(i) for i in xrange(last)]
+        last = self._currentToolBox.count() - 1
+        oldCategories = [convert_string(self._currentToolBox.widget(i).getCategory()) for i in xrange(last)]
         
         # remove categories that are not there any more
         reverse_enumerate = lambda l: izip(xrange(len(l)-1, -1, -1), reversed(l))
@@ -126,10 +127,11 @@ class MultipleCategoriesView(QWidget):
         
     def _createSingleView(self, mode):
         self._clearCurrentView()
-        w = SingleCategoryView(self._action, self, mode=mode)
+        w = SingleCategoryView(self._action, self, self.logger, mode=mode)
         self._currentSingleViews[None] = w
         self._settingsWidget.layout().addWidget(w)
         
+    @loggingSlot(int)
     def _modeChanged(self, newMode, notify=True):
         if newMode == self._mode and newMode == PrivacySettings.POLICY_BY_CATEGORY:
             self._updateCategoryView()
@@ -155,6 +157,7 @@ class MultipleCategoriesView(QWidget):
         if notify:
             PrivacySettings.get().setPolicy(self._action, None, self._mode, applyImmediately=False, categoryPolicy=PrivacySettings.CATEGORY_NEVER)
     
+    @loggingSlot(object, object)
     def _privacySettingsChanged(self, pluginName, actionName):
         if pluginName != self._action.getPluginName() or actionName != self._action.getName():
             return

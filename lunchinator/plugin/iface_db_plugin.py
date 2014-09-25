@@ -25,7 +25,7 @@ class iface_db_plugin(iface_plugin):
     ''' do not overwrite these methods '''    
     def activate(self):        
         iface_plugin.activate(self)
-        self.conn_options = self.options
+        self.conn_options = self.options.copy()
 
     def deactivate(self):        
         iface_plugin.deactivate(self)            
@@ -78,42 +78,35 @@ class lunch_db(object):
     def __init__(self):
         self.is_open = False
         
-    def isOpen(self):
+    def isOpen(self, _logger):
         return self.is_open
         
     '''convenience calls'''    
-    def execute(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=False, commit=True)
+    def execute(self, logger, query, *wildcards):
+        return self._execute(logger, query, wildcards, returnResults=False, commit=True)
         
-    def executeNoCommit(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=False, commit=False)
+    def executeNoCommit(self, logger, query, *wildcards):
+        return self._execute(logger, query, wildcards, returnResults=False, commit=False)
         
-    def query(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=True, commit=False)
+    def query(self, logger, query, *wildcards):
+        return self._execute(logger, query, wildcards, returnResults=True, commit=False)
     
-    def queryWithHeader(self, query, *wildcards):
-        return self._execute(query, wildcards, returnResults=True, commit=False, returnHeader=True)
+    def queryWithHeader(self, logger, query, *wildcards):
+        return self._execute(logger, query, wildcards, returnResults=True, commit=False, returnHeader=True)
     
     '''abstract methods - basic functionality'''   
+    def open(self, logger):
+        ''' this method is only called by iface_db_plugin::create_connection which is implemented by yourself
+        therefore this acts only as a reminder that you typically need the open function, but yours might have more parameters
+        '''
+        raise  NotImplementedError("%s does not implement this method"%self.db_type)
             
-    def _execute(self, query, wildcards, returnResults=True, commit=False, returnHeader=False):
+    def _execute(self, logger, query, wildcards, returnResults=True, commit=False, returnHeader=False):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
-    def existsTable(self, tableName):
+    def existsTable(self, logger, tableName):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
-    def insert_values(self, table, *values):
+    def insert_values(self, logger, table, *values):
         raise  NotImplementedError("%s does not implement this method"%self.db_type) 
-            
-            
-    '''The following maybe should be moved to the other class'''
-    
-    '''lunch statistics plugin methods'''    
-    def lastUpdateForLunchDay(self, date, tableName):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-        
-    def insertLunchPart(self, date, textAndAdditivesList, update, table):
-        raise  NotImplementedError("%s does not implement this method"%self.db_type)
-            
-       
         

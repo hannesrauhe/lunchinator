@@ -2,6 +2,7 @@ from copy import deepcopy
 from git import GitHandler
 from lunchinator import get_notification_center
 from lunchinator.logging_mutex import loggingMutex
+from lunchinator.log import loggingFunc, getCoreLogger
 
 class PluginRepositories(object):
     """Manages external plugin repositories."""
@@ -78,6 +79,7 @@ class PluginRepositories(object):
         
         return activeChanged
 
+    @loggingFunc
     def checkForUpdates(self, forced=False):
         """Checks each repository for updates.
         
@@ -90,9 +92,11 @@ class PluginRepositories(object):
             
         outdated = set()
         upToDate = set()
+        gh = GitHandler(getCoreLogger())
         for path, _active, autoUpdate in repos:
             if forced or autoUpdate:
-                if GitHandler.needsPull(path=path):
+                
+                if gh.needsPull(path=path):
                     outdated.add(path)
                 else:
                     upToDate.add(path)

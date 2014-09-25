@@ -1,5 +1,4 @@
-from lunchinator import log_error, log_info, get_settings,\
-    get_notification_center
+from lunchinator import get_settings, get_notification_center
 from lunchinator.utilities import displayNotification, restartWithCommands
 
 class AppUpdateHandler(object):
@@ -9,12 +8,13 @@ class AppUpdateHandler(object):
     application update process.
     """
     
-    def __init__(self):
+    def __init__(self, logger):
         self._ui = None
         self._statusHolder = self._getInitialStatus()        
         self._progressHolder = False
         self._changelogHolder = None
         self._install_ready = False
+        self.logger = logger
     
     def isInstallReady(self):
         """Returns True if there is an update available and ready to install."""
@@ -56,10 +56,10 @@ class AppUpdateHandler(object):
             The progress bar will be made visible based on this parameter.
         """
         if err:
-            log_error("Updater: " + status)
+            self.logger.warning("Updater: %s", status)
             status = "Error: " + status
         else:
-            log_info("Updater: " + status)
+            self.logger.info("Updater: %s", status)
             
         if self._ui != None:
             self._ui.setAppStatus("Status: " + status, progress)
@@ -71,7 +71,7 @@ class AppUpdateHandler(object):
         """Makes the install button enabled/disabled"""
         self._install_ready = True
         get_notification_center().emitApplicationUpdate()
-        displayNotification("New Version Available", "Install via Update Plugin")
+        displayNotification("New Version Available", "Install via Update Plugin", self.logger)
         if self._ui != None:
             self._ui.appInstallReady()    
             
@@ -92,7 +92,7 @@ class AppUpdateHandler(object):
     def canCheckForUpdate(self):
         """Returns True if this handler can check for updates."""
         return False
-            
+    
     def checkForUpdate(self):
         """Checks for updates.
         
@@ -113,5 +113,5 @@ class AppUpdateHandler(object):
     def executeInstallation(self, commands):
         """Usually means to install and restart"""
         
-        restartWithCommands(commands)
+        restartWithCommands(commands, self.logger)
     

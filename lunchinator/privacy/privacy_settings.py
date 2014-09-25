@@ -1,6 +1,6 @@
 import json
-from lunchinator import log_exception, get_settings, log_warning, log_error,\
-    get_notification_center
+from lunchinator import get_settings, get_notification_center
+from lunchinator.log import newLogger
 from lunchinator.logging_mutex import loggingMutex
 from copy import deepcopy
 
@@ -80,10 +80,11 @@ class PrivacySettings(object):
     
     def __init__(self, jsonString):
         # {plugin name : {action name : {settings}}}
+        self.logger = newLogger("Privacy")
         try:
             self._settings = json.loads(jsonString)
         except ValueError:
-            log_exception("Error reading privacy settings from JSON.")
+            self.logger.exception("Error reading privacy settings from JSON.")
             self._settings = {}
         
         self._modifications = {}
@@ -111,9 +112,13 @@ class PrivacySettings(object):
                         get_notification_center().emitPrivacySettingsChanged(pluginName, actionName)
             self._modifications = {}
                 
-    def discard(self):
+    def discard(self, notify=True):
         """Discards all modifications since the last save"""
         with self._lock:
+            for pluginName, pluginDict in self._modifications.iteritems():
+                for actionName, _actionDict in pluginDict.iteritems():
+                    if notify:
+                        get_notification_center().emitPrivacySettingsDiscarded(pluginName, actionName)
             self._modifications = {}
     
     ######################### GETTER ########################
@@ -246,7 +251,7 @@ class PrivacySettings(object):
             return self.getWhitelist(action, category, useModified, categoryPolicy)
         if policy == self.POLICY_PEER_EXCEPTION:
             return self.getPeerExceptions(action, useModified)
-        log_error("There are no exceptions for policy", policy)
+        self.logger.error("There are no exceptions for policy %s", policy)
                 
     def getPeerState(self, peerID, action, category):
         """Return the privacy state of a peer for a given action.
@@ -384,7 +389,7 @@ class PrivacySettings(object):
             key = u"blk"
         elif policy == self.POLICY_PEER_EXCEPTION:
             if category is not None:
-                log_warning("There are no peer exceptions for individual categories. Please check what you're doing here.")
+                self.logger.warning("There are no peer exceptions for individual categories. Please check what you're doing here.")
             key = u"exc"
             
         if key not in settingsDict:

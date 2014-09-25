@@ -1,0 +1,9 @@
+[Core]
+Name = hannesrauhe.lunchinator.logging_level_settings
+Module = logging_level_settings
+
+[Documentation]
+Author = Cornelius Ratsch
+Version = 0.1
+Website = http://www.lunchinator.de
+Description = GUI for managing logging levels per component

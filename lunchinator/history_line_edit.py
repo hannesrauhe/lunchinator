@@ -5,9 +5,7 @@ from lunchinator.growing_text_edit import GrowingTextEdit
 class HistoryBase(object):
     def __init__(self, keyModifiers = Qt.NoModifier):
         super(HistoryBase, self).__init__()
-        self.history = []
-        self.backups = {}
-        self.index = 0 # 0 means newest line
+        self.clearHistory()
         self.keyModifiers = keyModifiers
     
     def getText(self, index):
@@ -15,6 +13,11 @@ class HistoryBase(object):
             # current line not in history
             return None
         return self.history[-index]
+    
+    def clearHistory(self):
+        self.history = []
+        self.backups = {}
+        self.index = 0
     
     def appendHistory(self, text):
         if len(self.history) == 0 or text != self.history[-1]:

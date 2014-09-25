@@ -1,18 +1,15 @@
 from lunchinator.plugin import iface_gui_plugin
-from lunchinator import log_exception, convert_string, log_error, get_peers,\
-    get_settings, get_server
+from lunchinator import convert_string, get_peers, get_settings, lunchinator_has_gui
 from lunchinator.peer_actions import PeerAction
-from private_messages.chat_history_view import ChatHistoryWidget
-from private_messages.chat_messages_handler import ChatMessagesHandler
 from lunchinator.utilities import getPlatform, PLATFORM_MAC, getValidQtParent,\
     displayNotification, canUseBackgroundQThreads
-import os
+from lunchinator.privacy.privacy_settings import PrivacySettings
+from lunchinator.log.logging_func import loggingFunc
 from lunchinator.logging_mutex import loggingMutex
+import os
 import sys
-from private_messages.chat_messages_storage import ChatMessagesStorage
 from time import time
 from functools import partial
-from lunchinator.privacy.privacy_settings import PrivacySettings
 
 class _SendMessageAction(PeerAction):
     def getName(self):
@@ -34,7 +31,7 @@ class _OpenChatAction(PeerAction):
     def getName(self):
         return "Open Chat"
     
-    def performAction(self, peerID, _peerInfo):
+    def performAction(self, peerID, _peerInfo, _parent):
         self.getPluginObject().openChat(peerID)
         
     def appliesToPeer(self, peerID, peerInfo):
@@ -69,10 +66,10 @@ class _BlockAction(PeerAction):
             else:
                 return "Unblock"
     
-    def performAction(self, peerID, _peerInfo):
+    def performAction(self, peerID, _peerInfo, _parent):
         policy = self._sendMessageAction.getPrivacyPolicy()
         if policy not in (PrivacySettings.POLICY_EVERYBODY_EX, PrivacySettings.POLICY_NOBODY_EX):
-            log_error("Illegal policy for block action:", policy)
+            self.logger.error("Illegal policy for block action: %s", policy)
             return
         
         exceptions = self._sendMessageAction.getExceptions(policy)
@@ -96,20 +93,29 @@ class private_messages(iface_gui_plugin):
     
     def __init__(self):
         super(private_messages, self).__init__()
-        self.options = [((u"prev_messages", u"Number of previous messages to display"), 5)]
+        self.options = [((u"prev_messages", u"Number of previous messages to display"), 5),
+                        ((u"enable_markdown", u"Enable Markdown annotations", self._enableMarkdownChanged), False)]
         self.hidden_options = {u"ack_timeout" : 3, # seconds until message delivery is marked as timed out
                                u"next_msgid" : -1} # next free message ID. -1 = not initialized
         
+        self._storage = None
+        
     def get_displayed_name(self):
         return u"Chat"
-        
+    
     def activate(self):
         iface_gui_plugin.activate(self)
-        sendMessageAction = _SendMessageAction()
-        self._peerActions = [_OpenChatAction(sendMessageAction), _BlockAction(sendMessageAction), sendMessageAction]
+        if lunchinator_has_gui():
+            self._sendMessageAction = _SendMessageAction()
+            self._openChatAction = _OpenChatAction(self._sendMessageAction)
+            self._peerActions = [self._openChatAction, _BlockAction(self._sendMessageAction), self._sendMessageAction]
+        else:
+            self._peerActions = None
+        
+    def create_widget(self, parent):
+        from private_messages.chat_history_view import ChatHistoryWidget
         
         self._lock = loggingMutex("Private Messages", logging=get_settings().get_verbose())
-        self._storage = None
         
         from PyQt4.QtCore import QThread
         from private_messages.chat_messages_handler import ChatMessagesHandler
@@ -117,8 +123,8 @@ class private_messages(iface_gui_plugin):
             self._messagesThread = QThread()
         else:
             self._messagesThread = None
-
-        self._messagesHandler = ChatMessagesHandler(self, self.hidden_options[u"ack_timeout"], self.hidden_options[u"next_msgid"])
+            
+        self._messagesHandler = ChatMessagesHandler(self.logger, self, self.hidden_options[u"ack_timeout"], self.hidden_options[u"next_msgid"])
         if self._messagesThread is not None:
             self._messagesHandler.moveToThread(self._messagesThread)
             self._messagesThread.start()
@@ -128,7 +134,14 @@ class private_messages(iface_gui_plugin):
         self._messagesHandler.displayOwnMessage.connect(self._displayOwnMessage)
         self._messagesHandler.newMessage.connect(self._displayMessage)
         
-    def deactivate(self):
+        self._openChats = {} # mapping peer ID -> ChatDockWidget
+        self._history = ChatHistoryWidget(self, parent, self.logger)
+        return self._history
+    
+    def destroy_widget(self):
+        for chatWindow in self._openChats.values():
+            chatWindow.close()
+            
         self.set_hidden_option(u"next_msgid", self._messagesHandler.getNextMessageIDForStorage(), convert=False)
         self._messagesHandler.deactivate()
         if self._messagesThread is not None:
@@ -139,19 +152,15 @@ class private_messages(iface_gui_plugin):
         self._messagesHandler = None
         self._storage = None
         self._lock = None
-        iface_gui_plugin.deactivate(self)
-    
-    def create_widget(self, parent):
-        self._openChats = {} # mapping peer ID -> ChatDockWidget
-        return ChatHistoryWidget(self, parent)
-    
-    def destroy_widget(self):
-        for chatWindow in self._openChats.values():
-            chatWindow.close()
+            
         iface_gui_plugin.destroy_widget(self)
+        
+    def _enableMarkdownChanged(self, _setting, newVal):
+        for chatWindow in self._openChats.values():
+            chatWindow.getChatWidget().setMarkdownEnabled(newVal)
     
     def extendsInfoDict(self):
-        return True
+        return lunchinator_has_gui()
         
     def extendInfoDict(self, infoDict):
         infoDict[u"PM_v"] = self.VERSION_CURRENT
@@ -159,7 +168,7 @@ class private_messages(iface_gui_plugin):
     def get_peer_actions(self):
         return self._peerActions
         
-    def process_event(self, cmd, value, _ip, peerInfo):
+    def process_event(self, cmd, value, _ip, peerInfo, _prep):
         if not cmd.startswith(u"HELO_PM"):
             return
         
@@ -183,9 +192,11 @@ class private_messages(iface_gui_plugin):
         if self._storage == None:
             with self._lock:
                 if self._storage == None:
-                    self._storage = ChatMessagesStorage()
+                    from private_messages.chat_messages_storage import ChatMessagesStorage
+                    self._storage = ChatMessagesStorage(self.logger)
         return self._storage
     
+    @loggingFunc
     def _displayOwnMessage(self, otherID, msgID, recvTime, msgHTML, msgTime, status, errorMsg):
         otherID = convert_string(otherID)
         msgHTML = convert_string(msgHTML)
@@ -196,7 +207,6 @@ class private_messages(iface_gui_plugin):
             errorMsg = None
         
         if otherID in self._openChats:
-            from private_messages.chat_widget import ChatWidget
             chatWindow = self._openChats[otherID]
             chatWindow.getChatWidget().addOwnMessage(msgID, recvTime, msgHTML, msgTime, status, errorMsg)
     
@@ -209,7 +219,9 @@ class private_messages(iface_gui_plugin):
     
     def _openChat(self, myName, otherName, myAvatar, otherAvatar, otherID):
         from private_messages.chat_window import ChatWindow
-        newWindow = ChatWindow(None, myName, otherName, myAvatar, otherAvatar, otherID)
+        newWindow = ChatWindow(None, self.logger, myName, otherName, myAvatar, otherAvatar, otherID, self._sendMessageAction)
+        newWindow.getChatWidget().setMarkdownEnabled(self.get_option(u"enable_markdown"))
+        
         newWindow.windowClosing.connect(self._chatClosed)
         newWindow.getChatWidget().sendMessage.connect(self._messagesHandler.sendMessage)
         newWindow.getChatWidget().typing.connect(partial(self._messagesHandler.sendTyping, otherID))
@@ -217,6 +229,7 @@ class private_messages(iface_gui_plugin):
         self._openChats[otherID] = newWindow
         
         prevMessages = self.getStorage().getPreviousMessages(otherID, self.get_option(u"prev_messages"))
+        from private_messages.chat_messages_storage import ChatMessagesStorage
         for row in reversed(prevMessages):
             # partner, ID, own, time, status, text
             isOwnMessage = row[ChatMessagesStorage.MSG_IS_OWN_MESSAGE_COL] != 0
@@ -232,6 +245,7 @@ class private_messages(iface_gui_plugin):
                                                           row[ChatMessagesStorage.MSG_RECV_TIME_COL])
         return self._activateChat(newWindow)
         
+    @loggingFunc
     def _chatClosed(self, pID):
         pID = convert_string(pID)
         if pID in self._openChats:
@@ -239,9 +253,12 @@ class private_messages(iface_gui_plugin):
             chatWindow.deleteLater()
             del self._openChats[pID]
         else:
-            log_error("Closed chat window was not maintained:", pID)
+            self.logger.error("Closed chat window was not maintained: %s", pID)
         
-    def openChat(self, pID, forceForeground=False):
+    def getOpenChatAction(self):
+        return self._openChatAction
+    
+    def openChat(self, pID, forceForeground=True):
         pID = convert_string(pID)
         
         if pID in self._openChats:
@@ -249,7 +266,7 @@ class private_messages(iface_gui_plugin):
         
         otherName = get_peers().getDisplayedPeerName(pID=pID)
         if otherName == None:
-            log_error("Could not get info of chat partner", pID)
+            self.logger.error("Could not get info of chat partner %s", pID)
             return
         otherAvatar = get_peers().getPeerAvatarFile(pID=pID)
         
@@ -258,6 +275,7 @@ class private_messages(iface_gui_plugin):
         
         return self._openChat(myName, otherName, myAvatar, otherAvatar, pID)
 
+    @loggingFunc
     def _delayedDelivery(self, otherID, msgID, recvTime, error, errorMessage):
         otherID = convert_string(otherID)
         errorMessage = convert_string(errorMessage)
@@ -266,12 +284,14 @@ class private_messages(iface_gui_plugin):
             chatWindow = self._openChats[otherID]
             chatWindow.getChatWidget().delayedDelivery(msgID, recvTime, error, errorMessage)
 
+    @loggingFunc
     def _messageIDChanged(self, otherID, oldID, newID):
         otherID = convert_string(otherID)
         if otherID in self._openChats:
             chatWindow = self._openChats[otherID]
             chatWindow.getChatWidget().messageIDChanged(oldID, newID)
 
+    @loggingFunc
     def _displayMessage(self, otherID, msgHTML, msgTime, msgDict):
         try:
             recvTime = time()
@@ -289,9 +309,36 @@ class private_messages(iface_gui_plugin):
             doc.setHtml(msgHTML)
             displayNotification(chatWindow.getChatWidget().getOtherName(),
                                 convert_string(doc.toPlainText()),
+                                self.logger,
                                 chatWindow.getChatWidget().getOtherIconPath())
 
 if __name__ == '__main__':
+    from private_messages.chat_history_view import ChatHistoryModel
+    from private_messages.message_item_delegate import MessageItemDelegate
+    from PyQt4.QtGui import QTreeView
+    
     pm = private_messages()
+    
+    
+    
+    def addRow():
+        row = [u"",
+               0,
+               True,
+               0,
+               0,
+               u"sadfklsakdjflkj slkjf laksjd flk jsadlkf jalsd jfl jsalkd jflk jsadl fjlk sajdlkf jlksa jdfl jsadf jl<br>lsakdjflkjsalkdjf lksajdf",
+               0]
+        
+        roq = [u"",
+               0,
+               False,
+               0,
+               0,
+               u"0 jlksa jdfl jsadf jl<br>lsakdjflkjsalkdjf lksajdf",
+               0]
+        historyModel = ChatHistoryModel("", [row, roq])
+        pm._history._historyTable.setModel(historyModel)
+        
     pm.hasConfigOption = lambda _ : False
-    pm.run_in_window()
+    pm.run_in_window(addRow)

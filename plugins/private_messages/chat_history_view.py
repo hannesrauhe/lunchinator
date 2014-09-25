@@ -1,26 +1,33 @@
-from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView,\
-    QSplitter, QTextDocument, QStandardItemModel, QSortFilterProxyModel,\
-    QLineEdit, QVBoxLayout, QPushButton, QFrame
-from lunchinator import get_peers, log_warning,\
-    convert_string
+from private_messages.chat_messages_storage import ChatMessagesStorage
+from private_messages.message_item_delegate import MessageItemDelegate
+from private_messages.chat_messages_model import ChatMessagesModel
+from lunchinator import get_peers,  convert_string
 from lunchinator.table_models import TableModelBase
 from lunchinator.utilities import formatTime, getPlatform, PLATFORM_MAC
+from lunchinator.log.logging_slot import loggingSlot
+from lunchinator.log.logging_func import loggingFunc
+
+from PyQt4.QtGui import QWidget, QHBoxLayout, QTreeView,\
+    QSplitter, QStandardItemModel, QSortFilterProxyModel,\
+    QLineEdit, QVBoxLayout, QPushButton, QFrame, QToolButton, QMenu,\
+    QStandardItem, QItemSelection
+from PyQt4.QtCore import Qt, QVariant, QModelIndex
+
 from time import localtime
-from PyQt4.QtCore import Qt, QVariant
-from private_messages.chat_messages_storage import ChatMessagesStorage
+from functools import partial
 
 class HistoryPeersModel(TableModelBase):
     _NAME_KEY = u'name'
     _ID_KEY = u'ID'
     
-    def __init__(self, dataSource):
+    def __init__(self, dataSource, logger):
         columns = [(u"Chat Partner", self._updateNameItem)]
-        super(HistoryPeersModel, self).__init__(dataSource, columns)
+        super(HistoryPeersModel, self).__init__(dataSource, columns, logger)
             
     def _updateNameItem(self, pID, _data, item):
         m_name = get_peers().getDisplayedPeerName(pID=pID)
         if m_name == None:
-            log_warning("displayed peer name (%s) should not be None" % pID)
+            self.logger.warning("displayed peer name (%s) should not be None", pID)
             m_name = pID
         item.setText(m_name)
         
@@ -30,40 +37,87 @@ class ChatHistoryModel(QStandardItemModel):
 
         self.setHorizontalHeaderLabels([u"Sender", u"Send Time", u"Text"])
         
-        self.insertRows(0, len(rows));
-    
-        partnerName = get_peers().getDisplayedPeerName(pID=partnerID)
-        doc = QTextDocument()
-        for i, row in enumerate(rows):
+        if get_peers() is not None:
+            partnerName = get_peers().getDisplayedPeerName(pID=partnerID)
+        else:
+            partnerName = partnerID
+        for row in rows:
             # sender
-            index = self.index(i, 0);
-            if row[ChatMessagesStorage.MSG_IS_OWN_MESSAGE_COL] != 0:
-                self.setData(index, QVariant(u"You"))
+            item1 = self._createItem()
+            isOwn = row[ChatMessagesStorage.MSG_IS_OWN_MESSAGE_COL] != 0
+            if isOwn:
+                item1.setData(QVariant(u"You"), Qt.DisplayRole)
             else:
-                self.setData(index, partnerName)
+                item1.setData(partnerName, Qt.DisplayRole)
                 
             # time
-            index = self.index(i, 1)
+            item2 = self._createItem()
             mTime = localtime(row[ChatMessagesStorage.MSG_TIME_COL])
-            self.setData(index, QVariant(formatTime(mTime)))
+            item2.setData(QVariant(formatTime(mTime)), Qt.DisplayRole)
             
             # message
-            index = self.index(i, 2)
-            doc.setHtml(row[ChatMessagesStorage.MSG_TEXT_COL])
-            self.setData(index, QVariant(doc.toPlainText()));  
+            item3 = self._createItem(True)
+            item3.setData(QVariant(row[ChatMessagesStorage.MSG_TEXT_COL]), Qt.DisplayRole)
+            item3.setData(QVariant(isOwn), ChatMessagesModel.OWN_MESSAGE_ROLE)
+            
+            self.appendRow([item1, item2, item3])
+    
+    def _createItem(self, editable=False):
+        item = QStandardItem()
+        item.setEditable(editable)
+        return item
+        
+class HistoryTable(QTreeView):
+    def __init__(self, parent, logger):
+        super(HistoryTable, self).__init__(parent)
+        
+        self.logger = logger
+        self.setAlternatingRowColors(False)
+        self.setHeaderHidden(False)
+        self.setItemsExpandable(False)
+        self.setIndentation(0)
+        self.setItemDelegate(MessageItemDelegate(self, logger, column=2, margin=0))
+        self.setSelectionMode(QTreeView.NoSelection)
+                
+        self.setObjectName(u"__peer_list")
+        self.setFrameShape(QFrame.StyledPanel)
+        if getPlatform() == PLATFORM_MAC:
+            self.setStyleSheet("QFrame#__peer_list{border-width: 1px; border-top-style: solid; border-right-style: none; border-bottom-style: none; border-left-style: solid; border-color:palette(mid)}");
+        
+    
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            index = self.indexAt(event.pos())
+            if index.column() == 2 and self.itemDelegate().shouldStartEditAt(event.pos(), index):
+                # do not start editing if already editing
+                if index != self.itemDelegate().getEditIndex():
+                    self.stopEditing()
+                    self.itemDelegate().setEditIndex(index)
+                    self.edit(index)
+            else:
+                # clicked somewhere else -> stop editing
+                self.stopEditing()
+        super(HistoryTable, self).mousePressEvent(event)
+
+    def stopEditing(self):
+        if self.itemDelegate().getEditor() != None:
+            self.closeEditor(self.itemDelegate().getEditor(), MessageItemDelegate.NoHint)
+            self.itemDelegate().editorClosing(self.itemDelegate().getEditor(), MessageItemDelegate.NoHint)
+        
         
 class ChatHistoryWidget(QWidget):
-    def __init__(self, delegate, parent):
+    def __init__(self, delegate, parent, logger):
         super(ChatHistoryWidget, self).__init__(parent)
         
+        self.logger = logger
         self._delegate = delegate
         
-        self._peerModel = HistoryPeersModel(None)
-        self._updatePeers()
-        
+        self._peerModel = HistoryPeersModel(None, self.logger)
         self._initPeerList()
         self._initHistoryTable()
         self._initSortFilterModel()
+        
+        self._updatePeers()
         
         topWidget = self._initTopWidget()
         mainWidget = self._initMainWidget()
@@ -73,6 +127,8 @@ class ChatHistoryWidget(QWidget):
         layout.setSpacing(0)
         layout.addWidget(topWidget, 0)
         layout.addWidget(mainWidget, 1)
+        
+        self._peerList.doubleClicked.connect(self._peerDoubleClicked)
       
     def _initPeerList(self):  
         self._peerList = QTreeView(self)
@@ -90,16 +146,7 @@ class ChatHistoryWidget(QWidget):
             self._peerList.setStyleSheet("QFrame#__peer_list{border-width: 1px; border-top-style: solid; border-right-style: solid; border-bottom-style: none; border-left-style: none; border-color:palette(mid)}");
 
     def _initHistoryTable(self):
-        self._historyTable = QTreeView(self)
-        self._historyTable.setAlternatingRowColors(True)
-        self._historyTable.setHeaderHidden(False)
-        self._historyTable.setItemsExpandable(False)
-        self._historyTable.setIndentation(0)
-                
-        self._historyTable.setObjectName(u"__peer_list")
-        self._historyTable.setFrameShape(QFrame.StyledPanel)
-        if getPlatform() == PLATFORM_MAC:
-            self._historyTable.setStyleSheet("QFrame#__peer_list{border-width: 1px; border-top-style: solid; border-right-style: none; border-bottom-style: none; border-left-style: solid; border-color:palette(mid)}");
+        self._historyTable = HistoryTable(self, self.logger)
         
     def _initMainWidget(self):
         split = QSplitter(Qt.Horizontal, self)
@@ -112,12 +159,20 @@ class ChatHistoryWidget(QWidget):
     def _initTopWidget(self):
         topWidget = QWidget(self)
         
-        refreshButton = QPushButton("Refresh")
+        refreshButton = QPushButton("Refresh", topWidget)
         refreshButton.clicked.connect(self._updatePeers)
         
-        self._clearButton = QPushButton("Clear Selected")
+        self._clearButton = QPushButton("Clear Selected", topWidget)
         self._clearButton.setEnabled(False)
         self._clearButton.clicked.connect(self._clearSelected)
+        
+        self._openChatButton = QToolButton(topWidget)
+        self._openChatButton.setText(u"Open chat with ")
+        self._openChatButton.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self._openChatButton.setPopupMode(QToolButton.InstantPopup)
+        menu = QMenu(self._openChatButton)
+        menu.aboutToShow.connect(partial(self._fillPeersPopup, menu))
+        self._openChatButton.setMenu(menu)
         
         self._searchField = QLineEdit(topWidget)
         if hasattr(self._searchField, "setPlaceholderText"):
@@ -127,7 +182,8 @@ class ChatHistoryWidget(QWidget):
         layout = QHBoxLayout(topWidget)
         layout.setContentsMargins(0, 10, 10, 0)
         layout.addWidget(refreshButton, 0, Qt.AlignLeft)
-        layout.addWidget(self._clearButton, 1, Qt.AlignLeft)
+        layout.addWidget(self._clearButton, 0, Qt.AlignLeft)
+        layout.addWidget(self._openChatButton, 1, Qt.AlignLeft)
         layout.addWidget(self._searchField, 0, Qt.AlignRight)
         return topWidget
       
@@ -138,14 +194,55 @@ class ChatHistoryWidget(QWidget):
         self._historyTable.setModel(self._sortFilterModel)
 
     def _createHistoryModel(self, partnerID):
-        rows = self._delegate.getStorage().getMessages(partnerID) 
-        historyModel = ChatHistoryModel(partnerID, rows)
-        self._sortFilterModel.setSourceModel(historyModel)
+        rows = self._delegate.getStorage().getMessages(partnerID)
+        # have to store history model as instance variable, else it would be deleted by old PyQt versions
+        self.__historyModel = ChatHistoryModel(partnerID, rows)
+        self._sortFilterModel.setSourceModel(self.__historyModel)
 
+    @loggingFunc
+    def _fillPeersPopup(self, menu):
+        menu.clear()
+        
+        if get_peers() is None:
+            self.logger.warning("no lunch_peers instance available, cannot show peer actions")
+            return
+        
+        with get_peers():
+            for peerID in get_peers():
+                peerInfo = get_peers().getPeerInfo(pID=peerID, lock=False)
+                if self._delegate.getOpenChatAction().appliesToPeer(peerID, peerInfo):
+                    menu.addAction(get_peers().getDisplayedPeerName(pID=peerID, lock=False), partial(self._openChat, peerID))
+        
+    @loggingSlot(QModelIndex)
+    def _peerDoubleClicked(self, index):
+        pID = convert_string(index.data(HistoryPeersModel.KEY_ROLE).toString())
+        self._delegate.openChat(pID)
+        
+    def _openChat(self, peerID):
+        peerInfo = get_peers().getPeerInfo(pID=peerID)
+        if peerInfo is None:
+            self.logger.error("No peer info found for peer %s", peerID)
+            return
+        
+        self._delegate.getOpenChatAction().performAction(peerID, peerInfo, self)
+
+    def _getSelectedPeer(self, selection=None):
+        if selection is None:
+            selection = self._peerList.selectionModel().selection()
+        if len(selection.indexes()) > 0:
+            index = iter(selection.indexes()).next()
+            return convert_string(index.data(HistoryPeersModel.KEY_ROLE).toString())
+        return None
+
+    @loggingSlot()
     def _updatePeers(self):
+        if get_peers() is None:
+            return
+        
+        selectedBefore = self._getSelectedPeer()
         rows = self._delegate.getStorage().getPartners()
 
-        newPeers = {}      
+        newPeers = {}   
         with get_peers():
             for row in rows:
                 pID = row[0]
@@ -157,16 +254,22 @@ class ChatHistoryWidget(QWidget):
             else:
                 self._peerModel.externalRowAppended(pID, peerInfo)
                 
+        selectedAfter = self._getSelectedPeer()
+        if selectedAfter is not None and selectedBefore == selectedAfter:
+            self._createHistoryModel(selectedAfter)
+                
+    @loggingSlot(QItemSelection, QItemSelection)
     def _displayHistory(self, newSelection, _oldSelection):
-        if len(newSelection.indexes()) > 0:
-            index = iter(newSelection.indexes()).next()
-            partnerID = convert_string(index.data(HistoryPeersModel.KEY_ROLE).toString())
-            self._createHistoryModel(partnerID)
+        selected = self._getSelectedPeer(newSelection)
+        if selected is not None:
+            self._createHistoryModel(selected)
             self._clearButton.setEnabled(True)
+            self._historyTable.resizeColumnToContents(2)
         else:
             self._sortFilterModel.setSourceModel(None)
             self._clearButton.setEnabled(False)
             
+    @loggingSlot()
     def _clearSelected(self):
         if not self._peerList.selectionModel().hasSelection():
             return

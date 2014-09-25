@@ -1,5 +1,5 @@
 from lunchinator.plugin import iface_called_plugin
-from lunchinator import get_server, log_info, log_warning, log_error, log_exception, log_debug
+from lunchinator import get_server
 
 import os, sys, time, pprint
 
@@ -25,7 +25,10 @@ class twitter_status(iface_called_plugin):
     def process_lunch_call(self, _, __, member_info):
         pass
     
-    def process_event(self, cmd, value, ip, member_info):
+    def process_event(self, cmd, value, ip, member_info, _prep):
+        if len(value)==0:
+            return
+        
         if cmd == "HELO_TWITTER_USER":
             screen_name = value[1:] if value[0] == "@" else value
             if not self.other_twitter_users.has_key(ip) or self.other_twitter_users[ip] != screen_name:

@@ -1,5 +1,5 @@
 import threading, Queue
-from lunchinator import log_exception, log_debug
+from lunchinator.log import getCoreLogger
 
 class EventSignalLoop(threading.Thread):
     def __init__(self):
@@ -10,15 +10,15 @@ class EventSignalLoop(threading.Thread):
     def run(self):
         while True:
             req, args, kwargs = self.reqs.get()
-            log_debug("processing Signal: %s"%req)
+            getCoreLogger().debug("processing Signal: %s", req)
             if req == 'exit': 
                 break
             try:
                 req(*args, **kwargs)
             except Exception, e:
-                log_exception("Error in Signal handling; executed method: %s; Error: %s"%(str(req), str(e)))
+                getCoreLogger().exception("Error in Signal handling; executed method: %s; Error: %s", str(req), str(e))
             except:
-                log_exception("Error in Signal handling; executed method:  %s; no additional info"%str(req))
+                getCoreLogger().exception("Error in Signal handling; executed method:  %s; no additional info", str(req))
     
     def append(self, func, *args, **kwargs):
         self.reqs.put((func, args, kwargs))
@@ -43,7 +43,7 @@ def _disconnectFunc(func):
 def _emitFunc(func):
     signal = func.__name__[4:]
     def newFunc(self, *args, **kwargs):
-        func(self, *args, **kwargs)
+        #func(self, *args, **kwargs) TODO why would we do this?
         self._emit(signal, *args, **kwargs)
     return newFunc
 
@@ -392,7 +392,7 @@ class NotificationCenter(object):
     def emitPeerActionsRemoved(self, addedActions):
         pass
     
-    """Emitted whenever a peer action is added or removed."""    
+    """Emitted whenever privacy settings are changed."""    
     @_connectFunc
     def connectPrivacySettingsChanged(self, callback):
         pass
@@ -402,7 +402,66 @@ class NotificationCenter(object):
     @_emitFunc
     def emitPrivacySettingsChanged(self, pluginName, actionName):
         pass
+    
+    """Emitted when modifications to privacy settings are discarded."""    
+    @_connectFunc
+    def connectPrivacySettingsDiscarded(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectPrivacySettingsDiscarded(self, callback):
+        pass
+    @_emitFunc
+    def emitPrivacySettingsDiscarded(self, pluginName, actionName):
+        pass
+    
+    """Emitted when a message is logged."""    
+    @_connectFunc
+    def connectLogMessage(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectLogMessage(self, callback):
+        pass
+    @_emitFunc
+    def emitLogMessage(self, logRecord):
+        pass
 
+    """Emitted when the logging level changes.
+    
+    If the global level changes, loggerName is None.
+    If a logger is reset to the default (global) level, newLevel is None.
+    """    
+    @_connectFunc
+    def connectLoggingLevelChanged(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectLoggingLevelChanged(self, callback):
+        pass
+    @_emitFunc
+    def emitLoggingLevelChanged(self, loggerName, newLevel):
+        pass
+    
+    """Emitted when a new logger is added."""    
+    @_connectFunc
+    def connectLoggerAdded(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectLoggerAdded(self, callback):
+        pass
+    @_emitFunc
+    def emitLoggerAdded(self, loggerName):
+        pass
+    
+    """Emitted when a logger is removed."""    
+    @_connectFunc
+    def connectLoggerRemoved(self, callback):
+        pass
+    @_disconnectFunc
+    def disconnectLoggerRemoved(self, callback):
+        pass
+    @_emitFunc
+    def emitLoggerRemoved(self, loggerName):
+        pass
+    
 if __name__ == '__main__':
     def _testCallback(a, b, c):
         print a, b, c

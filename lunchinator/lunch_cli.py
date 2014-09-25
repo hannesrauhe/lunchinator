@@ -1,12 +1,16 @@
 import cmd, threading, time, inspect
 from functools import partial
-from lunchinator import get_server, log_error, utilities, log_exception,\
+from lunchinator import get_server, utilities, lunchinator_has_gui,\
     get_notification_center, get_settings, get_plugin_manager
+from lunchinator.log import loggingFunc
 from lunchinator.lunch_server_controller import LunchServerController
 from lunchinator.cli.cli_message import CLIMessageHandling
 from lunchinator.cli.cli_option import CLIOptionHandling
 from lunchinator.cli.cli_plugin import CLIPluginHandling
-from lunchinator.lunch_server import EXIT_CODE_UPDATE, lunch_server
+from lunchinator.cli.cli_privacy import CLIPrivacyHandling
+from lunchinator.lunch_server import EXIT_CODE_UPDATE
+from lunchinator.log.lunch_logger import newLogger
+from lunchinator.cli.cli_logging import CLILoggingHandling
 
 # enable tab completion on most platforms
 
@@ -24,7 +28,8 @@ class ServerThread(threading.Thread):
         try:
             get_server().start_server()
         except:
-            log_exception("Exception in Lunch Server")
+            from lunchinator.log import getCoreLogger
+            getCoreLogger().exception("Exception in Lunch Server")
             get_server().running = False
         
     def stop(self):
@@ -34,12 +39,15 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
     def __init__(self):
         cmd.Cmd.__init__(self)
         LunchServerController.__init__(self)
-
+        
+        self.logger = newLogger("cli")
         self.prompt = "> "
         self.commands = set(["exit"])
         self.addModule(CLIMessageHandling())  
         self.addModule(CLIOptionHandling())
         self.addModule(CLIPluginHandling(self))
+        self.addModule(CLIPrivacyHandling())
+        self.addModule(CLILoggingHandling())
         
         get_server().initialize(self)
         
@@ -65,11 +73,12 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
         return False
         
     def addModule(self, cliModule):
+        cliModule.logger = self.logger
         for name, value in inspect.getmembers(cliModule, inspect.ismethod):
             if name.startswith("do_"):
                 cmdName = name[3:]
                 if cmdName in self.commands:
-                    log_error("Conflicting command name: 'do_%s' is defined multiple times")
+                    self.logger.error("Conflicting command name: 'do_%s' is defined multiple times", cmdName)
                 else:
                     self.commands.add(cmdName)
                     setattr(self.__class__, name, value)
@@ -132,6 +141,7 @@ class LunchCommandLineInterface(cmd.Cmd, LunchServerController):
             except KeyboardInterrupt:
                 print "^C"
     
+    @loggingFunc
     def notifyUpdates(self):
         print "There are updates available for you. Please exit to fetch the updates."
         self.prompt = "(update available)> "

@@ -1,11 +1,10 @@
-import os
-from functools import partial
 from lunchinator import convert_string, get_notification_center, get_settings
 from lunchinator.plugin import iface_general_plugin
 from lunchinator.utilities import getValidQtParent
 from lunchinator.git import GitHandler
-from lunchinator.callables import AsyncCall
-from plugin_repositories.plugin_repositories_gui import PluginRepositoriesGUI
+from lunchinator.log.logging_func import loggingFunc
+import os
+from functools import partial
     
 class plugin_repositories(iface_general_plugin):
     def __init__(self):
@@ -17,7 +16,10 @@ class plugin_repositories(iface_general_plugin):
         self.force_activation = True
         self._restartRequired = False
         self._outdated = set()
-        self._upToDate = set()
+        self._upToDate = set()    
+        
+    def get_displayed_name(self):
+        return u"Plugin Repositories"
         
     def activate(self):
         iface_general_plugin.activate(self)
@@ -33,7 +35,8 @@ class plugin_repositories(iface_general_plugin):
         return True
         
     def create_options_widget(self, parent):
-        self._ui = PluginRepositoriesGUI(parent)
+        from plugin_repositories.plugin_repositories_gui import PluginRepositoriesGUI
+        self._ui = PluginRepositoriesGUI(self.logger, parent)
         
         self._initRepositories()
         self._ui.resizeColumns()
@@ -51,9 +54,10 @@ class plugin_repositories(iface_general_plugin):
     def _needsRestart(self):
         self._restartRequired = True
     
+    @loggingFunc
     def _addRepository(self):
         from plugin_repositories.add_repo_dialog import AddRepoDialog
-        dialog = AddRepoDialog(self._ui)
+        dialog = AddRepoDialog(self._ui, self.logger)
         dialog.exec_()
         if dialog.result() == AddRepoDialog.Accepted:
             self._ui.appendRepository(dialog.getPath(),
@@ -63,9 +67,11 @@ class plugin_repositories(iface_general_plugin):
             self._needsRestart()
             self._modified = True
     
+    @loggingFunc
     def _itemChanged(self, _item):
         self._modified = True
         
+    @loggingFunc
     def _rowsRemoved(self, _parent, _start, _end):
         self._modified = True
         self._needsRestart()
@@ -77,6 +83,7 @@ class plugin_repositories(iface_general_plugin):
             if os.path.isdir(path):
                 self._ui.appendRepository(path, active, auto_update)
         
+    @loggingFunc
     def _processUpdates(self, aTuple=None):
         if self._ui != None:
             if aTuple:
@@ -87,31 +94,37 @@ class plugin_repositories(iface_general_plugin):
             self._ui.updateStatusItems(outdated, upToDate)
             self._setStatus(None)
         
+    @loggingFunc
     def _checkForUpdates(self):
         if self._ui.getTable().model().rowCount() == 0:
             return
         
+        from lunchinator.callables import AsyncCall
         self._setStatus("Checking for updates...", True)
         AsyncCall(getValidQtParent(),
+                  self.logger,
                   self._checkAllRepositories,
                   self._processUpdates,
                   self._checkingError)()
         
     def _checkAllRepositories(self):
         from PyQt4.QtCore import Qt
+        from plugin_repositories.plugin_repositories_gui import PluginRepositoriesGUI
         model = self._ui.getTable().model()
         outdated = set()
         upToDate = {}
+        gh = GitHandler(self.logger)
         for row in xrange(model.rowCount()):
             path = convert_string(model.item(row, PluginRepositoriesGUI.PATH_COLUMN).data(Qt.DisplayRole).toString())
-            if GitHandler.hasGit(path):
-                needsPull, reason = GitHandler.needsPull(True, path)
+            if gh.hasGit(path):
+                needsPull, reason = gh.needsPull(True, path)
                 if needsPull:
                     outdated.add(path)
                 else:
                     upToDate[path] = reason
         return outdated, upToDate
 
+    @loggingFunc
     def _checkingError(self, msg):
         self._setStatus("Error: " + msg)
         
@@ -124,10 +137,13 @@ class plugin_repositories(iface_general_plugin):
         
     def discard_changes(self):
         self._initRepositories()
+        if self._ui is not None:
+            self._ui.resizeColumns()
         
     def save_options_widget_data(self, **_kwargs):
         if self._modified:
             from PyQt4.QtCore import Qt
+            from plugin_repositories.plugin_repositories_gui import PluginRepositoriesGUI
             repos = []
             model = self._ui.getTable().model() 
             for row in xrange(model.rowCount()):

@@ -1,7 +1,7 @@
 from lunchinator.plugin import iface_gui_plugin
-import urllib2, contextlib
-from lunchinator.callables import AsyncCall
 from lunchinator.utilities import getValidQtParent
+from lunchinator.log import loggingFunc
+import urllib2, contextlib
     
 class lunch_menu(iface_gui_plugin):
     def __init__(self):
@@ -17,12 +17,13 @@ class lunch_menu(iface_gui_plugin):
     
     def create_widget(self, parent):
         from PyQt4.QtGui import QTextEdit, QSizePolicy
+        from lunchinator.callables import AsyncCall
         self._textview = QTextEdit(parent)
         self._textview.setLineWrapMode(QTextEdit.WidgetWidth)
         self._textview.setReadOnly(True)
         self._textview.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         
-        AsyncCall(getValidQtParent(), self._downloadText, self._updateText, self._errorDownloadingText)()
+        AsyncCall(getValidQtParent(), self.logger, self._downloadText, self._updateText, self._errorDownloadingText)()
         
         return self._textview
     
@@ -38,9 +39,11 @@ class lunch_menu(iface_gui_plugin):
         resp = urllib2.urlopen(self.options["url"])
         return resp.read()
     
+    @loggingFunc
     def _updateText(self, txt):
         self._textview.setPlainText(txt)
         
+    @loggingFunc
     def _errorDownloadingText(self, msg):
         self._textview.setPlainText("Error downloading text: " + msg)
     

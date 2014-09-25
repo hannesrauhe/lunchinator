@@ -1,14 +1,15 @@
-import sys, random, time, math
+import time, math
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QGridLayout, QLabel, QPushButton, QWidget, QSpinBox, QLineEdit
-from lunchinator import log_exception
+from PyQt4.QtCore import Qt, QString
+from PyQt4.QtGui import QGridLayout, QLabel, QSpinBox, QLineEdit
+from lunchinator.log.logging_slot import loggingSlot
+from lunchinator import convert_string
 
 class statTimelineTab(QtGui.QWidget):
-    def __init__(self, parent, connPlugin):
+    def __init__(self, parent, connPlugin, logger):
         super(statTimelineTab, self).__init__(parent)
         lay = QGridLayout(self)
-        vw = statTimelineWidget(parent, connPlugin)
+        vw = statTimelineWidget(parent, connPlugin, logger)
         lay.addWidget(vw, 0, 0, 1, 2)
         lay.addWidget(QLabel("Scale:"), 1, 0, Qt.AlignRight)
         spinbox = QSpinBox(self)
@@ -17,11 +18,13 @@ class statTimelineTab(QtGui.QWidget):
         lay.addWidget(spinbox, 1, 1)
     
 class statTimelineWidget(QtGui.QWidget):    
-    def __init__(self, parent, connPlugin):
+    def __init__(self, parent, connPlugin, logger):
         super(statTimelineWidget, self).__init__(parent)
+        self.logger = logger
         self.connPlugin = connPlugin
         self.scale = 1
 
+    @loggingSlot(int)
     def setScale(self, i):
         self.scale = i
         self.update()
@@ -35,7 +38,7 @@ class statTimelineWidget(QtGui.QWidget):
         try:
             self.drawPoints(qp)
         except:
-            log_exception("Error painting")
+            self.logger.exception("Error painting")
         qp.end()
         
     def drawPoints(self, qp):      
@@ -87,10 +90,10 @@ class statTimelineWidget(QtGui.QWidget):
 #             print x,y,mtype
 
 class statSwarmTab(QtGui.QWidget):
-    def __init__(self, parent, connPlugin):
+    def __init__(self, parent, connPlugin, logger):
         super(statSwarmTab, self).__init__(parent)
         lay = QGridLayout(self)
-        vw = statSwarmWidget(parent, connPlugin)
+        vw = statSwarmWidget(parent, connPlugin, logger)
         lay.addWidget(vw, 0, 0, 0, 4)
         lay.addWidget(QLabel("Period:"), 1, 0, Qt.AlignRight)
         spinbox = QSpinBox(self)
@@ -105,8 +108,9 @@ class statSwarmTab(QtGui.QWidget):
         lay.addWidget(tBox, 1, 3)
     
 class statSwarmWidget(QtGui.QWidget):    
-    def __init__(self, parent, connPlugin):
+    def __init__(self, parent, connPlugin, logger):
         super(statSwarmWidget, self).__init__(parent)
+        self.logger = logger
         self.connPlugin = connPlugin
         self.period = 1
         self.mtype = "HELO%"
@@ -120,6 +124,7 @@ class statSwarmWidget(QtGui.QWidget):
         self.query_unbuffer = time.time()
         
         
+    @loggingSlot(int)
     def setPeriod(self, i):
         self.period = i
         self.update()
@@ -127,8 +132,9 @@ class statSwarmWidget(QtGui.QWidget):
     def getPeriod(self):
         return self.period
     
+    @loggingSlot(QString)
     def setmType(self, i):
-        self.mtype = i
+        self.mtype = convert_string(i)
         self.update()
         
     def getmType(self):
