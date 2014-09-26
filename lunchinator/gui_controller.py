@@ -256,7 +256,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         infoDict['qt_version'] = QtCore.QT_VERSION_STR
             
     def getOpenPort(self, ip):
-        DataReceiverThread.getOpenPort(category="avatar%s" % ip)
+        return DataReceiverThread.getOpenPort(category="avatar%s" % ip)
         
     def receiveFile(self, ip, fileSize, fileName, tcp_port, successFunc=None, errorFunc=None):
         self._receiveFile.emit(ip, fileSize, fileName, tcp_port, successFunc, errorFunc)
