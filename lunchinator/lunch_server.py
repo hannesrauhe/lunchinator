@@ -556,7 +556,7 @@ class lunch_server(object):
     def request_avatar(self, ip): 
         info = self._peers.getPeerInfo(pIP=ip)
         if info and u"avatar" in info and not os.path.exists(os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])):
-            openPort = DataReceiverThreadBase.getOpenPort(category="avatar%s" % ip)
+            openPort = self.controller.getOpenPort(ip)
             self.call("HELO_REQUEST_AVATAR " + str(openPort), peerIPs=[ip])  
             return True
         return False   
