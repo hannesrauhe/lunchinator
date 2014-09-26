@@ -622,7 +622,7 @@ class lunch_server(object):
                 (oport, _) = value.split(" ", 1)    
                 other_tcp_port = int(oport.strip())
             except:
-                getCoreLogger().exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0", str(ip), str(value), other_tcp_port)
+                getCoreLogger().warning("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0", str(ip), str(value), other_tcp_port)
             
             fileToSend = StringIO()
             with contextlib.closing(tarfile.open(mode='w:gz', fileobj=fileToSend)) as tarWriter:

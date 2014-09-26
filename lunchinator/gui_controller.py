@@ -691,7 +691,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
     @loggingSlot(QThread, object)
     def errorOnTransfer(self, _thread, message):
-        getCoreLogger().error("Error receiving file (%s)", message)
+        getCoreLogger().warning("Error receiving file (%s)", message)
     
     @loggingSlot(object, int, object, int, object, object)
     def receiveFileSlot(self, addr, file_size, file_name, tcp_port, successFunc, errorFunc):
