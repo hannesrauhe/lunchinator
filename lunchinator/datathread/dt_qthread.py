@@ -69,7 +69,7 @@ class DataReceiverThread(QThread, DataReceiverThreadBase):
         
     @classmethod
     def _startSocketTimeout(cls, port):
-        t = QTimer(self)
+        t = QTimer()
         t.setSingleShot(True)
         t.timeout.connect(partial(cls._socketTimedOut, port))
         t.start(30000)
