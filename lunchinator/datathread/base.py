@@ -369,15 +369,22 @@ class DataReceiverThreadBase(DataThreadBase):
     @classmethod
     def getOpenPort(cls, blockPort=True, category=None):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        port = 0
+
         try:
-            s.bind(("",0)) 
+            port = get_settings().get_tcp_port()
+            s.bind(("", port))
             s.settimeout(30.0)
             s.listen(1)
-            port = s.getsockname()[1]
-        except:
-            s.close()
-            raise
+        except socket.error: 
+            # could not get default port
+            try:
+                s.bind(("",0)) 
+                s.settimeout(30.0)
+                s.listen(1)
+                port = s.getsockname()[1]
+            except:
+                s.close()
+                raise
         finally:
             if blockPort:
                 cls._lockInactiveSockets()
