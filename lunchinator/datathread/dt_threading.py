@@ -36,7 +36,6 @@ class DataReceiverThread(Thread, DataReceiverThreadBase):
         
     @classmethod
     def _startSocketTimeout(cls, port):
-        print "start timeout", port
         t = Timer(30, partial(cls._socketTimedOut, port))
         t.start()
         return t
