@@ -77,9 +77,9 @@ class ConsoleWidget(QWidget):
             record = self._records[index.row()]
             
             try:
-                logMsg = convert_string(record.msg) % (unicode(v) for v in record.args)
+                logMsg = convert_string(record.msg) % record.args
             except:
-                logMsg = convert_string(record.msg) + ', '.join(record.args)
+                logMsg = convert_string(record.msg) + ', '.join(str(arg) for arg in record.args)
             
             msg = u"%s - In %s:%d: %s" % (strftime("%H:%M:%S", localtime(record.created)),
                                           record.pathname,
