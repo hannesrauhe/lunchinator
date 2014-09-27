@@ -627,6 +627,13 @@ class LunchPeers(object):
         ip = peerInfo["triggerIP"]
         myname = socket.gethostname() #socket.getfqdn(socket.gethostname())
         othername = socket.gethostbyaddr(ip)[0]
+        #make sure, we only check the hostname, not the fqdn
+        i = myname.find('.')
+        if i ==-1:
+            myname = myname[:i]
+        i = othername.find('.')
+        if i ==-1:
+            othername = othername[:i]
     
         if myname==othername:
             #that seems to be me from another, maybe on a second
