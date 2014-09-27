@@ -625,7 +625,7 @@ class LunchPeers(object):
             return False
         
         ip = peerInfo["triggerIP"]
-        myname = socket.getfqdn(socket.gethostname())
+        myname = socket.gethostname() #socket.getfqdn(socket.gethostname())
         othername = socket.gethostbyaddr(ip)[0]
     
         if myname==othername:
@@ -640,7 +640,7 @@ class LunchPeers(object):
         #that seems to be coming from an unknown machine and has to be reported
         from lunchinator import lunchinator_has_gui
         msg ="Another lunchinator on the network (%s: %s)"%( ip, othername) + \
-              "is identifying itself with your ID. "+\
+              "is identifying itself with your (%s) ID. "%myname +\
               "It will get all messages you get, also private ones!\n"
               
         if lunchinator_has_gui():
@@ -651,11 +651,12 @@ class LunchPeers(object):
 #             msgBox.setWindowTitle("Another Lunchinator with your ID detected")
             msgBox.setText(msg)
             msgBox.addButton(QPushButton('Create New ID'), QMessageBox.AcceptRole)
+            msgBox.addButton(QPushButton('Ignore'), QMessageBox.NoRole)
             msgBox.addButton(QPushButton('Allow host to get my messages'), QMessageBox.RejectRole)
             ret = msgBox.exec_();
             if ret==QMessageBox.AcceptRole:
                 get_settings().generate_ID()
-            else:
+            elif ret!=QMessageBox.NoRole:
                 get_settings().add_multiple_machines_allowed(othername)
         else:
             msg += "If you are sure that this is right you can set "+\
