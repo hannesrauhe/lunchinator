@@ -1,7 +1,10 @@
-from threading import Thread
 from lunchinator.datathread.base import DataSenderThreadBase,\
     DataReceiverThreadBase
 from lunchinator.utilities import formatException
+from lunchinator.logging_mutex import loggingMutex
+from lunchinator import get_settings
+from threading import Thread, Timer
+from functools import partial
 
 class DataSenderThread(Thread, DataSenderThreadBase):
     def __init__(self, receiverIP, receiverPort, filesOrData, sendDict, logger):
@@ -14,7 +17,35 @@ class DataSenderThread(Thread, DataSenderThreadBase):
         except:
             self.logger.warning("Error sending file: %s", formatException())
     
-class DataReceiverThread(Thread, DataReceiverThreadBase):    
+class DataReceiverThread(Thread, DataReceiverThreadBase):
+    _mutex = None
+        
+    @classmethod
+    def _inactiveSocketsMutex(cls):
+        if cls._mutex is None:
+            cls._mutex = loggingMutex("inactive sockets mutex", False, logging=get_settings().get_verbose())
+        return cls._mutex
+    
+    @classmethod
+    def _lockInactiveSockets(cls):
+        cls._inactiveSocketsMutex().acquire()
+        
+    @classmethod
+    def _unlockInactiveSockets(cls):
+        cls._inactiveSocketsMutex().release()
+        
+    @classmethod
+    def _startSocketTimeout(cls, port):
+        print "start timeout", port
+        t = Timer(30, partial(cls._socketTimedOut, port))
+        t.start()
+        return t
+    
+    @classmethod
+    def _stopSocketTimeout(cls, _port, timer):
+        if timer.is_alive():
+            timer.cancel()
+        
     def __init__(self, senderIP, portOrSocket, targetPath, overwrite, sendDict, category, logger, success_func=None, err_func=None):
         Thread.__init__(self)
         DataReceiverThreadBase.__init__(self, senderIP, portOrSocket, targetPath, overwrite, sendDict, category, logger) 

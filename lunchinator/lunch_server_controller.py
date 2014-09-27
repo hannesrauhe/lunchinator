@@ -261,3 +261,4 @@ class LunchServerController(object):
         get_notification_center().disconnectPluginActivated(self._checkSendInfoDict)
         get_notification_center().disconnectPluginDeactivated(self._checkSendInfoDict)
         get_notification_center().finish()
+        DataReceiverThread.cleanup()

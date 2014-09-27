@@ -225,6 +225,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             finalExitCode = get_server().exitCode
             
         get_settings().write_config_to_hd()
+        DataReceiverThread.cleanup()
             
         self.exitCode = finalExitCode
         
