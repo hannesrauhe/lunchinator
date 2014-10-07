@@ -629,10 +629,10 @@ class LunchPeers(object):
         othername = socket.gethostbyaddr(ip)[0]
         #make sure, we only check the hostname, not the fqdn
         i = myname.find('.')
-        if i ==-1:
+        if i != -1:
             myname = myname[:i]
         i = othername.find('.')
-        if i ==-1:
+        if i != -1:
             othername = othername[:i]
     
         if myname==othername:
