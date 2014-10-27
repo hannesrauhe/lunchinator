@@ -31,7 +31,7 @@ class tdtnotify(iface_called_plugin):
     def deactivate(self): 
         # if we are checking right now, finish checking first
         with self.lock:
-            if self.timer != None:
+            if self.timer:
                 self.timer.cancel()       
         iface_called_plugin.deactivate(self)
         
@@ -57,7 +57,7 @@ class tdtnotify(iface_called_plugin):
             timeout = 5
         else:
             # too many failed attempts
-            self.logger.error("TDTNotify: too many failed attempts, I stop trying")
+            self.logger.warning("TDTNotify: too many failed attempts, I stop trying")
             return
             
         self.timer = Timer(timeout, self.check)
@@ -84,10 +84,10 @@ class tdtnotify(iface_called_plugin):
                 http_result = u.read()
             return True, http_result
         except urllib2.HTTPError as e:
-            self.logger.error("TDT: Error while downloading %s (%s)", self.url, e)
+            self.logger.warning("TDT: Error while downloading %s (%s)", self.url, e)
             return False, None
         except:
-            self.logger.exception("TDT: Error while downloading %s", self.url)
+            self.logger.warning("TDT: Error while downloading %s", self.url)
             return False, None
         
     def parse_json(self, http_result):
