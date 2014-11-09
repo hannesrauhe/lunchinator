@@ -570,7 +570,12 @@ class LunchPeers(object):
         
         peerIPs = []
         #TODO change AF_INET when going to v6
-        ownIPs = set(i[4][0] for i in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET))
+        #TODO for Mac: incorporate search domains somehow?
+        ownIPs = set()
+        try:
+            ownIPs = set(i[4][0] for i in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET))
+        except socket.error:
+            self.logger.warning("socket error trying to obtain own IP")
         if not ownIPs:
             self.logger.warning("Didn't find IPs for ourselves")
         for ip in ownIPs:
