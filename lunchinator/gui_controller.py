@@ -225,6 +225,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
             finalExitCode = get_server().exitCode
             
         get_settings().write_config_to_hd()
+        DataReceiverThread.cleanup()
             
         self.exitCode = finalExitCode
         
@@ -255,6 +256,9 @@ class LunchinatorGuiController(QObject, LunchServerController):
         infoDict['pyqt_version'] = QtCore.PYQT_VERSION_STR
         infoDict['qt_version'] = QtCore.QT_VERSION_STR
             
+    def getOpenPort(self, ip):
+        return DataReceiverThread.getOpenPort(category="avatar%s" % ip)
+        
     def receiveFile(self, ip, fileSize, fileName, tcp_port, successFunc=None, errorFunc=None):
         self._receiveFile.emit(ip, fileSize, fileName, tcp_port, successFunc, errorFunc)
     
@@ -688,7 +692,7 @@ class LunchinatorGuiController(QObject, LunchServerController):
         
     @loggingSlot(QThread, object)
     def errorOnTransfer(self, _thread, message):
-        getCoreLogger().error("Error receiving file (%s)", message)
+        getCoreLogger().warning("Error receiving file (%s)", message)
     
     @loggingSlot(object, int, object, int, object, object)
     def receiveFileSlot(self, addr, file_size, file_name, tcp_port, successFunc, errorFunc):

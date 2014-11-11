@@ -1,6 +1,7 @@
 import sys, os
 from lunchinator.datathread.base import DataSenderThreadBase, DataReceiverThreadBase,\
     DataThreadBase
+from lunchinator.datathread.dt_threading import DataReceiverThread
 from tempfile import NamedTemporaryFile, mkdtemp
 import string
 import time
@@ -180,12 +181,24 @@ if __name__ == '__main__':
     
     get_settings().set_verbose(True)
     
+    errors = False
+    
+    # test opening ports
+    p1 = DataReceiverThread.getOpenPort()
+    p2 = DataReceiverThread.getOpenPort()
+    assert p1 != p2
+    if p1 != get_settings().get_tcp_port():
+        getCoreLogger().error("Did not obtain default TCP port")
+        errors = True
+    
+    DataReceiverThread.cleanup()
+    sys.exit(0)
+    
     sourceDir = mkdtemp()
     targetDir = mkdtemp()
     
     FILE_SIZE = 1024 * 1024
     
-    errors = False
     try:
         getCoreLogger().info("Test raw data transfer")
         inData = makeData(FILE_SIZE)

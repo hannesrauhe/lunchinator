@@ -556,7 +556,7 @@ class lunch_server(object):
     def request_avatar(self, ip): 
         info = self._peers.getPeerInfo(pIP=ip)
         if info and u"avatar" in info and not os.path.exists(os.path.join(get_settings().get_avatar_dir(), info[u"avatar"])):
-            openPort = DataReceiverThreadBase.getOpenPort(category="avatar%s" % ip)
+            openPort = self.controller.getOpenPort(ip)
             self.call("HELO_REQUEST_AVATAR " + str(openPort), peerIPs=[ip])  
             return True
         return False   
@@ -622,7 +622,7 @@ class lunch_server(object):
                 (oport, _) = value.split(" ", 1)    
                 other_tcp_port = int(oport.strip())
             except:
-                getCoreLogger().exception("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0", str(ip), str(value), other_tcp_port)
+                getCoreLogger().warning("%s requested the logfile, I could not parse the port and number from value %s, using standard %d and logfile 0", str(ip), str(value), other_tcp_port)
             
             fileToSend = StringIO()
             with contextlib.closing(tarfile.open(mode='w:gz', fileobj=fileToSend)) as tarWriter:

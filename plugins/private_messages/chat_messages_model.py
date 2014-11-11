@@ -42,11 +42,15 @@ class ChatMessagesModel(QStandardItemModel):
         
     def setOwnIcon(self, icon):
         for row in xrange(self.rowCount()):
-            self.item(row, self.OWN_ICON_COLUMN).setData(QVariant(icon), Qt.DecorationRole)
+            item = self.item(row, self.OWN_ICON_COLUMN)
+            if not item.data(Qt.DecorationRole).isNull():
+                item.setData(QVariant(icon), Qt.DecorationRole)
             
     def setOtherIcon(self, icon):
         for row in xrange(self.rowCount()):
-            self.item(row, self.OTHER_ICON_COLUMN).setData(QVariant(icon), Qt.DecorationRole)
+            item = self.item(row, self.OTHER_ICON_COLUMN)
+            if not item.data(Qt.DecorationRole).isNull():
+                item.setData(QVariant(icon), Qt.DecorationRole)
         
     def _createTimeItem(self, rtime):
         item = QStandardItem()

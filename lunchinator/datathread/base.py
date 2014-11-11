@@ -313,17 +313,30 @@ class DataSenderThreadBase(DataThreadBase):
 class DataReceiverThreadBase(DataThreadBase):
     _inactiveSockets = {}
     _inactivePorts = []
-    _mutex = None
+    _timers = {}
     
     @classmethod
-    def _useQMutex(cls):
-        return False
-        
+    def _lockInactiveSockets(cls):
+        raise NotImplementedError("Implement in subclass.")
     @classmethod
-    def _inactiveSocketsMutex(cls):
-        if cls._mutex is None:
-            cls._mutex = loggingMutex("inactive sockets mutex", cls._useQMutex(), logging=get_settings().get_verbose())
-        return cls._mutex
+    def _unlockInactiveSockets(cls):
+        raise NotImplementedError("Implement in subclass.")
+    @classmethod
+    def _startSocketTimeout(cls, port):
+        raise NotImplementedError("Implement in subclass.")
+    @classmethod
+    def _stopSocketTimeout(cls, port, timer):
+        raise NotImplementedError("Implement in subclass.")
+    
+    @classmethod
+    def cleanup(cls):
+        cls._lockInactiveSockets()
+        try:
+            for port, timer in cls._timers.iteritems():
+                cls._stopSocketTimeout(port, timer)
+            cls._timers = {}
+        finally:
+            cls._unlockInactiveSockets()
     
     @classmethod
     def isPortOpen(cls, port):
@@ -339,11 +352,9 @@ class DataReceiverThreadBase(DataThreadBase):
  
     @classmethod
     def _socketTimedOut(cls, port):
-        if cls._useQMutex():
-            cls._inactiveSocketsMutex().lock()
-        else:
-            cls._inactiveSocketsMutex().acquire()
+        cls._lockInactiveSockets()
         try:
+            cls._timers.pop(port, None)
             if port not in cls._inactiveSockets:
                 return
             cls._inactivePorts.remove(port)
@@ -353,41 +364,40 @@ class DataReceiverThreadBase(DataThreadBase):
         except:
             getCoreLogger().exception("Socket timed out, error trying to clean up")
         finally:
-            if cls._useQMutex():
-                cls._inactiveSocketsMutex().unlock()
-            else:
-                cls._inactiveSocketsMutex().release()
+            cls._unlockInactiveSockets()
  
     @classmethod
     def getOpenPort(cls, blockPort=True, category=None):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        port = 0
+
         try:
-            s.bind(("",0)) 
+            port = get_settings().get_tcp_port()
+            s.bind(("", port))
             s.settimeout(30.0)
             s.listen(1)
-            port = s.getsockname()[1]
-        except:
-            s.close()
-            raise
+        except socket.error: 
+            # could not get default port
+            try:
+                s.bind(("",0)) 
+                s.settimeout(30.0)
+                s.listen(1)
+                port = s.getsockname()[1]
+            except:
+                s.close()
+                raise
         finally:
             if blockPort:
-                if cls._useQMutex():
-                    cls._inactiveSocketsMutex().lock()
-                else:
-                    cls._inactiveSocketsMutex().acquire()
+                cls._lockInactiveSockets()
                 try:
                     cls._inactivePorts.append(port)
                     cls._inactiveSockets[port] = (s, category)
                     
-                    if cls._useQMutex():
-                        from PyQt4.QtCore import QTimer
-                        QTimer.singleShot(30000, partial(cls._socketTimedOut, port))
+                    timer = cls._startSocketTimeout(port)
+                    if port in cls._timers:
+                        cls._stopSocketTimeout(port, cls._timers[port])
+                    cls._timers[port] = timer
                 finally:
-                    if cls._useQMutex():
-                        cls._inactiveSocketsMutex().unlock()
-                    else:
-                        cls._inactiveSocketsMutex().release()
+                    cls._unlockInactiveSockets()
             else:
                 s.close()
         
@@ -546,10 +556,7 @@ class DataReceiverThreadBase(DataThreadBase):
         # check if the port is being kept open
         port = 0
         if type(self._portOrSocket) == int:
-            if self._useQMutex():
-                self._inactiveSocketsMutex().lock()
-            else:
-                self._inactiveSocketsMutex().acquire()
+            self._lockInactiveSockets()
             try:
                 if self._portOrSocket == 0:
                     # use recently opened socket
@@ -569,10 +576,7 @@ class DataReceiverThreadBase(DataThreadBase):
                     self._portOrSocket = self._inactiveSockets[port][0]
                     del self._inactiveSockets[port]
             finally:
-                if self._useQMutex():
-                    self._inactiveSocketsMutex().unlock()
-                else:
-                    self._inactiveSocketsMutex().release()
+                self._unlockInactiveSockets()
 
         numFiles, totalSize, _name, useTarstream, compression = self._readSendDict(self._sendDict)
         s = None

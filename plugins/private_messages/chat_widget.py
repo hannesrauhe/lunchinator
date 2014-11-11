@@ -48,7 +48,7 @@ class ChatWidget(QWidget):
     _MAIL_REGEX="""
     (
       (
-        [\-;:&=\+\$,\w]+@
+        [\-;:&=\+\$,\w\.]+@
         [A-Za-z0-9\.\-]+
         \.[A-Za-z]+
       )
@@ -240,7 +240,7 @@ class ChatWidget(QWidget):
         
         if peerID == self._otherID:
             self.setOtherIconPath(get_peers().getPeerAvatarFile(pID=peerID))
-        elif peerID == get_settings().get_ID():
+        if peerID == get_settings().get_ID():
             self.setOwnIconPath(get_peers().getPeerAvatarFile(pID=peerID))
             
     @loggingSlot(object, object, object)

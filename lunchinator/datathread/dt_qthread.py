@@ -1,9 +1,12 @@
 from lunchinator.datathread.base import DataSenderThreadBase, DataReceiverThreadBase, CanceledException,\
     IncompleteTransfer
-from PyQt4.QtCore import QThread, pyqtSignal
+from lunchinator import get_settings
 from lunchinator.utilities import formatException
-import socket
 from lunchinator.log.logging_slot import loggingSlot
+from lunchinator.logging_mutex import loggingMutex
+from PyQt4.QtCore import QThread, QTimer, pyqtSignal
+import socket
+from functools import partial
 
 class DataSenderThread(QThread, DataSenderThreadBase):
     successfullyTransferred = pyqtSignal(QThread) # self
@@ -48,9 +51,34 @@ class DataReceiverThread(QThread, DataReceiverThreadBase):
     transferCanceled = pyqtSignal(QThread)
     nextFile = pyqtSignal(object, int) # name/path, size
     
+    _mutex = None
+    
     @classmethod
-    def _useQMutex(cls):
-        return True
+    def _inactiveSocketsMutex(cls):
+        if cls._mutex is None:
+            cls._mutex = loggingMutex("inactive sockets mutex", True, logging=get_settings().get_verbose())
+        return cls._mutex
+    
+    @classmethod
+    def _lockInactiveSockets(cls):
+        cls._inactiveSocketsMutex().lock()
+        
+    @classmethod
+    def _unlockInactiveSockets(cls):
+        cls._inactiveSocketsMutex().unlock()
+        
+    @classmethod
+    def _startSocketTimeout(cls, port):
+        t = QTimer()
+        t.setSingleShot(True)
+        t.timeout.connect(partial(cls._socketTimedOut, port))
+        t.start(30000)
+        return t
+    
+    @classmethod
+    def _stopSocketTimeout(cls, _port, timer):
+        if timer.isActive():
+            timer.stop()
     
     def __init__(self, senderIP, portOrSocket, targetPath, overwrite, sendDict, category, logger, parent):
         QThread.__init__(self, parent)
