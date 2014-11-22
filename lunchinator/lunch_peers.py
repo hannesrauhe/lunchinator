@@ -90,7 +90,7 @@ class LunchPeers(object):
         self._lock = loggingMutex("peers", logging=get_settings().get_verbose())
         
         if get_settings().get_plugins_enabled():
-            self._peerNames = PeerNames(self._lock)
+            self._peerNames = PeerNames()
         else:
             self._peerNames = None 
         
@@ -283,9 +283,12 @@ class LunchPeers(object):
         Else, the custom name is returned.
         """
         if self._peerNames != None:
-            return self._peerNames.getDisplayedPeerName(peerID)
-        else:
-            return self.getRealPeerName(pID=peerID, lock=False)
+            try:
+                return self._peerNames.getDisplayedPeerName(peerID)
+            except:
+                self.logger.exception("Error obtaining displayed peer name")
+        # Fall back to peer info dictionary if peer names are not available
+        return self.getRealPeerName(pID=peerID, lock=False)
         
     @peerGetter(needsID=True)
     def hasCustomPeerName(self, peerID):
@@ -423,6 +426,7 @@ class LunchPeers(object):
     ############# Setters #################
     
     def setCustomPeerName(self, peerID, customName):
+        """This method might occasionally raise an exception"""
         if self.isMe(pID=peerID):
             # special case: it doesn't make sense to use the custom name for myself
             get_settings().set_user_name(customName)
@@ -500,6 +504,8 @@ class LunchPeers(object):
                     existing_info.pop(key)
                     
                 if old_info != existing_info:
+                    if self._peerNames is not None:
+                        self._peerNames.addPeerName(newPID, existing_info)
                     get_notification_center().emitPeerUpdated(newPID, deepcopy(existing_info))
                     self.logger.debug("%s has new info: %s; \n update was %s", ip, existing_info, newInfo)
                 else:
@@ -554,6 +560,8 @@ class LunchPeers(object):
     def _addPeerIPtoID(self, pID, ip):       
         if pID not in self._idToIp:
             self._idToIp[pID] = [ip]
+            if self._peerNames is not None:
+                self._peerNames.addPeerName(pID, self._peer_info[ip])
             get_notification_center().emitPeerAppended(pID, deepcopy(self._peer_info[ip]))
         else:
             # last one is last seen one

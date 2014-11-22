@@ -1,14 +1,13 @@
-from lunchinator import get_notification_center, convert_string,\
-    get_db_connection
-from lunchinator.log import newLogger, loggingFunc
+from lunchinator import convert_string,\
+    get_db_connection, get_notification_center
+from lunchinator.log import newLogger
         
 class PeerNames(object):
     _DB_VERSION_INITIAL = 0
     _DB_VERSION_CURRENT = _DB_VERSION_INITIAL
     
-    def __init__(self, lock):
+    def __init__(self):
         self.logger = newLogger("Peer Names")
-        self._lock = lock
         self._db, plugin_type = get_db_connection(self.logger)
         self._peerNameCache = {} # peer ID -> (peer name, custom name)
         
@@ -30,21 +29,16 @@ class PeerNames(object):
                 self._db.execute("INSERT INTO CORE_PEER_NAMES SELECT PEER_ID, PEER_NAME, NULL FROM CORE_MESSAGE_PEER_NAMES")
                 self._db.execute("DROP TABLE CORE_MESSAGE_PEER_NAMES")
             
-        get_notification_center().connectPeerAppended(self._addPeerName)
-        get_notification_center().connectPeerUpdated(self._addPeerName)
-
     def _getDBVersion(self):
         return self._db.query("SELECT VERSION FROM CORE_PEER_NAME_VERSION")[0][0]
     
     def finish(self):
-        get_notification_center().disconnectPeerAppended(self._addPeerName)
-        get_notification_center().disconnectPeerUpdated(self._addPeerName)
+        pass
         
-    @loggingFunc
-    def _addPeerName(self, peerID, peerInfo):
+    def addPeerName(self, peerID, peerInfo):
+        """called from lunch_peers - no locking"""
         peerID = convert_string(peerID)
-        with self._lock:
-            self._checkCache(peerID)
+        self._checkCache(peerID, shouldExist=False)
         oldName, customName = self._peerNameCache[peerID]
         changed = False
         
@@ -61,22 +55,23 @@ class PeerNames(object):
             newName = None
         
         if newName != None:
-            with self._lock:
-                self._peerNameCache[peerID] = (newName, customName)
+            self._peerNameCache[peerID] = (newName, customName)
             # if there is a custom name, a change in the info dict does not change the displayed name
             if changed and not customName:
                 get_notification_center().emitDisplayedPeerNameChanged(peerID, newName, peerInfo)
             
-    def _getPeerNameFromDB(self, peerID):
+    def _getPeerNameFromDB(self, peerID, shouldExist=True):
         # TODO bulk loading if necessary
         res = self._db.query("SELECT PEER_NAME, CUSTOM_NAME FROM CORE_PEER_NAMES WHERE PEER_ID = ?", peerID)
         if len(res) > 0:
             return res[0][0], res[0][1]
+        elif shouldExist:
+            raise ValueError(u"Error: Peer name for peer", peerID, "not in database")
         return None, None
     
-    def _checkCache(self, peerID):
+    def _checkCache(self, peerID, shouldExist=True):
         if peerID not in self._peerNameCache:
-            peerName, customName = self._getPeerNameFromDB(peerID)
+            peerName, customName = self._getPeerNameFromDB(peerID, shouldExist=shouldExist)
             self._peerNameCache[peerID] = (peerName, customName)
     
     def setCustomName(self, peerID, customName, infoDict=None):
@@ -94,7 +89,11 @@ class PeerNames(object):
     
     def hasCustomName(self, peerID):
         """called from lunch_peers, no locking"""
-        self._checkCache(peerID)
+        try:
+            self._checkCache(peerID)
+        except:
+            self.logger.exception("Error checking for custom peer name")
+            return False
         _peerName, customName = self._peerNameCache[peerID]
         return customName != None
     
