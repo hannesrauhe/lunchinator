@@ -1,4 +1,4 @@
-from lunchinator.plugin import iface_called_plugin
+from lunchinator.plugin import iface_gui_plugin, db_for_plugin_iface
 from lunchinator import get_server, get_settings, convert_string
 
 import subprocess, sys, ctypes, logging
@@ -7,9 +7,10 @@ from cStringIO import StringIO
 
 from threading import Thread,Event,Lock
 from lunchinator.logging_mutex import loggingMutex
+from twitter_lunch.twitter_gui import TwitterGui
 
 class TwitterDownloadThread(Thread):    
-    def __init__(self, event, logger):
+    def __init__(self, event, logger, db_conn):
         super(TwitterDownloadThread, self).__init__()
         self.logger = logger
         self._twitter_api = None
@@ -23,14 +24,14 @@ class TwitterDownloadThread(Thread):
         self._mentions_since_id = 0
         self._remote_callers = []
         self._friends = []
+        self._db_conn = db_conn
             
-    def announce_pic(self,account_name,url_text_tuple):
-        
+    def announce_pic(self,account_name,url_text_tuple, peerIDs = []):        
         if len(url_text_tuple[0]):
             with contextlib.closing(StringIO()) as strOut:
                 writer = csv.writer(strOut, delimiter = ' ', quotechar = '"')
                 writer.writerow([url_text_tuple[0].encode("utf-8"), url_text_tuple[1].encode("utf-8"), account_name])
-                get_server().call('HELO_REMOTE_PIC %s' % strOut.getvalue())
+                get_server().call('HELO_REMOTE_PIC %s' % strOut.getvalue(), peerIDs)
         
     def set_polling_time(self,v):
         self._polling_time = v
@@ -49,19 +50,31 @@ class TwitterDownloadThread(Thread):
                     
     def get_remote_callers(self):
         return self._remote_callers
-                    
+                   
     def add_remote_caller(self,value):
+        if len(value)==0:
+            return
+        
         remote_caller = value[1:] if value[0]=="@" else value
         with self._lock:
             if not remote_caller.upper() in [x.upper() for x in self._remote_callers]:
                 self._remote_callers.append(remote_caller)
+                
+        '''this shoul be done by the twitter thread:
         if not remote_caller.upper() in [x.upper() for x in self._friends]:
+            try:
+                self._friends = [x.GetScreenName() for x in self._twitter_api.GetFriends()]
+                self.logger.debug("Twitter: my Friends %s", self._friends)
+            except:
+                self.logger.exception("Twitter: was not able to fetch my friends")
+            
             try:
                 self._twitter_api.CreateFriendship(screen_name=remote_caller)
                 self._friends.append(unicode(remote_caller))
                 self.logger.debug("Twitter: now following %s", remote_caller)
             except:
                 self.logger.exception("Twitter: cannot follow %s", remote_caller)
+        '''
                 
                 
     def get_old_pic_urls(self):
@@ -88,11 +101,6 @@ class TwitterDownloadThread(Thread):
                     self.logger.exception("Twitter: was not able to find my screen_name")
                     self._twitter_api = None
                     return False                
-                try:
-                    self._friends = [x.GetScreenName() for x in self._twitter_api.GetFriends()]
-                    self.logger.debug("Twitter: my Friends %s", self._friends)
-                except:
-                    self.logger.exception("Twitter: was not able to fetch my friends")
                     
             else:
                 self.logger.error("Twitter: provide keys and secrets in settings")
@@ -108,6 +116,28 @@ class TwitterDownloadThread(Thread):
             self._twitter_api.PostUpdate(message[0:140])
         except:
             self.logger.exception("Twitter: was not able to post %s", message)
+                
+    def _get_home_timeline(self):
+        import twitter
+        with self._lock:
+            self._timeline_since_id = self._db_conn.get_max_id()
+            tweets = self._twitter_api.GetHomeTimeline(200, self._timeline_since_id)
+            if len(tweets)==0:
+                self.logger.debug("Twitter: no new tweets in timeline")
+            for t in tweets:
+                self._db_conn.insert_message(t)
+                
+                urls = []
+                try:
+                    for media in t.media:
+                        urls.append((media["media_url"],t.text))
+                except:
+                    item = t.AsDict()
+                    urls = [(url,item['text']) for url in item['text'].split(" ") if url.startswith("http")]  
+                    
+                for u in urls:
+                    self.announce_pic("timeline", u, [get_settings().get_ID()])
+                
 
     def _get_pics_from_account(self,account_name):
         import twitter
@@ -189,7 +219,8 @@ class TwitterDownloadThread(Thread):
                 for account_name in self._screen_names:
                     self._get_pics_from_account(account_name)
                 
-                self._find_remote_calls()  
+                self._find_remote_calls()
+                self._get_home_timeline()  
             except twitter.TwitterError as t:
                 self.logger.warning("Twitter: Rate limit exceeded. Waiting 15 min: %s", str(t))
                 poll_time = 60*15
@@ -203,7 +234,7 @@ class TwitterDownloadThread(Thread):
             self._stop_event.wait(poll_time)      
         
 
-class twitter_lunch(iface_called_plugin):
+class twitter_lunch(iface_gui_plugin):
     def __init__(self):
         super(twitter_lunch, self).__init__()
         self.options = [(("twitter_pics","Extract pictures from following Twitter accounts:",self.set_twitter_pics),"HistoricalPics"),
@@ -214,14 +245,15 @@ class twitter_lunch(iface_called_plugin):
                         (("polling_time","Polling Time", self.reset_timer),60)]
         self.dthread = None
         self.stopEvent = Event()
+        self.add_supported_dbms("SQLite Connection", twitter_sqlite)
         
     def get_displayed_name(self):
         return u"Twitter"
         
     def activate(self):        
-        iface_called_plugin.activate(self)
+        iface_gui_plugin.activate(self)
         
-        self.dthread = TwitterDownloadThread(self.stopEvent, self.logger)
+        self.dthread = TwitterDownloadThread(self.stopEvent, self.logger, self.specialized_db_conn())
         self.authenticate()
         self.set_twitter_pics()
         self.reset_timer()
@@ -233,7 +265,7 @@ class twitter_lunch(iface_called_plugin):
         self.stopEvent.set()
         self.dthread.join()
         self.logger.info("Twitter thread stopped")
-        iface_called_plugin.deactivate(self)
+        iface_gui_plugin.deactivate(self)
         
     def authenticate(self,oldv=None,newv=None):
         self.dthread.authenticate(self.options["key"],self.options["secret"],self.options["at_key"],self.options["at_secret"])
@@ -268,5 +300,42 @@ class twitter_lunch(iface_called_plugin):
             
         elif cmd=="TWITTER_USER":
             self.dthread.add_remote_caller(value)
-            self.logger.debug("Twitter: Now accepting remote calls from: %s", str(self.dthread.get_remote_callers()))            
-      
+            self.logger.debug("Twitter: Now accepting remote calls from: %s", str(self.dthread.get_remote_callers()))   
+                     
+    def create_widget(self, parent):
+        if not (self.options["key"] and self.options["secret"] and self.options["at_key"] and self.options["at_secret"]):
+            from PyQt4.QtGui import QLabel
+            from PyQt4.QtCore import Qt
+            return QLabel("Please make sure that secrets and keys in settings are correct")
+        from twitter_gui import TwitterGui
+        return TwitterGui(None, None, self.logger, self.specialized_db_conn())
+    
+class twitter_sqlite(db_for_plugin_iface):
+    messages_schema = "CREATE TABLE twitter_messages (m_id BIGINT PRIMARY KEY, \
+            screen_name TEXT, user_image TEXT, create_time INTEGER, message_text TEXT)"
+    version_schema = "CREATE TABLE twitter_version (commit_count INTEGER, migrate_time INTEGER)"
+            
+    
+    def init_db(self):                   
+        if not self.dbConn.existsTable("twitter_version"):
+            self.dbConn.execute(self.version_schema)
+            self.dbConn.execute("INSERT INTO twitter_version(commit_count, migrate_time) VALUES(?, strftime('%s', 'now'))", 1959)
+        if not self.dbConn.existsTable("twitter_messages"):
+            self.dbConn.execute(self.messages_schema)
+        
+    def insert_message(self, tweetAsStatus):
+        created_at = tweetAsStatus.GetCreatedAtInSeconds()
+        tweet = tweetAsStatus.AsDict()
+        self.dbConn.execute("INSERT INTO twitter_messages(m_id, screen_name, user_image, create_time, message_text) \
+                            VALUES(?, ?, ?, ?, ?)", tweet["id"], tweet["user"]["screen_name"], 
+                            tweet["user"]["profile_image_url"], int(created_at), tweet["text"])
+    
+    def get_last_tweets(self, num = 20):    
+        r = self.dbConn.query("SELECT message_text, screen_name, user_image, create_time, m_id FROM twitter_messages ORDER BY m_id DESC LIMIT ?", num)
+        return r
+    
+    def get_max_id(self):    
+        r = self.dbConn.query("SELECT MAX(m_id) FROM twitter_messages")
+        if not r:
+            return 0
+        return r[0][0]

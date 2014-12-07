@@ -1,5 +1,5 @@
 [Core]
-Name = Twitter
+Name = hannesrauhe.lunchinator.twitter
 Module = twitter_lunch
 
 [Documentation]
