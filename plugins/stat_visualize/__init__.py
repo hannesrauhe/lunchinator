@@ -31,7 +31,4 @@ class stat_visualize(iface_gui_plugin):
         w.addTab(statTimelineTab(parent, connPlugin, self.logger), "Timeline")
         w.addTab(statSwarmTab(parent, connPlugin, self.logger), "Swarm")
         return w
-    
-    def add_menu(self, menu):
-        pass
 
