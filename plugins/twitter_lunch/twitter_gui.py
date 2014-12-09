@@ -6,7 +6,7 @@ from PyQt4.QtNetwork import QNetworkProxy
 from lunchinator import get_settings
 
 class TwitterGui(QWidget):    
-    URL_REGEX = re.compile(r'''((?:mailto:|ftp://|http://)[^ <>'"{}|\\^`[\]]*)''')
+    URL_REGEX = re.compile(r'''((?:mailto:|ftp://|http://|https://)[^ <>'"{}|\\^`[\]]*)''')
     
     def __init__(self, parent, connPlugin, logger, db_conn):
         super(TwitterGui, self).__init__(parent)
