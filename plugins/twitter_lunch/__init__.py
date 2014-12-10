@@ -7,6 +7,7 @@ from lunchinator.logging_mutex import loggingMutex
 from lunchinator.plugin import iface_gui_plugin, db_for_plugin_iface
 from lunchinator import get_server, get_settings, convert_string
 from twitter_lunch.twitter_thread import TwitterDownloadThread
+from twitter_lunch.setup_gui import SetupGui
 
 class twitter_lunch(iface_gui_plugin):
     def __init__(self):
@@ -84,12 +85,10 @@ class twitter_lunch(iface_gui_plugin):
                      
     def create_widget(self, parent):
         if not (self.options["key"] and self.options["secret"] and self.options["at_key"] and self.options["at_secret"]):
-            from PyQt4.QtGui import QLabel
-            from PyQt4.QtCore import Qt
-            return QLabel("Please make sure that secrets and keys in settings are correct")
+            return SetupGui(parent, self.logger)
         
         from twitter_gui import TwitterGui
-        self._twitter_gui = TwitterGui(None, None, self.logger, self.specialized_db_conn())
+        self._twitter_gui = TwitterGui(parent, None, self.logger, self.specialized_db_conn())
         self._twitter_gui.start()
         return self._twitter_gui
     
@@ -102,6 +101,8 @@ class twitter_lunch(iface_gui_plugin):
 class twitter_sqlite(db_for_plugin_iface):
     messages_schema = "CREATE TABLE twitter_messages (m_id BIGINT PRIMARY KEY, \
             screen_name TEXT, user_image TEXT, create_time INTEGER, message_text TEXT)"
+    post_queue_schema = "CREATE TABLE twitter_post_queue (q_id  INTEGER PRIMARY KEY AUTOINCREMENT, \
+            message_text TEXT, reply_to BIGINT, create_time INTEGER, m_id BIGINT)"
     version_schema = "CREATE TABLE twitter_version (commit_count INTEGER, migrate_time INTEGER)"
             
     
@@ -111,6 +112,8 @@ class twitter_sqlite(db_for_plugin_iface):
             self.dbConn.execute("INSERT INTO twitter_version(commit_count, migrate_time) VALUES(?, strftime('%s', 'now'))", 1959)
         if not self.dbConn.existsTable("twitter_messages"):
             self.dbConn.execute(self.messages_schema)
+        if not self.dbConn.existsTable("twitter_post_queue"):
+            self.dbConn.execute(self.post_queue_schema)
         
     def insert_message(self, tweetAsStatus):
         created_at = tweetAsStatus.GetCreatedAtInSeconds()
@@ -118,9 +121,22 @@ class twitter_sqlite(db_for_plugin_iface):
         self.dbConn.execute("INSERT INTO twitter_messages(m_id, screen_name, user_image, create_time, message_text) \
                             VALUES(?, ?, ?, ?, ?)", tweet["id"], tweet["user"]["screen_name"], 
                             tweet["user"]["profile_image_url"], int(created_at), tweet["text"])
+        
+    def insert_post_queue(self, text):
+        self.dbConn.execute("INSERT INTO twitter_post_queue(message_text) VALUES(?)", text)        
     
-    def get_last_tweets(self, num = 20):    
-        r = self.dbConn.query("SELECT message_text, screen_name, user_image, create_time, m_id FROM twitter_messages ORDER BY m_id DESC LIMIT ?", num)
+    """return last num tweets (only if anything has happened since min_m_id)"""
+    def get_last_tweets(self, min_m_id = 0, num = 20):   
+        if min_m_id != 0:
+            tmp = self.dbConn.query("SELECT m_id \
+                                    FROM twitter_messages \
+                                    WHERE m_id>?", min_m_id)
+            if len(tmp)==0:
+                return []
+          
+        r = self.dbConn.query("SELECT message_text, screen_name, user_image, create_time, m_id \
+                                FROM twitter_messages \
+                                ORDER BY m_id DESC LIMIT ?", num)
         return r
     
     def get_max_id(self):    
