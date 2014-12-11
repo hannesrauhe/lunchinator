@@ -29,6 +29,7 @@ class TwitterGui(QWidget):
         self.msgview.linkClicked.connect(self.linkClicked)
                 
         self.post_field = QTextEdit(self)
+        self.post_field.setMaximumHeight(50)
         self.send_button = QPushButton("Post", self)
         self.send_button.clicked.connect(self.postStatusClicked)
         
