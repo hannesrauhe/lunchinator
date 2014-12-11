@@ -8,7 +8,7 @@ from threading import Thread,Event,Lock
 from lunchinator.logging_mutex import loggingMutex
 
 class TwitterDownloadThread(Thread):    
-    def __init__(self, event, logger, db_conn):
+    def __init__(self, logger, db_conn):
         super(TwitterDownloadThread, self).__init__()
         self.logger = logger
         self._twitter_api = None
@@ -16,7 +16,8 @@ class TwitterDownloadThread(Thread):
         self._screen_names = []
         self._old_pic_urls = {}
         self._since_ids = {}
-        self._stop_event = event
+        self._stop_event = Event()
+        self._wait_event = Event()
         self._lock = loggingMutex("twitter download thread", logging=get_settings().get_verbose())
         self._polling_time = 60
         self._mentions_since_id = 0
@@ -134,6 +135,23 @@ class TwitterDownloadThread(Thread):
                     
                 for u in urls:
                     self.announce_pic("timeline", u, [get_settings().get_ID()])
+                    
+    def _post_update_queue(self):
+        posts = self._db_conn.get_unprocessed_queue()
+        if 0==len(posts):          
+            return
+        
+        with self._lock:
+            for post in posts:
+                """ 0 - id, 1 - reply-to, 2 -text """
+                pstatus = None
+                if post[1]:
+                    self.logger.debug("Posting status %s as reply to %d"%(post[2], post[1]))
+#                     pstatus = self._twitter_api.PostUpdate(post[2], post[1])
+                else:
+                    self.logger.debug("Posting status %s"%(post[2]))
+#                     pstatus = self._twitter_api.PostUpdate(post[2])
+#                 self._db_conn.update_post_queue(post[0], pstatus.GetId(), pstatus.GetCreatedAtInSeconds())
                 
 
     def _get_pics_from_account(self,account_name):
@@ -204,20 +222,23 @@ class TwitterDownloadThread(Thread):
     def run(self):
         import twitter,requests 
         #first give the lunchinator a few seconds to initialize to prevent a warning
-        self._stop_event.wait(10)  
-        while not self._stop_event.isSet():            
+        self._wait_event.wait(10)  
+        while not self._stop_event.isSet():                 
+            self._wait_event.clear()       
             if None==self._twitter_api:
-                self._stop_event.wait(self._polling_time) 
+                self._wait_event.wait(self._polling_time) 
                 continue
             
             poll_time = self._polling_time
             self.logger.debug("Polling Twitter now")
             try:
+                self._post_update_queue()
+                self._get_home_timeline() 
+                
                 for account_name in self._screen_names:
                     self._get_pics_from_account(account_name)
                 
-                self._find_remote_calls()
-                self._get_home_timeline()  
+                self._find_remote_calls() 
             except twitter.TwitterError as t:
                 self.logger.warning("Twitter: Rate limit exceeded. Waiting 15 min: %s", str(t))
                 poll_time = 60*15
@@ -228,4 +249,11 @@ class TwitterDownloadThread(Thread):
                 self.logger.exception("Twitter: Unknown error")
                 
             #returns None on Python 2.6
-            self._stop_event.wait(poll_time)  
+            self._wait_event.wait(poll_time)
+    
+    def stop(self):
+        self._wait_event.set()      
+        self._stop_event.set()
+        
+    def trigger_update(self):
+        self._wait_event.set()

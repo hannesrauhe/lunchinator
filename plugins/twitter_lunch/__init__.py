@@ -19,7 +19,6 @@ class twitter_lunch(iface_gui_plugin):
                         (("at_secret","Access Token Secret", self.authenticate),""),
                         (("polling_time","Polling Time", self.reset_timer),60)]
         self.dthread = None
-        self.stopEvent = Event()
         self.add_supported_dbms("SQLite Connection", twitter_sqlite)
         self._twitter_gui = None
         
@@ -29,7 +28,7 @@ class twitter_lunch(iface_gui_plugin):
     def activate(self):        
         iface_gui_plugin.activate(self)
         
-        self.dthread = TwitterDownloadThread(self.stopEvent, self.logger, self.specialized_db_conn())
+        self.dthread = TwitterDownloadThread(self.logger, self.specialized_db_conn())
         self.authenticate()
         self.set_twitter_pics()
         self.reset_timer()
@@ -38,7 +37,7 @@ class twitter_lunch(iface_gui_plugin):
     
     def deactivate(self):
         self.logger.info("Waiting for Twitter Thread to stop")
-        self.stopEvent.set()
+        self.dthread.stop()
         self.dthread.join()
         self.logger.info("Twitter thread stopped")
         iface_gui_plugin.deactivate(self)
@@ -88,7 +87,7 @@ class twitter_lunch(iface_gui_plugin):
             return SetupGui(parent, self.logger)
         
         from twitter_gui import TwitterGui
-        self._twitter_gui = TwitterGui(parent, None, self.logger, self.specialized_db_conn())
+        self._twitter_gui = TwitterGui(parent, self.logger, self.specialized_db_conn(), self.dthread.trigger_update)
         self._twitter_gui.start()
         return self._twitter_gui
     
@@ -122,8 +121,9 @@ class twitter_sqlite(db_for_plugin_iface):
                             VALUES(?, ?, ?, ?, ?)", tweet["id"], tweet["user"]["screen_name"], 
                             tweet["user"]["profile_image_url"], int(created_at), tweet["text"])
         
-    def insert_post_queue(self, text):
-        self.dbConn.execute("INSERT INTO twitter_post_queue(message_text) VALUES(?)", text)        
+    def insert_post_queue(self, text, reply_to = 0):
+        self.dbConn.execute("INSERT INTO twitter_post_queue(message_text, reply_to, create_time) \
+                            VALUES(?, ?, strftime('%s', 'now'))", text, reply_to)        
     
     """return last num tweets (only if anything has happened since min_m_id)"""
     def get_last_tweets(self, min_m_id = 0, num = 20):   
@@ -139,8 +139,17 @@ class twitter_sqlite(db_for_plugin_iface):
                                 ORDER BY m_id DESC LIMIT ?", num)
         return r
     
+    def get_unprocessed_queue(self):
+        r = self.dbConn.query("SELECT q_id, m_id, message_text \
+                                FROM twitter_post_queue \
+                                ORDER BY create_time")
+        return r
+    
     def get_max_id(self):    
         r = self.dbConn.query("SELECT MAX(m_id) FROM twitter_messages")
         if not r:
             return 0
         return r[0][0]
+    
+    def update_post_queue(self, p_id, m_id, created_at):
+        self.dbConn.execute("UPDATE SET created_at=?, m_id=? WHERE p_id=?", created_at, m_id, p_id)

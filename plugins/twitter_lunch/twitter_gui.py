@@ -3,18 +3,19 @@ from PyQt4.QtGui import QGridLayout, QWidget
 from PyQt4.QtCore import QTimer
 from PyQt4.QtWebKit import QWebView, QWebPage
 from PyQt4.QtNetwork import QNetworkProxy
-from lunchinator import get_settings
-from PyQt4.Qt import QLabel, QTextEdit, QPushButton
+from lunchinator import get_settings, convert_string
+from PyQt4.Qt import QLabel, QTextEdit, QPushButton, QUrl
 
 class TwitterGui(QWidget):    
     URL_REGEX = re.compile(r'''((?:mailto:|ftp://|http://|https://)[^ <>'"{}|\\^`[\]]*)''')
     
-    def __init__(self, parent, connPlugin, logger, db_conn):
+    def __init__(self, parent, logger, db_conn, update_func):
         super(TwitterGui, self).__init__(parent)
         self._db_conn = db_conn
         self.logger = logger
-        self._connPlugin = connPlugin
         self._last_m_id = 0
+        self._reply_to_id = 0
+        self._update_func = update_func
         
         lay = QGridLayout(self)
         self.msgview = QWebView(self)
@@ -32,10 +33,13 @@ class TwitterGui(QWidget):
         self.post_field.setMaximumHeight(50)
         self.send_button = QPushButton("Post", self)
         self.send_button.clicked.connect(self.postStatusClicked)
+        self.refresh_button = QPushButton("Refresh", self)
+        self.refresh_button.clicked.connect(self._update_func)
         
         lay.addWidget(self.msgview, 0, 0, 1, 2)
-        lay.addWidget(self.post_field, 1, 0, 1, 1)
-        lay.addWidget(self.send_button, 1, 1, 1, 1)
+        lay.addWidget(self.post_field, 1, 0, 2, 1)
+        lay.addWidget(self.refresh_button, 1, 1, 1, 1)
+        lay.addWidget(self.send_button, 2, 1, 1, 1)
         
         self.timer  = QTimer(self)
         self.timer.setInterval(30000)
@@ -61,6 +65,7 @@ class TwitterGui(QWidget):
                             <img src="$IMAGE$" style="float: left; margin-right: 2px" alt="$NAME$" title="$NAME$"/>\
                     </a>\
                     <p>$TEXT$</p>\
+                    <a style="float: right" href="?reply-to=$ID$&screen-name=$NAME$">reply</a>\
                     </div>\
                     <hr style="clear: both" />\
                     '
@@ -69,7 +74,6 @@ class TwitterGui(QWidget):
             templ_text = t_file.read()
             t_file.close()
             
-        
         txt = ""
         for t in tweets:
             text = self.URL_REGEX.sub(r'<a href="\1">\1</a>', t[0])
@@ -78,10 +82,17 @@ class TwitterGui(QWidget):
 
         self.msgview.setHtml(txt)
         
-    def linkClicked(self, url): 
-        webbrowser.open(str(url.toString()))
+    def linkClicked(self, url):
+        if not url.host():
+            if url.hasQueryItem("reply-to") and url.hasQueryItem("screen-name"):
+                self._reply_to_id = long(convert_string(url.queryItemValue("reply-to")))
+                self.post_field.setPlainText("@"+convert_string(url.queryItemValue("screen-name"))+" ")
+        else:
+            webbrowser.open(str(url.toString()))
         
     def postStatusClicked(self):
         msg = unicode(self.post_field.toPlainText().toUtf8(), encoding="UTF-8")
         if msg:
-            self._db_conn.insert_post_queue(msg)
+            self._db_conn.insert_post_queue(msg, self._reply_to_id)
+            self._reply_to_id = 0
+            self._update_func()
