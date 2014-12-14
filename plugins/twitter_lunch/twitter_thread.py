@@ -1,4 +1,5 @@
 from lunchinator import get_server, get_settings, convert_string
+from twitter_lunch.twitter_sqlite import twitter_sqlite
 
 import subprocess, sys, ctypes, logging
 import tempfile, json, time, contextlib, csv
@@ -24,6 +25,10 @@ class TwitterDownloadThread(Thread):
         self._remote_callers = []
         self._friends = []
         self._db_conn = db_conn
+        self._safe_conn = None
+        
+    def setSafeConn(self, safe_conn):
+        self._safe_conn = safe_conn
             
     def announce_pic(self,account_name,url_text_tuple, peerIDs = []):        
         if len(url_text_tuple[0]):
@@ -119,9 +124,11 @@ class TwitterDownloadThread(Thread):
     def _get_home_timeline(self):
         with self._lock:
             self._timeline_since_id = self._db_conn.get_max_id()
-            tweets = self._twitter_api.GetHomeTimeline(200, self._timeline_since_id)
+            tweets = self._twitter_api.GetHomeTimeline(since_id=self._timeline_since_id)
             if len(tweets)==0:
                 self.logger.debug("Twitter: no new tweets in timeline")
+                return
+            
             for t in tweets:
                 self._db_conn.insert_message(t)
                 
@@ -135,6 +142,9 @@ class TwitterDownloadThread(Thread):
                     
                 for u in urls:
                     self.announce_pic("timeline", u, [get_settings().get_ID()])
+                    
+        if self._safe_conn:
+            self._safe_conn.emit_home_timeline_updated()
                     
     def _post_update_queue(self):
         posts = self._db_conn.get_unprocessed_queue()
@@ -229,6 +239,9 @@ class TwitterDownloadThread(Thread):
                 self._wait_event.wait(self._polling_time) 
                 continue
             
+            if self._safe_conn:
+                self._safe_conn.emit_twitter_loop_started()
+            
             poll_time = self._polling_time
             self.logger.debug("Polling Twitter now")
             try:
@@ -247,6 +260,9 @@ class TwitterDownloadThread(Thread):
                 poll_time = 60*15
             except:
                 self.logger.exception("Twitter: Unknown error")
+            finally:                
+                if self._safe_conn:
+                    self._safe_conn.emit_twitter_loop_stopped()
                 
             #returns None on Python 2.6
             self._wait_event.wait(poll_time)
