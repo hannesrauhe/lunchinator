@@ -41,6 +41,13 @@ class SafeConnector(QObject):
         
     def emit_twitter_loop_stopped(self):
         self._emit_from_threading(self.twitterLoopStopped, None)
+        
+    rangeLimiteExceeded = QtCore.pyqtSignal(object)
+    def connect_range_limit_exceeded(self, callback):
+        self.twitterLoopStopped.connect(callback)
+        
+    def emit_range_limit_exceeded(self):
+        self._emit_from_threading(self.rangeLimiteExceeded, None)
 
     # should be called by Python thread
     def _emit_from_threading(self, signal, args):

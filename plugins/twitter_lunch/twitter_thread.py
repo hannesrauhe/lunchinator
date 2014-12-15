@@ -255,6 +255,8 @@ class TwitterDownloadThread(Thread):
             except twitter.TwitterError as t:
                 self.logger.warning("Twitter: Rate limit exceeded. Waiting 15 min: %s", str(t))
                 poll_time = 60*15
+                if self._safe_conn:
+                    self._safe_conn.emit_range_limit_exceeded()
             except requests.ConnectionError as e:
                 self.logger.warning("Twitter: Connection error. Waiting 15 min: %s", str(e))
                 poll_time = 60*15

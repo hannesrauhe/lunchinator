@@ -13,7 +13,6 @@ class TwitterGui(QWidget):
         super(TwitterGui, self).__init__(parent)
         self._db_conn = db_conn
         self.logger = logger
-        self._last_m_id = 0
         self._reply_to_id = 0
         self._update_func = update_func
         
@@ -59,10 +58,9 @@ class TwitterGui(QWidget):
     def update_view(self, _ = None):
         template_file_path = os.path.join(get_settings().get_main_config_dir(),"tweet.thtml")
         
-        tweets = self._db_conn.get_last_tweets(self._last_m_id, user_list = self._list)
+        tweets = self._db_conn.get_last_tweets(user_list = self._list)
         if len(tweets)==0:
             return 0
-        self._last_m_id = tweets[0][4]
         
         templ_text = '<div>\
                     <a href="http://twitter.com/$NAME$/status/$ID$">\
@@ -88,6 +86,7 @@ class TwitterGui(QWidget):
             t_txt = t_txt.replace("$SECONDS_SINCE$", str(int(time.time()) - t[3]))
             t_txt = t_txt.replace("$RT_USER$", t[5])
             txt += t_txt
+        txt += "<p style=\"float:right\">Updated: %s</p>"%time.strftime("%H:%M")
 
         self.msgview.setHtml(txt)
         

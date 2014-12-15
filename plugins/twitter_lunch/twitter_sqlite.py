@@ -43,14 +43,14 @@ class twitter_sqlite(db_for_plugin_iface):
         user_pic = tweetAsStatus.GetUser().GetProfileImageUrl()
         tweet_text = tweetAsStatus.GetText()
         self.dbConn.execute("INSERT INTO twitter_messages(m_id, screen_name, user_image, create_time, message_text, retweeted_by) \
-                            VALUES(?, ?, ?, ?, ?, ?)", m_id, user_name, user_pic, int(created_at), tweet_text, retweeted_by)
+                            \nVALUES(?, ?, ?, ?, ?, ?)", m_id, user_name, user_pic, int(created_at), tweet_text, retweeted_by)
         
     def insert_post_queue(self, text, reply_to = 0):
         self.dbConn.execute("INSERT INTO twitter_post_queue(message_text, reply_to, create_time) \
                             VALUES(?, ?, strftime('%s', 'now'))", text, reply_to)        
     
     """return last num tweets (only if anything has happened since min_m_id)"""
-    def get_last_tweets(self, min_m_id = 0, num = 20, user_list = None): 
+    def get_last_tweets(self, num = 20, user_list = None, min_m_id = 0): 
         if min_m_id != 0:
             tmp = []
             if user_list:
