@@ -247,7 +247,7 @@ class iface_plugin(IPlugin):
             
     def _set_option(self, o, new_v, convert, hidden, **kwargs):
         if not self.has_option(o, hidden):
-            print "don't have"
+            self.logger.error("Option %s is unknown and cannot be set.", o)
             return
         v = self._getOptionValue(o, hidden)
         if convert:
