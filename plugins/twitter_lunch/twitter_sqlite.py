@@ -31,6 +31,11 @@ class twitter_sqlite(db_for_plugin_iface):
         r = self.dbConn.query("Select distinct(list) FROM twitter_lists")
         r = [a[0] for a in r]
         return r
+          
+    def get_users_from_list(self, user_list):
+        r = self.dbConn.query("Select distinct(user) FROM twitter_lists WHERE list = ?", user_list)
+        r = [a[0] for a in r]
+        return r
             
     def insert_message(self, tweetAsStatus):
         retweeted_by = ""

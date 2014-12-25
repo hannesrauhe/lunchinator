@@ -4,6 +4,7 @@ from PyQt4 import Qt, QtCore
 import socket
 import Queue
 from PyQt4.Qt import QObject
+from twisted.test.test_pb import callbackArgs
 
 # Object of this class has to be shared between
 # the two threads (Python and Qt one).
@@ -48,6 +49,20 @@ class SafeConnector(QObject):
         
     def emit_range_limit_exceeded(self):
         self._emit_from_threading(self.rangeLimiteExceeded, None)
+        
+    updatePosted = QtCore.pyqtSignal(object)
+    def connect_update_posted(self, callback):
+        self.updatePosted.connect(callback)
+        
+    def emit_update_posted(self, postId):
+        self._emit_from_threading(self.updatePosted, postId)
+        
+    notAuthenticated = QtCore.pyqtSignal(object)
+    def connect_not_authenticated(self, callback):
+        self.notAuthenticated.connect(callback)
+        
+    def emit_not_authenticated(self):
+        self._emit_from_threading(self.notAuthenticated, None)
 
     # should be called by Python thread
     def _emit_from_threading(self, signal, args):
