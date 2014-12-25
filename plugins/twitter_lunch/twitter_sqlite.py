@@ -85,8 +85,9 @@ class twitter_sqlite(db_for_plugin_iface):
     
     def get_unprocessed_queue(self):
         r = self.dbConn.query("SELECT q_id, m_id, message_text \
-                                FROM twitter_post_queue \
-                                ORDER BY create_time")
+                               \n FROM twitter_post_queue \
+                               \n WHERE m_id IS NULL\
+                               \n ORDER BY create_time")
         return r
     
     def get_max_id(self):    
@@ -95,5 +96,8 @@ class twitter_sqlite(db_for_plugin_iface):
             return 0
         return r[0][0]
     
-    def update_post_queue(self, p_id, m_id, created_at):
-        self.dbConn.execute("UPDATE SET created_at=?, m_id=? WHERE p_id=?", created_at, m_id, p_id)
+    def update_post_queue(self, q_id, m_id, created_at = 0):
+        if created_at>0:
+            self.dbConn.execute("UPDATE twitter_post_queue SET create_time=?, m_id=? WHERE q_id=?", created_at, m_id, q_id)
+        else:
+            self.dbConn.execute("UPDATE twitter_post_queue SET m_id=? WHERE q_id=?", m_id, q_id)

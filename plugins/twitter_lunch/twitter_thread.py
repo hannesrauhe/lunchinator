@@ -272,6 +272,7 @@ class TwitterDownloadThread(Thread):
                     self.logger.error("Twitter: Error while trying to retrieve pics from %s: %s", account_name,str(t))
                     
     def _post_update_queue(self):
+        import twitter
         posts = self._get_db_conn().get_unprocessed_queue()
         if 0==len(posts):          
             return
@@ -280,13 +281,26 @@ class TwitterDownloadThread(Thread):
             for post in posts:
                 """ 0 - id, 1 - reply-to, 2 -text """
                 pstatus = None
-                if post[1]:
-                    self.logger.debug("Posting status %s as reply to %d"%(post[2], post[1]))
-#                     pstatus = self._twitter_api.PostUpdate(post[2], post[1])
-                else:
-                    self.logger.debug("Posting status %s"%(post[2]))
-#                     pstatus = self._twitter_api.PostUpdate(post[2])
-#                 self._get_db_conn().update_post_queue(post[0], pstatus.GetId(), pstatus.GetCreatedAtInSeconds())
-#                 if self._safe_conn:
-#                     self._safe_conn.emit_update_posted(pstatus.GetId())
+                pm_id = -1
+                try:
+                    if post[1]:
+                        self.logger.debug("Posting status %s as reply to %d"%(post[2], post[1]))
+                        pstatus = self._twitter_api.PostUpdate(post[2], post[1])
+                    else:
+                        self.logger.debug("Posting status %s"%(post[2]))
+                        pstatus = self._twitter_api.PostUpdate(post[2])
+                    pm_id = pstatus.GetId()
+                    self._get_db_conn().update_post_queue(post[0], pm_id, pstatus.GetCreatedAtInSeconds())
+                except twitter.TwitterError as t:
+                    if t[0][0][u'code']==88:
+                        raise
+                    else:
+                        self._get_db_conn().update_post_queue(post[0], -1 * t[0][0][u'code'])
+                        self.logger.error("Failed to send tweet \"%s\" \n%s (Error code: %d)\n ",post[2], 
+                                          t[0][0]["message"], t[0][0]["code"])
+                finally:                    
+                    if self._safe_conn:
+                        self._safe_conn.emit_update_posted(post[0], pm_id)
+                    
+                    
                     

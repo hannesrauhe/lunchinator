@@ -50,12 +50,12 @@ class SafeConnector(QObject):
     def emit_range_limit_exceeded(self):
         self._emit_from_threading(self.rangeLimiteExceeded, None)
         
-    updatePosted = QtCore.pyqtSignal(object)
+    updatePosted = QtCore.pyqtSignal(object, object)
     def connect_update_posted(self, callback):
         self.updatePosted.connect(callback)
         
-    def emit_update_posted(self, postId):
-        self._emit_from_threading(self.updatePosted, postId)
+    def emit_update_posted(self, post_id, post_m_id):
+        self._emit_from_threading(self.updatePosted, post_id, post_m_id)
         
     notAuthenticated = QtCore.pyqtSignal(object)
     def connect_not_authenticated(self, callback):
@@ -65,7 +65,7 @@ class SafeConnector(QObject):
         self._emit_from_threading(self.notAuthenticated, None)
 
     # should be called by Python thread
-    def _emit_from_threading(self, signal, args):
+    def _emit_from_threading(self, signal, *args):
         self._queue.put((signal, args))
         self._wsock.send('!')
 
@@ -73,4 +73,4 @@ class SafeConnector(QObject):
     def _recv(self):
         self._rsock.recv(1)
         signal, args = self._queue.get()
-        signal.emit(args)
+        signal.emit(*args)

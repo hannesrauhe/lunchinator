@@ -45,6 +45,7 @@ class TwitterGui(QWidget):
         safe_conn.connect_home_timeline_updated(self.update_view)
         safe_conn.connect_twitter_loop_started(self.start_refresh_animation)
         safe_conn.connect_twitter_loop_stopped(self.stop_refresh_animation)
+        safe_conn.connect_update_posted(self.enable_posting)
         
         self.update_view()
     
@@ -53,6 +54,11 @@ class TwitterGui(QWidget):
     
     def stop_refresh_animation(self):
         self.refresh_button.setEnabled(True)
+        
+    def enable_posting(self, q_id, m_id):
+        if m_id>1:
+            self.post_field.setText("")
+        self.post_field.setEnabled(True)
         
     @pyqtSlot(object)
     def update_view(self, _ = None):
@@ -68,7 +74,7 @@ class TwitterGui(QWidget):
                     </a>\
                     <p>$TEXT$</p>\
                     <span><a href="http://twitter.com/$RT_USER$">$RT_USER$</a></span>\
-                    <span style="float: right">$SECONDS_SINCE$s ago <a href="?retweet=$ID$">retweet</a> <a href="?reply-to=$ID$&screen-name=$NAME$">reply</a></span>\
+                    <span style="float: right">$CREATE_TIME$ <a href="?retweet=$ID$">retweet</a> <a href="?reply-to=$ID$&screen-name=$NAME$">reply</a></span>\
                     </div>\
                     <hr style="clear: both" />\
                     '
@@ -83,7 +89,7 @@ class TwitterGui(QWidget):
             text = self.URL_REGEX.sub(r'<a href="\1">\1</a>', t[4])
             t_txt = templ_text.replace("$IMAGE$", t[2]).replace("$NAME$", t[1])
             t_txt = t_txt.replace("$ID$", str(t[0])).replace("$TEXT$", text)
-            t_txt = t_txt.replace("$SECONDS_SINCE$", str(int(time.time()) - t[3]))
+            t_txt = t_txt.replace("$CREATE_TIME$", self.humanReadableTime(t[3]))
             t_txt = t_txt.replace("$RT_USER$", t[5])
             txt += t_txt
         txt += "<p style=\"float:right\">Updated: %s</p>"%time.strftime("%H:%M")
@@ -106,3 +112,30 @@ class TwitterGui(QWidget):
             self._db_conn.insert_post_queue(msg, self._reply_to_id)
             self._reply_to_id = 0
             self._update_func()
+            self.post_field.setDisabled(True)
+            
+    def humanReadableTime(self, post_time):
+        '''Get a human readable string representing the posting time
+    
+        Returns:
+          A human readable string representing the posting time
+        '''
+        fudge = 1.25
+        delta = long(time.time()) - long(post_time)
+    
+        if delta < (1 * fudge):
+            return 'about a second ago' 
+        elif delta < (60 * (1 / fudge)):
+            return 'about %d seconds ago' % (delta)
+        elif delta < (60 * fudge):
+            return 'about a minute ago'
+        elif delta < (60 * 60 * (1 / fudge)):
+            return 'about %d minutes ago' % (delta / 60)
+        elif delta < (60 * 60 * fudge) or delta / (60 * 60) == 1:
+            return 'about an hour ago'
+        elif delta < (60 * 60 * 24 * (1 / fudge)):
+            return 'about %d hours ago' % (delta / (60 * 60))
+        elif delta < (60 * 60 * 24 * fudge) or delta / (60 * 60 * 24) == 1:
+            return 'about a day ago'
+        else:
+            return 'about %d days ago' % (delta / (60 * 60 * 24))
