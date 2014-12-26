@@ -219,7 +219,7 @@ class TwitterDownloadThread(Thread):
     def _get_home_timeline(self):
         with self._lock:
             self._timeline_since_id = self._get_db_conn().get_max_id()
-            tweets = self._twitter_api.GetHomeTimeline(since_id=self._timeline_since_id)
+            tweets = self._twitter_api.GetHomeTimeline(since_id=self._timeline_since_id, count=200)
             if len(tweets)==0:
                 self.logger.debug("Twitter: no new tweets in timeline")
                 return

@@ -1,5 +1,5 @@
 import os, webbrowser, re, time, urlparse
-from PyQt4.QtGui import QGridLayout, QVBoxLayout, QWidget
+from PyQt4.QtGui import QGridLayout, QVBoxLayout, QWidget, QCompleter
 from PyQt4.QtCore import QTimer
 from PyQt4.QtWebKit import QWebView, QWebPage
 from PyQt4.QtNetwork import QNetworkProxy
@@ -17,6 +17,8 @@ class TwitterGui(QWidget):
         self._reply_to_id = 0
         self._update_func = update_func
         
+        self._list = None
+        
         if get_settings().get_proxy():
             u = urlparse.urlsplit(get_settings().get_proxy())
             proxy = QNetworkProxy()
@@ -30,9 +32,14 @@ class TwitterGui(QWidget):
         self.msgview.page().setLinkDelegationPolicy(QWebPage.DelegateAllLinks)
         self.msgview.linkClicked.connect(self.link_clicked)
         
+        self.userCombo = QComboBox(self)
+        self.userCombo.setEditable(True)
+        self.userCombo.activated.connect(self.toggle_user_in_list)
+        
         self.showButton = QPushButton(chr(94), self)  
         self.showButton.setMaximumHeight(13)
         self.showButton.clicked.connect(self.show_hide_animation)
+        
         self.post_field = QTextEdit(self)
         self.post_field.setMaximumHeight(50)
         self.post_field.textChanged.connect(self.text_changed)
@@ -56,17 +63,16 @@ class TwitterGui(QWidget):
         gridlay.addWidget(self.post_field, 0, 0, 2, 1)
         gridlay.addWidget(self.attach_button, 0, 1, 1, 1)
         gridlay.addWidget(self.send_button, 1, 1, 1, 1)
-        gridlay.addWidget(self.refresh_button, 0, 2, 1, 1)
-        gridlay.addWidget(self.lists_box, 1, 2, 1, 1)
+        gridlay.addWidget(self.lists_box, 0, 2, 1, 1)
+        gridlay.addWidget(self.refresh_button, 1, 2, 1, 1)
         gridlay.addWidget(self.statusLabel, 2, 0, 1, 1)
         gridlay.addWidget(self.charCounter, 2, 1, 1, 2)
         
         hlay = QVBoxLayout(self)
         hlay.addWidget(self.msgview)
+        hlay.addWidget(self.userCombo)
         hlay.addWidget(self.showButton)
         hlay.addWidget(self.gridw)
-        
-        self._list = None
         
         safe_conn.connect_home_timeline_updated(self.update_view)
         safe_conn.connect_twitter_loop_started(self.start_refresh_animation)
@@ -101,8 +107,13 @@ class TwitterGui(QWidget):
     def list_changed(self, list_idx):
         if list_idx:
             self._list = convert_string(self.lists_box.currentText())
+            self.userCombo.clear()
+            self.userCombo.addItems(self._db_conn.get_known_users())            
+            self.userCombo.completer().setCompletionMode(QCompleter.PopupCompletion)
+            self.userCombo.show()
             self.set_status(self._list)
         else:
+            self.userCombo.hide()
             self._list = None
         self.update_view()
         
@@ -136,6 +147,17 @@ class TwitterGui(QWidget):
             self.charCounter.setText(str(count) + " - reply to ")
         else:
             self.charCounter.setText(str(count))
+            
+    def toggle_user_in_list(self, _):
+        user = convert_string(self.userCombo.currentText())
+        if user in self._db_conn.get_users_from_list(self._list):
+            self._db_conn.delete_user_from_list(user, self._list)
+            self.set_status("Removed user %s from list %s"%(user, self._list))
+        else:
+            self._db_conn.add_user_to_list(user, self._list)
+            self.set_status("Added user %s to list %s"%(user, self._list))
+        self.update_view()
+        
         
     @pyqtSlot(object)
     def update_view(self, _ = None):
@@ -167,7 +189,7 @@ class TwitterGui(QWidget):
             t_txt = templ_text.replace("$IMAGE$", t[2]).replace("$NAME$", t[1])
             t_txt = t_txt.replace("$ID$", str(t[0])).replace("$TEXT$", text)
             t_txt = t_txt.replace("$CREATE_TIME$", self.humanReadableTime(t[3]))
-            t_txt = t_txt.replace("$RT_USER$", t[5])
+            t_txt = t_txt.replace("$RT_USER$", t[5] if t[5] else "")
             txt += t_txt
         txt += "<p style=\"float:right\">Updated: %s</p>"%time.strftime("%H:%M")
 

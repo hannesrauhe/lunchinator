@@ -55,7 +55,7 @@ class twitter_sqlite(db_for_plugin_iface):
                             VALUES(?, ?, strftime('%s', 'now'))", text, reply_to)        
     
     """return last num tweets (only if anything has happened since min_m_id)"""
-    def get_last_tweets(self, num = 20, user_list = None, min_m_id = 0): 
+    def get_last_tweets(self, num = 100, user_list = None, min_m_id = 0): 
         if min_m_id != 0:
             tmp = []
             if user_list:
@@ -88,6 +88,13 @@ class twitter_sqlite(db_for_plugin_iface):
                                \n FROM twitter_post_queue \
                                \n WHERE m_id IS NULL\
                                \n ORDER BY create_time")
+        return r
+    
+    def get_known_users(self):
+        r = self.dbConn.query("select distinct(user) as u FROM twitter_lists UNION \
+                                \n select distinct(screen_name) as u FROM twitter_messages\
+                                \n order by u COLLATE NOCASE")
+        r = [a[0] for a in r]
         return r
     
     def get_max_id(self):    
