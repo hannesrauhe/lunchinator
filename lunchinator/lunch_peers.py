@@ -639,7 +639,13 @@ class LunchPeers(object):
         
         ip = peerInfo["triggerIP"]
         myname = socket.gethostname() #socket.getfqdn(socket.gethostname())
-        othername = socket.gethostbyaddr(ip)[0]
+        othername = ""
+        try:
+            othername = socket.gethostbyaddr(ip)[0]
+        except:
+            self.logger.warning("Another IP (%s) contacted me with my ID, I can't find it's hostname..., won't do anything now."%ip)
+            return False
+        
         #make sure, we only check the hostname, not the fqdn
         i = myname.find('.')
         if i != -1:
