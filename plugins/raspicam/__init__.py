@@ -33,20 +33,22 @@ class http_server_thread(Thread):
 class raspicam(iface_called_plugin):
     def __init__(self):
         super(raspicam, self).__init__()
-        self.options = [(("picture_path", "Folder where pics are stored"), get_settings().get_main_config_dir()),
-                        (("http_hostname", "hostname/IP of this lunchinator"), socket.getfqdn(socket.gethostname())),
+        self.options = [(("picture_path", "Folder where pics are stored"), os.path.join(get_settings().get_main_config_dir(),"raspicam")),
+                        (("http_server", "start http server to enable remote pics"), True),
+                        (("http_hostname", "hostname/IP of this lunchinator"), socket.getfqdn()),
                         (("http_port", "Port where pictures can be accessed"), 5000)]
         self.s_thread = None
         
     def activate(self):
         iface_called_plugin.activate(self)
-        self.logger.info("Starting the HTTP Server on Port %d"%self.options["http_port"])
-        self.s_thread = http_server_thread(self.options["http_port"],self.options["picture_path"])
-        self.s_thread.start()
+        if self.options["http_server"]:
+            self.logger.info("Starting the Raspicam HTTP Server on Port %d"%self.options["http_port"])
+            self.s_thread = http_server_thread(self.options["http_port"],self.options["picture_path"])
+            self.s_thread.start()
         
     def deactivate(self):
-        self.logger.info("Stopping HTTP Server")
         if self.s_thread:
+            self.logger.info("Stopping Raspicam HTTP Server")
             self.s_thread.stop_server()
             self.s_thread.join()
         iface_called_plugin.deactivate(self)  
@@ -69,11 +71,12 @@ class raspicam(iface_called_plugin):
             camera.capture(os.path.join(self.options["picture_path"], filename))
             self.logger.debug("Picture taken with camera")
             
-            with contextlib.closing(StringIO()) as strOut:
-                writer = csv.writer(strOut, delimiter=' ', quotechar='"')
-                pic_url = "http://%s:%d/%s" % (self.options["http_hostname"], self.options["http_port"], filename)
-                writer.writerow([pic_url, "Picamera picture from " % time.strftime("%b %d %Y %H:%M"), "raspicam"])
-                get_server().call('HELO_REMOTE_PIC %s' % strOut.getvalue())
+            if self.options["http_server"]:
+                with contextlib.closing(StringIO()) as strOut:
+                    writer = csv.writer(strOut, delimiter=' ', quotechar='"')
+                    pic_url = "http://%s:%d/%s" % (self.options["http_hostname"], self.options["http_port"], filename)
+                    writer.writerow([pic_url, "Picamera picture from " % time.strftime("%b %d %Y %H:%M"), "raspicam"])
+                    get_server().call('HELO_REMOTE_PIC %s' % strOut.getvalue())
             
     def do_take_picture(self, cmd):
         try:
