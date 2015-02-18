@@ -41,6 +41,9 @@ class raspicam(iface_called_plugin):
         
     def activate(self):
         iface_called_plugin.activate(self)
+        if os.path.isdir(self.options["picture_path"]):
+            os.mkdir(self.options["picture_path"])
+            #if this throws activation will be canceled
         if self.options["http_server"]:
             self.logger.info("Starting the Raspicam HTTP Server on Port %d"%self.options["http_port"])
             self.s_thread = http_server_thread(self.options["http_port"],self.options["picture_path"])
@@ -61,7 +64,7 @@ class raspicam(iface_called_plugin):
         import time
         import picamera
         
-        filename = "raspicam.jpg"
+        filename = "raspicam.png"
         
         with picamera.PiCamera() as camera:
             camera.resolution = (1024, 768)
