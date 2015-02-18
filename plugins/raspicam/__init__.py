@@ -5,7 +5,7 @@ from lunchinator.log import loggingFunc
 
 from StringIO import StringIO
 from threading import Thread
-import SimpleHTTPServer, SocketServer, os, socket, contextlib, csv
+import SimpleHTTPServer, SocketServer, os, socket, contextlib, csv, time, sys
 
 #http to serve the remote pictures component
 class ExtendedHTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
@@ -73,19 +73,21 @@ class raspicam(iface_called_plugin):
             time.sleep(2)
             camera.capture(os.path.join(self.options["picture_path"], filename))
             self.logger.debug("Picture taken with camera")
+        
+        if self.options["http_server"]:
+            with contextlib.closing(StringIO()) as strOut:
+                writer = csv.writer(strOut, delimiter=' ', quotechar='"')
+                pic_url = "http://%s:%d/%s" % (self.options["http_hostname"], self.options["http_port"], filename)
+                writer.writerow([pic_url, "Picamera picture from " % time.strftime("%b %d %Y %H:%M"), "raspicam"])
+                get_server().call('HELO_REMOTE_PIC %s' % strOut.getvalue())
             
-            if self.options["http_server"]:
-                with contextlib.closing(StringIO()) as strOut:
-                    writer = csv.writer(strOut, delimiter=' ', quotechar='"')
-                    pic_url = "http://%s:%d/%s" % (self.options["http_hostname"], self.options["http_port"], filename)
-                    writer.writerow([pic_url, "Picamera picture from " % time.strftime("%b %d %Y %H:%M"), "raspicam"])
-                    get_server().call('HELO_REMOTE_PIC %s' % strOut.getvalue())
             
     def do_take_picture(self, cmd):
         try:
             self.take_picture()
         except:
-            print "Error while taking picture..."
+            print "Error while taking picture:"
+            print sys.exc_info()[0]
             
 
         
