@@ -41,7 +41,7 @@ class raspicam(iface_called_plugin):
         
     def activate(self):
         iface_called_plugin.activate(self)
-        if os.path.isdir(self.options["picture_path"]):
+        if not os.path.isdir(self.options["picture_path"]):
             os.mkdir(self.options["picture_path"])
             #if this throws activation will be canceled
         if self.options["http_server"]:
