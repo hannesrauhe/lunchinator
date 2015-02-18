@@ -78,7 +78,7 @@ class raspicam(iface_called_plugin):
             with contextlib.closing(StringIO()) as strOut:
                 writer = csv.writer(strOut, delimiter=' ', quotechar='"')
                 pic_url = "http://%s:%d/%s" % (self.options["http_hostname"], self.options["http_port"], filename)
-                writer.writerow([pic_url, "Picamera picture from " % time.strftime("%b %d %Y %H:%M"), "raspicam"])
+                writer.writerow([pic_url, "Picamera picture taken at %s" % time.strftime("%b %d %Y %H:%M"), "raspicam"])
                 get_server().call('HELO_REMOTE_PIC %s' % strOut.getvalue())
             
             
@@ -87,7 +87,7 @@ class raspicam(iface_called_plugin):
             self.take_picture()
         except:
             print "Error while taking picture:"
-            print sys.exc_info()[0]
+            print sys.exc_info()
             
 
         
