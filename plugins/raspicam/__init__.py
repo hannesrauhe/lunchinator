@@ -29,3 +29,10 @@ class raspicam(iface_called_plugin):
             # Camera warm-up time
             time.sleep(2)
             camera.capture(os.path.join(self.options["picture_path"], "raspicam.jpg"))
+            self.logger.debug("Picture taken with camera")
+            
+    def do_take_picture(self, cmd):
+        try:
+            self.take_picture()
+        except:
+            print "Error while taking picture..."
