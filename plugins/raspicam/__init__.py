@@ -77,7 +77,8 @@ class raspicam(iface_called_plugin):
         if self.options["http_server"]:
             with contextlib.closing(StringIO()) as strOut:
                 writer = csv.writer(strOut, delimiter=' ', quotechar='"')
-                pic_url = "http://%s:%d/%s" % (self.options["http_hostname"], self.options["http_port"], filename)
+                #add the time to the URL to make remote picture aware of this being a new picture but still overwrite the old one
+                pic_url = "http://%s:%d/%s?time=%d" % (self.options["http_hostname"], self.options["http_port"], filename, int(time.time()))
                 writer.writerow([pic_url, "Picamera picture taken at %s" % time.strftime("%b %d %Y %H:%M"), "raspicam"])
                 get_server().call('HELO_REMOTE_PIC %s' % strOut.getvalue())
             
