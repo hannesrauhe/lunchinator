@@ -159,6 +159,8 @@ def getBinary(name, altLocation = ""):
 def _findLunchinatorKeyID(gpg, secret):
     # use key from keyring as default
     for key in gpg.list_keys(secret):
+        if int(key['expires'])<time.time():
+            continue
         for uid in key['uids']:
             if 'info@lunchinator.de' in uid:
                 return key['keyid']
@@ -210,9 +212,9 @@ def getGPGandKey(secret=False):
         # no key in keyring, try to import from file
         path = None
         if secret:
-            path = os.path.join(ghome, "lunchinator_pub_sec_0x17F57DC2.asc")
+            path = os.path.join(ghome, "lunchinator_pub_sec.asc")
         else:
-            path = get_settings().get_resource("lunchinator_pub_0x17F57DC2.asc")
+            path = get_settings().get_resource("lunchinator_pub.asc")
                 
         if not os.path.isfile(path):
             raise Exception("Key file not found: %s"%path)

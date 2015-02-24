@@ -21,7 +21,7 @@ class statTimelineWidget(QtGui.QWidget):
     def __init__(self, parent, connPlugin, logger):
         super(statTimelineWidget, self).__init__(parent)
         self.logger = logger
-        self.connPlugin = connPlugin
+        self._connPlugin = connPlugin
         self.scale = 1
 
     @loggingSlot(int)
@@ -48,7 +48,7 @@ class statTimelineWidget(QtGui.QWidget):
         maxTime = time.time()
         minTime = int(maxTime - size.width() * self.scale)
         try:
-            tmp = self.connPlugin.query("SELECT mtype, count(*) FROM statistics_messages " + \
+            tmp = self._connPlugin.query("SELECT mtype, count(*) FROM statistics_messages " + \
                                         "WHERE rtime between %d and %d GROUP BY mtype" % (minTime, maxTime))
         except:
             # database error, probably table does not exist
@@ -75,7 +75,7 @@ class statTimelineWidget(QtGui.QWidget):
             
         
         qp.setPen(QtCore.Qt.red)
-        timelineData = self.connPlugin.query("SELECT mtype, sender, rtime " + \
+        timelineData = self._connPlugin.query("SELECT mtype, sender, rtime " + \
                                             "FROM statistics_messages " + \
                                             "WHERE rtime between %d and %d" % (minTime, maxTime))
 
@@ -111,7 +111,7 @@ class statSwarmWidget(QtGui.QWidget):
     def __init__(self, parent, connPlugin, logger):
         super(statSwarmWidget, self).__init__(parent)
         self.logger = logger
-        self.connPlugin = connPlugin
+        self._connPlugin = connPlugin
         self.period = 1
         self.mtype = "HELO%"
         
@@ -157,7 +157,7 @@ class statSwarmWidget(QtGui.QWidget):
         minTime = maxTime - self.period*60*60
         
         try:
-            tmp = self.connPlugin.query("SELECT sender, count(*) FROM statistics_messages " + \
+            tmp = self._connPlugin.query("SELECT sender, count(*) FROM statistics_messages " + \
                                         "WHERE rtime between ? and ? "+ \
                                         "AND mType LIKE ?"
                                         "GROUP BY sender", minTime, maxTime, str(self.mtype))
