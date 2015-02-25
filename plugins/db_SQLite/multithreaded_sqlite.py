@@ -5,9 +5,9 @@ from lunchinator.plugin import lunch_db
 import datetime
 
 class MultiThreadSQLite(threading.Thread, lunch_db):
-    def __init__(self, db_file):
+    def __init__(self, db_file, dbPlugin, connName):
         threading.Thread.__init__(self)
-        lunch_db.__init__(self)
+        lunch_db.__init__(self, dbPlugin, connName)
         
         self.db_file=db_file
         self.results={}

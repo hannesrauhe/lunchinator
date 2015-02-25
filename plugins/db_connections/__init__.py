@@ -20,6 +20,7 @@ class _LoggerWrapper(object):
 
 class db_connections(iface_general_plugin):
     STANDARD_PLUGIN = "SQLite Connection"
+    DEFAULT_KEYS = set(["plugin_type"])
     
     def __init__(self):
         super(db_connections, self).__init__()
@@ -60,14 +61,14 @@ class db_connections(iface_general_plugin):
                         "%s which is not available. \n Delete the connection from the Settings "\
                         "or install the DB plugin again.", conn_name, plugin_type)
                         continue
-                    p_options = p.plugin_object.options.copy()
+                    p_options = p.plugin_object.getDefaultOptions().copy()
                     for k,v in p_options.items():
                         '''this takes care of the option-type'''
                         p_options[k] = get_settings().read_value_from_config_file(v,
                                                                                   section_name,
                                                                                   k)
                     p_options["plugin_type"]=plugin_type
-                    self.conn_properties[conn_name] = p_options.copy()
+                    self.conn_properties[conn_name] = p_options
             except:
                 raise
             finally:
@@ -82,8 +83,8 @@ class db_connections(iface_general_plugin):
         assert("plugin_type" in prop)
         
         if len(prop)==1:
-            prop = ob.options.copy()
-        return ob,prop
+            prop = ob.getDefaultOptions().copy()
+        return ob, prop
     
     def deactivate(self):
         for name,conn in self.open_connections.iteritems():
@@ -104,7 +105,7 @@ class db_connections(iface_general_plugin):
         ob, props = self.getProperties(name)
         if name not in self.open_connections:
             self.logger.debug("DB Connections: opening connection %s of type %s", name, props["plugin_type"])
-            self.open_connections[name] = ob.create_connection(props)
+            self.open_connections[name] = ob.create_connection(name, props)
         
         return _LoggerWrapper(self.open_connections[name], logger), props["plugin_type"]
     
@@ -135,12 +136,14 @@ class db_connections(iface_general_plugin):
         return self.conn_options_widget
     
     def save_options_widget_data(self, **_kwargs):
-        new_props = self.conn_options_widget.get_connection_properties()
+        new_props, new_passwords = self.conn_options_widget.get_connection_properties()
         self.config_file = get_settings().get_config_file()
         '''@todo Delete connections here'''
 
         with self.conn_properties_lock:
             for conn_name, props in new_props.iteritems():
+                passwords = new_passwords.get(conn_name, None)
+                
                 section_name = "DB Connection: "+str(conn_name)
                 if conn_name not in self.conn_properties:
                     self.logger.debug("DB Connection: new connection %s", conn_name)
@@ -151,15 +154,32 @@ class db_connections(iface_general_plugin):
                         self.config_file.add_section(section_name)
                     self.conn_properties[conn_name] = {"plugin_type": props["plugin_type"]}
                 
-                if props != self.conn_properties[conn_name]:
+                if props != self.conn_properties[conn_name] or passwords:
                     self.logger.debug("DB Connection: updated properties for %s", conn_name)
+                    
+                    po = self.plugin_manager.getPluginByName(props["plugin_type"], "db").plugin_object
+                    defaultOptions = po.getDefaultOptions()
                     
                     if not self.config_file.has_section(section_name):
                         self.config_file.add_section(section_name)
                         
                     for o, v in props.iteritems():
-                        self.config_file.set(section_name, o, unicode(v))
+                        if o in self.DEFAULT_KEYS or (o in defaultOptions and v != defaultOptions[o]):
+                            self.config_file.set(section_name, o, unicode(v))
+                        elif self.config_file.has_option(section_name, o):
+                            # don't store default values, don't store options that this connection type doesn't have
+                            self.config_file.remove_option(section_name, o)
+                        
+                    # remove removed options from config    
+                    for o in set(self.conn_properties[conn_name].keys()) - set(props.keys()):
+                        if self.config_file.has_option(section_name, o):
+                            self.config_file.remove_option(section_name, o)
+                            
                     self.conn_properties[conn_name] = props
+                    
+                    # store passwords
+                    for o, p in passwords.iteritems():
+                        po.storePasswordForConnection(conn_name, o, p)
                     
                     if conn_name in self.open_connections:
                         conn = self.open_connections.pop(conn_name)
@@ -168,6 +188,8 @@ class db_connections(iface_general_plugin):
                         get_notification_center().emitRestartRequired("DB Settings were changed - you should restart")
                     
             get_settings().set_available_db_connections(self.conn_properties.keys())
+        
+        self.conn_options_widget.clear_passwords()
             
         self.conn_plugins = {}
         self._init_plugin_objects()

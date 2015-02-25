@@ -652,7 +652,7 @@ if __name__ == '__main__':
     from lunchinator.log import getCoreLogger
     
     def createTable(window):
-        ownIcon = get_settings().get_resource("images", "me.png")
+        ownIcon = get_settings().get_resource("images", "me2.png")
         otherIcon = get_settings().get_resource("images", "lunchinator.png")
         tw = ChatWidget(window, getCoreLogger(), "Me", "Other Guy", ownIcon, otherIcon, "ID", None)
         tw.setMarkdownEnabled(True)

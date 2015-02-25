@@ -1,9 +1,14 @@
 from yapsy.IPlugin import IPlugin
 from lunchinator import convert_string, \
-    get_notification_center, get_db_connection, get_connection_type
+    get_notification_center, get_db_connection, get_connection_type, convert_raw
 from lunchinator.log import loggingFunc, newLogger, removeLogger
+from lunchinator.utilities import getPlatform, PLATFORM_MAC
+
 import types, sys, logging, threading
 from copy import deepcopy
+
+class PasswordOption(object):
+    pass
 
 class iface_plugin(IPlugin):    
     def __init__(self):
@@ -92,10 +97,17 @@ class iface_plugin(IPlugin):
             self.option_names.insert(0, (u"db_connection", u"Database Connection"))
             self._registerOptionCallback(u"db_connection", self.reconnect_db)
            
-        self.option_defaults = []
+        self.option_defaults = {}
         if self._hasOptions():
             for o, v in self._iterOptions():
-                self.option_defaults.append((o, deepcopy(v)))
+                self.option_defaults[o] = deepcopy(v)
+        
+    def __initKeyring(self):
+        import keyring
+        if getPlatform() == PLATFORM_MAC:
+            from keyring.backends.OS_X import Keyring
+            if keyring.get_keyring() is None:
+                keyring.set_keyring(Keyring())
         
     """ Override to change options data structure """
     
@@ -126,18 +138,42 @@ class iface_plugin(IPlugin):
     
     def _getOptionValue(self, o, hidden=False):
         """Get value of an option."""
-        return self.hidden_options[o] if hidden else self.options[o]
+        v = self.hidden_options[o] if hidden else self.options[o]
+        if False:#v is PasswordOption:
+            try:
+                import keyring
+                self.__initKeyring()
+                return keyring.get_password("Lunchinator", "%s.%s" % (self.plugin_name, o))
+            except:
+                self.logger.exception("Error reading password.")
+                return None
+        return v
     
     def _initOptionValue(self, o, v, hidden=False):
         """Initially sets the option value, read from the settings file."""
         self._setOptionValue(o, v, hidden)
             
+    def _setPasswordOptionValue(self, o, v):
+        # passwords are not stored in options dict
+        self._storePassword("%s.%s" % (self.plugin_name, o), convert_raw(v))
+        
+    def _getPasswordForOption(self, o):
+        """Gets a password from the keychain."""
+        # passwords are not stored in options dict
+        return self._getPassword("%s.%s" % (self.plugin_name, o))
+        
+    def _hasPasswordForOption(self, o):
+        """Checks if a password exists in the keychain"""
+        return self._getPasswordForOption(o) is not None
+            
     def _setOptionValue(self, o, v, hidden=False, **_kwargs):
         """Stores the value of the option in memory."""
-        if hidden:
-            self.hidden_options[o] = v
+        options = self.hidden_options if hidden else self.options
+        curVal = options[o]
+        if curVal is PasswordOption:
+            self._setPasswordOptionValue(o, v)
         else:
-            self.options[o] = v
+            options[o] = v
     
     def _iterOptions(self, hidden=False):
         """Iterates over (option key, option value)"""
@@ -194,19 +230,15 @@ class iface_plugin(IPlugin):
             self.logger.exception("could not convert value of %s from config to type %s (%s) using default", o, type(v), new_v)
 
     def _readOptionsFromFile(self):
-        if self.has_options():
-            for o, v in self._iterOptions():
-                if self._hasConfigOption(o):
-                    new_v = self._getConfigOption(o)
-                    conv = self._convertOption(o, v, new_v)
-                    self._initOptionValue(o, conv)
-        
-        if self.has_options(True):
-            for o, v in self._iterOptions(True):
-                if self._hasConfigOption(o):
-                    new_v = self._getConfigOption(o)
-                    conv = self._convertOption(o, v, new_v)
-                    self._initOptionValue(o, conv, True)
+        for hidden in (False, True):
+            if self.has_options(hidden):
+                for o, v in self._iterOptions(hidden):
+                    if v is PasswordOption:
+                        continue
+                    if self._hasConfigOption(o):
+                        new_v = self._getConfigOption(o)
+                        conv = self._convertOption(o, v, new_v)
+                        self._initOptionValue(o, conv, hidden)
         
     def _initChoiceOption(self, optionKey, comboBox, choiceOptions, currentValue):
         comboBox.clear()
@@ -221,6 +253,7 @@ class iface_plugin(IPlugin):
     def _addOptionToLayout(self, parent, grid, i, o, v):
         from PyQt4.QtGui import QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
         from PyQt4.QtCore import Qt
+        from lunchinator.gui_elements.password_edit import PasswordEdit
         e = ""
         fillHorizontal = False
         choiceOptions = self._getChoiceOptions(o[0])
@@ -237,6 +270,11 @@ class iface_plugin(IPlugin):
             e = QCheckBox(parent)
             e.setCheckState(Qt.Checked if v else Qt.Unchecked)
             fillHorizontal = True
+        elif v is PasswordOption:
+            e = PasswordEdit(self._hasPasswordForOption(o[0]), parent)
+            fillHorizontal = True
+        elif v is None:
+            raise ValueError("Value of option %s (%s) cannot be None" % (o[1], o[0]))
         else:
             e = QLineEdit(v, parent)
             fillHorizontal = True
@@ -250,11 +288,14 @@ class iface_plugin(IPlugin):
             self.logger.error("Option %s is unknown and cannot be set.", o)
             return
         v = self._getOptionValue(o, hidden)
+        if v is PasswordOption:
+            convert = False
         if convert:
             new_v = self._convertOption(o, v, new_v)
         if new_v != v:
             new_v = self._callOptionCallback(o, new_v, **kwargs)
-            new_v = self._storeOptionValue(o, new_v)
+            if v is not PasswordOption:
+                new_v = self._storeOptionValue(o, new_v)
             self._setOptionValue(o, new_v, hidden, **kwargs)
         if not hidden:
             self._displayOptionValue(o, new_v)
@@ -278,18 +319,26 @@ class iface_plugin(IPlugin):
         self._setConfigOption(o, str(new_v))
         return new_v
     
-    def _displayOptionValue(self, o, v=None):
-        """Propagates a changed setting value to the optione widget"""
+    def _storePassword(self, user, password):
+        """Stores a password in the keyring."""
+        try:
+            import keyring
+            self.__initKeyring()
+            keyring.set_password("Lunchinator", user, password)
+        except:
+            self.logger.exception("Error storing password.")
+            
+    def _getPassword(self, user):
+        """Stores a password in the keyring."""
+        try:
+            import keyring
+            self.__initKeyring()
+            return keyring.get_password("Lunchinator", user)
+        except:
+            self.logger.exception("Error storing password.")
+            
+    def _setValueToWidget(self, o, v, e, choiceOptions=None):
         from PyQt4.QtCore import Qt
-        
-        if v == None:
-            v = self._getOptionValue(o)
-        
-        if not self.option_widgets:
-            # probably not initialized yet.
-            return
-        e = self.option_widgets[o]
-        choiceOptions = self.option_choice.get(o, None)
         if choiceOptions is not None:
             currentIndex = 0
             if v in choiceOptions:
@@ -299,8 +348,22 @@ class iface_plugin(IPlugin):
             e.setValue(v)
         elif type(v) == types.BooleanType:
             e.setCheckState(Qt.Checked if v else Qt.Unchecked)
+        elif v is PasswordOption:
+            e.reset(self._hasPasswordForOption(o))
         else:
             e.setText(v)
+    
+    def _displayOptionValue(self, o, v=None):
+        """Propagates a changed setting value to the options widget"""
+        if v == None:
+            v = self._getOptionValue(o)
+        
+        if not self.option_widgets:
+            # probably not initialized yet.
+            return
+        e = self.option_widgets[o]
+        choiceOptions = self.option_choice.get(o, None)
+        self._setValueToWidget(o, v, e, choiceOptions)
     
     def _registerOptionCallback(self, o, callback):
         if o in self.option_callbacks:
@@ -321,6 +384,13 @@ class iface_plugin(IPlugin):
             new_v = e.value()
         elif type(v) == types.BooleanType:
             new_v = e.checkState() == Qt.Checked
+        elif v is PasswordOption:
+            if e.isModified():
+                newPassword = convert_raw(e.text())
+                e.reset(len(newPassword) > 0)
+                return newPassword
+            else:
+                return PasswordOption
         else:
             new_v = convert_string(e.text())
         return new_v      
@@ -340,12 +410,18 @@ class iface_plugin(IPlugin):
         if self.get_option_names(False) == None:
             # add options sorted by dictionary order
             for o, v in self._iterOptions():
-                self._addOptionToLayout(optionsWidget, t, i, (o, o), v)
+                try:
+                    self._addOptionToLayout(optionsWidget, t, i, (o, o), v)
+                except:
+                    self.logger.exception("Error adding widget for option %s", o)
                 i += 1
         else:
             # add options sorted by specified order
             for o in self.get_option_names(False):
-                self._addOptionToLayout(optionsWidget, t, i, o, self._getOptionValue(o[0]))
+                try:
+                    self._addOptionToLayout(optionsWidget, t, i, o, self._getOptionValue(o[0]))
+                except:
+                    self.logger.exception("Error adding widget for options %s (%s)", o[1], o[0])
                 i += 1
                 
         t.setColumnStretch(1, 1)

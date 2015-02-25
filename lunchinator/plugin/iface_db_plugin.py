@@ -1,5 +1,4 @@
 from lunchinator.plugin import iface_plugin
-import types
 
 ''' every DB plugin consists of at least two objects:
 (necessary, because multiple connections of the same type are allowed)
@@ -15,17 +14,22 @@ the actual connection is created and administered here,
 only the execute and close function will be used from the outside
 
 '''
+from lunchinator.plugin.iface_plugins import PasswordOption
+from lunchinator import get_settings, convert_raw
+from __builtin__ import False
 
 class iface_db_plugin(iface_plugin):    
     def __init__(self):
         super(iface_db_plugin, self).__init__()
-        self.conn_options={}
         self.force_activation = True
+        self.passwords = set()
+        self.password_options = []
+        self.connName = None
         
     ''' do not overwrite these methods '''    
     def activate(self):        
         iface_plugin.activate(self)
-        self.conn_options = self.options.copy()
+        self.config_file = get_settings().get_config_file()
 
     def deactivate(self):        
         iface_plugin.deactivate(self)            
@@ -35,51 +39,87 @@ class iface_db_plugin(iface_plugin):
     properties'''
     def has_options_widget(self):
         return False
-      
-    def save_options_widget_data(self, **_kwargs):
-        pass
     
     def create_db_options_widget(self, parent):
         return super(iface_db_plugin, self).create_options_widget(parent)
 
-    def fill_options_widget(self, options):
-        if not self.option_widgets:
-            return
-        self.conn_options.update(options)
+    ############################################
 
-        from PyQt4.QtCore import Qt
-        for o,e in self.option_widgets.iteritems():
-            v = self.conn_options[o]
-            if o[0] in self.option_choice:
-                currentIndex = 0
-                if v in self.option_choice[o[0]]:
-                    currentIndex = self.option_choice[o[0]].index(v)
-                e.setCurrentIndex(currentIndex)
-            elif type(v)==types.IntType:
-                e.setValue(v)
-            elif type(v)==types.BooleanType:
-                e.setCheckState(Qt.Checked if v else Qt.Unchecked)
-            else:
-                e.setText(v)
+    def _hasConfigOption(self, o):
+        if not self.options:
+            return False
+        return o in self.options
+    
+    def _getConfigOption(self, o):
+        return self.get_option(o)
+    
+    def _setConfigOption(self, o, v):
+        # configuration is stored via DbConnOptions
+        pass
+    
+    def _getPasswordForOption(self, o):
+        return self.getPasswordForConnection(self.connName, o)
+    
+    def _hasPasswordForOption(self, o):
+        return o in self.password_options or super(iface_db_plugin, self)._hasPasswordForOption(o)
+    
+    def _setPasswordOptionValue(self, o, v):
+        self.passwords[o] = v
+        self.password_options.add(o)
+    
+    #########################################
+
+    def getOptions(self):
+        return self.options
+    
+    def getDefaultOptions(self):
+        return self.option_defaults
         
-    def get_options_from_widget(self):
-        if not self.option_widgets:
-            return
-        for o,e in self.option_widgets.iteritems():
-            self.conn_options[o] = self._readDataFromWidget(o, e)
-        return self.conn_options
+    def storePasswordForConnection(self, connName, o, p):
+        self._storePassword("dbconn_%s.%s" % (connName, o), p)
+        
+    def getPasswordForConnection(self, connName, o):
+        return self._getPassword("dbconn_%s.%s" % (connName, o))
+        
+    def getPasswords(self):
+        return self.passwords
+    
+    def clearPasswords(self):
+        self.passwords = {}
+
+    def setConnection(self, connName, options, password_options):
+        self.connName = connName
+        
+        if options:
+            for o, v in options.iteritems():
+                self.set_option(o, v, convert=False)
+        else:                
+            for option, _v in self._iterOptions():
+                self.reset_option(option)
+            self._readOptionsFromFile()
+            
+        self.password_options = set(password_options)
+        self.passwords = {}
     
     '''should return an object of Type lunch_db which is already open'''
-    def create_connection(self, properties):
+    def create_connection(self, connName, properties):
         raise  NotImplementedError("%s does not implement this method"%self.db_type)
     
 
 class lunch_db(object):              
-    def __init__(self):
+    def __init__(self, dbPlugin, connName):
         self.is_open = False
+        self._db_plugin = dbPlugin
+        self._conn_name = connName
         
     def isOpen(self, _logger):
         return self.is_open
+    
+    def getConnectionName(self):
+        return self._conn_name
+    
+    def _getPasswordForOption(self, o):
+        return self._db_plugin.getPasswordForConnection(self._conn_name, o)
         
     '''convenience calls'''    
     def execute(self, logger, query, *wildcards):

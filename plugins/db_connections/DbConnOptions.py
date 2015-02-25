@@ -12,6 +12,7 @@ class DbConnOptions(QWidget):
         self.plugin_manager = get_plugin_manager()
         self.available_types = {}
         self.conn_properties = None
+        self.conn_passwords = None
         
         for dbplugin in self.plugin_manager.getPluginsOfCategory("db"):
             self.available_types[dbplugin.name] = dbplugin.plugin_object
@@ -56,6 +57,10 @@ class DbConnOptions(QWidget):
             pass
         
         self.conn_properties = deepcopy(conn_properties)
+        self.conn_passwords = {}
+        for connName in self.conn_properties:
+            self.conn_passwords[connName] = {}
+        
         self.nameCombo.clear()
         self.nameCombo.addItems(self.conn_properties.keys())
             
@@ -71,17 +76,22 @@ class DbConnOptions(QWidget):
     
     def store_conn_details(self):
         p = self.available_types[self.last_type]
-        o = p.get_options_from_widget()
+        p.save_options_widget_data() # this doesn't write anything to the config file
+        o = p.getOptions()
+        
+        self.conn_passwords[self.last_name].update(p.getPasswords())
+        p.clearPasswords()
         if o:
             self.conn_properties[self.last_name].update(o)
             self.conn_properties[self.last_name]["plugin_type"] = self.last_type
         
     def fill_conn_details(self):        
-        self.last_type = str(self.typeCombo.currentText())
-        self.last_name = str(self.nameCombo.currentText())
+        self.last_type = convert_string(self.typeCombo.currentText())
+        self.last_name = convert_string(self.nameCombo.currentText())
         
         p = self.available_types[self.last_type]
-        p.fill_options_widget(self.conn_properties[self.last_name])
+        
+        p.setConnection(self.last_name, self.conn_properties[self.last_name], self.conn_passwords[self.last_name].keys())
             
         if self.nameCombo.currentText()=="Standard":
             self.typeCombo.setEnabled(False)
@@ -130,10 +140,16 @@ class DbConnOptions(QWidget):
                 return 
             new_conn_name = convert_string(new_conn_name)
         
-        self.conn_properties[new_conn_name] = {"plugin_type" : str(self.typeCombo.currentText()) }
+        self.conn_properties[new_conn_name] = {"plugin_type" : convert_string(self.typeCombo.currentText()) }
+        self.conn_passwords[new_conn_name] = {}
         self.nameCombo.addItem(new_conn_name)
         self.nameCombo.setCurrentIndex(self.nameCombo.count() - 1)
         
     def get_connection_properties(self):
         self.store_conn_details()
-        return self.conn_properties
+        return self.conn_properties, self.conn_passwords
+
+    def clear_passwords(self):
+        for connName in self.conn_passwords:
+            self.conn_passwords[connName] = {}
+        
