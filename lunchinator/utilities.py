@@ -9,9 +9,6 @@ from tempfile import NamedTemporaryFile
 import itertools
 import string
 import errno
-import sys
-from pkg_resources import get_distribution, ResolutionError,\
-    DistributionNotFound, VersionConflict
 
 PLATFORM_OTHER = -1
 PLATFORM_LINUX = 0
@@ -507,6 +504,8 @@ def checkRequirements(reqs, component, dispName, missing={}):
     missing -- dictionary to update
     """
     
+    from pkg_resources import get_distribution, ResolutionError,\
+        DistributionNotFound, VersionConflict
     if isPyinstallerBuild():
         # pkg_resources is not working reliably here.
         return missing
@@ -538,6 +537,8 @@ INSTALL_NOT_POSSIBLE = 4
 INSTALL_IGNORE = 5
        
 def installDependencies(requirements):
+    from pkg_resources import get_distribution
+    
     if not requirements:
         getCoreLogger().info("No dependencies to install.")
         return INSTALL_SUCCESS

@@ -1,11 +1,10 @@
 import os, webbrowser, re, time, urlparse
-from PyQt4.QtGui import QGridLayout, QVBoxLayout, QWidget, QCompleter
-from PyQt4.QtCore import QTimer
+from PyQt4.QtGui import QGridLayout, QVBoxLayout, QWidget, QCompleter, \
+    QLabel, QTextEdit, QPushButton, QComboBox
+from PyQt4.QtCore import pyqtSlot
 from PyQt4.QtWebKit import QWebView, QWebPage
 from PyQt4.QtNetwork import QNetworkProxy
 from lunchinator import get_settings, convert_string
-from PyQt4.Qt import QLabel, QTextEdit, QPushButton, QComboBox, QUrl, pyqtSlot,\
-    QString
 
 class TwitterGui(QWidget):    
     URL_REGEX = re.compile(r'''((?:mailto:|ftp://|http://|https://)[^ <>'"{}|\\^`[\]]*)''')
